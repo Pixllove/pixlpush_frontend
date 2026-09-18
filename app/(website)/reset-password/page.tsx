@@ -1,0 +1,4 @@
+import { Box, Button, Card, CardContent, TextField, Typography } from '@mui/material';
+import AuthShell from '@/components/website/AuthShell';
+
+export default function ResetPasswordPage() { return <AuthShell mode="login"><Card className="auth-card" sx={{ maxWidth: 620, mx: 'auto', border: '1px solid #eee7f1', borderRadius: 4, boxShadow: '0 22px 70px rgba(44,16,58,.08)' }}><CardContent sx={{ p: { xs: 3, md: 5 } }}><Typography variant="h3" sx={{ fontSize: { xs: 32, md: 42 } }}>Reset your password.</Typography><Typography color="text.secondary" sx={{ mt: 1, lineHeight: 1.6 }}>Enter your Account email and we&apos;ll send a secure reset link.</Typography><TextField label="Work email" type="email" fullWidth sx={{ mt: 4 }} /><Button fullWidth variant="contained" size="large" sx={{ mt: 2 }} href="/login">Send reset link</Button><Box sx={{ textAlign: 'center', mt: 2 }}><Button href="/login">Back to login</Button></Box></CardContent></Card></AuthShell>; }
