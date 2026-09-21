@@ -14,7 +14,7 @@ const navigation = [
   { label: 'Billing & Usage', href: '/dashboard/billing', icon: BarChartRounded }, { label: 'Settings', href: '/dashboard/settings', icon: SettingsOutlined },
 ];
 
-function Brand() { return <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2, color: '#fff' }}><Box sx={{ width: 34, height: 34, borderRadius: '11px', display: 'grid', placeItems: 'center', background: 'linear-gradient(135deg,#ff6a8d,#7b35f4)', fontWeight: 900 }}>P</Box><Typography sx={{ fontWeight: 900, letterSpacing: '-.05em', fontSize: 21 }}>Pixl<span style={{ color: '#ff8d73' }}>Push</span></Typography></Box>; }
+function Brand() { return <Box component="img" src="/assets/logo.png" alt="PixlPush" sx={{ display: 'block', width: 165, height: 'auto' }} />; }
 
 export default function DashboardSidebar({ active, setActive, mobileOpen }: { active: string; setActive: (value: string) => void; mobileOpen: boolean }) {
   const selectedProject = useSelector((state: RootState) => state.ui.selectedProject);

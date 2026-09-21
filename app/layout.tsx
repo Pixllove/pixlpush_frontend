@@ -5,6 +5,11 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'PixlPush — Make more of the users you already have',
   description: 'AI-powered journey automation for apps, SaaS and digital products.',
+  icons: {
+    icon: '/assets/site-icon.png',
+    shortcut: '/assets/site-icon.png',
+    apple: '/assets/site-icon.png',
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
