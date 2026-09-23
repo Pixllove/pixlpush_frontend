@@ -1,3 +1,6 @@
 import DashboardFrame from '@/components/dashboard/DashboardFrame';
-import { ChannelSection } from '@/components/dashboard/DashboardSections';
-export default function EmailPage() { return <DashboardFrame active="Email" title="Email" description="Create, send and measure email campaigns for your Project."><ChannelSection channel="email" /></DashboardFrame>; }
+import EmailWorkspace from '@/components/dashboard/EmailWorkspace';
+
+export default function EmailPage() {
+  return <DashboardFrame active="Email" title="Email Template" description="Create, manage, and reuse email templates for future campaigns and Journey Automations."><EmailWorkspace /></DashboardFrame>;
+}
