@@ -596,19 +596,7 @@ export default function EmailWorkspace() {
           {notice}
         </Paper>
       )}
-      <Stack
-        direction={{ xs: "column", md: "row" }}
-        justifyContent="space-between"
-        alignItems={{ md: "center" }}
-        gap={2}
-      >
-        <Box>
-          <Typography variant="h3">Email workspace</Typography>
-          <Typography color="text.secondary" fontSize={12}>
-            Create, manage, and reuse email content for PixlPush campaigns and
-            journeys.
-          </Typography>
-        </Box>
+      <Stack direction={{ xs: "column", md: "row" }} justifyContent="flex-end" alignItems={{ md: "center" }} gap={2}>
         <Stack direction="row" gap={1}>
           <Button
             variant="contained"
