@@ -559,3 +559,25 @@ a { color: inherit; text-decoration: none; }
 .journey-rule-choice.active { border-color:#4775de; background:#f4f7ff; box-shadow:0 0 0 2px rgba(71,117,222,.12); }
 .journey-rule-choice .MuiFormControlLabel-root { width:100%; margin:0; align-items:flex-start; }
 .journey-rule-choice .MuiRadio-root { padding:2px 9px 2px 0; }
+
+.user-table-link { margin:-4px; padding:4px; border-radius:7px; cursor:pointer; outline:none; transition:background .15s, color .15s; }
+.user-table-link:hover, .user-table-link:focus-visible { background:#f1edff; color:#5d20c6; }
+.user-details-workspace { width:100%; max-width:none; margin:0; }
+.user-back-button { align-self:flex-start; border-color:#dce4ef !important; color:#344054 !important; text-transform:none !important; font-weight:800 !important; }
+.user-detail-breadcrumb { padding-bottom:14px; border-bottom:1px solid #e4e8f0; }
+.user-detail-email-title { max-width:100%; color:#16121d; font-size:clamp(24px, 3vw, 38px); font-weight:800; line-height:1.12; letter-spacing:-.035em; overflow-wrap:anywhere; }
+.user-detail-card, .user-engagement-card, .activity-history-card { padding:0 18px 18px; border:1px solid #e0e6f0 !important; border-radius:10px !important; }
+.user-detail-card-header { padding:16px 0; }
+.user-detail-section { padding:16px 0; }
+.user-detail-section + .user-detail-section { border-top:1px solid #e4e8f0; }
+.user-detail-item { min-height:48px; padding:4px 0 9px; border-bottom:1px solid #e4e8f0; }
+.user-detail-header-icon, .user-detail-icon { display:grid; place-items:center; color:#6678ee; background:#eef1ff; border-radius:7px; }
+.user-detail-header-icon { width:28px; height:28px; }
+.user-detail-icon { width:30px; height:30px; margin-bottom:8px; }
+.user-engagement-card { padding:16px 18px 18px; }
+.user-engagement-metric { flex:1 1 180px; min-width:150px; padding:12px; border:1px solid #e0e6f0 !important; border-radius:8px !important; }
+.user-metric-row { padding:5px 8px; color:#344054; background:#f7f8fb; border-radius:4px; white-space:pre-wrap; }
+.activity-history-card { padding:16px 18px 18px; }
+.user-activity-event { padding:12px; border:1px solid #e4e8f0; border-radius:8px; }
+.user-activity-dot { display:grid; place-items:center; flex:0 0 28px; width:28px; height:28px; color:#6678ee; background:#eef1ff; border-radius:50%; }
+@media (max-width: 700px) { .user-detail-card, .user-engagement-card, .activity-history-card { padding-left:12px; padding-right:12px; } }
