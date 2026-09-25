@@ -50,10 +50,12 @@ function refreshOnce(): Promise<boolean> {
 }
 
 async function rawRequest(path: string, body?: unknown, base = '/api/auth', method?: string): Promise<Response> {
+  // A string body is a raw file (CSV user import); everything else is JSON.
+  const isFile = typeof body === 'string';
   return fetch(`${base}${path}`, {
     method: method ?? (body === undefined ? 'GET' : 'POST'),
-    headers: { 'Content-Type': 'application/json' },
-    body: body === undefined ? undefined : JSON.stringify(body),
+    headers: { 'Content-Type': isFile ? 'text/csv' : 'application/json' },
+    body: body === undefined ? undefined : isFile ? body : JSON.stringify(body),
     // Same-origin, but explicit so the session cookies are always sent.
     credentials: 'same-origin',
   });

@@ -109,3 +109,61 @@ export interface EmailSettings {
   lastCheckedAt: string | null;
   productionSendingEnabled: boolean;
 }
+
+export type UserImportStatus = 'uploaded' | 'mapped' | 'previewed' | 'committing' | 'completed' | 'failed' | 'expired';
+
+/** One CSV user import. `sampleRows` are keyed by column header. */
+export interface UserImport {
+  id: string;
+  fileName: string;
+  status: UserImportStatus;
+  headers: string[];
+  sampleRows?: Record<string, string>[];
+  totalRows: number;
+  processedRows: number;
+  results: { created: number; updated: number; unchanged: number; conflicts: number; errors: number; skipped: number };
+  errorMessage: string | null;
+  createdAt: string;
+}
+
+export interface CustomPropertyDef {
+  key: string;
+  label: string;
+  type: 'string' | 'number' | 'boolean' | 'date';
+}
+
+export interface ImportSuggestions {
+  customProperties: CustomPropertyDef[];
+  suggestions: {
+    sourceColumn: string;
+    targetField: string | null;
+    normalization?: 'email' | 'phone' | 'lowercase' | 'trim';
+    newCustomProperty?: CustomPropertyDef;
+    isMatchKey: boolean;
+  }[];
+}
+
+export interface ImportMappingInput {
+  sourceLanguage: string;
+  mappings: {
+    sourceColumn: string;
+    targetField: string | null;
+    isMatchKey?: boolean;
+    overwriteMode?: 'overwrite' | 'fill_empty_only' | 'do_not_overwrite';
+    normalization?: 'email' | 'phone' | 'lowercase' | 'trim';
+  }[];
+  customProperties: CustomPropertyDef[];
+  saveMatchRule: boolean;
+}
+
+export interface ImportPreview {
+  summary: { total: number; newUsers: number; existingUsers: number; unchanged: number; conflicts: number; invalid: number; skipped: number };
+}
+
+/** GET /users/stats: header counts for the Users page. */
+export interface UserStats {
+  total: number;
+  reachable: number;
+  eventsToday: number;
+  eventsYesterday: number;
+}

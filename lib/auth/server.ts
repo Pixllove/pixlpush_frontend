@@ -60,9 +60,10 @@ export interface UpstreamResult<T> {
  */
 export async function callBackend<T>(
   path: string,
-  init: { method?: string; body?: unknown; auth?: boolean } = {},
+  init: { method?: string; body?: unknown; auth?: boolean; contentType?: string } = {},
 ): Promise<UpstreamResult<T>> {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  // A contentType means a raw text body (CSV user import), forwarded as-is.
+  const headers: Record<string, string> = { 'Content-Type': init.contentType ?? 'application/json' };
 
   if (init.auth) {
     const token = getSessionToken();
@@ -80,7 +81,7 @@ export async function callBackend<T>(
     const response = await fetch(`${API_URL}${path}`, {
       method: init.method ?? 'GET',
       headers,
-      body: init.body === undefined ? undefined : JSON.stringify(init.body),
+      body: init.body === undefined ? undefined : init.contentType ? String(init.body) : JSON.stringify(init.body),
       cache: 'no-store',
     });
 
@@ -132,7 +133,7 @@ async function refreshSession(): Promise<string | undefined> {
  */
 export async function callBackendWithRefresh<T>(
   path: string,
-  init: { method?: string; body?: unknown } = {},
+  init: { method?: string; body?: unknown; contentType?: string } = {},
 ): Promise<UpstreamResult<T>> {
   const first = await callBackend<T>(path, { ...init, auth: true });
   if (first.status !== 401) return first;

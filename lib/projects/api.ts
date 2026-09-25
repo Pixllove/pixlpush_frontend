@@ -1,6 +1,7 @@
 import { authRequest } from '@/lib/auth/client';
 import type {
-  CreatedSdkKey, EmailSettings, FirebaseSettings, LifecycleSegment, Project, ProjectDetail, SdkKey, UpdateProjectInput, UsersPage,
+  CreatedSdkKey, EmailSettings, FirebaseSettings, ImportMappingInput, ImportPreview, ImportSuggestions, LifecycleSegment, Project,
+  ProjectDetail, SdkKey, UpdateProjectInput, UserImport, UserStats, UsersPage,
 } from '@/types/project';
 
 /** Route handlers under app/api/projects, which forward to Fastify. */
@@ -70,9 +71,40 @@ export const usersApi = {
   },
 };
 
+export const userStatsApi = {
+  get: (projectId: string) => authRequest<UserStats>(at(projectId, '/users/stats'), undefined, BASE),
+};
+
+export const audienceGroupsApi = {
+  list: (projectId: string) => authRequest<unknown[]>(at(projectId, '/audience-groups'), undefined, BASE),
+};
+
 export const lifecycleSegmentsApi = {
   list: (projectId: string) =>
     authRequest<LifecycleSegment[]>(at(projectId, '/lifecycle-segments'), undefined, BASE),
+};
+
+/** CSV user import: upload -> suggestions -> mapping -> preview -> commit (worker applies it). */
+export const userImportApi = {
+  list: (projectId: string) =>
+    authRequest<{ items: UserImport[] }>(at(projectId, '/user-imports?limit=20'), undefined, BASE),
+  get: (projectId: string, importId: string) =>
+    authRequest<UserImport>(at(projectId, `/user-imports/${encodeURIComponent(importId)}`), undefined, BASE),
+  /** The file content is the request body (sent as text/csv). */
+  upload: (projectId: string, fileName: string, csv: string) =>
+    authRequest<UserImport>(at(projectId, `/user-imports?fileName=${encodeURIComponent(fileName)}`), csv, BASE),
+  suggestions: (projectId: string, importId: string, language: string) =>
+    authRequest<ImportSuggestions>(
+      at(projectId, `/user-imports/${encodeURIComponent(importId)}/suggestions?language=${language}`),
+      undefined,
+      BASE,
+    ),
+  map: (projectId: string, importId: string, input: ImportMappingInput) =>
+    authRequest<UserImport>(at(projectId, `/user-imports/${encodeURIComponent(importId)}/mapping`), input, BASE, 'PUT'),
+  preview: (projectId: string, importId: string) =>
+    authRequest<ImportPreview>(at(projectId, `/user-imports/${encodeURIComponent(importId)}/preview`), {}, BASE),
+  commit: (projectId: string, importId: string) =>
+    authRequest<UserImport>(at(projectId, `/user-imports/${encodeURIComponent(importId)}/commit`), {}, BASE),
 };
 
 export const projectKeys = {
