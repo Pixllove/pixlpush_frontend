@@ -1,7 +1,7 @@
 import { authRequest } from '@/lib/auth/client';
 import type {
-  CreatedSdkKey, EmailSettings, FirebaseSettings, ImportMappingInput, ImportPreview, ImportSuggestions, LifecycleSegment, Project,
-  ProjectDetail, SdkKey, UpdateProjectInput, UserImport, UserStats, UsersPage,
+  AudienceGroup, AudienceGroupMember, CreatedSdkKey, EmailSettings, FirebaseSettings, ImportMappingInput, ImportPreview,
+  ImportSuggestions, LifecycleSegment, Project, ProjectDetail, SdkKey, UpdateProjectInput, UserImport, UserStats, UsersPage,
 } from '@/types/project';
 
 /** Route handlers under app/api/projects, which forward to Fastify. */
@@ -75,10 +75,6 @@ export const userStatsApi = {
   get: (projectId: string) => authRequest<UserStats>(at(projectId, '/users/stats'), undefined, BASE),
 };
 
-export const audienceGroupsApi = {
-  list: (projectId: string) => authRequest<unknown[]>(at(projectId, '/audience-groups'), undefined, BASE),
-};
-
 export const lifecycleSegmentsApi = {
   list: (projectId: string) =>
     authRequest<LifecycleSegment[]>(at(projectId, '/lifecycle-segments'), undefined, BASE),
@@ -105,6 +101,17 @@ export const userImportApi = {
     authRequest<ImportPreview>(at(projectId, `/user-imports/${encodeURIComponent(importId)}/preview`), {}, BASE),
   commit: (projectId: string, importId: string) =>
     authRequest<UserImport>(at(projectId, `/user-imports/${encodeURIComponent(importId)}/commit`), {}, BASE),
+};
+
+export const audienceGroupsApi = {
+  list: (projectId: string) =>
+    authRequest<AudienceGroup[]>(at(projectId, '/audience-groups'), undefined, BASE),
+  get: (projectId: string, groupId: string) =>
+    authRequest<AudienceGroup>(at(projectId, `/audience-groups/${encodeURIComponent(groupId)}`), undefined, BASE),
+  delete: (projectId: string, groupId: string) =>
+    authRequest<void>(at(projectId, `/audience-groups/${encodeURIComponent(groupId)}`), {}, BASE, 'DELETE'),
+  members: (projectId: string, groupId: string, limit = 100) =>
+    authRequest<{ members: AudienceGroupMember[]; nextCursor: string | null }>(at(projectId, `/audience-groups/${encodeURIComponent(groupId)}/members?limit=${limit}`), undefined, BASE),
 };
 
 export const projectKeys = {

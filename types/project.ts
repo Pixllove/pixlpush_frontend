@@ -58,6 +58,25 @@ export interface LifecycleSegment {
   updatedAt: string;
 }
 
+export interface AudienceGroup {
+  id: string;
+  name: string;
+  description: string | null;
+  rules: Record<string, unknown>;
+  memberCount?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AudienceGroupMember {
+  id: string;
+  externalUserId: string | null;
+  email: string | null;
+  name: string | null;
+  country: string | null;
+  createdAt: string;
+}
+
 /** PATCH /projects/:projectId. Omitted keys are left unchanged. */
 export interface UpdateProjectInput {
   name?: string;
