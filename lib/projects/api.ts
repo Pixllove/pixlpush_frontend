@@ -106,8 +106,12 @@ export const userImportApi = {
 export const audienceGroupsApi = {
   list: (projectId: string) =>
     authRequest<AudienceGroup[]>(at(projectId, '/audience-groups'), undefined, BASE),
+  create: (projectId: string, input: { name: string; description?: string; rules: { operator: 'AND' | 'OR'; conditions: Array<{ field: string; operator: string; value?: string }> } }) =>
+    authRequest<AudienceGroup>(at(projectId, '/audience-groups'), input, BASE),
   get: (projectId: string, groupId: string) =>
     authRequest<AudienceGroup>(at(projectId, `/audience-groups/${encodeURIComponent(groupId)}`), undefined, BASE),
+  update: (projectId: string, groupId: string, input: { name?: string; description?: string; rules: { operator: 'AND' | 'OR'; conditions: Array<{ field: string; operator: string; value?: string }> } }) =>
+    authRequest<AudienceGroup>(at(projectId, `/audience-groups/${encodeURIComponent(groupId)}`), input, BASE, 'PATCH'),
   delete: (projectId: string, groupId: string) =>
     authRequest<void>(at(projectId, `/audience-groups/${encodeURIComponent(groupId)}`), {}, BASE, 'DELETE'),
   members: (projectId: string, groupId: string, limit = 100) =>

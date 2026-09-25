@@ -1,10 +1,10 @@
 'use client';
 
-import { Fragment, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AddRounded, ArrowBackRounded, CloseRounded, EmailRounded, GroupsRounded, NotificationsActiveRounded, SearchRounded, TimelineRounded } from '@mui/icons-material';
-import { Box, Button, Card, Chip, Divider, Grid, MenuItem, Select, Skeleton, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
-import { useQuery } from '@tanstack/react-query';
+import { Box, Button, Card, Chip, CircularProgress, Divider, Grid, MenuItem, Select, Skeleton, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { audienceGroupsApi } from '@/lib/projects/api';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
 
@@ -17,11 +17,45 @@ const values: Record<string, string[]> = { Country: ['Canada', 'United States', 
 const makeRule = (id: number): Rule => ({ id, filter: '', operator: '', value: '' });
 const makeBlock = (id: number, ruleId: number): Block => ({ id, rules: [makeRule(ruleId)] });
 
+const backendField: Record<string, string> = { Email: 'email', 'Current Lifecycle Segment': 'lifecycleSegmentId', Country: 'country', Region: 'region', 'Preferred Language': 'preferredLanguage', Platform: 'platform', 'Push Enabled': 'pushEnabled', 'Email Available': 'emailAvailable', 'Last Active': 'lastActiveAt' };
+const backendOperator: Record<string, string> = { Is: 'equals', 'Is not': 'not_equals', Contains: 'contains', 'Is available': 'exists', 'Is not available': 'not_exists', 'In the last': 'within_days', More: 'greater_than', 'More than': 'not_within_days' };
+const uiField: Record<string, string> = Object.fromEntries(Object.entries(backendField).map(([label, field]) => [field, label]));
+const uiOperator: Record<string, string> = Object.fromEntries(Object.entries(backendOperator).map(([label, operator]) => [operator, label]));
+function toBackendRules(blocks: Block[]) {
+  return {
+    operator: blocks.length > 1 ? 'OR' as const : 'AND' as const,
+    conditions: blocks.flatMap(block => block.rules.filter(rule => rule.filter && rule.operator).map(rule => ({
+      field: backendField[rule.filter] ?? rule.filter,
+      operator: backendOperator[rule.operator] ?? rule.operator,
+      ...(rule.value.trim() ? { value: rule.value.trim() } : {}),
+    }))),
+  };
+}
+
 export default function AudienceGroupWorkspace({ groupId }: { groupId: string }) {
   const router = useRouter();
   const { active } = useActiveProject();
   const groupQuery = useQuery({ queryKey: ['projects', 'audience-groups', active?.id, groupId], queryFn: () => audienceGroupsApi.get(active!.id, groupId), enabled: Boolean(active?.id) });
   const membersQuery = useQuery({ queryKey: ['projects', 'audience-groups', active?.id, groupId, 'members'], queryFn: () => audienceGroupsApi.members(active!.id, groupId), enabled: Boolean(active?.id) });
+  const queryClient = useQueryClient();
+  const saveConditions = useMutation({
+    mutationFn: () => audienceGroupsApi.update(active!.id, groupId, {
+      name: groupQuery.data?.name,
+      description: groupQuery.data?.description ?? undefined,
+      rules: toBackendRules(blocks),
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects', 'audience-groups', active?.id, groupId] });
+      queryClient.invalidateQueries({ queryKey: ['projects', 'audience-groups', active?.id, groupId, 'members'] });
+      queryClient.invalidateQueries({ queryKey: ['projects', 'audience-groups', active?.id] });
+    },
+  });
+  useEffect(() => {
+    const rules = groupQuery.data?.rules as { operator?: 'AND' | 'OR'; conditions?: Array<{ field: string; operator: string; value?: string }> } | undefined;
+    if (!rules?.conditions?.length) return;
+    setBlocks([{ id: 1, rules: rules.conditions.map((condition, index) => ({ id: index + 1, filter: uiField[condition.field] ?? condition.field, operator: uiOperator[condition.operator] ?? condition.operator, value: condition.value ?? '' })) }]);
+    setNextId(rules.conditions.length + 1);
+  }, [groupQuery.data]);
   const title = groupQuery.data?.name ?? decodeURIComponent(groupId).replace(/-/g, ' ').replace(/\b\w/g, letter => letter.toUpperCase());
   const [blocks, setBlocks] = useState<Block[]>([makeBlock(1, 1)]);
   const [nextId, setNextId] = useState(2);
@@ -36,8 +70,8 @@ export default function AudienceGroupWorkspace({ groupId }: { groupId: string })
   const openUser = (userId: string) => router.push(`/dashboard/users/${userId}`);
   return <Stack gap={2} className="audience-group-workspace">
     <Button startIcon={<ArrowBackRounded />} onClick={() => router.push('/dashboard/users')} className="group-back-button">Back to audience groups</Button>
-    <Card className="group-title-card"><Typography color="text.secondary" fontSize={10}>Audience group</Typography><Typography variant="h3">{title}</Typography></Card>
-    <Card className="group-section-card"><Typography variant="h3">Group conditions</Typography><Typography color="text.secondary" fontSize={12}>Build the audience using filters for user data, lifecycle, and engagement.</Typography><Stack gap={1.5} sx={{ mt: 2 }}><Box className="condition-groups"><Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ px: 1, pb: 1 }}><Box><Typography fontWeight={900}>Match {blocks.length > 1 ? 'any' : 'all'} of these conditions</Typography><Typography color="text.secondary" fontSize={11}>Conditions joined with <strong>{blocks.length > 1 ? 'OR' : 'AND'}</strong></Typography></Box><Chip label={blocks.length > 1 ? 'OR' : 'AND'} className="condition-logic-chip" size="small" /></Stack>{blocks.map((block, index) => <Fragment key={block.id}><Box className="condition-block"><Stack gap={1.2} className="condition-block-inner">{block.rules.map(rule => <ConditionRow key={rule.id} rule={rule} onChange={(field, value) => updateRule(block.id, rule.id, field, value)} onRemove={() => removeRule(block.id, rule.id)} />)}<Button size="small" startIcon={<AddRounded />} onClick={() => addAnd(block.id)} disabled={conditionCount >= 10} className="condition-add-button">AND</Button></Stack></Box>{index < blocks.length - 1 && <Box className="condition-or-divider"><span>OR</span></Box>}</Fragment>)}<Button size="small" startIcon={<AddRounded />} onClick={addOr} disabled={conditionCount >= 10} className="condition-add-button condition-add-or">OR</Button></Box></Stack><Divider sx={{ my: 2 }} /><Stack direction="row" justifyContent="space-between" alignItems="center"><Typography color="text.secondary" fontSize={12}>{conditionCount} / 10 conditions</Typography><Button variant="contained">Save conditions</Button></Stack></Card>
+    <Card className="group-title-card"><Typography color="text.secondary" fontSize={10}>Audience group</Typography><Typography variant="h3">{groupQuery.isLoading ? <Skeleton width={180} /> : title}</Typography></Card>
+    <Card className="group-section-card"><Typography variant="h3">Group conditions</Typography><Typography color="text.secondary" fontSize={12}>Build the audience using filters for user data, lifecycle, and engagement.</Typography><Stack gap={1.5} sx={{ mt: 2 }}><Box className="condition-groups"><Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ px: 1, pb: 1 }}><Box><Typography fontWeight={900}>Match {blocks.length > 1 ? 'any' : 'all'} of these conditions</Typography><Typography color="text.secondary" fontSize={11}>Conditions joined with <strong>{blocks.length > 1 ? 'OR' : 'AND'}</strong></Typography></Box><Chip label={blocks.length > 1 ? 'OR' : 'AND'} className="condition-logic-chip" size="small" /></Stack>{blocks.map((block, index) => <Fragment key={block.id}><Box className="condition-block"><Stack gap={1.2} className="condition-block-inner">{block.rules.map(rule => <ConditionRow key={rule.id} rule={rule} onChange={(field, value) => updateRule(block.id, rule.id, field, value)} onRemove={() => removeRule(block.id, rule.id)} />)}<Button size="small" startIcon={<AddRounded />} onClick={() => addAnd(block.id)} disabled={conditionCount >= 10} className="condition-add-button">AND</Button></Stack></Box>{index < blocks.length - 1 && <Box className="condition-or-divider"><span>OR</span></Box>}</Fragment>)}<Button size="small" startIcon={<AddRounded />} onClick={addOr} disabled={conditionCount >= 10} className="condition-add-button condition-add-or">OR</Button></Box></Stack><Divider sx={{ my: 2 }} /><Stack direction="row" justifyContent="space-between" alignItems="center"><Typography color="text.secondary" fontSize={12}>{conditionCount} / 10 conditions</Typography><Box textAlign="right"><Button variant="contained" disabled={saveConditions.isPending || groupQuery.isLoading} onClick={() => saveConditions.mutate()}>{saveConditions.isPending ? <CircularProgress size={18} color="inherit" /> : "Save conditions"}</Button>{saveConditions.isError && <Typography color="error" fontSize={11} sx={{ mt: 0.5 }}>Could not save conditions. Check that at least one valid condition is selected.</Typography>}</Box></Stack></Card>
     <EngagementCard />
     <Card className="group-section-card users-in-group"><Typography variant="h3">Users in this group</Typography><Divider sx={{ mx: -2.5, mt: 2 }} /><Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" gap={1.2} sx={{ mt: 2 }}><TextField size="small" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search users by name or email" InputProps={{ startAdornment: <SearchRounded fontSize="small" sx={{ mr: 1, color: '#7c8aa2' }} /> }} /><Typography color="text.secondary" fontSize={11} sx={{ alignSelf: 'center' }}>{filteredUsers.length} users currently match these conditions.</Typography></Stack><Box sx={{ overflowX: 'auto', mt: 1.5 }}><Table size="small"><TableHead><TableRow>{['User', 'Email', 'Status', 'Location', 'Created'].map(label => <TableCell key={label}>{label}</TableCell>)}</TableRow></TableHead><TableBody>{membersQuery.isLoading ? Array.from({ length: 4 }, (_, index) => <TableRow key={`member-skeleton-${index}`}><TableCell colSpan={5}><Skeleton variant="text" /></TableCell></TableRow>) : filteredUsers.map(user => <TableRow key={user.id} hover tabIndex={0} className="group-user-row" onClick={() => openUser(user.externalUserId || user.id)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') openUser(user.externalUserId || user.id); }}><TableCell><Typography fontSize={11} fontWeight={900}>{user.name || user.externalUserId || user.id}</Typography></TableCell><TableCell>{user.email || '—'}</TableCell><TableCell><Chip label="Member" size="small" className="active-chip" /></TableCell><TableCell>{user.country || 'Unknown'}</TableCell><TableCell>{new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(user.createdAt))}</TableCell></TableRow>)}</TableBody></Table></Box></Card>
   </Stack>;
