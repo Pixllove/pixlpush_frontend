@@ -1,6 +1,6 @@
 import { authRequest } from '@/lib/auth/client';
 import type {
-  CreatedSdkKey, EmailSettings, FirebaseSettings, Project, ProjectDetail, SdkKey, UpdateProjectInput,
+  CreatedSdkKey, EmailSettings, FirebaseSettings, LifecycleSegment, Project, ProjectDetail, SdkKey, UpdateProjectInput, UsersPage,
 } from '@/types/project';
 
 /** Route handlers under app/api/projects, which forward to Fastify. */
@@ -54,6 +54,25 @@ export const emailApi = {
   configure: (projectId: string, input: { sendingDomain: string; senderEmail: string; senderName: string }) =>
     authRequest<EmailSettings>(at(projectId, '/email-settings'), input, BASE, 'PUT'),
   verify: (projectId: string) => authRequest<EmailSettings>(at(projectId, '/email-settings/verify'), {}, BASE),
+};
+
+export const usersApi = {
+  list: (projectId: string, params?: { search?: string; limit?: number; cursor?: string | null }) => {
+    const query = new URLSearchParams();
+    if (params?.search) query.set('search', params.search);
+    query.set('limit', String(params?.limit ?? 100));
+    if (params?.cursor) query.set('cursor', params.cursor);
+    return authRequest<UsersPage>(
+      at(projectId, `/users?${query.toString()}`),
+      undefined,
+      BASE,
+    );
+  },
+};
+
+export const lifecycleSegmentsApi = {
+  list: (projectId: string) =>
+    authRequest<LifecycleSegment[]>(at(projectId, '/lifecycle-segments'), undefined, BASE),
 };
 
 export const projectKeys = {

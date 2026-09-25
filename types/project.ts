@@ -29,6 +29,35 @@ export interface ProjectDetail extends Project {
   _count?: { endUsers: number; members: number };
 }
 
+export interface EndUser {
+  id: string;
+  externalUserId: string | null;
+  email: string | null;
+  name: string | null;
+  country: string | null;
+  preferredLanguage: string | null;
+  lastActiveAt: string | null;
+  createdAt: string;
+  lifecycleSegment: { id: string; name: string } | null;
+}
+
+export interface UsersPage {
+  users: EndUser[];
+  nextCursor: string | null;
+}
+
+/** GET /projects/:projectId/lifecycle-segments returns an array in `data`. */
+export interface LifecycleSegment {
+  id: string;
+  name: string;
+  description: string | null;
+  rules: Record<string, unknown>;
+  userCount?: number;
+  usersCount?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /** PATCH /projects/:projectId. Omitted keys are left unchanged. */
 export interface UpdateProjectInput {
   name?: string;

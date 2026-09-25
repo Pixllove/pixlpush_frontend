@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { callBackendWithRefresh } from '@/lib/auth/server';
 
 /** Project-scoped backend areas this proxy may reach. Anything else is a 404. */
-const ALLOWED = ['deactivate', 'restore', 'firebase', 'sdk-keys', 'email-settings'];
+const ALLOWED = ['deactivate', 'restore', 'firebase', 'sdk-keys', 'email-settings', 'users', 'lifecycle-segments'];
 
 type Params = { params: { projectId: string; path: string[] } };
 
@@ -13,10 +13,11 @@ async function proxy(request: Request, { params }: Params) {
   }
 
   const path = [params.projectId, ...params.path].map(encodeURIComponent).join('/');
+  const query = new URL(request.url).search;
   // Fastify rejects an empty body sent as application/json, hence `{}`.
   const body = request.method === 'GET' ? undefined : await request.json().catch(() => ({}));
 
-  const result = await callBackendWithRefresh(`/projects/${path}`, { method: request.method, body });
+  const result = await callBackendWithRefresh(`/projects/${path}${query}`, { method: request.method, body });
   return NextResponse.json(result.body, { status: result.status });
 }
 
