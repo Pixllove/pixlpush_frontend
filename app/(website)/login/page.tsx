@@ -1,7 +1,14 @@
-import { Box, Button, Card, CardContent, Divider, Stack, TextField, Typography } from '@mui/material';
-import GoogleIcon from '@mui/icons-material/Google';
+import { Suspense } from 'react';
 import AuthShell from '@/components/website/AuthShell';
+import LoginForm from '@/components/auth/LoginForm';
 
 export default function LoginPage() {
-  return <AuthShell mode="login"><Card className="auth-card" sx={{ maxWidth: 620, mx: 'auto', border: '1px solid #eee7f1', borderRadius: 4, boxShadow: '0 22px 70px rgba(44,16,58,.08)' }}><CardContent sx={{ p: { xs: 3, md: 5 }, height: '100%', display: 'flex', flexDirection: 'column' }}><Typography variant="h3" sx={{ fontSize: { xs: 33, md: 42 } }}>Welcome back.</Typography><Typography color="text.secondary" sx={{ mt: 1 }}>Sign in to your PixlPush workspace.</Typography><Button fullWidth variant="outlined" startIcon={<GoogleIcon />} href="/dashboard" sx={{ mt: 4, py: 1.4, borderColor: '#ddd5e5', color: '#241536' }}>Continue with Google</Button><Stack direction="row" alignItems="center" gap={2} sx={{ my: 3 }}><Divider sx={{ flex: 1 }} /><Typography fontSize={12} color="text.secondary" whiteSpace="nowrap">or continue with email</Typography><Divider sx={{ flex: 1 }} /></Stack><Box component="form" sx={{ display: 'grid', gap: 2 }}><TextField label="Work email" type="email" fullWidth /><Stack direction="row" justifyContent="space-between" alignItems="center"><Typography fontSize={13} fontWeight={700}>Password</Typography><Typography fontSize={12} color="primary">Forgot password?</Typography></Stack><TextField placeholder="Enter your password" type="password" fullWidth /><Button href="/dashboard" variant="contained" size="large" sx={{ mt: 1, py: 1.4 }}>Log in to PixlPush</Button></Box><Typography textAlign="center" color="text.secondary" fontSize={13} sx={{ mt: 'auto', pt: 3 }}>Don&apos;t have an account? <a href="/get-started" style={{ color: '#6318bd', fontWeight: 700 }}>Create a free workspace</a></Typography></CardContent></Card></AuthShell>;
+  return (
+    <AuthShell mode="login">
+      {/* useSearchParams needs a Suspense boundary during static rendering. */}
+      <Suspense>
+        <LoginForm />
+      </Suspense>
+    </AuthShell>
+  );
 }

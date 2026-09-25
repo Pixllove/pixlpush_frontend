@@ -1,7 +1,13 @@
-import { Box, Button, Card, CardContent, Divider, Stack, TextField, Typography } from '@mui/material';
-import GoogleIcon from '@mui/icons-material/Google';
+import { Suspense } from 'react';
 import AuthShell from '@/components/website/AuthShell';
+import SignupForm from '@/components/auth/SignupForm';
 
 export default function GetStartedPage() {
-  return <AuthShell mode="signup"><Card className="auth-card signup-card" sx={{ maxWidth: 620, mx: 'auto', border: '1px solid #eee7f1', borderRadius: 4, boxShadow: '0 22px 70px rgba(44,16,58,.08)' }}><CardContent sx={{ p: { xs: 3, md: 5 }, display: 'flex', flexDirection: 'column' }}><Typography variant="h3" sx={{ fontSize: { xs: 33, md: 42 } }}>Create your workspace.</Typography><Typography color="text.secondary" sx={{ mt: 1, maxWidth: 480 }}>Set up your PixlPush account and start building your first retention journey.</Typography><Button fullWidth variant="outlined" startIcon={<GoogleIcon />} href="/verify-email" sx={{ mt: 3, py: 1.25, borderColor: '#ddd5e5', color: '#241536' }}>Continue with Google</Button><Stack direction="row" alignItems="center" gap={2} sx={{ my: 2.5 }}><Divider sx={{ flex: 1 }} /><Typography fontSize={12} color="text.secondary" whiteSpace="nowrap">or sign up with email</Typography><Divider sx={{ flex: 1 }} /></Stack><Box component="form" sx={{ display: 'grid', gap: 1.5 }}><Stack direction={{ xs: 'column', sm: 'row' }} gap={1.5}><TextField label="First name" fullWidth /><TextField label="Last name" fullWidth /></Stack><TextField label="Work email" type="email" fullWidth /><TextField label="Company name" fullWidth /><TextField label="What best describes your product?" fullWidth /><Button href="/verify-email" variant="contained" size="large" sx={{ mt: .5, py: 1.3 }}>Create my free workspace</Button></Box><Typography textAlign="center" color="text.secondary" fontSize={11} lineHeight={1.5} sx={{ mt: 2 }}>By creating an account, you agree to our terms and privacy policy. No credit card required.</Typography><Typography textAlign="center" color="text.secondary" fontSize={13} sx={{ mt: 1.5 }}>Already have an account? <a href="/login" style={{ color: '#6318bd', fontWeight: 700 }}>Log in</a></Typography></CardContent></Card></AuthShell>;
+  return (
+    <AuthShell mode="signup">
+      <Suspense>
+        <SignupForm />
+      </Suspense>
+    </AuthShell>
+  );
 }

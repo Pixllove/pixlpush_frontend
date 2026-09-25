@@ -1,5 +1,13 @@
-import { Box, Button, Card, CardContent, Stack, Typography } from '@mui/material';
-import MarkEmailReadRounded from '@mui/icons-material/MarkEmailReadRounded';
+import { Suspense } from 'react';
 import AuthShell from '@/components/website/AuthShell';
+import VerifyEmailView from '@/components/auth/VerifyEmailView';
 
-export default function VerifyEmailPage() { return <AuthShell mode="signup"><Card className="auth-card" sx={{ maxWidth: 620, mx: 'auto', border: '1px solid #eee7f1', borderRadius: 4, boxShadow: '0 22px 70px rgba(44,16,58,.08)' }}><CardContent sx={{ p: { xs: 3, md: 5 }, textAlign: 'center' }}><Box sx={{ width: 64, height: 64, mx: 'auto', display: 'grid', placeItems: 'center', borderRadius: '18px', color: '#7132d3', bgcolor: '#f0e8ff' }}><MarkEmailReadRounded /></Box><Typography variant="h3" sx={{ mt: 3, fontSize: { xs: 32, md: 42 } }}>Verify your email.</Typography><Typography color="text.secondary" sx={{ mt: 1, lineHeight: 1.6 }}>We sent a verification link to your work email. Verify it to activate your Account and continue to Project setup.</Typography><Stack gap={1.5} sx={{ mt: 4 }}><Button variant="contained" href="/dashboard">I have verified my email</Button><Button variant="text">Resend verification email</Button></Stack><Typography color="text.secondary" fontSize={12} sx={{ mt: 3 }}>The link expires in 24 hours.</Typography></CardContent></Card></AuthShell>; }
+export default function VerifyEmailPage() {
+  return (
+    <AuthShell mode="signup">
+      <Suspense>
+        <VerifyEmailView />
+      </Suspense>
+    </AuthShell>
+  );
+}
