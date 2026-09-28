@@ -122,6 +122,9 @@ export const userImportApi = {
     authRequest<ImportPreview>(at(projectId, `/user-imports/${encodeURIComponent(importId)}/preview`), {}, BASE),
   commit: (projectId: string, importId: string) =>
     authRequest<UserImport>(at(projectId, `/user-imports/${encodeURIComponent(importId)}/commit`), {}, BASE),
+  /** Permanently deletes the users this import created (not the ones it only updated). */
+  deleteUsers: (projectId: string, importId: string) =>
+    authRequest<{ deletedUsers: number }>(at(projectId, `/user-imports/${encodeURIComponent(importId)}/users`), {}, BASE, 'DELETE'),
 };
 
 export const audienceGroupsApi = {
