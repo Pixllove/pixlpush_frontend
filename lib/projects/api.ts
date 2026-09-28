@@ -120,8 +120,13 @@ export const userImportApi = {
     authRequest<UserImport>(at(projectId, `/user-imports/${encodeURIComponent(importId)}/mapping`), input, BASE, 'PUT'),
   preview: (projectId: string, importId: string) =>
     authRequest<ImportPreview>(at(projectId, `/user-imports/${encodeURIComponent(importId)}/preview`), {}, BASE),
-  commit: (projectId: string, importId: string) =>
-    authRequest<UserImport>(at(projectId, `/user-imports/${encodeURIComponent(importId)}/commit`), {}, BASE),
+  /** `audienceGroupName` creates an Audience Group holding exactly this import's users. */
+  commit: (projectId: string, importId: string, audienceGroupName?: string) =>
+    authRequest<UserImport & { audienceGroup?: { id: string; name: string } | null }>(
+      at(projectId, `/user-imports/${encodeURIComponent(importId)}/commit`),
+      audienceGroupName ? { audienceGroupName } : {},
+      BASE,
+    ),
   /** Permanently deletes the users this import created (not the ones it only updated). */
   deleteUsers: (projectId: string, importId: string) =>
     authRequest<{ deletedUsers: number }>(at(projectId, `/user-imports/${encodeURIComponent(importId)}/users`), {}, BASE, 'DELETE'),
