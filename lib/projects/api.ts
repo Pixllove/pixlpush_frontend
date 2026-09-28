@@ -1,7 +1,7 @@
 import { authRequest } from '@/lib/auth/client';
 import type {
-  AudienceGroup, AudienceGroupMember, CreatedSdkKey, EmailSettings, FirebaseSettings, ImportMappingInput, ImportPreview,
-  ImportSuggestions, LifecycleSegment, Project, ProjectDetail, SdkKey, UpdateProjectInput, UserImport, UserStats, UsersPage,
+  AudienceGroup, AudienceGroupMember, AudienceGroupSchema, CreatedSdkKey, EmailSettings, FirebaseSettings, ImportMappingInput, ImportPreview,
+  ImportSuggestions, LifecycleSegment, LifecycleSegmentMember, LifecycleSegmentSchema, Project, ProjectDetail, SdkKey, UpdateProjectInput, UserImport, UserStats, UsersPage,
 } from '@/types/project';
 
 /** Route handlers under app/api/projects, which forward to Fastify. */
@@ -78,6 +78,27 @@ export const userStatsApi = {
 export const lifecycleSegmentsApi = {
   list: (projectId: string) =>
     authRequest<LifecycleSegment[]>(at(projectId, '/lifecycle-segments'), undefined, BASE),
+  get: (projectId: string, segmentId: string) =>
+    authRequest<LifecycleSegment>(at(projectId, `/lifecycle-segments/${encodeURIComponent(segmentId)}`), undefined, BASE),
+  create: (projectId: string, input: { name: string; description?: string; rules: { operator?: 'AND' | 'OR'; conditions: Array<{ event: string }> } }) =>
+    authRequest<LifecycleSegment>(at(projectId, '/lifecycle-segments'), input, BASE),
+  update: (projectId: string, segmentId: string, input: { name?: string; description?: string; rules?: { operator: 'AND' | 'OR'; conditions: Array<{ event: string }> } }) =>
+    authRequest<LifecycleSegment>(at(projectId, `/lifecycle-segments/${encodeURIComponent(segmentId)}`), input, BASE, 'PATCH'),
+  delete: (projectId: string, segmentId: string) =>
+    authRequest<void>(at(projectId, `/lifecycle-segments/${encodeURIComponent(segmentId)}`), {}, BASE, 'DELETE'),
+  members: (projectId: string, segmentId: string, params: { limit?: number; cursor?: string | null } = {}) => {
+    const query = new URLSearchParams({ limit: String(params.limit ?? 50) });
+    if (params.cursor) query.set('cursor', params.cursor);
+    return authRequest<{ members: LifecycleSegmentMember[]; nextCursor: string | null }>(
+      at(projectId, `/lifecycle-segments/${encodeURIComponent(segmentId)}/members?${query.toString()}`),
+      undefined,
+      BASE,
+    );
+  },
+  schema: (projectId: string) =>
+    authRequest<LifecycleSegmentSchema>(at(projectId, '/lifecycle-segments/schema'), undefined, BASE),
+  reevaluate: (projectId: string) =>
+    authRequest<{ reclassifiedUsers: number }>(at(projectId, '/lifecycle-segments/reevaluate'), {}, BASE),
 };
 
 /** CSV user import: upload -> suggestions -> mapping -> preview -> commit (worker applies it). */
@@ -106,16 +127,25 @@ export const userImportApi = {
 export const audienceGroupsApi = {
   list: (projectId: string) =>
     authRequest<AudienceGroup[]>(at(projectId, '/audience-groups'), undefined, BASE),
-  create: (projectId: string, input: { name: string; description?: string; rules: { operator: 'AND' | 'OR'; conditions: Array<{ field: string; operator: string; value?: string }> } }) =>
+  create: (projectId: string, input: { name: string; description?: string; rules?: Record<string, unknown> | null }) =>
     authRequest<AudienceGroup>(at(projectId, '/audience-groups'), input, BASE),
   get: (projectId: string, groupId: string) =>
     authRequest<AudienceGroup>(at(projectId, `/audience-groups/${encodeURIComponent(groupId)}`), undefined, BASE),
-  update: (projectId: string, groupId: string, input: { name?: string; description?: string; rules: { operator: 'AND' | 'OR'; conditions: Array<{ field: string; operator: string; value?: string }> } }) =>
+  update: (projectId: string, groupId: string, input: { name?: string; description?: string; rules: Record<string, unknown> | null }) =>
     authRequest<AudienceGroup>(at(projectId, `/audience-groups/${encodeURIComponent(groupId)}`), input, BASE, 'PATCH'),
   delete: (projectId: string, groupId: string) =>
     authRequest<void>(at(projectId, `/audience-groups/${encodeURIComponent(groupId)}`), {}, BASE, 'DELETE'),
-  members: (projectId: string, groupId: string, limit = 100) =>
-    authRequest<{ members: AudienceGroupMember[]; nextCursor: string | null }>(at(projectId, `/audience-groups/${encodeURIComponent(groupId)}/members?limit=${limit}`), undefined, BASE),
+  members: (projectId: string, groupId: string, params: { limit?: number; cursor?: string | null } = {}) => {
+    const query = new URLSearchParams({ limit: String(params.limit ?? 50) });
+    if (params.cursor) query.set('cursor', params.cursor);
+    return authRequest<{ members: AudienceGroupMember[]; nextCursor: string | null }>(
+      at(projectId, `/audience-groups/${encodeURIComponent(groupId)}/members?${query.toString()}`),
+      undefined,
+      BASE,
+    );
+  },
+  schema: (projectId: string) =>
+    authRequest<AudienceGroupSchema>(at(projectId, '/audience-groups/schema'), undefined, BASE),
 };
 
 export const projectKeys = {

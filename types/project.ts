@@ -58,11 +58,46 @@ export interface LifecycleSegment {
   updatedAt: string;
 }
 
+export interface LifecycleSegmentMember {
+  id: string;
+  externalUserId: string | null;
+  email: string | null;
+  name: string | null;
+  country?: string | null;
+  accountStatus?: string | null;
+  createdAt: string;
+  lastActiveAt?: string | null;
+}
+
+export interface LifecycleSegmentSchemaEvent {
+  name: string;
+  tracked?: boolean;
+  eventCount: number;
+  lastSeenAt: string | null;
+  assignedSegment: { id: string; name: string } | null;
+}
+
+export interface LifecycleSegmentRecommendedEvent {
+  name: string;
+  suggestedSegment?: string;
+  tracked: boolean;
+  assignedSegment: { id: string; name: string } | null;
+}
+
+export interface LifecycleSegmentSchema {
+  logicalOperators: Array<'AND' | 'OR'>;
+  condition: { key: string; label: string; value: { type: string; required?: boolean } };
+  limits: { maxConditions: number };
+  allowCustomEvent: boolean;
+  events: LifecycleSegmentSchemaEvent[];
+  recommendedEvents?: LifecycleSegmentRecommendedEvent[];
+}
+
 export interface AudienceGroup {
   id: string;
   name: string;
   description: string | null;
-  rules: Record<string, unknown>;
+  rules: Record<string, unknown> | null;
   memberCount?: number;
   createdAt: string;
   updatedAt: string;
@@ -73,8 +108,37 @@ export interface AudienceGroupMember {
   externalUserId: string | null;
   email: string | null;
   name: string | null;
-  country: string | null;
-  createdAt: string;
+  lastActiveAt: string | null;
+  enteredAt: string;
+}
+
+export interface AudienceGroupSchemaOption { key: string; label: string }
+export interface AudienceGroupSchemaCondition {
+  key: string;
+  label: string;
+  value: {
+    type: string;
+    required?: boolean;
+    multiple?: boolean;
+    freeText?: boolean;
+    min?: number;
+    unit?: string;
+    options?: AudienceGroupSchemaOption[];
+  };
+}
+export interface AudienceGroupSchemaField {
+  key: string;
+  label: string;
+  category?: string;
+  operators: string[];
+  conditions: AudienceGroupSchemaCondition[];
+}
+export interface AudienceGroupSchema {
+  levels: Array<Record<string, unknown>>;
+  fields: AudienceGroupSchemaField[];
+  fieldKeys: string[];
+  logicalOperators: Array<'AND' | 'OR'>;
+  limits: { maxConditions: number; maxDepth: number };
 }
 
 /** PATCH /projects/:projectId. Omitted keys are left unchanged. */
