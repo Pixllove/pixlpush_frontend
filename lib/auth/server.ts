@@ -77,15 +77,14 @@ export async function callBackend<T>(
     headers.Authorization = `Bearer ${token}`;
   }
 
+  let response: Response;
   try {
-    const response = await fetch(`${API_URL}${path}`, {
+    response = await fetch(`${API_URL}${path}`, {
       method: init.method ?? 'GET',
       headers,
       body: init.body === undefined ? undefined : init.contentType ? String(init.body) : JSON.stringify(init.body),
       cache: 'no-store',
     });
-
-    return { ok: response.ok, status: response.status, body: await response.json() };
   } catch {
     // Backend unreachable. The reason is deliberately not echoed to the client.
     return {
@@ -94,6 +93,20 @@ export async function callBackend<T>(
       body: { error: { code: 'BACKEND_UNAVAILABLE', message: 'Service is unavailable. Please try again.' } },
     };
   }
+
+  // The backend answered, so this is never "unavailable". A 204 (DELETE) or any
+  // other empty reply has no body; a non-JSON reply (gateway error page) keeps
+  // its status with a generic error.
+  const text = await response.text().catch(() => '');
+  let body: unknown = null;
+  if (text) {
+    try {
+      body = JSON.parse(text);
+    } catch {
+      body = response.ok ? null : { error: { code: 'UPSTREAM_ERROR', message: 'Unexpected response from the server.' } };
+    }
+  }
+  return { ok: response.ok, status: response.status, body: body as UpstreamResult<T>['body'] };
 }
 
 interface SessionTokens {

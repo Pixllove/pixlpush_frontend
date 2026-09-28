@@ -83,7 +83,8 @@ export async function authRequest<T>(path: string, body?: unknown, base?: string
 
   if (!response.ok) throw normalizeError(response.status, payload);
 
-  return (payload as { data: T }).data;
+  // 204 No Content: success with no payload.
+  return (payload as { data: T } | undefined)?.data as T;
 }
 
 /** True for failures that will never succeed on retry. */

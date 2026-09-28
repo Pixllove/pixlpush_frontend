@@ -26,7 +26,9 @@ async function proxy(request: Request, { params }: Params) {
     body,
     contentType: csvType,
   });
+  // No body (204 from DELETE): NextResponse.json would throw on a 204.
+  if (result.body === null) return new NextResponse(null, { status: result.status });
   return NextResponse.json(result.body, { status: result.status });
 }
 
-export { proxy as GET, proxy as POST, proxy as PUT, proxy as DELETE };
+export { proxy as GET, proxy as POST, proxy as PUT, proxy as PATCH, proxy as DELETE };
