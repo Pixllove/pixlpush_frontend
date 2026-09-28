@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Avatar, Divider, IconButton, ListItemIcon, Menu, MenuItem, Stack, Typography } from '@mui/material';
-import { KeyboardArrowDownRounded, LockOutlined, LogoutRounded } from '@mui/icons-material';
+import { Avatar, Badge, Divider, IconButton, ListItemIcon, Menu, MenuItem, Stack, Tooltip, Typography } from '@mui/material';
+import { CheckRounded, KeyboardArrowDownRounded, PersonOutlineRounded, LogoutRounded } from '@mui/icons-material';
 import { useCurrentUser } from '@/hooks/auth/use-current-user';
 import { useLogout } from '@/hooks/auth/use-logout';
 
@@ -16,16 +16,16 @@ export default function AccountMenu() {
   return (
     <>
       <Stack direction="row" alignItems="center" gap={0.5}>
-        <Avatar sx={{ width: 34, height: 34, background: 'linear-gradient(135deg,#ff5d6c,#7928ef)' }}>
-          {initial}
-        </Avatar>
+        <Badge overlap="circular" anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} badgeContent={account?.emailVerified ? <Tooltip title="Email verified"><CheckRounded sx={{ fontSize: 11, color: '#fff' }} /></Tooltip> : null} sx={{ '& .MuiBadge-badge': { width: 16, height: 16, minWidth: 16, borderRadius: '50%', bgcolor: '#1976d2', border: '2px solid #fff', p: 0 } }}>
+          <Avatar sx={{ width: 34, height: 34, background: 'linear-gradient(135deg,#ff5d6c,#7928ef)' }}>{initial}</Avatar>
+        </Badge>
         <IconButton size="small" onClick={(e) => setAnchor(e.currentTarget)} aria-label="Account menu">
           <KeyboardArrowDownRounded />
         </IconButton>
       </Stack>
 
-      <Menu anchorEl={anchor} open={Boolean(anchor)} onClose={() => setAnchor(null)}>
-        <Stack sx={{ px: 2, py: 1 }}>
+      <Menu anchorEl={anchor} open={Boolean(anchor)} onClose={() => setAnchor(null)} PaperProps={{ sx: { mt: 1, minWidth: 245, borderRadius: 2, overflow: 'hidden', border: '1px solid rgba(113,50,211,.12)', boxShadow: '0 18px 42px rgba(35,16,55,.2)' } }}>
+        <Stack sx={{ px: 2.2, py: 1.8, background: 'linear-gradient(135deg, #f5edff 0%, #fff5f1 100%)' }}>
           <Typography fontSize={13} fontWeight={700}>
             {account?.name ?? 'Signed in'}
           </Typography>
@@ -34,13 +34,14 @@ export default function AccountMenu() {
           </Typography>
         </Stack>
         <Divider />
-        <MenuItem component="a" href="/dashboard/account" onClick={() => setAnchor(null)}>
+        <MenuItem component="a" href="/dashboard/account" onClick={() => setAnchor(null)} sx={{ px: 2.2, py: 1.25, gap: 1, '&:hover': { bgcolor: '#f5edff', color: 'primary.main' } }}>
           <ListItemIcon>
-            <LockOutlined fontSize="small" />
+            <PersonOutlineRounded fontSize="small" />
           </ListItemIcon>
-          Account security
+          My profile
         </MenuItem>
         <MenuItem
+          sx={{ px: 2.2, py: 1.25, gap: 1, '&:hover': { bgcolor: '#fff1ef', color: '#d94841' } }}
           disabled={logout.isPending}
           onClick={() => {
             setAnchor(null);
