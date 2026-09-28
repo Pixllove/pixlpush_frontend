@@ -36,7 +36,7 @@ export default function SignupForm() {
     formState: { errors, isSubmitting },
   } = useForm<SignupInput>({
     resolver: zodResolver(signupSchema),
-    defaultValues: { email: '', password: '', name: '' },
+    defaultValues: { email: '', password: '', name: '', company: '' },
   });
 
   useClearOnRestore(reset);
@@ -49,6 +49,7 @@ export default function SignupForm() {
         password: values.password,
         // The backend takes a single optional name; empty means "not supplied".
         ...(values.name?.trim() ? { name: values.name.trim() } : {}),
+        company: values.company.trim(),
       });
 
       // Signup establishes no session: the backend emails a verification link.
@@ -100,6 +101,17 @@ export default function SignupForm() {
             error={Boolean(errors.name)}
             helperText={errors.name?.message}
             {...register('name')}
+          />
+
+          <TextField
+            label="Company name"
+            autoComplete="organization"
+            fullWidth
+            required
+            disabled={pending}
+            error={Boolean(errors.company)}
+            helperText={errors.company?.message ?? 'Your company or organization name.'}
+            {...register('company')}
           />
 
           <TextField

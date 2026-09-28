@@ -25,6 +25,7 @@ export const signupSchema = z.object({
   email,
   password: newPassword,
   name: z.string().trim().min(1).max(120).optional(),
+  company: z.string().trim().min(1, 'Enter your company name.').max(160, 'Company name must be at most 160 characters.'),
 });
 
 export const forgotPasswordSchema = z.object({ email });
