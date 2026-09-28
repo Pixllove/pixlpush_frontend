@@ -1,25 +1,25 @@
-# Graph Report - pixlpush_frontend  (2026-09-28)
+# Graph Report - pixlpush_frontend  (2026-09-25)
 
 ## Corpus Check
-- 132 files · ~143,352 words
+- 132 files · ~139,917 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 627 nodes · 1162 edges · 36 communities (28 shown, 8 thin omitted)
+- 599 nodes · 1086 edges · 39 communities (29 shown, 10 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 5 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `183dac0f`
+- Built from commit: `adbc8e13`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - auth.ts
-- projectContext
+- DashboardSections.tsx
 - server.ts
 - SiteShell.tsx
-- ProjectSettingsCenter.tsx
+- use-projects.ts
 - dependencies
 - compilerOptions
 - HomePage.tsx
@@ -32,69 +32,72 @@
 - next.config.mjs
 - next-env.d.ts
 - README.md
-- DashboardSections.tsx
+- DashboardFrame
 - EmailWorkspace.tsx
 - BlockDesign.tsx
 - SimpleEmailEditor.tsx
 - PushComposer.tsx
+- AppProviders.tsx
 - reorderByInsertionIndex
 - AudienceGroupWorkspace.tsx
-- useActiveProject
+- DashboardFrame.tsx
 - JourneyWorkspace.tsx
 - UserDetailsWorkspace.tsx
 - store.ts
-- project.ts
-- LifecycleSegmentWorkspace.tsx
+- UserImportDialog.tsx
+- segments/[id]/page.tsx
 - create/page.tsx
+- push/page.tsx
+- team/page.tsx
 
 ## God Nodes (most connected - your core abstractions)
-1. `useActiveProject()` - 28 edges
-2. `ApiError` - 20 edges
+1. `useActiveProject()` - 22 edges
+2. `ApiError` - 19 edges
 3. `callBackend()` - 18 edges
 4. `DashboardFrame()` - 17 edges
 5. `compilerOptions` - 17 edges
-6. `SiteShell()` - 14 edges
-7. `callBackendWithRefresh()` - 14 edges
+6. `callBackendWithRefresh()` - 16 edges
+7. `SiteShell()` - 14 edges
 8. `PageHero()` - 13 edges
 9. `CTA()` - 12 edges
 10. `SectionIntro()` - 12 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `IntegrationsSection()` --calls--> `useActiveProject()`  [EXTRACTED]
-  components/dashboard/DashboardSections.tsx → hooks/projects/use-active-project.ts
-- `SettingsSection()` --calls--> `useActiveProject()`  [EXTRACTED]
-  components/dashboard/DashboardSections.tsx → hooks/projects/use-active-project.ts
 - `POST()` --calls--> `setSessionCookies()`  [EXTRACTED]
   app/api/auth/change-password/route.ts → lib/auth/server.ts
 - `POST()` --calls--> `callBackend()`  [EXTRACTED]
   app/api/auth/forgot-password/route.ts → lib/auth/server.ts
 - `POST()` --calls--> `setSessionCookies()`  [EXTRACTED]
   app/api/auth/google/route.ts → lib/auth/server.ts
+- `POST()` --calls--> `setSessionCookies()`  [EXTRACTED]
+  app/api/auth/login/route.ts → lib/auth/server.ts
+- `GET()` --calls--> `callBackendWithRefresh()`  [EXTRACTED]
+  app/api/auth/me/route.ts → lib/auth/server.ts
 
 ## Import Cycles
 - None detected.
 
-## Communities (36 total, 8 thin omitted)
+## Communities (39 total, 10 thin omitted)
 
 ### Community 0 - "auth.ts"
 Cohesion: 0.05
-Nodes (61): AccountMenu(), FormError(), Toast(), ChangePasswordForm(), GoogleButton(), LoginForm(), PasswordField, cardSx (+53 more)
+Nodes (66): AccountMenu(), FormError(), Toast(), ChangePasswordForm(), GoogleButton(), LoginForm(), PasswordField, cardSx (+58 more)
 
-### Community 1 - "projectContext"
-Cohesion: 0.20
-Nodes (6): metadata, BillingSection(), EmailSection(), OverviewSection(), PushSection(), projectContext
+### Community 1 - "DashboardSections.tsx"
+Cohesion: 0.18
+Nodes (8): metadata, AudienceGroupCreateDialog(), BillingSection(), EmailSection(), OverviewSection(), PushSection(), UsersSection(), projectContext
 
 ### Community 2 - "server.ts"
 Cohesion: 0.08
-Nodes (35): ChangePasswordData, POST(), POST(), LoginData, POST(), LoginData, POST(), POST() (+27 more)
+Nodes (37): ChangePasswordData, POST(), POST(), LoginData, POST(), LoginData, POST(), POST() (+29 more)
 
 ### Community 3 - "SiteShell.tsx"
 Cohesion: 0.09
 Nodes (17): posts, stories, topics, terms, items, CTA(), FeatureGrid(), plans (+9 more)
 
-### Community 4 - "ProjectSettingsCenter.tsx"
-Cohesion: 0.07
-Nodes (32): metadata, AppProviders(), CONFIG_ROLES, EmailPanel(), STATUS, CONFIG_ROLES, FirebasePanel(), panels (+24 more)
+### Community 4 - "use-projects.ts"
+Cohesion: 0.08
+Nodes (41): CreateProjectDialog(), DangerZonePanel(), CONFIG_ROLES, EmailPanel(), STATUS, CONFIG_ROLES, FirebasePanel(), ProjectDetailsPanel() (+33 more)
 
 ### Community 5 - "dependencies"
 Cohesion: 0.06
@@ -124,9 +127,9 @@ Nodes (6): AddTarget, Block, blockOptions, BlockType, EntranceConfig, JourneyBui
 Cohesion: 0.40
 Nodes (3): AUTH_ONLY, config, PROTECTED
 
-### Community 22 - "DashboardSections.tsx"
-Cohesion: 0.13
-Nodes (10): AudienceGroupCreateDialog(), ChannelSection(), IntegrationsSection(), JourneysSection(), SettingsSection(), TeamSection(), LifecycleSegmentCreateDialog(), usersApi (+2 more)
+### Community 22 - "DashboardFrame"
+Cohesion: 0.14
+Nodes (3): DashboardFrame(), JourneysSection(), ProjectSettingsCenter()
 
 ### Community 23 - "EmailWorkspace.tsx"
 Cohesion: 0.09
@@ -144,13 +147,17 @@ Nodes (9): CloseEmailEditor(), EditorItem, EmailKind, FONT_OPTIONS, FONT_SIZE_OP
 Cohesion: 0.20
 Nodes (7): countries, deepLinks, groups, languages, Mode, PushComposer(), SaveTarget
 
-### Community 29 - "AudienceGroupWorkspace.tsx"
-Cohesion: 0.13
-Nodes (15): AudienceGroupWorkspace(), backendField, backendOperator, Block, filters, makeBlock(), makeRule(), operators (+7 more)
+### Community 27 - "AppProviders.tsx"
+Cohesion: 0.32
+Nodes (4): metadata, AppProviders(), store, theme
 
-### Community 30 - "useActiveProject"
-Cohesion: 0.22
-Nodes (8): DashboardFrame(), UsersSection(), DashboardSidebar(), navigation, planLabel(), useActiveProject(), useProjects(), RootState
+### Community 29 - "AudienceGroupWorkspace.tsx"
+Cohesion: 0.21
+Nodes (8): AudienceGroupWorkspace(), Block, filters, makeBlock(), makeRule(), operators, Rule, values
+
+### Community 30 - "DashboardFrame.tsx"
+Cohesion: 0.32
+Nodes (8): IntegrationsSection(), SettingsSection(), DashboardSidebar(), navigation, planLabel(), useActiveProject(), useProjects(), RootState
 
 ### Community 31 - "JourneyWorkspace.tsx"
 Cohesion: 0.24
@@ -160,33 +167,33 @@ Nodes (8): guide, JourneyRow, journeyRows, JourneyStatus, JourneyWorkspace(), Da
 Cohesion: 0.28
 Nodes (6): ProjectId, projects, AppDispatch, SelectedProject, uiReducer, uiSlice
 
-### Community 34 - "project.ts"
-Cohesion: 0.07
-Nodes (45): DangerZonePanel(), ProjectDetailsPanel(), Field, fields, headerLanguages, SourceId, sources, UserImportDialog() (+37 more)
+### Community 34 - "UserImportDialog.tsx"
+Cohesion: 0.25
+Nodes (7): Field, fields, headerLanguages, ImportRecord, SourceId, sources, UserImportDialog()
 
-### Community 35 - "LifecycleSegmentWorkspace.tsx"
+### Community 35 - "segments/[id]/page.tsx"
 Cohesion: 0.38
-Nodes (3): LifecycleSegmentWorkspace(), metric(), lifecycleSegmentsApi
+Nodes (3): LifecycleSegmentWorkspace(), metric(), segmentData
 
 ## Knowledge Gaps
-- **171 isolated node(s):** `extends`, `next/core-web-vitals`, `metadata`, `posts`, `stories` (+166 more)
+- **164 isolated node(s):** `extends`, `next/core-web-vitals`, `metadata`, `posts`, `stories` (+159 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **8 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **10 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `ApiError` connect `auth.ts` to `project.ts`, `ProjectSettingsCenter.tsx`?**
-  _High betweenness centrality (0.057) - this node is a cross-community bridge._
-- **Why does `useActiveProject()` connect `useActiveProject` to `projectContext`, `project.ts`, `LifecycleSegmentWorkspace.tsx`, `ProjectSettingsCenter.tsx`, `DashboardSections.tsx`, `AudienceGroupWorkspace.tsx`?**
-  _High betweenness centrality (0.051) - this node is a cross-community bridge._
-- **Why does `DashboardFrame()` connect `useActiveProject` to `auth.ts`, `projectContext`, `UserDetailsWorkspace.tsx`, `LifecycleSegmentWorkspace.tsx`, `ProjectSettingsCenter.tsx`, `create/page.tsx`, `DashboardSections.tsx`?**
-  _High betweenness centrality (0.033) - this node is a cross-community bridge._
+- **Why does `useActiveProject()` connect `DashboardFrame.tsx` to `DashboardSections.tsx`, `use-projects.ts`, `DashboardFrame`?**
+  _High betweenness centrality (0.056) - this node is a cross-community bridge._
+- **Why does `ApiError` connect `auth.ts` to `use-projects.ts`?**
+  _High betweenness centrality (0.046) - this node is a cross-community bridge._
+- **Why does `DashboardFrame()` connect `DashboardFrame` to `UserDetailsWorkspace.tsx`, `DashboardSections.tsx`, `segments/[id]/page.tsx`, `create/page.tsx`, `push/page.tsx`, `team/page.tsx`, `DashboardFrame.tsx`?**
+  _High betweenness centrality (0.039) - this node is a cross-community bridge._
 - **What connects `extends`, `next/core-web-vitals`, `metadata` to the rest of the system?**
-  _171 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _164 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `auth.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.053019145802650956 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05086390992040381 - nodes in this community are weakly interconnected._
 - **Should `server.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.08244897959183674 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07692307692307693 - nodes in this community are weakly interconnected._
 - **Should `SiteShell.tsx` be split into smaller, more focused modules?**
   _Cohesion score 0.09485815602836879 - nodes in this community are weakly interconnected._

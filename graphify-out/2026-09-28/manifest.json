@@ -257,6 +257,12 @@
     "ast_hash": "aa8b318f21c3068af3564c90f0250558",
     "semantic_hash": ""
   },
+  "app/api/projects/[projectId]/[action]/route.ts": {
+    "mtime": 1790322058.0136375,
+    "seen": 1790322273.359402,
+    "ast_hash": "bfafe1b0493548b976f0a023dad39b93",
+    "semantic_hash": ""
+  },
   "app/api/projects/[projectId]/route.ts": {
     "mtime": 1790322058.0138223,
     "seen": 1790322273.359403,
@@ -366,9 +372,9 @@
     "semantic_hash": ""
   },
   "components/dashboard/DashboardSections.tsx": {
-    "mtime": 1790588170.6664524,
-    "seen": 1790589169.0169458,
-    "ast_hash": "93ca4281fade6a5b12f612accb1e07de",
+    "mtime": 1790322259.6067433,
+    "seen": 1790322273.3594172,
+    "ast_hash": "7b80aceba0106b65b90b908d8a2ed024",
     "semantic_hash": ""
   },
   "components/dashboard/DashboardSidebar.tsx": {
@@ -390,9 +396,9 @@
     "semantic_hash": ""
   },
   "components/dashboard/ReusableDataTable.tsx": {
-    "mtime": 1790331982.472958,
-    "seen": 1790589169.016957,
-    "ast_hash": "f8d7af1af278e044c7575ca50de5d4cf",
+    "mtime": 1790162709.921075,
+    "seen": 1790163213.852006,
+    "ast_hash": "44234e6c7ce535d09dc77c1ff2772afa",
     "semantic_hash": ""
   },
   "components/website/AuthShell.tsx": {
@@ -516,9 +522,9 @@
     "semantic_hash": ""
   },
   "lib/auth/client.ts": {
-    "mtime": 1790578383.2855337,
-    "seen": 1790589169.016979,
-    "ast_hash": "3360470f667433812c119353040eba81",
+    "mtime": 1790322058.031795,
+    "seen": 1790322273.359444,
+    "ast_hash": "75d3c2db31a5b3dc20e26a0d5391e8d2",
     "semantic_hash": ""
   },
   "lib/auth/firebase.ts": {
@@ -546,9 +552,9 @@
     "semantic_hash": ""
   },
   "lib/auth/server.ts": {
-    "mtime": 1790578383.2857606,
-    "seen": 1790589169.016983,
-    "ast_hash": "4a1e8d9bec5e0986bcb237a8a20a3f6b",
+    "mtime": 1790322058.032628,
+    "seen": 1790322273.359447,
+    "ast_hash": "5cacb450f00455f85516f543c2e8c758",
     "semantic_hash": ""
   },
   "lib/projects.ts": {
@@ -558,9 +564,9 @@
     "semantic_hash": ""
   },
   "lib/projects/api.ts": {
-    "mtime": 1790586839.8054237,
-    "seen": 1790589169.016984,
-    "ast_hash": "ab9a8e3a54d0cdfd4df5ab07f5ceb3fc",
+    "mtime": 1790322058.0331724,
+    "seen": 1790322273.359448,
+    "ast_hash": "f5ea7c1245eb305bbd345512b9ca5e1b",
     "semantic_hash": ""
   },
   "lib/store.ts": {
@@ -624,9 +630,9 @@
     "semantic_hash": ""
   },
   "types/project.ts": {
-    "mtime": 1790584620.4637878,
-    "seen": 1790589169.016993,
-    "ast_hash": "d4ee50ef94e76b72d3a37c511e386c55",
+    "mtime": 1790322058.0358772,
+    "seen": 1790322273.3594549,
+    "ast_hash": "5ca711797cb65d47058834ce322e3da5",
     "semantic_hash": ""
   },
   "README.md": {
@@ -744,21 +750,21 @@
     "semantic_hash": ""
   },
   "app/api/projects/[projectId]/[...path]/route.ts": {
-    "mtime": 1790578383.2853155,
-    "seen": 1790589169.016927,
-    "ast_hash": "197e18b5614dee136ca5758230ea1357",
+    "mtime": 1790322058.0134578,
+    "seen": 1790322273.359402,
+    "ast_hash": "c645205e40324d05c3b620fd9d3ea269",
     "semantic_hash": ""
   },
   "components/dashboard/AudienceGroupCreateDialog.tsx": {
-    "mtime": 1790578378.3409681,
-    "seen": 1790589169.01694,
-    "ast_hash": "a5e352ab33aec4404142ba9c67740100",
+    "mtime": 1790322050.850567,
+    "seen": 1790322273.359413,
+    "ast_hash": "99b915c92437f43a36cef56129850e9a",
     "semantic_hash": ""
   },
   "components/dashboard/AudienceGroupWorkspace.tsx": {
-    "mtime": 1790584620.4622312,
-    "seen": 1790589169.016941,
-    "ast_hash": "f10ba84f5d80967d8531c908bc85fd50",
+    "mtime": 1790322050.8512483,
+    "seen": 1790322273.359414,
+    "ast_hash": "e7a4fb78f516f85d4c09ba7e0be54402",
     "semantic_hash": ""
   },
   "components/dashboard/EmailPanel.tsx": {
@@ -786,9 +792,9 @@
     "semantic_hash": ""
   },
   "components/dashboard/LifecycleSegmentWorkspace.tsx": {
-    "mtime": 1790589155.8433142,
-    "seen": 1790589169.0169542,
-    "ast_hash": "7c836e080da65ba0d7672c9236c008c2",
+    "mtime": 1790322050.8528945,
+    "seen": 1790322273.359423,
+    "ast_hash": "6e5d8352d99df4d9ff409221bca6b51d",
     "semantic_hash": ""
   },
   "components/dashboard/SdkKeysPanel.tsx": {
@@ -810,21 +816,15 @@
     "semantic_hash": ""
   },
   "components/dashboard/UserImportDialog.tsx": {
-    "mtime": 1790588141.0269356,
-    "seen": 1790589169.016961,
-    "ast_hash": "51eb6afc729ac0839273f6062be903dd",
+    "mtime": 1790322050.8537881,
+    "seen": 1790322273.3594291,
+    "ast_hash": "eeb9daad0fa435a36c64f5e0a7ccf43b",
     "semantic_hash": ""
   },
   "hooks/projects/use-project-settings.ts": {
     "mtime": 1790322058.0314503,
     "seen": 1790322273.359442,
     "ast_hash": "afe44ede3f29b3e80ef9a544fca851d6",
-    "semantic_hash": ""
-  },
-  "components/dashboard/LifecycleSegmentCreateDialog.tsx": {
-    "mtime": 1790588141.026538,
-    "seen": 1790589169.016953,
-    "ast_hash": "3c7c9e77f0f07bf7fb5ae2d327730581",
     "semantic_hash": ""
   }
 }
