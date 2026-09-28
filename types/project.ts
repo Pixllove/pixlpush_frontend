@@ -29,6 +29,31 @@ export interface ProjectDetail extends Project {
   _count?: { endUsers: number; members: number };
 }
 
+export interface BillingContact {
+  email: string;
+  name?: string | null;
+  company?: string | null;
+  addressLine1?: string | null;
+  addressLine2?: string | null;
+  postalCode?: string | null;
+  city?: string | null;
+  country?: string | null;
+  vatId?: string | null;
+}
+
+export interface BillingSubscription {
+  subscription: Record<string, unknown> | null;
+  billingContact: BillingContact | null;
+}
+
+export interface ProjectMember {
+  id: string;
+  role: ProjectRole;
+  joinedAt?: string;
+  state?: string;
+  account: { id: string; email: string; name: string | null };
+}
+
 export interface EndUser {
   id: string;
   externalUserId: string | null;

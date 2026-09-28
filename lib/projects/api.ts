@@ -1,7 +1,7 @@
 import { authRequest } from '@/lib/auth/client';
 import type {
-  AudienceGroup, AudienceGroupMember, AudienceGroupSchema, CreatedSdkKey, EmailSettings, FirebaseSettings, ImportMappingInput, ImportPreview,
-  ImportSuggestions, LifecycleSegment, LifecycleSegmentMember, LifecycleSegmentSchema, Project, ProjectDetail, SdkKey, UpdateProjectInput, UserImport, UserStats, UsersPage,
+  AudienceGroup, AudienceGroupMember, AudienceGroupSchema, BillingContact, BillingSubscription, CreatedSdkKey, EmailSettings, FirebaseSettings, ImportMappingInput, ImportPreview,
+  ImportSuggestions, LifecycleSegment, LifecycleSegmentMember, LifecycleSegmentSchema, Project, ProjectDetail, ProjectMember, SdkKey, UpdateProjectInput, UserImport, UserStats, UsersPage,
 } from '@/types/project';
 
 /** Route handlers under app/api/projects, which forward to Fastify. */
@@ -55,6 +55,19 @@ export const emailApi = {
   configure: (projectId: string, input: { sendingDomain: string; senderEmail: string; senderName: string }) =>
     authRequest<EmailSettings>(at(projectId, '/email-settings'), input, BASE, 'PUT'),
   verify: (projectId: string) => authRequest<EmailSettings>(at(projectId, '/email-settings/verify'), {}, BASE),
+};
+
+export const billingApi = {
+  subscription: (projectId: string) =>
+    authRequest<BillingSubscription>(at(projectId, '/billing/subscription'), undefined, BASE),
+  updateContact: (projectId: string, input: BillingContact) =>
+    authRequest<BillingContact>(at(projectId, '/billing/contact'), input, BASE, 'PUT'),
+};
+
+export const teamApi = {
+  members: (projectId: string) => authRequest<ProjectMember[]>(at(projectId, '/members'), undefined, BASE),
+  updateRole: (projectId: string, memberId: string, role: ProjectMember['role']) =>
+    authRequest<{ id: string; role: ProjectMember['role']; updatedAt: string }>(at(projectId, `/members/${encodeURIComponent(memberId)}`), { role }, BASE, 'PATCH'),
 };
 
 export const usersApi = {
