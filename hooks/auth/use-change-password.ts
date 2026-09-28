@@ -12,7 +12,7 @@ import type { ApiError } from '@/types/auth';
 export function useChangePassword() {
   const queryClient = useQueryClient();
 
-  return useMutation<{ message: string }, ApiError, { currentPassword: string; newPassword: string }>({
+  return useMutation<{ message: string }, ApiError, { currentPassword?: string; newPassword: string }>({
     mutationFn: authApi.changePassword,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: authKeys.all });

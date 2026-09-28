@@ -30,7 +30,7 @@ export const authApi = {
   resetPassword: (input: { token: string; password: string }) =>
     authRequest<{ message: string }>('/reset-password', input),
 
-  changePassword: (input: { currentPassword: string; newPassword: string }) =>
+  changePassword: (input: { currentPassword?: string; newPassword: string }) =>
     authRequest<{ message: string }>('/change-password', input),
 
   verifyEmail: (token: string) => authRequest<{ message: string }>('/verify-email', { token }),

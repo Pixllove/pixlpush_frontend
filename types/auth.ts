@@ -7,6 +7,9 @@ export interface Account {
   email: string;
   name: string | null;
   emailVerified: boolean;
+  /** False for Google-only accounts: they can set a first password without a current one. */
+  hasPassword?: boolean;
+  googleLinked?: boolean;
   createdAt: string;
 }
 
