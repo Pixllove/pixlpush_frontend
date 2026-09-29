@@ -164,7 +164,9 @@ export default function UserImportDialog({
     if (
       !projectId ||
       !window.confirm(
-        `Permanently delete the users created by "${record.fileName}"? Their events and activity are deleted too. Users this import only updated are kept.`,
+        record.status === "completed"
+          ? `Permanently delete the users created by "${record.fileName}"? Their events and activity are deleted too. Users this import only updated are kept.`
+          : `Delete the unfinished import "${record.fileName}"? No users were imported from it.`,
       )
     )
       return;
@@ -638,8 +640,8 @@ export default function UserImportDialog({
                               />
                             </TableCell>
                             <TableCell align="right">
-                              {record.status === "completed" && (
-                                <Tooltip title="Delete the users this import created">
+                              {["completed", "uploaded", "mapped", "previewed"].includes(record.status) && (
+                                <Tooltip title={record.status === "completed" ? "Delete the users this import created" : "Delete this unfinished import"}>
                                   <span>
                                     <IconButton
                                       size="small"
