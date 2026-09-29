@@ -1,35 +1,642 @@
-'use client';
+"use client";
 
-import { useRouter } from 'next/navigation';
-import type { ElementType, ReactNode } from 'react';
-import { ArrowBackRounded, CalendarTodayRounded, CheckCircleRounded, CodeRounded, EmailRounded, GroupsRounded, LanguageRounded, LocationOnRounded, NotificationsActiveRounded, PhoneAndroidRounded, PublicRounded, RouteRounded, SendRounded, TimelineRounded } from '@mui/icons-material';
-import { Box, Button, Card, Chip, Divider, Grid, Stack, Typography } from '@mui/material';
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import type { ElementType } from "react";
+import {
+  ArrowBackRounded,
+  CalendarTodayRounded,
+  CheckCircleRounded,
+  CodeRounded,
+  ContentCopyRounded,
+  EmailRounded,
+  GroupsRounded,
+  LanguageRounded,
+  LocationOnRounded,
+  NotificationsActiveRounded,
+  PhoneAndroidRounded,
+  PublicRounded,
+  RouteRounded,
+  SendRounded,
+  TimelineRounded,
+} from "@mui/icons-material";
+import {
+  Box,
+  Button,
+  Card,
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  Grid,
+  IconButton,
+  Skeleton,
+  Stack,
+  Typography,
+} from "@mui/material";
+import { useActiveProject } from "@/hooks/projects/use-active-project";
+import { eventsApi, usersApi } from "@/lib/projects/api";
+import type { UserActivity, UserProfile } from "@/types/project";
 
-const records: Record<string, { email: string; name: string; segment: string; location: string; timezone: string; language: string; reachability: string }> = {
-  customer_123: { email: 'customer123@example.com', name: 'Customer 123', segment: 'Paid Customer', location: 'Toronto, Canada', timezone: 'America/Toronto', language: 'en', reachability: 'Push + Email' },
-  customer_847: { email: 'customer847@example.com', name: 'Customer 847', segment: 'Incomplete Onboarding', location: 'New York, United States', timezone: 'America/New_York', language: 'en', reachability: 'Push only' },
-  customer_219: { email: 'customer219@example.com', name: 'Customer 219', segment: 'Onboarding Complete', location: 'London, United Kingdom', timezone: 'Europe/London', language: 'en', reachability: 'Email only' },
-};
+const formatDate = (value?: string | null) =>
+  value
+    ? new Intl.DateTimeFormat(undefined, {
+        dateStyle: "medium",
+        timeStyle: "short",
+      }).format(new Date(value))
+    : "—";
+const display = (value: unknown) =>
+  value === null || value === undefined || value === ""
+    ? "—"
+    : typeof value === "boolean"
+      ? value
+        ? "Yes"
+        : "No"
+      : String(value);
 
 export default function UserDetailsWorkspace({ userId }: { userId: string }) {
   const router = useRouter();
-  const user = records[userId] || { email: userId, name: 'No name provided', segment: 'No segment', location: 'Not available', timezone: 'Not available', language: 'en', reachability: 'Unreachable' };
-  const metric = (Icon: ElementType, label: string, value: string) => <Card className="user-engagement-metric"><Box className="user-detail-icon"><Icon fontSize="small" /></Box><Typography color="text.secondary" fontSize={10}>{label}</Typography><Typography fontSize={20} fontWeight={900}>{value}</Typography></Card>;
-  return <Stack gap={2.2} className="user-details-workspace">
-    <Button startIcon={<ArrowBackRounded />} onClick={() => router.push('/dashboard/users')} className="user-back-button">Back to Users</Button>
-    <Box className="user-detail-breadcrumb"><Typography color="text.secondary" fontSize={10}>Users&nbsp; › &nbsp;{user.email}</Typography><Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} gap={1}><Typography className="user-detail-email-title">{user.email}</Typography><Chip label="Active" size="small" className="active-chip" /></Stack><Typography color="text.secondary" fontSize={11}>{user.name}</Typography></Box>
-    <Card className="saas-card user-detail-card"><Stack direction="row" justifyContent="space-between" alignItems="center" className="user-detail-card-header"><Box><Typography fontWeight={900}>User Details</Typography><Typography color="text.secondary" fontSize={10}>Account identity, subscription, permissions, and device information</Typography></Box><Button variant="outlined" size="small">&#123; &#125;&nbsp; View JSON</Button></Stack><Divider />
-      <UserDetailSection title="Account Information"><DetailItem icon={GroupsRounded} label="Name" value={user.name} /><DetailItem icon={CodeRounded} label="User ID" value={userId} /><DetailItem icon={EmailRounded} label="Email address" value={user.email} /><DetailItem icon={CheckCircleRounded} label="Email subscription / opt-in" value="Active" badge /><DetailItem icon={CalendarTodayRounded} label="Email opt-in date & time" value="23 Sep 2026, 05:55 pm" /><DetailItem icon={CheckCircleRounded} label="Opt-in IP address" value="31.221.156.144" /><DetailItem icon={RouteRounded} label="Signup source" value="google" /><DetailItem icon={LocationOnRounded} label="Signup IP address" value="31.221.156.144" /><DetailItem icon={CalendarTodayRounded} label="Account created" value="23 Sep 2026, 05:55 pm" /></UserDetailSection>
-      <UserDetailSection title="Device & App"><DetailItem icon={NotificationsActiveRounded} label="FCM token status" value="Not available" /><DetailItem icon={NotificationsActiveRounded} label="Push permission" value="Enabled" /><DetailItem icon={PhoneAndroidRounded} label="Platform" value="android" /></UserDetailSection>
-      <UserDetailSection title="Location & Preferences"><DetailItem icon={LocationOnRounded} label="Location" value={user.location} /><DetailItem icon={PublicRounded} label="Timezone" value={user.timezone} /><DetailItem icon={LanguageRounded} label="Language" value={user.language} /></UserDetailSection>
-      <UserDetailSection title="Account Status"><DetailItem icon={CalendarTodayRounded} label="Account deleted" value="Not deleted" /></UserDetailSection>
-    </Card>
-    <Card className="saas-card user-engagement-card"><DetailHeader icon={TimelineRounded} title="Engagement" subtitle="Email and push performance are calculated independently by channel" /><Grid container spacing={1.2} sx={{ mt: 1 }}>{metric(EmailRounded, 'Emails sent', '0')}{metric(EmailRounded, 'Emails opened', '0')}{metric(NotificationsActiveRounded, 'Pushes sent', '0')}{metric(SendRounded, 'Pushes clicks', '0')}</Grid><Divider sx={{ my: 1.5 }} /><Grid container spacing={2}><Grid item xs={12} md={6}><Typography fontSize={11} fontWeight={900}>✉ Email engagement</Typography><MetricRows rows={['Open rate                 0%', 'Delivery rate             0%', 'Unsubscribe status        None', 'Click rate                 0%', 'Bounces status             None', 'Spam complaints            None']} /></Grid><Grid item xs={12} md={6}><Typography fontSize={11} fontWeight={900}>♧ Push engagement</Typography><MetricRows rows={['Delivered                    0', 'Click rate                  0%', 'Failed                         0']} /></Grid></Grid><Divider sx={{ my: 1.5 }} /><Grid container spacing={2}><DetailItem icon={RouteRounded} label="Current Lifecycle Segment" value={user.segment} /><DetailItem icon={GroupsRounded} label="Current Audience Groups" value="-" /><DetailItem icon={TimelineRounded} label="Journey Automation" value="No" /></Grid></Card>
-    <Card className="saas-card activity-history-card"><DetailHeader icon={TimelineRounded} title="Activity History" subtitle="App and any account, permission, segment, group, journey, email, and push audit events" /><Stack gap={2} sx={{ mt: 2 }}>{[['Account created', 'Account', '23 Sep 2026, 05:55 pm'], ['Entered segment Onboarding Incomplete', 'Lifecycle', '23 Sep 2026, 05:55 pm']].map(([title, tag, time]) => <Box className="user-activity-event" key={title}><Stack direction="row" gap={1}><Box className="user-activity-dot"><TimelineRounded fontSize="small" /></Box><Box><Stack direction="row" gap={1} alignItems="center"><Typography fontSize={11} fontWeight={900}>{title}</Typography><Chip label={tag} size="small" /></Stack><Typography color="text.secondary" fontSize={10}>{time}</Typography><Typography color="text.secondary" fontSize={10}>No additional details available</Typography><Button size="small" variant="outlined" sx={{ mt: 1 }}>&#123; &#125;&nbsp; View JSON</Button></Box></Stack></Box>)}</Stack><Stack direction="row" justifyContent="space-between" sx={{ mt: 2 }}><Typography color="text.secondary" fontSize={10}>Page 1 of 1 · 2 activities</Typography><Stack direction="row" gap={1}><Button size="small" variant="outlined" disabled>Previous</Button><Button size="small" variant="outlined" disabled>Next</Button></Stack></Stack></Card>
-  </Stack>;
+  const { active } = useActiveProject();
+  const [activityCursor, setActivityCursor] = useState<string | null>(null);
+  const [history, setHistory] = useState<string[]>([]);
+  const [json, setJson] = useState<unknown>(null);
+  const [copied, setCopied] = useState(false);
+  const profileQuery = useQuery({
+    queryKey: ["projects", "users", active?.id, userId],
+    queryFn: () => usersApi.get(active!.id, userId),
+    enabled: Boolean(active?.id && userId),
+  });
+  const activityQuery = useQuery({
+    queryKey: [
+      "projects",
+      "users",
+      active?.id,
+      userId,
+      "activity",
+      activityCursor,
+    ],
+    queryFn: () =>
+      usersApi.activity(active!.id, userId, {
+        limit: 20,
+        cursor: activityCursor,
+      }),
+    enabled: Boolean(active?.id && userId),
+  });
+  const eventsQuery = useQuery({
+    queryKey: ["projects", "events", active?.id, userId],
+    queryFn: () => eventsApi.listForUser(active!.id, userId),
+    enabled: Boolean(active?.id && userId),
+  });
+  const user = profileQuery.data;
+  const activities = activityQuery.data?.activity ?? [];
+  const events = eventsQuery.data?.events ?? [];
+  const goNext = () => {
+    if (activityQuery.data?.nextCursor) {
+      setHistory((current) => [...current, activityCursor ?? ""]);
+      setActivityCursor(activityQuery.data.nextCursor);
+    }
+  };
+  const goPrevious = () => {
+    const previous = history[history.length - 1];
+    if (previous !== undefined) {
+      setHistory((current) => current.slice(0, -1));
+      setActivityCursor(previous || null);
+    }
+  };
+
+  return (
+    <Stack gap={2.2} className="user-details-workspace">
+      <Button
+        startIcon={<ArrowBackRounded />}
+        onClick={() => router.push("/dashboard/users")}
+        className="user-back-button"
+      >
+        Back to Users
+      </Button>
+      <Box className="user-detail-breadcrumb">
+        <Typography color="text.secondary" fontSize={10}>
+          Users&nbsp; › &nbsp;{user?.email || userId}
+        </Typography>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          alignItems={{ xs: "flex-start", sm: "center" }}
+          gap={1}
+        >
+          <Typography className="user-detail-email-title">
+            {user?.email || userId}
+          </Typography>
+          <Chip
+            label={user?.deletedAt ? "Deleted" : "Active"}
+            size="small"
+            className={user?.deletedAt ? "paused-chip" : "active-chip"}
+          />
+        </Stack>
+        <Typography color="text.secondary" fontSize={11}>
+          {user?.name || "No name provided"}
+        </Typography>
+      </Box>
+      {profileQuery.isLoading ? (
+        <LoadingCards />
+      ) : profileQuery.isError ? (
+        <Card className="saas-card">
+          <Typography color="error">
+            Could not load this user. Please try again.
+          </Typography>
+        </Card>
+      ) : (
+        <>
+          <Card className="saas-card user-detail-card">
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              alignItems="center"
+              className="user-detail-card-header"
+            >
+              <Box>
+                <Typography fontWeight={900}>User Details</Typography>
+                <Typography color="text.secondary" fontSize={10}>
+                  Account identity, subscription, permissions, device, and
+                  profile information
+                </Typography>
+              </Box>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => setJson(user)}
+              >
+                &#123; &#125;&nbsp; View JSON
+              </Button>
+            </Stack>
+            <Divider />
+            <UserDetailSection title="Account Information">
+              <DetailItem
+                icon={GroupsRounded}
+                label="Name"
+                value={display(user?.name)}
+              />
+              <DetailItem
+                icon={CodeRounded}
+                label="User ID"
+                value={display(user?.id)}
+              />
+              <DetailItem
+                icon={EmailRounded}
+                label="Email address"
+                value={display(user?.email)}
+              />
+              <DetailItem
+                icon={CheckCircleRounded}
+                label="Email consent"
+                value={display(user?.emailConsent)}
+                badge={user?.emailConsent === true}
+              />
+              <DetailItem
+                icon={CalendarTodayRounded}
+                label="Last active"
+                value={formatDate(user?.lastActiveAt)}
+              />
+              <DetailItem
+                icon={CheckCircleRounded}
+                label="Account status"
+                value={display(user?.accountStatus)}
+              />
+              <DetailItem
+                icon={RouteRounded}
+                label="Signup source"
+                value={display(user?.signupSource)}
+              />
+              <DetailItem
+                icon={LocationOnRounded}
+                label="Region"
+                value={display(user?.region)}
+              />
+              <DetailItem
+                icon={CalendarTodayRounded}
+                label="Account created"
+                value={formatDate(user?.createdAt)}
+              />
+            </UserDetailSection>
+            <UserDetailSection title="Device & App">
+              <DetailItem
+                icon={NotificationsActiveRounded}
+                label="Push permission"
+                value={display(user?.pushPermission ?? user?.push?.permission)}
+              />
+              <DetailItem
+                icon={PhoneAndroidRounded}
+                label="Platform"
+                value={display(user?.platform ?? user?.device?.platform)}
+              />
+              <DetailItem
+                icon={NotificationsActiveRounded}
+                label="Push token"
+                value={display(
+                  user?.push?.token ? "Available" : "Not available",
+                )}
+              />
+            </UserDetailSection>
+            <UserDetailSection title="Location & Preferences">
+              <DetailItem
+                icon={LocationOnRounded}
+                label="Country"
+                value={display(user?.country)}
+              />
+              <DetailItem
+                icon={PublicRounded}
+                label="Timezone"
+                value={display(user?.timezone)}
+              />
+              <DetailItem
+                icon={LanguageRounded}
+                label="Language"
+                value={display(user?.preferredLanguage)}
+              />
+            </UserDetailSection>
+            <UserDetailSection title="Account Status">
+              <DetailItem
+                icon={CalendarTodayRounded}
+                label="Deleted"
+                value={
+                  user?.deletedAt ? formatDate(user.deletedAt) : "Not deleted"
+                }
+              />
+            </UserDetailSection>
+          </Card>
+          <Card className="saas-card user-engagement-card">
+            <DetailHeader
+              icon={TimelineRounded}
+              title="Engagement"
+              subtitle="Email and push performance are calculated independently by channel"
+            />
+            <Grid container spacing={1.2} sx={{ mt: 1 }}>
+              {metric(EmailRounded, "Emails sent", "0")}
+              {metric(EmailRounded, "Emails opened", "0")}
+              {metric(NotificationsActiveRounded, "Pushes sent", "0")}
+              {metric(SendRounded, "Pushes clicked", "0")}
+            </Grid>
+            <Divider sx={{ my: 1.5 }} />
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={6}>
+                <Typography fontSize={11} fontWeight={900}>
+                  ✉ Email engagement
+                </Typography>
+                <MetricRows
+                  rows={[
+                    "Open rate                 0%",
+                    "Delivery rate             0%",
+                    "Unsubscribe status        None",
+                    "Click rate                 0%",
+                    "Bounces status             None",
+                    "Spam complaints            None",
+                  ]}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Typography fontSize={11} fontWeight={900}>
+                  ♧ Push engagement
+                </Typography>
+                <MetricRows
+                  rows={[
+                    "Delivered                    0",
+                    "Click rate                  0%",
+                    "Failed                         0",
+                  ]}
+                />
+              </Grid>
+            </Grid>
+            <Divider sx={{ my: 1.5 }} />
+            <Grid container spacing={2}>
+              <DetailItem
+                icon={RouteRounded}
+                label="Current Lifecycle Segment"
+                value={display(user?.lifecycleSegment?.name)}
+              />
+              <DetailItem
+                icon={GroupsRounded}
+                label="Current Audience Groups"
+                value={
+                  user?.audienceGroups?.map((group) => group.name).join(", ") ||
+                  "—"
+                }
+              />
+              <DetailItem
+                icon={TimelineRounded}
+                label="Journey Automation"
+                value="No"
+              />
+            </Grid>
+            <Typography color="text.secondary" fontSize={10} sx={{ mt: 1 }}>
+              SDK events recorded:{" "}
+              {eventsQuery.isLoading ? "…" : events.length.toLocaleString()}
+            </Typography>
+          </Card>
+          <ActivityCard
+            activities={activities}
+            loading={activityQuery.isLoading}
+            hasPrevious={history.length > 0}
+            hasNext={Boolean(activityQuery.data?.nextCursor)}
+            onPrevious={goPrevious}
+            onNext={goNext}
+            onViewJson={setJson}
+          />
+        </>
+      )}
+      <Dialog
+        open={json !== null}
+        onClose={() => {
+          setJson(null);
+          setCopied(false);
+        }}
+        fullWidth
+        maxWidth="md"
+      >
+        <DialogTitle
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          JSON details
+          <IconButton
+            aria-label="Copy JSON"
+            onClick={async () => {
+              await navigator.clipboard.writeText(
+                JSON.stringify(json, null, 2),
+              );
+              setCopied(true);
+              window.setTimeout(() => setCopied(false), 1800);
+            }}
+          >
+            <ContentCopyRounded fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: 2, bgcolor: "#171322" }}>
+          <Box
+            component="pre"
+            sx={{
+              m: 0,
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-word",
+              maxHeight: "65vh",
+              overflow: "auto",
+              color: "#f7f1ff",
+              fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+              fontSize: 12,
+              lineHeight: 1.65,
+            }}
+          >
+            {JSON.stringify(json, null, 2)}
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: "space-between" }}>
+          {copied ? (
+            <Typography color="success.main" fontSize={12} fontWeight={800}>
+              JSON copied
+            </Typography>
+          ) : (
+            <span />
+          )}
+          <Button
+            onClick={() => {
+              setJson(null);
+              setCopied(false);
+            }}
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Stack>
+  );
 }
 
-function DetailHeader({ icon: Icon, title, subtitle }: { icon: ElementType; title: string; subtitle: string }) { return <Stack direction="row" alignItems="center" gap={1}><Box className="user-detail-header-icon"><Icon fontSize="small" /></Box><Box><Typography fontWeight={900} fontSize={13}>{title}</Typography><Typography color="text.secondary" fontSize={10}>{subtitle}</Typography></Box></Stack>; }
-function UserDetailSection({ title, children }: { title: string; children: ReactNode }) { return <Box className="user-detail-section"><Typography fontWeight={900} fontSize={11} sx={{ mb: 1 }}>{title}</Typography><Grid container spacing={1.2}>{children}</Grid></Box>; }
-function DetailItem({ icon: Icon, label, value, badge }: { icon: ElementType; label: string; value: string; badge?: boolean }) { return <Grid item xs={12} sm={4}><Box className="user-detail-item"><Stack direction="row" gap={.7} alignItems="center"><Icon sx={{ fontSize: 13, color: '#6678ee' }} /><Typography color="text.secondary" fontSize={9}>{label}</Typography></Stack>{badge ? <Chip label={value} size="small" className="active-chip" /> : <Typography fontSize={10} fontWeight={800}>{value}</Typography>}</Box></Grid>; }
-function MetricRows({ rows }: { rows: string[] }) { return <Stack gap={.5} sx={{ mt: .8 }}>{rows.map(row => <Box key={row} className="user-metric-row"><Typography fontSize={9}>{row}</Typography></Box>)}</Stack>; }
+function ActivityCard({
+  activities,
+  loading,
+  hasPrevious,
+  hasNext,
+  onPrevious,
+  onNext,
+  onViewJson,
+}: {
+  activities: UserActivity[];
+  loading: boolean;
+  hasPrevious: boolean;
+  hasNext: boolean;
+  onPrevious: () => void;
+  onNext: () => void;
+  onViewJson: (value: unknown) => void;
+}) {
+  return (
+    <Card className="saas-card activity-history-card">
+      <DetailHeader
+        icon={TimelineRounded}
+        title="Activity History"
+        subtitle="App, account, segment, group, journey, email, push, and SDK activity"
+      />
+      <Stack gap={2} sx={{ mt: 2 }}>
+        {loading ? (
+          Array.from({ length: 2 }, (_, index) => (
+            <Box
+              key={index}
+              sx={{ p: 2, border: "1px solid #e0e6f0", borderRadius: 1 }}
+            >
+              <Skeleton width="35%" />
+              <Skeleton width="60%" />
+              <Skeleton width="25%" />
+            </Box>
+          ))
+        ) : activities.length ? (
+          activities.map((activity, index) => (
+            <Box
+              className="user-activity-event"
+              key={activity.id || `${activity.type}-${index}`}
+            >
+              <Stack direction="row" gap={1}>
+                <Box className="user-activity-dot">
+                  <TimelineRounded fontSize="small" />
+                </Box>
+                <Box>
+                  <Stack direction="row" gap={1} alignItems="center">
+                    <Typography fontSize={11} fontWeight={900}>
+                      {activity.title || activity.type || "Activity"}
+                    </Typography>
+                    <Chip
+                      label={activity.category || "Activity"}
+                      size="small"
+                    />
+                  </Stack>
+                  <Typography color="text.secondary" fontSize={10}>
+                    {formatDate(activity.occurredAt || activity.createdAt)}
+                  </Typography>
+                  <Typography color="text.secondary" fontSize={10}>
+                    {activity.description || "No additional details available"}
+                  </Typography>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    sx={{ mt: 1 }}
+                    onClick={() => onViewJson(activity)}
+                  >
+                    &#123; &#125;&nbsp; View JSON
+                  </Button>
+                </Box>
+              </Stack>
+            </Box>
+          ))
+        ) : (
+          <Typography color="text.secondary" fontSize={12}>
+            No activity recorded for this user.
+          </Typography>
+        )}
+      </Stack>
+      <Stack direction="row" justifyContent="space-between" sx={{ mt: 2 }}>
+        <Typography color="text.secondary" fontSize={10}>
+          Activity is paginated by the backend
+        </Typography>
+        <Stack direction="row" gap={1}>
+          <Button
+            size="small"
+            variant="outlined"
+            disabled={!hasPrevious || loading}
+            onClick={onPrevious}
+          >
+            Previous
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            disabled={!hasNext || loading}
+            onClick={onNext}
+          >
+            Next
+          </Button>
+        </Stack>
+      </Stack>
+    </Card>
+  );
+}
+function LoadingCards() {
+  return (
+    <>
+      <Card className="saas-card">
+        <Skeleton variant="text" width="30%" />
+        <Skeleton variant="rounded" height={180} sx={{ mt: 2 }} />
+      </Card>
+      <Card className="saas-card">
+        <Skeleton variant="text" width="25%" />
+        <Skeleton variant="rounded" height={130} sx={{ mt: 2 }} />
+      </Card>
+    </>
+  );
+}
+function DetailHeader({
+  icon: Icon,
+  title,
+  subtitle,
+}: {
+  icon: ElementType;
+  title: string;
+  subtitle: string;
+}) {
+  return (
+    <Stack direction="row" alignItems="center" gap={1}>
+      <Box className="user-detail-header-icon">
+        <Icon fontSize="small" />
+      </Box>
+      <Box>
+        <Typography fontWeight={900} fontSize={13}>
+          {title}
+        </Typography>
+        <Typography color="text.secondary" fontSize={10}>
+          {subtitle}
+        </Typography>
+      </Box>
+    </Stack>
+  );
+}
+function UserDetailSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Box className="user-detail-section">
+      <Typography fontWeight={900} fontSize={11} sx={{ mb: 1 }}>
+        {title}
+      </Typography>
+      <Grid container spacing={1.2}>
+        {children}
+      </Grid>
+    </Box>
+  );
+}
+function DetailItem({
+  icon: Icon,
+  label,
+  value,
+  badge,
+}: {
+  icon: ElementType;
+  label: string;
+  value: string;
+  badge?: boolean;
+}) {
+  return (
+    <Grid item xs={12} sm={4}>
+      <Box className="user-detail-item">
+        <Stack direction="row" gap={0.7} alignItems="center">
+          <Icon sx={{ fontSize: 13, color: "#6678ee" }} />
+          <Typography color="text.secondary" fontSize={9}>
+            {label}
+          </Typography>
+        </Stack>
+        {badge ? (
+          <Chip label={value} size="small" className="active-chip" />
+        ) : (
+          <Typography fontSize={10} fontWeight={800}>
+            {value}
+          </Typography>
+        )}
+      </Box>
+    </Grid>
+  );
+}
+function MetricRows({ rows, empty = "—" }: { rows: string[]; empty?: string }) {
+  return (
+    <Stack gap={0.5} sx={{ mt: 0.8 }}>
+      {rows.length ? (
+        rows.map((row) => (
+          <Box key={row} className="user-metric-row">
+            <Typography fontSize={9}>{row}</Typography>
+          </Box>
+        ))
+      ) : (
+        <Box className="user-metric-row">
+          <Typography fontSize={9}>{empty}</Typography>
+        </Box>
+      )}
+    </Stack>
+  );
+}
+function metric(Icon: ElementType, label: string, value: string) {
+  return (
+    <Card className="user-engagement-metric">
+      <Box className="user-detail-icon">
+        <Icon fontSize="small" />
+      </Box>
+      <Typography color="text.secondary" fontSize={10}>
+        {label}
+      </Typography>
+      <Typography fontSize={20} fontWeight={900}>
+        {value}
+      </Typography>
+    </Card>
+  );
+}
