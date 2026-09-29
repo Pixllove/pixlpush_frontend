@@ -35,48 +35,6 @@ type EventOption = {
   assigned?: string | null;
   suggestedSegment?: string;
 };
-const fallbackEvents = [
-  "user_engagement",
-  "pixlswipes_skip_swipe",
-  "pixlswipes_depixelate_click",
-  "pixlswipes_like_swipe",
-  "permanent_chat_screen_view",
-  "bottom_nav_click_messages",
-  "permanent_chat_open",
-  "permanent_chat_leave",
-  "push_received_custom",
-  "bottom_nav_click_likes",
-  "sign_up",
-  "login",
-  "logout",
-  "profile_completed",
-  "onboarding_started",
-  "onboarding_completed",
-  "screen_view",
-  "feature_used",
-  "search_performed",
-  "content_viewed",
-  "content_shared",
-  "content_saved",
-  "video_started",
-  "video_completed",
-  "trial_started",
-  "subscription_started",
-  "subscription_canceled",
-  "checkout_started",
-  "purchase_completed",
-  "refund_requested",
-  "payment_failed",
-  "invite_sent",
-  "team_member_added",
-  "notification_opened",
-  "support_requested",
-  "feedback_submitted",
-  "campaign_clicked",
-  "email_opened",
-  "push_opened",
-];
-
 export default function LifecycleSegmentCreateDialog({
   open,
   onClose,
@@ -120,19 +78,15 @@ export default function LifecycleSegmentCreateDialog({
       group: "Tracked events",
       assigned: item.assignedSegment?.name ?? null,
     }));
-    const suggested = (schema?.recommendedEvents ?? []).map((item) => ({
+    const trackedNames = new Set(tracked.map((item) => item.name));
+    const suggested = (schema?.recommendedEvents ?? []).filter((item) => !trackedNames.has(item.name)).map((item) => ({
       name: item.name,
       group: "Suggested events",
       assigned: item.assignedSegment?.name ?? null,
       suggestedSegment: item.suggestedSegment,
     }));
-    const existingNames = new Set(
-      [...tracked, ...suggested].map((item) => item.name),
-    );
-    const additional = fallbackEvents
-      .filter((name) => !existingNames.has(name))
-      .map((name) => ({ name, group: "Available events", assigned: null }));
-    return [...tracked, ...suggested, ...additional];
+    // Both lists come from the API: this project's SDK events, then recommendations.
+    return [...tracked, ...suggested];
   }, [schema]);
   const visibleEvents = eventOptions.filter((option) =>
     option.name.toLowerCase().includes(search.trim().toLowerCase()),
