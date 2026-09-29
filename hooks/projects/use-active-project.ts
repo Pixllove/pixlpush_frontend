@@ -26,9 +26,11 @@ export function useActiveProject() {
   const { data: projects, isPending, isError } = useProjects();
 
   // Restore the last selection before the list arrives, so switching pages
-  // does not momentarily fall back to a different Project.
+  // does not momentarily fall back to a different Project. A ?project= link
+  // (e.g. from an access email) wins; an id without access falls back below.
   useEffect(() => {
-    const saved = window.localStorage.getItem('pixlpush:selectedProject');
+    const linked = new URLSearchParams(window.location.search).get('project');
+    const saved = linked ?? window.localStorage.getItem('pixlpush:selectedProject');
     if (saved) dispatch(setSelectedProject(saved));
   }, [dispatch]);
 

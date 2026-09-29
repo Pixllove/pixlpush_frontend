@@ -1,6 +1,6 @@
 'use client';
 
-import { BarChartRounded, BoltRounded, CampaignRounded, DashboardRounded, GroupsRounded, InsightsRounded, SettingsOutlined, TuneRounded } from '@mui/icons-material';
+import { HistoryRounded, BarChartRounded, BoltRounded, CampaignRounded, DashboardRounded, GroupsRounded, InsightsRounded, SettingsOutlined, TuneRounded } from '@mui/icons-material';
 import { Box, Button, Stack, Typography } from '@mui/material';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/lib/store';
@@ -10,7 +10,7 @@ const navigation = [
   { label: 'Overview', href: '/dashboard', icon: DashboardRounded }, { label: 'Users', href: '/dashboard/users', icon: GroupsRounded },
   { label: 'Email', href: '/dashboard/email', icon: CampaignRounded }, { label: 'Push Notifications', href: '/dashboard/push', icon: BoltRounded },
   { label: 'Journey Automations', href: '/dashboard/journeys', icon: InsightsRounded },
-  { label: 'Integrations', href: '/dashboard/integrations', icon: TuneRounded }, { label: 'Team & Access', href: '/dashboard/team', icon: GroupsRounded },
+  { label: 'Integrations', href: '/dashboard/integrations', icon: TuneRounded }, { label: 'Team & Access', href: '/dashboard/team', icon: GroupsRounded }, { label: 'Audit Logs', href: '/dashboard/audit-logs', icon: HistoryRounded },
   { label: 'Billing & Usage', href: '/dashboard/billing', icon: BarChartRounded }, { label: 'Settings', href: '/dashboard/settings', icon: SettingsOutlined },
 ];
 
