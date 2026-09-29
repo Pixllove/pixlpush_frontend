@@ -61,7 +61,12 @@ import {
 } from "@mui/material";
 import { RootState } from "@/lib/store";
 import { projectContext } from "@/lib/projects";
-import { audienceGroupsApi, lifecycleSegmentsApi, userStatsApi, usersApi } from "@/lib/projects/api";
+import {
+  audienceGroupsApi,
+  lifecycleSegmentsApi,
+  userStatsApi,
+  usersApi,
+} from "@/lib/projects/api";
 import type { AudienceGroup, EndUser, LifecycleSegment } from "@/types/project";
 import { useActiveProject } from "@/hooks/projects/use-active-project";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -622,15 +627,15 @@ export function OverviewSection() {
 
 export function UsersSection() {
   const router = useRouter();
-  const [tab, setTab] = useState<'users' | 'segments' | 'groups'>('users');
+  const [tab, setTab] = useState<"users" | "segments" | "groups">("users");
   const [createGroupOpen, setCreateGroupOpen] = useState(false);
   const [createSegmentOpen, setCreateSegmentOpen] = useState(false);
   const [importUsersOpen, setImportUsersOpen] = useState(false);
   const queryClient = useQueryClient();
-  const [userSearch, setUserSearch] = useState('');
+  const [userSearch, setUserSearch] = useState("");
   const [userCursors, setUserCursors] = useState<string[]>([]);
-  const [segmentSearch, setSegmentSearch] = useState('');
-  const [groupSearch, setGroupSearch] = useState('');
+  const [segmentSearch, setSegmentSearch] = useState("");
+  const [groupSearch, setGroupSearch] = useState("");
   const deferredUserSearch = useDeferredValue(userSearch);
   const selectedProject = useSelector(
     (state: RootState) => state.ui.selectedProject,
@@ -639,98 +644,834 @@ export function UsersSection() {
   const projectName = active?.name ?? "this project";
   const project = projectContext(selectedProject);
   const usersQuery = useQuery({
-    queryKey: ['projects', 'users', active?.id, deferredUserSearch, userCursors[userCursors.length - 1]],
-    queryFn: () => usersApi.list(active!.id, { search: deferredUserSearch, limit: 100, cursor: userCursors[userCursors.length - 1] }),
+    queryKey: [
+      "projects",
+      "users",
+      active?.id,
+      deferredUserSearch,
+      userCursors[userCursors.length - 1],
+    ],
+    queryFn: () =>
+      usersApi.list(active!.id, {
+        search: deferredUserSearch,
+        limit: 100,
+        cursor: userCursors[userCursors.length - 1],
+      }),
     enabled: Boolean(active?.id),
   });
   const segmentsQuery = useQuery({
-    queryKey: ['projects', 'lifecycle-segments', active?.id],
+    queryKey: ["projects", "lifecycle-segments", active?.id],
     queryFn: () => lifecycleSegmentsApi.list(active!.id),
     enabled: Boolean(active?.id),
   });
   const segmentSchemaQuery = useQuery({
-    queryKey: ['projects', 'lifecycle-segments', active?.id, 'schema'],
+    queryKey: ["projects", "lifecycle-segments", active?.id, "schema"],
     queryFn: () => lifecycleSegmentsApi.schema(active!.id),
     enabled: Boolean(active?.id && createSegmentOpen),
   });
   const groupsQuery = useQuery({
-    queryKey: ['projects', 'audience-groups', active?.id],
+    queryKey: ["projects", "audience-groups", active?.id],
     queryFn: () => audienceGroupsApi.list(active!.id),
     enabled: Boolean(active?.id),
   });
   // Deletes the classification only; the users stay (their segment is cleared).
   const deleteSegment = useMutation({
-    mutationFn: (segmentId: string) => lifecycleSegmentsApi.delete(active!.id, segmentId),
+    mutationFn: (segmentId: string) =>
+      lifecycleSegmentsApi.delete(active!.id, segmentId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects', 'lifecycle-segments', active?.id] });
-      queryClient.invalidateQueries({ queryKey: ['projects', 'users'] });
+      queryClient.invalidateQueries({
+        queryKey: ["projects", "lifecycle-segments", active?.id],
+      });
+      queryClient.invalidateQueries({ queryKey: ["projects", "users"] });
     },
   });
   const deleteGroup = useMutation({
-    mutationFn: (groupId: string) => audienceGroupsApi.delete(active!.id, groupId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['projects', 'audience-groups', active?.id] }),
+    mutationFn: (groupId: string) =>
+      audienceGroupsApi.delete(active!.id, groupId),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: ["projects", "audience-groups", active?.id],
+      }),
   });
   const createGroup = useMutation({
-    mutationFn: (input: { name: string; description: string }) => audienceGroupsApi.create(active!.id, input),
+    mutationFn: (input: { name: string; description: string }) =>
+      audienceGroupsApi.create(active!.id, input),
     onSuccess: (group) => {
-      queryClient.invalidateQueries({ queryKey: ['projects', 'audience-groups', active?.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["projects", "audience-groups", active?.id],
+      });
       setCreateGroupOpen(false);
       router.push(`/dashboard/users/groups/${group.id}`);
     },
   });
   const createSegment = useMutation({
-    mutationFn: (input: { name: string; description: string; events: string[] }) => lifecycleSegmentsApi.create(active!.id, {
-      name: input.name,
-      description: input.description || undefined,
-      rules: { operator: 'OR', conditions: input.events.map(event => ({ event })) },
-    }),
+    mutationFn: (input: {
+      name: string;
+      description: string;
+      events: string[];
+    }) =>
+      lifecycleSegmentsApi.create(active!.id, {
+        name: input.name,
+        description: input.description || undefined,
+        rules: {
+          operator: "OR",
+          conditions: input.events.map((event) => ({ event })),
+        },
+      }),
     onSuccess: (segment) => {
-      queryClient.invalidateQueries({ queryKey: ['projects', 'lifecycle-segments', active?.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["projects", "lifecycle-segments", active?.id],
+      });
       setCreateSegmentOpen(false);
       router.push(`/dashboard/users/segments/${segment.id}`);
     },
   });
   useEffect(() => setUserCursors([]), [deferredUserSearch, active?.id]);
   const statsQuery = useQuery({
-    queryKey: ['projects', 'users', 'stats', active?.id],
+    queryKey: ["projects", "users", "stats", active?.id],
     queryFn: () => userStatsApi.get(active!.id),
     enabled: Boolean(active?.id),
   });
   const stats = statsQuery.data;
-  const reachRate = stats?.total ? `${((stats.reachable / stats.total) * 100).toFixed(1)}% of users` : 'No users yet';
-  const eventsTrend = !stats ? '' : stats.eventsYesterday ? `${stats.eventsToday >= stats.eventsYesterday ? '+' : ''}${(((stats.eventsToday - stats.eventsYesterday) / stats.eventsYesterday) * 100).toFixed(1)}% vs yesterday` : `${stats.eventsYesterday} yesterday`;
-  const tabs = [{ id: 'users' as const, label: 'All users', icon: PeopleAltRounded, count: stats ? stats.total.toLocaleString() : '—' }, { id: 'segments' as const, label: 'Lifecycle segments', icon: InsightsRounded, count: segmentsQuery.data ? segmentsQuery.data.length.toLocaleString() : '—' }, { id: 'groups' as const, label: 'Audience groups', icon: GroupsRounded, count: groupsQuery.data ? groupsQuery.data.length.toLocaleString() : '—' }];
+  const reachRate = stats?.total
+    ? `${((stats.reachable / stats.total) * 100).toFixed(1)}% of users`
+    : "No users yet";
+  const eventsTrend = !stats
+    ? ""
+    : stats.eventsYesterday
+      ? `${stats.eventsToday >= stats.eventsYesterday ? "+" : ""}${(((stats.eventsToday - stats.eventsYesterday) / stats.eventsYesterday) * 100).toFixed(1)}% vs yesterday`
+      : `${stats.eventsYesterday} yesterday`;
+  const tabs = [
+    {
+      id: "users" as const,
+      label: "All users",
+      icon: PeopleAltRounded,
+      count: stats ? stats.total.toLocaleString() : "—",
+    },
+    {
+      id: "segments" as const,
+      label: "Lifecycle segments",
+      icon: InsightsRounded,
+      count: segmentsQuery.data
+        ? segmentsQuery.data.length.toLocaleString()
+        : "—",
+    },
+    {
+      id: "groups" as const,
+      label: "Audience groups",
+      icon: GroupsRounded,
+      count: groupsQuery.data ? groupsQuery.data.length.toLocaleString() : "—",
+    },
+  ];
   const users = usersQuery.data?.users ?? [];
-  const formatDate = (value: string | null) => value ? new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) : 'Never';
+  const formatDate = (value: string | null) =>
+    value
+      ? new Intl.DateTimeFormat(undefined, {
+          dateStyle: "medium",
+          timeStyle: "short",
+        }).format(new Date(value))
+      : "Never";
   const exportUsers = () => {
-    const columns = ['User', 'Lifecycle segment', 'Email', 'Last active', 'Country'];
+    const columns = [
+      "User",
+      "Lifecycle segment",
+      "Email",
+      "Last active",
+      "Country",
+    ];
     const escapeCsv = (value: string) => `"${value.replace(/"/g, '""')}"`;
-    const csv = [columns, ...users.map(row => [row.externalUserId || row.email || row.id, row.lifecycleSegment?.name || 'No segment', row.email || '', formatDate(row.lastActiveAt), row.country || 'Unknown'])].map(row => row.map(escapeCsv).join(',')).join('\r\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const csv = [
+      columns,
+      ...users.map((row) => [
+        row.externalUserId || row.email || row.id,
+        row.lifecycleSegment?.name || "No segment",
+        row.email || "",
+        formatDate(row.lastActiveAt),
+        row.country || "Unknown",
+      ]),
+    ]
+      .map((row) => row.map(escapeCsv).join(","))
+      .join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
-    link.download = 'users.csv';
+    link.download = "users.csv";
     document.body.appendChild(link);
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
   };
-  const userColumns: DataTableColumn<EndUser>[] = [{ key: 'externalUserId', label: 'User', render: row => <Box className="user-table-link" role="link" tabIndex={0} onClick={() => router.push(`/dashboard/users/${row.id}`)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') router.push(`/dashboard/users/${row.id}`); }}><Typography fontSize={12} fontWeight={800}>{row.externalUserId || row.email || row.id}</Typography><Typography color="text.secondary" fontSize={10}>{row.name || 'Identified user'}</Typography></Box> }, { key: 'lifecycleSegment', label: 'Lifecycle segment', render: row => <Typography fontSize={12}>{row.lifecycleSegment?.name || 'No segment'}</Typography> }, { key: 'email', label: 'Email', render: row => <Typography fontSize={12}>{row.email || '—'}</Typography> }, { key: 'lastActiveAt', label: 'Last active', render: row => <Typography fontSize={12}>{formatDate(row.lastActiveAt)}</Typography> }, { key: 'country', label: 'Country', render: row => <Typography fontSize={12}>{row.country || 'Unknown'}</Typography> }];
-  const segments = (segmentsQuery.data ?? []).filter(segment => `${segment.name} ${segment.description ?? ''}`.toLowerCase().includes(segmentSearch.toLowerCase()));
-  const segmentTotalUsers = segments.reduce((sum, segment) => sum + (segment.userCount ?? segment.usersCount ?? 0), 0);
-  const segmentColumns: DataTableColumn<LifecycleSegment>[] = [{ key: 'name', label: 'Segment', render: row => <Box className="segment-table-link" role="link" tabIndex={0} onClick={() => router.push(`/dashboard/users/segments/${row.id}`)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') router.push(`/dashboard/users/segments/${row.id}`); }}><Stack direction="row" alignItems="center" gap={1.2}><Box className="segment-color" sx={{ bgcolor: '#9b53e1' }} /><Box><Stack direction="row" alignItems="center" gap={1}><Typography fontSize={12} fontWeight={800}>{row.name}</Typography><Chip label="AUTO LIFECYCLE" size="small" /></Stack><Typography color="text.secondary" fontSize={10}>{row.description || 'Automatically updated based on user activity.'}</Typography></Box></Stack></Box> }, { key: 'updatedAt', label: 'Status', render: row => <Typography color="#168c5b" fontSize={11} fontWeight={800}>{row.updatedAt ? `Updated ${new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(row.updatedAt))}` : 'Updated automatically'}</Typography> }, { key: 'share', label: 'Share', align: 'right', render: row => <Typography fontSize={12}>{segmentTotalUsers ? `${Math.round(((row.userCount ?? row.usersCount ?? 0) / segmentTotalUsers) * 100)}%` : '—'}</Typography> }, { key: 'userCount', label: 'Users', align: 'right', render: row => <Box className="segment-count"><Typography color="text.secondary" fontSize={10}><GroupsRounded fontSize="inherit" /> Users</Typography><strong>{(row.userCount ?? row.usersCount ?? 0).toLocaleString()}</strong></Box> }, { key: 'action', label: '', align: 'right', render: row => <IconButton aria-label={`Delete ${row.name}`} title="Delete segment" className="group-delete-button" disabled={deleteSegment.isPending} onClick={() => { if (window.confirm(`Delete the segment "${row.name}"? Its users are kept; they just lose this classification.`)) deleteSegment.mutate(row.id); }}><DeleteOutlineRounded fontSize="small" /></IconButton> }];
-  const groups = (groupsQuery.data ?? []).filter(group => `${group.name} ${group.description ?? ''}`.toLowerCase().includes(groupSearch.toLowerCase()));
-  const groupColumns: DataTableColumn<AudienceGroup>[] = [{ key: 'name', label: 'Audience group', render: row => <Stack direction="row" alignItems="center" gap={1.2}><Box className="group-dot" /><Box><Stack direction="row" alignItems="center" gap={1}><Typography fontSize={12} fontWeight={800}>{row.name}</Typography><Chip label="DYNAMIC" size="small" /></Stack><Typography color="text.secondary" fontSize={10}>{row.description || 'Dynamic audience group'}</Typography></Box></Stack> }, { key: 'updatedAt', label: 'Updated', render: row => <Typography color="text.secondary" fontSize={11}>{row.updatedAt ? new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(row.updatedAt)) : 'Updated automatically'}</Typography> }, { key: 'memberCount', label: 'Users', align: 'right', render: row => <Box className="segment-count"><Typography color="text.secondary" fontSize={10}><GroupsRounded fontSize="inherit" /> Users</Typography><strong>{(row.memberCount ?? 0).toLocaleString()}</strong></Box> }, { key: 'action', label: '', align: 'right', render: row => <Stack direction="row" justifyContent="flex-end" alignItems="center" gap={.5}><Button size="small" variant="outlined" className="group-view-button" onClick={() => router.push(`/dashboard/users/groups/${row.id}`)}>View group</Button><IconButton aria-label={`Remove ${row.name}`} title="Remove group" className="group-delete-button" disabled={deleteGroup.isPending} onClick={() => { if (window.confirm(`Delete ${row.name}?`)) deleteGroup.mutate(row.id); }}><DeleteOutlineRounded fontSize="small" /></IconButton></Stack> }];
-  return <Stack gap={2.5} className="users-workspace">
-    <Box className="workspace-tabs">{tabs.map(({ id, label, icon: Icon, count }) => <Button key={id} onClick={() => setTab(id)} className={tab === id ? 'workspace-tab active' : 'workspace-tab'} startIcon={<Icon />}><span>{label}</span><Chip label={count} size="small" /></Button>)}</Box>
-    {tab === 'users' && <Stack gap={2}><Grid container spacing={2}><Grid item xs={12} sm={4}><StatCard icon={GroupsRounded} label="Identified users" value={stats ? stats.total.toLocaleString() : '—'} trend="All users in this project" /></Grid><Grid item xs={12} sm={4}><StatCard icon={NotificationsActiveRounded} label="Reachable users" value={stats ? stats.reachable.toLocaleString() : '—'} trend={reachRate} /></Grid><Grid item xs={12} sm={4}><StatCard icon={EventRounded} label="Events today" value={stats ? stats.eventsToday.toLocaleString() : '—'} trend={eventsTrend} /></Grid></Grid><Card className="saas-card data-panel"><Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ md: 'center' }} gap={2}><Box><Typography variant="h3">All users</Typography><Typography color="text.secondary" fontSize={12}>Search and inspect identified people in {projectName}.</Typography></Box><Stack direction={{ xs: 'column', sm: 'row' }} gap={1}><Button variant="contained" startIcon={<FileUploadRounded />} className="users-import-button" onClick={() => setImportUsersOpen(true)}>Import users</Button><Button variant="contained" startIcon={<FileDownloadRounded />} className="users-export-button" onClick={exportUsers} disabled={!users.length}>Export</Button></Stack></Stack><Stack direction={{ xs: 'column', sm: 'row' }} gap={1.2} className="data-toolbar"><TextField size="small" value={userSearch} onChange={event => setUserSearch(event.target.value)} placeholder="Search by user ID, email or country" className="table-search" InputProps={{ startAdornment: <InputAdornment position="start"><SearchRounded fontSize="small" /></InputAdornment> }} /><Select size="small" defaultValue="all" className="filter-select" startAdornment={<InputAdornment position="start"><FilterListRounded fontSize="small" /></InputAdornment>}><MenuItem value="all">All users</MenuItem><MenuItem value="email-subscribed">Email subscribed</MenuItem><MenuItem value="email-unsubscribed">Email unsubscribed</MenuItem><MenuItem value="push-enabled">Push enabled</MenuItem><MenuItem value="unreachable">Unreachable users</MenuItem></Select></Stack>{usersQuery.isError ? <Typography color="error" fontSize={12} sx={{ p: 2 }}>Could not load users. Please try again.</Typography> : <ReusableDataTable columns={userColumns} rows={users} totalCount={users.length} noun="users" showMenu={false} loading={usersQuery.isLoading || usersQuery.isFetching} hasNextPage={Boolean(usersQuery.data?.nextCursor)} hasPreviousPage={userCursors.length > 0} onNextPage={() => usersQuery.data?.nextCursor && setUserCursors(current => [...current, usersQuery.data!.nextCursor!])} onPreviousPage={() => setUserCursors(current => current.slice(0, -1))} />}</Card></Stack>}
-    {tab === 'segments' && <Stack gap={2}><Card className="setup-strip segment-getting-started"><Box className="setup-intro"><Box className="setup-icon"><ManageSearchRounded /></Box><Box><Typography fontWeight={900}>Getting started</Typography><Typography color="text.secondary" fontSize={12}>Create <strong>Lifecycle Segments</strong> based on what users do in your app. Integrate the SDK, choose events, set conditions and filters, and we&apos;ll keep segments up to date automatically.</Typography><Button href="/docs" size="small" sx={{ mt: 1, px: 0 }} endIcon={<ArrowForwardRounded />}>View documentation</Button></Box></Box><Stack direction={{ xs: 'column', sm: 'row' }} gap={1} className="setup-steps"><Box className="setup-step"><Box className="setup-step-icon"><CodeRounded /></Box><Box><Stack direction="row" alignItems="center" gap={.7}><span>1</span><Typography fontSize={11} fontWeight={800}>Integrate SDK</Typography></Stack><Typography className="setup-step-desc">Connect the PixlPush SDK to start sending events from your app.</Typography></Box></Box><Box className="setup-step"><Box className="setup-step-icon"><AutoGraphRounded /></Box><Box><Stack direction="row" alignItems="center" gap={.7}><span>2</span><Typography fontSize={11} fontWeight={800}>Choose events</Typography></Stack><Typography className="setup-step-desc">Pick the events you want to track, like sign up, purchase or screen view.</Typography></Box></Box><Box className="setup-step"><Box className="setup-step-icon"><FilterListRounded /></Box><Box><Stack direction="row" alignItems="center" gap={.7}><span>3</span><Typography fontSize={11} fontWeight={800}>Add conditions</Typography></Stack><Typography className="setup-step-desc">Define rules and filters to include the right users in the segment.</Typography></Box></Box><Box className="setup-step"><Box className="setup-step-icon"><GroupsRounded /></Box><Box><Stack direction="row" alignItems="center" gap={.7}><span>4</span><Typography fontSize={11} fontWeight={800}>Segment updates</Typography></Stack><Typography className="setup-step-desc">Segments update automatically as users take action in your app.</Typography></Box></Box></Stack></Card><Card className="saas-card data-panel"><Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" gap={2}><Box><Typography variant="h3">Lifecycle segments</Typography><Typography color="text.secondary" fontSize={12}>Automatic classifications that update as users take action in {projectName}.</Typography></Box><Button variant="contained" startIcon={<AddRounded />} onClick={() => setCreateSegmentOpen(true)}>Create segment</Button></Stack><Stack direction={{ xs: 'column', sm: 'row' }} gap={1.2} className="data-toolbar"><TextField size="small" value={segmentSearch} onChange={event => setSegmentSearch(event.target.value)} placeholder="Search segments" className="table-search" InputProps={{ startAdornment: <InputAdornment position="start"><SearchRounded fontSize="small" /></InputAdornment> }} /><Select size="small" defaultValue="updated" className="filter-select" startAdornment={<InputAdornment position="start"><CalendarTodayRounded fontSize="small" /></InputAdornment>}><MenuItem value="updated">Recently updated</MenuItem><MenuItem value="created">Date created</MenuItem><MenuItem value="largest">Most users</MenuItem></Select></Stack>{segmentsQuery.isError ? <Typography color="error" fontSize={12} sx={{ p: 2 }}>Could not load lifecycle segments. Please try again.</Typography> : <ReusableDataTable columns={segmentColumns} rows={segments} totalCount={segments.length} noun="segments" showMenu={false} loading={segmentsQuery.isLoading || segmentsQuery.isFetching} />}</Card></Stack>}
-    {tab === 'groups' && <Card className="saas-card data-panel"><Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" gap={2}><Box><Typography variant="h3">Audience groups</Typography><Typography color="text.secondary" fontSize={12}>Dynamic targeting groups for campaigns and journey automations.</Typography></Box><Button variant="contained" startIcon={<AddRounded />} onClick={() => setCreateGroupOpen(true)}>Create group</Button></Stack><Stack direction={{ xs: 'column', sm: 'row' }} gap={1.2} className="data-toolbar"><TextField size="small" value={groupSearch} onChange={event => setGroupSearch(event.target.value)} placeholder="Search audience groups" className="table-search" InputProps={{ startAdornment: <InputAdornment position="start"><SearchRounded fontSize="small" /></InputAdornment> }} /><Select size="small" defaultValue="created" className="filter-select" startAdornment={<InputAdornment position="start"><CalendarTodayRounded fontSize="small" /></InputAdornment>}><MenuItem value="created">Date created</MenuItem><MenuItem value="updated">Recently updated</MenuItem><MenuItem value="largest">Most users</MenuItem></Select></Stack>{groupsQuery.isError ? <Typography color="error" fontSize={12} sx={{ p: 2 }}>Could not load audience groups. Please try again.</Typography> : <ReusableDataTable columns={groupColumns} rows={groups} totalCount={groups.length} noun="groups" showMenu={false} loading={groupsQuery.isLoading || groupsQuery.isFetching} />}</Card>}
-    <AudienceGroupCreateDialog open={createGroupOpen} onClose={() => { if (!createGroup.isPending) setCreateGroupOpen(false); }} onCreate={(name, description) => createGroup.mutate({ name, description })} loading={createGroup.isPending} error={createGroup.isError ? 'Could not create the audience group. Please try again.' : undefined} />
-    <LifecycleSegmentCreateDialog open={createSegmentOpen} onClose={() => { if (!createSegment.isPending) setCreateSegmentOpen(false); }} onCreate={input => createSegment.mutate(input)} schema={segmentSchemaQuery.data} loading={createSegment.isPending} error={segmentSchemaQuery.isError ? 'Could not load tracked events for this project.' : createSegment.isError ? ((createSegment.error as { message?: string })?.message ?? 'Could not create the lifecycle segment.') : undefined} />
-    <UserImportDialog open={importUsersOpen} onClose={() => setImportUsersOpen(false)} />
-  </Stack>;
+  const userColumns: DataTableColumn<EndUser>[] = [
+    {
+      key: "externalUserId",
+      label: "User",
+      render: (row) => (
+        <Box
+          className="user-table-link"
+          role="link"
+          tabIndex={0}
+          onClick={() => router.push(`/dashboard/users/${row.id}`)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ")
+              router.push(`/dashboard/users/${row.id}`);
+          }}
+        >
+          <Typography fontSize={12} fontWeight={800}>
+            {row.externalUserId || row.email || row.id}
+          </Typography>
+          <Typography color="text.secondary" fontSize={10}>
+            {row.name || "Identified user"}
+          </Typography>
+        </Box>
+      ),
+    },
+    {
+      key: "lifecycleSegment",
+      label: "Lifecycle segment",
+      render: (row) => (
+        <Typography fontSize={12}>
+          {row.lifecycleSegment?.name || "No segment"}
+        </Typography>
+      ),
+    },
+    {
+      key: "email",
+      label: "Email",
+      render: (row) => (
+        <Typography fontSize={12}>{row.email || "—"}</Typography>
+      ),
+    },
+    {
+      key: "lastActiveAt",
+      label: "Last active",
+      render: (row) => (
+        <Typography fontSize={12}>{formatDate(row.lastActiveAt)}</Typography>
+      ),
+    },
+    {
+      key: "country",
+      label: "Country",
+      render: (row) => (
+        <Typography fontSize={12}>{row.country || "Unknown"}</Typography>
+      ),
+    },
+  ];
+  const segments = (segmentsQuery.data ?? []).filter((segment) =>
+    `${segment.name} ${segment.description ?? ""}`
+      .toLowerCase()
+      .includes(segmentSearch.toLowerCase()),
+  );
+  const segmentTotalUsers = segments.reduce(
+    (sum, segment) => sum + (segment.userCount ?? segment.usersCount ?? 0),
+    0,
+  );
+  const segmentColumns: DataTableColumn<LifecycleSegment>[] = [
+    {
+      key: "name",
+      label: "Segment",
+      render: (row) => (
+        <Box
+          className="segment-table-link"
+          role="link"
+          tabIndex={0}
+          onClick={() => router.push(`/dashboard/users/segments/${row.id}`)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ")
+              router.push(`/dashboard/users/segments/${row.id}`);
+          }}
+        >
+          <Stack direction="row" alignItems="center" gap={1.2}>
+            <Box className="segment-color" sx={{ bgcolor: "#9b53e1" }} />
+            <Box>
+              <Stack direction="row" alignItems="center" gap={1}>
+                <Typography fontSize={12} fontWeight={800}>
+                  {row.name}
+                </Typography>
+                <Chip label="AUTO LIFECYCLE" size="small" />
+              </Stack>
+              <Typography color="text.secondary" fontSize={10}>
+                {row.description ||
+                  "Automatically updated based on user activity."}
+              </Typography>
+            </Box>
+          </Stack>
+        </Box>
+      ),
+    },
+    {
+      key: "updatedAt",
+      label: "Status",
+      render: (row) => (
+        <Typography color="#168c5b" fontSize={11} fontWeight={800}>
+          {row.updatedAt
+            ? `Updated ${new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(row.updatedAt))}`
+            : "Updated automatically"}
+        </Typography>
+      ),
+    },
+    {
+      key: "share",
+      label: "Share",
+      align: "right",
+      render: (row) => (
+        <Typography fontSize={12}>
+          {segmentTotalUsers
+            ? `${Math.round(((row.userCount ?? row.usersCount ?? 0) / segmentTotalUsers) * 100)}%`
+            : "—"}
+        </Typography>
+      ),
+    },
+    {
+      key: "userCount",
+      label: "Users",
+      align: "right",
+      render: (row) => (
+        <Box className="segment-count">
+          <Typography color="text.secondary" fontSize={10}>
+            <GroupsRounded fontSize="inherit" /> Users
+          </Typography>
+          <strong>
+            {(row.userCount ?? row.usersCount ?? 0).toLocaleString()}
+          </strong>
+        </Box>
+      ),
+    },
+    {
+      key: "action",
+      label: "",
+      align: "right",
+      render: (row) => (
+        <IconButton
+          aria-label={`Delete ${row.name}`}
+          title="Delete segment"
+          className="group-delete-button"
+          disabled={deleteSegment.isPending}
+          onClick={() => {
+            if (
+              window.confirm(
+                `Delete the segment "${row.name}"? Its users are kept; they just lose this classification.`,
+              )
+            )
+              deleteSegment.mutate(row.id);
+          }}
+        >
+          <DeleteOutlineRounded fontSize="small" />
+        </IconButton>
+      ),
+    },
+  ];
+  const groups = (groupsQuery.data ?? []).filter((group) =>
+    `${group.name} ${group.description ?? ""}`
+      .toLowerCase()
+      .includes(groupSearch.toLowerCase()),
+  );
+  const groupColumns: DataTableColumn<AudienceGroup>[] = [
+    {
+      key: "name",
+      label: "Audience group",
+      render: (row) => (
+        <Stack direction="row" alignItems="center" gap={1.2}>
+          <Box className="group-dot" />
+          <Box>
+            <Stack direction="row" alignItems="center" gap={1}>
+              <Typography fontSize={12} fontWeight={800}>
+                {row.name}
+              </Typography>
+              <Chip label="DYNAMIC" size="small" />
+            </Stack>
+            <Typography color="text.secondary" fontSize={10}>
+              {row.description || "Dynamic audience group"}
+            </Typography>
+          </Box>
+        </Stack>
+      ),
+    },
+    {
+      key: "updatedAt",
+      label: "Updated",
+      render: (row) => (
+        <Typography color="text.secondary" fontSize={11}>
+          {row.updatedAt
+            ? new Intl.DateTimeFormat(undefined, {
+                dateStyle: "medium",
+              }).format(new Date(row.updatedAt))
+            : "Updated automatically"}
+        </Typography>
+      ),
+    },
+    {
+      key: "memberCount",
+      label: "Users",
+      align: "right",
+      render: (row) => (
+        <Box className="segment-count">
+          <Typography color="text.secondary" fontSize={10}>
+            <GroupsRounded fontSize="inherit" /> Users
+          </Typography>
+          <strong>{(row.memberCount ?? 0).toLocaleString()}</strong>
+        </Box>
+      ),
+    },
+    {
+      key: "action",
+      label: "",
+      align: "right",
+      render: (row) => (
+        <Stack
+          direction="row"
+          justifyContent="flex-end"
+          alignItems="center"
+          gap={0.5}
+        >
+          <Button
+            size="small"
+            variant="outlined"
+            className="group-view-button"
+            onClick={() => router.push(`/dashboard/users/groups/${row.id}`)}
+          >
+            View group
+          </Button>
+          <IconButton
+            aria-label={`Remove ${row.name}`}
+            title="Remove group"
+            className="group-delete-button"
+            disabled={deleteGroup.isPending}
+            onClick={() => {
+              if (window.confirm(`Delete ${row.name}?`))
+                deleteGroup.mutate(row.id);
+            }}
+          >
+            <DeleteOutlineRounded fontSize="small" />
+          </IconButton>
+        </Stack>
+      ),
+    },
+  ];
+  return (
+    <Stack gap={2.5} className="users-workspace">
+      <Box className="workspace-tabs">
+        {tabs.map(({ id, label, icon: Icon, count }) => (
+          <Button
+            key={id}
+            onClick={() => setTab(id)}
+            className={tab === id ? "workspace-tab active" : "workspace-tab"}
+            startIcon={<Icon />}
+          >
+            <span>{label}</span>
+            <Chip label={count} size="small" />
+          </Button>
+        ))}
+      </Box>
+      {tab === "users" && (
+        <Stack gap={2}>
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={4}>
+              <StatCard
+                icon={GroupsRounded}
+                label="Identified users"
+                value={stats ? stats.total.toLocaleString() : "—"}
+                trend="All users in this project"
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <StatCard
+                icon={NotificationsActiveRounded}
+                label="Reachable users"
+                value={stats ? stats.reachable.toLocaleString() : "—"}
+                trend={reachRate}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <StatCard
+                icon={EventRounded}
+                label="Events today"
+                value={stats ? stats.eventsToday.toLocaleString() : "—"}
+                trend={eventsTrend}
+              />
+            </Grid>
+          </Grid>
+          <Card className="saas-card data-panel">
+            <Stack
+              direction={{ xs: "column", md: "row" }}
+              justifyContent="space-between"
+              alignItems={{ md: "center" }}
+              gap={2}
+            >
+              <Box>
+                <Typography variant="h3">All users</Typography>
+                <Typography color="text.secondary" fontSize={12}>
+                  Search and inspect identified people in {projectName}.
+                </Typography>
+              </Box>
+              <Stack direction={{ xs: "column", sm: "row" }} gap={1}>
+                <Button
+                  variant="contained"
+                  startIcon={<FileUploadRounded />}
+                  className="users-import-button"
+                  onClick={() => setImportUsersOpen(true)}
+                >
+                  Import users
+                </Button>
+                <Button
+                  variant="contained"
+                  startIcon={<FileDownloadRounded />}
+                  className="users-export-button"
+                  onClick={exportUsers}
+                  disabled={!users.length}
+                >
+                  Export
+                </Button>
+              </Stack>
+            </Stack>
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              gap={1.2}
+              className="data-toolbar"
+            >
+              <TextField
+                size="small"
+                value={userSearch}
+                onChange={(event) => setUserSearch(event.target.value)}
+                placeholder="Search by user ID, email or country"
+                className="table-search"
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchRounded fontSize="small" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+              <Select
+                size="small"
+                defaultValue="all"
+                className="filter-select"
+                startAdornment={
+                  <InputAdornment position="start">
+                    <FilterListRounded fontSize="small" />
+                  </InputAdornment>
+                }
+              >
+                <MenuItem value="all">All users</MenuItem>
+                <MenuItem value="email-subscribed">Email subscribed</MenuItem>
+                <MenuItem value="email-unsubscribed">
+                  Email unsubscribed
+                </MenuItem>
+                <MenuItem value="push-enabled">Push enabled</MenuItem>
+                <MenuItem value="unreachable">Unreachable users</MenuItem>
+              </Select>
+            </Stack>
+            {usersQuery.isError ? (
+              <Typography color="error" fontSize={12} sx={{ p: 2 }}>
+                Could not load users. Please try again.
+              </Typography>
+            ) : (
+              <ReusableDataTable
+                columns={userColumns}
+                rows={users}
+                totalCount={users.length}
+                noun="users"
+                showMenu={false}
+                loading={usersQuery.isLoading || usersQuery.isFetching}
+                hasNextPage={Boolean(usersQuery.data?.nextCursor)}
+                hasPreviousPage={userCursors.length > 0}
+                onNextPage={() =>
+                  usersQuery.data?.nextCursor &&
+                  setUserCursors((current) => [
+                    ...current,
+                    usersQuery.data!.nextCursor!,
+                  ])
+                }
+                onPreviousPage={() =>
+                  setUserCursors((current) => current.slice(0, -1))
+                }
+              />
+            )}
+          </Card>
+        </Stack>
+      )}
+      {tab === "segments" && (
+        <Stack gap={2}>
+          <Card className="setup-strip segment-getting-started">
+            <Box className="setup-intro">
+              <Box className="setup-icon">
+                <ManageSearchRounded />
+              </Box>
+              <Box>
+                <Typography fontWeight={900}>Getting started</Typography>
+                <Typography color="text.secondary" fontSize={12}>
+                  Create <strong>Lifecycle Segments</strong> based on what users
+                  do in your app. Integrate the SDK, choose events, set
+                  conditions and filters, and we&apos;ll keep segments up to
+                  date automatically.
+                </Typography>
+                <Button
+                  href="/docs"
+                  size="small"
+                  sx={{ mt: 1, px: 0 }}
+                  endIcon={<ArrowForwardRounded />}
+                >
+                  View documentation
+                </Button>
+              </Box>
+            </Box>
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              gap={1}
+              className="setup-steps"
+            >
+              <Box className="setup-step">
+                <Box className="setup-step-icon">
+                  <CodeRounded />
+                </Box>
+                <Box>
+                  <Stack direction="row" alignItems="center" gap={0.7}>
+                    <span>1</span>
+                    <Typography fontSize={11} fontWeight={800}>
+                      Integrate SDK
+                    </Typography>
+                  </Stack>
+                  <Typography className="setup-step-desc">
+                    Connect the PixlPush SDK to start sending events from your
+                    app.
+                  </Typography>
+                </Box>
+              </Box>
+              <Box className="setup-step">
+                <Box className="setup-step-icon">
+                  <AutoGraphRounded />
+                </Box>
+                <Box>
+                  <Stack direction="row" alignItems="center" gap={0.7}>
+                    <span>2</span>
+                    <Typography fontSize={11} fontWeight={800}>
+                      Choose events
+                    </Typography>
+                  </Stack>
+                  <Typography className="setup-step-desc">
+                    Pick the events you want to track, like sign up, purchase or
+                    screen view.
+                  </Typography>
+                </Box>
+              </Box>
+              <Box className="setup-step">
+                <Box className="setup-step-icon">
+                  <FilterListRounded />
+                </Box>
+                <Box>
+                  <Stack direction="row" alignItems="center" gap={0.7}>
+                    <span>3</span>
+                    <Typography fontSize={11} fontWeight={800}>
+                      Add conditions
+                    </Typography>
+                  </Stack>
+                  <Typography className="setup-step-desc">
+                    Define rules and filters to include the right users in the
+                    segment.
+                  </Typography>
+                </Box>
+              </Box>
+              <Box className="setup-step">
+                <Box className="setup-step-icon">
+                  <GroupsRounded />
+                </Box>
+                <Box>
+                  <Stack direction="row" alignItems="center" gap={0.7}>
+                    <span>4</span>
+                    <Typography fontSize={11} fontWeight={800}>
+                      Segment updates
+                    </Typography>
+                  </Stack>
+                  <Typography className="setup-step-desc">
+                    Segments update automatically as users take action in your
+                    app.
+                  </Typography>
+                </Box>
+              </Box>
+            </Stack>
+          </Card>
+          <Card className="saas-card data-panel">
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              justifyContent="space-between"
+              gap={2}
+            >
+              <Box>
+                <Typography variant="h3">Lifecycle segments</Typography>
+                <Typography color="text.secondary" fontSize={12}>
+                  Automatic classifications that update as users take action in{" "}
+                  {projectName}.
+                </Typography>
+              </Box>
+              <Button
+                variant="contained"
+                startIcon={<AddRounded />}
+                onClick={() => setCreateSegmentOpen(true)}
+              >
+                Create segment
+              </Button>
+            </Stack>
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              gap={1.2}
+              className="data-toolbar"
+            >
+              <TextField
+                size="small"
+                value={segmentSearch}
+                onChange={(event) => setSegmentSearch(event.target.value)}
+                placeholder="Search segments"
+                className="table-search"
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchRounded fontSize="small" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+              <Select
+                size="small"
+                defaultValue="updated"
+                className="filter-select"
+                startAdornment={
+                  <InputAdornment position="start">
+                    <CalendarTodayRounded fontSize="small" />
+                  </InputAdornment>
+                }
+              >
+                <MenuItem value="updated">Recently updated</MenuItem>
+                <MenuItem value="created">Date created</MenuItem>
+                <MenuItem value="largest">Most users</MenuItem>
+              </Select>
+            </Stack>
+            {segmentsQuery.isError ? (
+              <Typography color="error" fontSize={12} sx={{ p: 2 }}>
+                Could not load lifecycle segments. Please try again.
+              </Typography>
+            ) : (
+              <ReusableDataTable
+                columns={segmentColumns}
+                rows={segments}
+                totalCount={segments.length}
+                noun="segments"
+                showMenu={false}
+                loading={segmentsQuery.isLoading || segmentsQuery.isFetching}
+              />
+            )}
+          </Card>
+        </Stack>
+      )}
+      {tab === "groups" && (
+        <Card className="saas-card data-panel">
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            justifyContent="space-between"
+            gap={2}
+          >
+            <Box>
+              <Typography variant="h3">Audience groups</Typography>
+              <Typography color="text.secondary" fontSize={12}>
+                Dynamic targeting groups for campaigns and journey automations.
+              </Typography>
+            </Box>
+            <Button
+              variant="contained"
+              startIcon={<AddRounded />}
+              onClick={() => setCreateGroupOpen(true)}
+            >
+              Create group
+            </Button>
+          </Stack>
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            gap={1.2}
+            className="data-toolbar"
+          >
+            <TextField
+              size="small"
+              value={groupSearch}
+              onChange={(event) => setGroupSearch(event.target.value)}
+              placeholder="Search audience groups"
+              className="table-search"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchRounded fontSize="small" />
+                  </InputAdornment>
+                ),
+              }}
+            />
+            <Select
+              size="small"
+              defaultValue="created"
+              className="filter-select"
+              startAdornment={
+                <InputAdornment position="start">
+                  <CalendarTodayRounded fontSize="small" />
+                </InputAdornment>
+              }
+            >
+              <MenuItem value="created">Date created</MenuItem>
+              <MenuItem value="updated">Recently updated</MenuItem>
+              <MenuItem value="largest">Most users</MenuItem>
+            </Select>
+          </Stack>
+          {groupsQuery.isError ? (
+            <Typography color="error" fontSize={12} sx={{ p: 2 }}>
+              Could not load audience groups. Please try again.
+            </Typography>
+          ) : (
+            <ReusableDataTable
+              columns={groupColumns}
+              rows={groups}
+              totalCount={groups.length}
+              noun="groups"
+              showMenu={false}
+              loading={groupsQuery.isLoading || groupsQuery.isFetching}
+            />
+          )}
+        </Card>
+      )}
+      <AudienceGroupCreateDialog
+        open={createGroupOpen}
+        onClose={() => {
+          if (!createGroup.isPending) setCreateGroupOpen(false);
+        }}
+        onCreate={(name, description) =>
+          createGroup.mutate({ name, description })
+        }
+        loading={createGroup.isPending}
+        error={
+          createGroup.isError
+            ? "Could not create the audience group. Please try again."
+            : undefined
+        }
+      />
+      <LifecycleSegmentCreateDialog
+        open={createSegmentOpen}
+        onClose={() => {
+          if (!createSegment.isPending) setCreateSegmentOpen(false);
+        }}
+        onCreate={(input) => createSegment.mutate(input)}
+        schema={segmentSchemaQuery.data}
+        loading={createSegment.isPending}
+        error={
+          segmentSchemaQuery.isError
+            ? "Could not load tracked events for this project."
+            : createSegment.isError
+              ? ((createSegment.error as { message?: string })?.message ??
+                "Could not create the lifecycle segment.")
+              : undefined
+        }
+      />
+      <UserImportDialog
+        open={importUsersOpen}
+        onClose={() => setImportUsersOpen(false)}
+      />
+    </Stack>
+  );
 }
 
 export function ChannelSection({ channel }: { channel: "email" | "push" }) {
@@ -995,9 +1736,6 @@ function PushSection() {
   const [tab, setTab] = useState<"send" | "drafts" | "templates">("templates");
   const [composer, setComposer] = useState<"campaign" | "template" | null>(
     null,
-  );
-  const project = projectContext(
-    useSelector((state: RootState) => state.ui.selectedProject),
   );
   if (composer)
     return (
@@ -1299,17 +2037,10 @@ function PushSection() {
     <Stack gap={2.5} className="email-workspace push-workspace">
       <Stack
         direction={{ xs: "column", md: "row" }}
-        justifyContent="space-between"
+        justifyContent="flex-end"
         alignItems={{ md: "center" }}
         gap={2}
       >
-        <Box>
-          <Typography variant="h3">Push workspace</Typography>
-          <Typography color="text.secondary" fontSize={12}>
-            Create, manage, and reuse push notifications for {project.name}{" "}
-            campaigns and journeys.
-          </Typography>
-        </Box>
         <Stack direction="row" gap={1}>
           <Button
             variant="contained"
