@@ -679,10 +679,10 @@ export function UsersSection() {
     },
   });
   const createSegment = useMutation({
-    mutationFn: (input: { name: string; description: string; event: string }) => lifecycleSegmentsApi.create(active!.id, {
+    mutationFn: (input: { name: string; description: string; events: string[] }) => lifecycleSegmentsApi.create(active!.id, {
       name: input.name,
       description: input.description || undefined,
-      rules: { operator: 'OR', conditions: [{ event: input.event }] },
+      rules: { operator: 'OR', conditions: input.events.map(event => ({ event })) },
     }),
     onSuccess: (segment) => {
       queryClient.invalidateQueries({ queryKey: ['projects', 'lifecycle-segments', active?.id] });
