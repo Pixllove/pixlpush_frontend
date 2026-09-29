@@ -218,7 +218,7 @@ export interface EmailSettings {
   productionSendingEnabled: boolean;
 }
 
-export type UserImportStatus = 'uploaded' | 'mapped' | 'previewed' | 'committing' | 'completed' | 'failed' | 'expired';
+export type UserImportStatus = 'uploaded' | 'mapped' | 'previewed' | 'committing' | 'completed' | 'failed' | 'expired' | 'deleted';
 
 /** One CSV user import. `sampleRows` are keyed by column header. */
 export interface UserImport {

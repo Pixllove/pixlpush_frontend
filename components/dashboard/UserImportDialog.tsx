@@ -630,7 +630,11 @@ export default function UserImportDialog({
                               <Chip
                                 label={record.status}
                                 size="small"
-                                className="active-chip"
+                                className={
+                                  record.status === "completed"
+                                    ? "active-chip"
+                                    : "paused-chip"
+                                }
                               />
                             </TableCell>
                             <TableCell align="right">
