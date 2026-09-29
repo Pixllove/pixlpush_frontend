@@ -1,11 +1,12 @@
 /** Mirrors the backend's ProjectRole enum. */
-export type ProjectRole = 'owner' | 'admin' | 'developer' | 'analyst' | 'read_only' | 'billing';
+export type ProjectRole =
+  "owner" | "admin" | "developer" | "analyst" | "read_only" | "billing";
 
-export type ProjectStatus = 'active' | 'deactivated';
+export type ProjectStatus = "active" | "deactivated";
 
-export type ProjectEnvironment = 'development' | 'staging' | 'production';
+export type ProjectEnvironment = "development" | "staging" | "production";
 
-export type PlanName = 'free' | 'starter' | 'pro' | 'enterprise';
+export type PlanName = "free" | "starter" | "pro" | "enterprise";
 
 /** A Project as returned by GET /projects and POST /projects. */
 export interface Project {
@@ -25,7 +26,11 @@ export interface Project {
 export interface ProjectDetail extends Project {
   description: string | null;
   environment: ProjectEnvironment;
-  subscription: { plan: PlanName; status: string; currentPeriodStart: string } | null;
+  subscription: {
+    plan: PlanName;
+    status: string;
+    currentPeriodStart: string;
+  } | null;
   _count?: { endUsers: number; members: number };
 }
 
@@ -64,6 +69,48 @@ export interface EndUser {
   lastActiveAt: string | null;
   createdAt: string;
   lifecycleSegment: { id: string; name: string } | null;
+}
+
+export interface UserProfile extends EndUser {
+  emailConsent?: boolean | null;
+  accountStatus?: string | null;
+  userType?: string | null;
+  region?: string | null;
+  timezone?: string | null;
+  platform?: string | null;
+  emailVerified?: boolean | null;
+  deletedAt?: string | null;
+  device?: Record<string, unknown> | null;
+  push?: Record<string, unknown> | null;
+  audienceGroups?: Array<{ id: string; name: string }>;
+  properties?: Record<string, unknown> | null;
+  [key: string]: unknown;
+}
+
+export interface UserActivity {
+  id: string;
+  type?: string;
+  category?: string;
+  title?: string;
+  description?: string | null;
+  details?: Record<string, unknown> | null;
+  occurredAt?: string;
+  createdAt?: string;
+  [key: string]: unknown;
+}
+
+export interface UserEvent {
+  id: string;
+  eventId?: string;
+  name: string;
+  userId: string;
+  externalUserId?: string | null;
+  sessionId?: string | null;
+  environment?: string | null;
+  platform?: string | null;
+  properties?: Record<string, unknown>;
+  occurredAt: string;
+  receivedAt?: string;
 }
 
 export interface UsersPage {
@@ -110,8 +157,12 @@ export interface LifecycleSegmentRecommendedEvent {
 }
 
 export interface LifecycleSegmentSchema {
-  logicalOperators: Array<'AND' | 'OR'>;
-  condition: { key: string; label: string; value: { type: string; required?: boolean } };
+  logicalOperators: Array<"AND" | "OR">;
+  condition: {
+    key: string;
+    label: string;
+    value: { type: string; required?: boolean };
+  };
   limits: { maxConditions: number };
   allowCustomEvent: boolean;
   events: LifecycleSegmentSchemaEvent[];
@@ -137,7 +188,10 @@ export interface AudienceGroupMember {
   enteredAt: string;
 }
 
-export interface AudienceGroupSchemaOption { key: string; label: string }
+export interface AudienceGroupSchemaOption {
+  key: string;
+  label: string;
+}
 export interface AudienceGroupSchemaCondition {
   key: string;
   label: string;
@@ -162,7 +216,7 @@ export interface AudienceGroupSchema {
   levels: Array<Record<string, unknown>>;
   fields: AudienceGroupSchemaField[];
   fieldKeys: string[];
-  logicalOperators: Array<'AND' | 'OR'>;
+  logicalOperators: Array<"AND" | "OR">;
   limits: { maxConditions: number; maxDepth: number };
 }
 
@@ -175,7 +229,7 @@ export interface UpdateProjectInput {
 
 /** GET /projects/:id/firebase. Credentials themselves are never returned. */
 export interface FirebaseSettings {
-  status: 'not_configured' | 'connected' | 'error';
+  status: "not_configured" | "connected" | "error";
   firebaseProjectId: string | null;
   clientEmail: string | null;
   lastError?: string | null;
@@ -188,7 +242,7 @@ export interface SdkKey {
   id: string;
   name: string;
   keyPrefix: string;
-  status: 'active' | 'revoked';
+  status: "active" | "revoked";
   lastUsedAt: string | null;
   createdAt: string;
   revokedAt: string | null;
@@ -212,13 +266,21 @@ export interface EmailSettings {
   senderEmail: string | null;
   senderName: string | null;
   dnsRecords: DnsRecord[];
-  status: 'not_configured' | 'pending_verification' | 'verified' | 'error';
+  status: "not_configured" | "pending_verification" | "verified" | "error";
   lastError: string | null;
   lastCheckedAt: string | null;
   productionSendingEnabled: boolean;
 }
 
-export type UserImportStatus = 'uploaded' | 'mapped' | 'previewed' | 'committing' | 'completed' | 'failed' | 'expired' | 'deleted';
+export type UserImportStatus =
+  | "uploaded"
+  | "mapped"
+  | "previewed"
+  | "committing"
+  | "completed"
+  | "failed"
+  | "expired"
+  | "deleted";
 
 /** One CSV user import. `sampleRows` are keyed by column header. */
 export interface UserImport {
@@ -229,7 +291,14 @@ export interface UserImport {
   sampleRows?: Record<string, string>[];
   totalRows: number;
   processedRows: number;
-  results: { created: number; updated: number; unchanged: number; conflicts: number; errors: number; skipped: number };
+  results: {
+    created: number;
+    updated: number;
+    unchanged: number;
+    conflicts: number;
+    errors: number;
+    skipped: number;
+  };
   errorMessage: string | null;
   createdAt: string;
 }
@@ -237,7 +306,7 @@ export interface UserImport {
 export interface CustomPropertyDef {
   key: string;
   label: string;
-  type: 'string' | 'number' | 'boolean' | 'date';
+  type: "string" | "number" | "boolean" | "date";
 }
 
 export interface ImportSuggestions {
@@ -245,7 +314,7 @@ export interface ImportSuggestions {
   suggestions: {
     sourceColumn: string;
     targetField: string | null;
-    normalization?: 'email' | 'phone' | 'lowercase' | 'trim';
+    normalization?: "email" | "phone" | "lowercase" | "trim";
     newCustomProperty?: CustomPropertyDef;
     isMatchKey: boolean;
   }[];
@@ -257,15 +326,23 @@ export interface ImportMappingInput {
     sourceColumn: string;
     targetField: string | null;
     isMatchKey?: boolean;
-    overwriteMode?: 'overwrite' | 'fill_empty_only' | 'do_not_overwrite';
-    normalization?: 'email' | 'phone' | 'lowercase' | 'trim';
+    overwriteMode?: "overwrite" | "fill_empty_only" | "do_not_overwrite";
+    normalization?: "email" | "phone" | "lowercase" | "trim";
   }[];
   customProperties: CustomPropertyDef[];
   saveMatchRule: boolean;
 }
 
 export interface ImportPreview {
-  summary: { total: number; newUsers: number; existingUsers: number; unchanged: number; conflicts: number; invalid: number; skipped: number };
+  summary: {
+    total: number;
+    newUsers: number;
+    existingUsers: number;
+    unchanged: number;
+    conflicts: number;
+    invalid: number;
+    skipped: number;
+  };
 }
 
 /** GET /users/stats: header counts for the Users page. */
