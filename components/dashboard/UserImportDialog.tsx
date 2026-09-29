@@ -947,6 +947,10 @@ export default function UserImportDialog({
             )}
             <Box className="import-review-card">
               <Typography fontWeight={900}>Mapped fields</Typography>
+              <Typography color="text.secondary" fontSize={12}>
+                Column header language:{" "}
+                {headerLanguages.find(([, code]) => code === headerLanguage)?.[0] ?? headerLanguage}
+              </Typography>
               {headers
                 .filter((header) => (mapping[header] ?? "ignore") !== "ignore")
                 .map((header) => (

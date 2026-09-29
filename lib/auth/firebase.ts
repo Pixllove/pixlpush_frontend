@@ -4,9 +4,8 @@ import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
 import {
   getAuth,
   GoogleAuthProvider,
-  signInWithPopup,
-  type AuthError,
-  type UserCredential,
+  getRedirectResult,
+  signInWithRedirect,
 } from 'firebase/auth';
 
 /**
@@ -16,7 +15,13 @@ import {
  */
 const config = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  // On HTTPS, our own host: /__/auth is proxied to Firebase (next.config.mjs),
+  // keeping the redirect flow first-party. Firebase always opens the handler
+  // over https, so plain-http localhost keeps the firebaseapp.com domain.
+  authDomain:
+    typeof window !== 'undefined' && window.location.protocol === 'https:'
+      ? window.location.host
+      : process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
@@ -28,45 +33,21 @@ function firebaseApp(): FirebaseApp {
   return getApps()[0] ?? initializeApp(config as Required<typeof config>);
 }
 
-const popupClosed = () =>
-  Object.assign(new Error('Popup closed by user.'), { code: 'auth/popup-closed-by-user' }) as AuthError;
+/**
+ * Sends the current tab to Google's account chooser; the page is left behind,
+ * so this never resolves. The result is picked up by getGoogleRedirectIdToken()
+ * when Google sends the user back.
+ */
+export async function startGoogleRedirect(): Promise<void> {
+  await signInWithRedirect(getAuth(firebaseApp()), new GoogleAuthProvider());
+}
 
 /**
- * Returns the Google ID token. This is the only value the backend can verify:
+ * Returns the Google ID token after a redirect back from Google, or null when
+ * this page load isn't one. This is the only value the backend can verify:
  * not the uid, and not the OAuth access token from credentialFromResult().
- *
- * signInWithPopup only notices a closed window on its own ~2s poll, and when
- * the window is dismissed before an account is picked it can stall past that,
- * leaving the caller awaiting a promise that never settles. Racing the sign-in
- * against our own poll means a cancel rejects promptly however Firebase behaves.
  */
-export async function getGoogleIdToken(): Promise<string> {
-  const auth = getAuth(firebaseApp());
-  let popup: Window | null = null;
-
-  // Firebase reuses whatever window.open returns during signInWithPopup, so
-  // wrapping it is how we get a handle on the popup to watch.
-  const open = window.open;
-  window.open = ((...args: Parameters<typeof window.open>) => {
-    popup = open.apply(window, args);
-    return popup;
-  }) as typeof window.open;
-
-  let timer: ReturnType<typeof setInterval> | undefined;
-
-  try {
-    const credential = await Promise.race([
-      signInWithPopup(auth, new GoogleAuthProvider()),
-      new Promise<never>((_, reject) => {
-        timer = setInterval(() => {
-          if (popup?.closed) reject(popupClosed());
-        }, 300);
-      }),
-    ]);
-
-    return (credential as UserCredential).user.getIdToken();
-  } finally {
-    clearInterval(timer);
-    window.open = open;
-  }
+export async function getGoogleRedirectIdToken(): Promise<string | null> {
+  const result = await getRedirectResult(getAuth(firebaseApp()));
+  return result ? result.user.getIdToken() : null;
 }

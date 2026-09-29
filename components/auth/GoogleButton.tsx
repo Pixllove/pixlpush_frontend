@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Box, Button, CircularProgress, SvgIcon } from '@mui/material';
 import { useGoogleLogin } from '@/hooks/auth/use-login';
@@ -19,6 +19,8 @@ function GoogleIcon() {
   );
 }
 
+const REDIRECT_FLAG = 'pixlpush:google-redirect';
+
 export default function GoogleButton({
   label = 'Continue with Google',
   onError,
@@ -33,38 +35,71 @@ export default function GoogleButton({
 
   const pending = popupPending || googleLogin.isPending;
 
+  const reportError = (error: unknown) => {
+    const code = (error as { code?: string }).code;
+    // Firebase's own message for this one is opaque; name the actual fix.
+    if (code === 'auth/unauthorized-domain') {
+      onError(
+        `Google sign-in is not enabled for ${window.location.hostname}. Add that hostname under Firebase > Authentication > Settings > Authorized domains.`,
+      );
+      return;
+    }
+    onError((error as ApiError).message ?? 'Google sign-in failed. Please try again.');
+  };
+
+  // Coming back from Google's account chooser: finish the sign-in here.
+  // The ref stops Strict Mode's double effect from logging in twice.
+  const handledRedirect = useRef(false);
+  useEffect(() => {
+    if (handledRedirect.current) return;
+    handledRedirect.current = true;
+
+    // Only a page load that follows our own redirect has a result to collect;
+    // any other load (a plain reload) leaves the button idle.
+    if (sessionStorage.getItem(REDIRECT_FLAG) !== '1') return;
+    sessionStorage.removeItem(REDIRECT_FLAG);
+    setPopupPending(true);
+
+    (async () => {
+      const { getGoogleRedirectIdToken } = await import('@/lib/auth/firebase');
+
+      try {
+        const idToken = await getGoogleRedirectIdToken();
+        if (!idToken) {
+          onError('Google sign-in did not complete. Please try again.');
+          return;
+        }
+
+        const { account } = await googleLogin.mutateAsync(idToken);
+        // Verified addresses go to the app, unverified ones to the verify screen.
+        router.replace(postLoginPath(account, searchParams.get('redirect')));
+        router.refresh();
+      } catch (error) {
+        reportError(error);
+      } finally {
+        setPopupPending(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleClick = async () => {
     setPopupPending(true);
     try {
-      const { getGoogleIdToken, isGoogleSignInConfigured } = await import('@/lib/auth/firebase');
+      const { startGoogleRedirect, isGoogleSignInConfigured } = await import('@/lib/auth/firebase');
 
       if (!isGoogleSignInConfigured) {
         onError('Google sign-in is not configured.');
+        setPopupPending(false);
         return;
       }
 
-      const idToken = await getGoogleIdToken();
-      const { account } = await googleLogin.mutateAsync(idToken);
-
-      // Google-verified addresses land straight in the app; the helper still
-      // routes an unverified one to the verify screen rather than assuming.
-      router.replace(postLoginPath(account, searchParams.get('redirect')));
-      router.refresh();
+      sessionStorage.setItem(REDIRECT_FLAG, '1');
+      // Navigates this tab away to Google; the spinner stays until it does.
+      await startGoogleRedirect();
     } catch (error) {
-      const code = (error as { code?: string }).code;
-      // The user closing the popup is not a failure worth reporting.
-      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') return;
-
-      // Firebase's own message for this one is opaque; name the actual fix.
-      if (code === 'auth/unauthorized-domain') {
-        onError(
-          `Google sign-in is not enabled for ${window.location.hostname}. Add that hostname under Firebase > Authentication > Settings > Authorized domains.`,
-        );
-        return;
-      }
-
-      onError((error as ApiError).message ?? 'Google sign-in failed. Please try again.');
-    } finally {
+      sessionStorage.removeItem(REDIRECT_FLAG);
+      reportError(error);
       setPopupPending(false);
     }
   };

@@ -1,7 +1,7 @@
 # Graph Report - pixlpush_frontend  (2026-09-29)
 
 ## Corpus Check
-- 134 files · ~146,436 words
+- 134 files · ~146,369 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
