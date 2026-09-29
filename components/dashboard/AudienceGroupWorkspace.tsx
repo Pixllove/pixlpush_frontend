@@ -107,13 +107,32 @@ export default function AudienceGroupWorkspace({ groupId }: { groupId: string })
   </Stack>;
 }
 
+/** Every ISO country, for the Country dropdown when the project has no stored countries yet. */
+const regionNames = new Intl.DisplayNames(['en'], { type: 'region' });
+// Retired codes (UK, NH, YD…) canonicalize to another code, so skip them; the
+// rest are pseudo-regions (EU, UN, XA…) that have no likely-subtags data.
+const allCountries = Array.from({ length: 26 * 26 }, (_, i) => String.fromCharCode(65 + Math.floor(i / 26), 65 + (i % 26)))
+  .filter(code => !['EU', 'EZ', 'UN', 'QO'].includes(code))
+  .filter(code => {
+    try {
+      const locale = new Intl.Locale(`und-${code}`);
+      return locale.region === code && locale.maximize().language !== 'und';
+    } catch {
+      return false;
+    }
+  })
+  .map(code => ({ key: code.toLowerCase(), label: regionNames.of(code) ?? code }))
+  .filter(option => option.label.toLowerCase() !== option.key)
+  .sort((a, b) => a.label.localeCompare(b.label));
+
 function ConditionRow({ rule, schema, onChange, onRemove }: { rule: Rule; schema?: AudienceGroupSchema; onChange: (field: keyof Rule, value: string) => void; onRemove: () => void }) {
   const field = schema?.fields.find(item => item.key === rule.filter || item.label === rule.filter);
   const condition = field?.conditions.find(item => item.key === rule.operator || item.label === rule.operator);
   const fallbackField = field?.label ?? rule.filter;
   const fallbackOperators = operators[fallbackField] ?? ['Is'];
   const valueConfig = condition?.value;
-  const options = valueConfig?.options;
+  const isCountry = rule.filter === 'country' || rule.filter === 'Country';
+  const options = valueConfig?.options?.length ? valueConfig.options : isCountry ? allCountries : undefined;
   const noValue = valueConfig?.type === 'none';
   return <Stack direction={{ xs: 'column', md: 'row' }} gap={1} className="condition-row-card">
     <Select size="small" displayEmpty value={rule.filter} onChange={event => onChange('filter', event.target.value)}>
