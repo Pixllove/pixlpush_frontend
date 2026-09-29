@@ -15,6 +15,9 @@ export interface Project {
   slug: string;
   status: ProjectStatus;
   role: ProjectRole;
+  /** Same as role; present on list responses. */
+  myRole?: ProjectRole;
+  isOwner?: boolean;
   createdAt: string;
   updatedAt: string;
   deactivatedAt: string | null;
@@ -57,6 +60,64 @@ export interface ProjectMember {
   joinedAt?: string;
   state?: string;
   account: { id: string; email: string; name: string | null };
+  invitedBy?: { id: string; email: string; name: string | null } | null;
+}
+
+export type InvitationStatus = 'pending' | 'accepted' | 'expired' | 'revoked';
+
+export interface ProjectInvitation {
+  id: string;
+  email: string;
+  role: ProjectRole;
+  status: InvitationStatus;
+  expiresAt: string;
+  acceptedAt?: string | null;
+  createdAt: string;
+  invitedBy?: { id: string; email: string; name: string | null } | null;
+}
+
+/** POST /invitations: an existing account is added at once, a new one is invited. */
+export type InviteResult =
+  | { type: 'member'; emailSent: boolean; member: { id: string; role: ProjectRole; account: { id: string; email: string; name: string | null } } }
+  | ({ type: 'invitation'; emailSent: boolean } & ProjectInvitation);
+
+export type AuditCategory = 'auth' | 'project' | 'team' | 'settings' | 'integration' | 'workspace';
+
+export interface AuditLogEntry {
+  id: string;
+  action: string;
+  category: AuditCategory;
+  entityType: string;
+  entityId: string | null;
+  description: string;
+  metadata: Record<string, unknown> | null;
+  ipAddress: string | null;
+  createdAt: string;
+  project: { id: string; name: string } | null;
+  actor: { id: string; name: string | null; email: string } | null;
+}
+
+export interface AuditLogPage {
+  items: AuditLogEntry[];
+  nextCursor: string | null;
+}
+
+export interface AuditLogFilters {
+  projects: { id: string; name: string }[];
+  actors: { id: string; name: string | null; email: string }[];
+  categories: AuditCategory[];
+  actions: string[];
+}
+
+export interface AuditLogQuery {
+  projectId?: string;
+  actorAccountId?: string;
+  category?: string;
+  from?: string;
+  to?: string;
+  q?: string;
+  cursor?: string | null;
+  limit?: number;
 }
 
 export interface EndUser {

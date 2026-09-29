@@ -1,6 +1,11 @@
 import { authRequest } from "@/lib/auth/client";
 import type {
   AudienceGroup,
+  AuditLogFilters,
+  AuditLogPage,
+  AuditLogQuery,
+  InviteResult,
+  ProjectInvitation,
   AudienceGroupMember,
   AudienceGroupSchema,
   BillingContact,
@@ -154,6 +159,20 @@ export const billingApi = {
 export const teamApi = {
   members: (projectId: string) =>
     authRequest<ProjectMember[]>(at(projectId, "/members"), undefined, BASE),
+  removeMember: (projectId: string, memberId: string) =>
+    authRequest<null>(at(projectId, `/members/${encodeURIComponent(memberId)}`), {}, BASE, "DELETE"),
+  invitations: (projectId: string) =>
+    authRequest<ProjectInvitation[]>(at(projectId, "/invitations"), undefined, BASE),
+  invite: (projectId: string, input: { email: string; role: ProjectMember["role"] }) =>
+    authRequest<InviteResult>(at(projectId, "/invitations"), input, BASE),
+  resendInvitation: (projectId: string, invitationId: string) =>
+    authRequest<ProjectInvitation & { emailSent: boolean }>(
+      at(projectId, `/invitations/${encodeURIComponent(invitationId)}/resend`),
+      {},
+      BASE,
+    ),
+  revokeInvitation: (projectId: string, invitationId: string) =>
+    authRequest<null>(at(projectId, `/invitations/${encodeURIComponent(invitationId)}`), {}, BASE, "DELETE"),
   updateRole: (
     projectId: string,
     memberId: string,
@@ -165,6 +184,20 @@ export const teamApi = {
       BASE,
       "PATCH",
     ),
+};
+
+const auditQuery = (q: AuditLogQuery) => {
+  const params = new URLSearchParams();
+  for (const [k, v] of Object.entries(q)) if (v !== undefined && v !== null && v !== "") params.set(k, String(v));
+  return params.toString();
+};
+
+/** Account-wide feed (projects you own/administer + your own account activity). */
+export const auditApi = {
+  list: (q: AuditLogQuery = {}) => authRequest<AuditLogPage>(`?${auditQuery(q)}`, undefined, "/api/audit-logs"),
+  filters: () => authRequest<AuditLogFilters>("/filters", undefined, "/api/audit-logs"),
+  project: (projectId: string, q: AuditLogQuery = {}) =>
+    authRequest<AuditLogPage>(at(projectId, `/audit-logs?${auditQuery(q)}`), undefined, BASE),
 };
 
 export const usersApi = {

@@ -360,21 +360,21 @@
     "semantic_hash": ""
   },
   "components/dashboard/DashboardFrame.tsx": {
-    "mtime": 1790589235.1139774,
-    "seen": 1790665872.297729,
-    "ast_hash": "9028d8077842c6dce499eed1881ce2b5",
+    "mtime": 1790668758.2032437,
+    "seen": 1790682904.05666,
+    "ast_hash": "0b880acfbb24c2a6dda0249f4f86d750",
     "semantic_hash": ""
   },
   "components/dashboard/DashboardSections.tsx": {
-    "mtime": 1790664482.975616,
-    "seen": 1790665872.29773,
-    "ast_hash": "be15df5d6bfc999ac93f33e3fdb4390e",
+    "mtime": 1790682685.8175008,
+    "seen": 1790682904.05666,
+    "ast_hash": "1cb7ed7ec106910890fc35af124726f3",
     "semantic_hash": ""
   },
   "components/dashboard/DashboardSidebar.tsx": {
-    "mtime": 1790322058.017825,
-    "seen": 1790322273.3594182,
-    "ast_hash": "06202df7fdcbe8bad9ebfbe74ee468c2",
+    "mtime": 1790682726.977285,
+    "seen": 1790682904.056661,
+    "ast_hash": "2facdc33269c416fac228898c0d85502",
     "semantic_hash": ""
   },
   "components/dashboard/ProjectDetailsPanel.tsx": {
@@ -384,9 +384,9 @@
     "semantic_hash": ""
   },
   "components/dashboard/ProjectSettingsCenter.tsx": {
-    "mtime": 1790322058.0189419,
-    "seen": 1790322273.359424,
-    "ast_hash": "b048093726d46faa5855ffe53291bba0",
+    "mtime": 1790672535.8614106,
+    "seen": 1790682904.056669,
+    "ast_hash": "5a329f7fcff9e77a2ed81ad003d3b0ea",
     "semantic_hash": ""
   },
   "components/dashboard/ReusableDataTable.tsx": {
@@ -492,9 +492,9 @@
     "semantic_hash": ""
   },
   "hooks/projects/use-active-project.ts": {
-    "mtime": 1790322058.0312767,
-    "seen": 1790322273.3594408,
-    "ast_hash": "1a5c8d3643f7172fbefe652a4d58e7cf",
+    "mtime": 1790682611.4777298,
+    "seen": 1790682904.0566962,
+    "ast_hash": "26cbd1b8451536c75aadc7e3cd714eab",
     "semantic_hash": ""
   },
   "hooks/projects/use-projects.ts": {
@@ -558,9 +558,9 @@
     "semantic_hash": ""
   },
   "lib/projects/api.ts": {
-    "mtime": 1790597373.6208806,
-    "seen": 1790665872.29777,
-    "ast_hash": "518859c7e9ecd0d3a5c2d2d99349df57",
+    "mtime": 1790682611.4792364,
+    "seen": 1790682904.056705,
+    "ast_hash": "af3875416f50faca4c89cbcb3b139c05",
     "semantic_hash": ""
   },
   "lib/store.ts": {
@@ -594,15 +594,15 @@
     "semantic_hash": ""
   },
   "next.config.mjs": {
-    "mtime": 1790665853.771928,
-    "seen": 1790665872.297775,
-    "ast_hash": "9c0a2d17083e41019f1f0c67d0cb3d0d",
+    "mtime": 1790666442.6584961,
+    "seen": 1790682904.056711,
+    "ast_hash": "368634ad42a0ef2cbb38a028fbfc2720",
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1790666119.0236368,
-    "seen": 1790666127.785679,
-    "ast_hash": "de0fb3ffc9fe01ac94f1e26b226e43e5",
+    "mtime": 1790672571.9931748,
+    "seen": 1790682904.056712,
+    "ast_hash": "6b4587dc91fba2ce61570b587f609f3a",
     "semantic_hash": ""
   },
   "schemas/auth.schema.ts": {
@@ -624,9 +624,9 @@
     "semantic_hash": ""
   },
   "types/project.ts": {
-    "mtime": 1790664493.804442,
-    "seen": 1790665872.297778,
-    "ast_hash": "8213564efdaaa599f19a0be7a6400ea0",
+    "mtime": 1790682611.4785707,
+    "seen": 1790682904.0567172,
+    "ast_hash": "a049eed2d64d96480c0f62688e011322",
     "semantic_hash": ""
   },
   "README.md": {
@@ -744,9 +744,9 @@
     "semantic_hash": ""
   },
   "app/api/projects/[projectId]/[...path]/route.ts": {
-    "mtime": 1790597373.619729,
-    "seen": 1790665872.2977111,
-    "ast_hash": "0a14ffc0259bf4651456e1fa8b528a30",
+    "mtime": 1790682611.4795053,
+    "seen": 1790682904.056639,
+    "ast_hash": "5c37a9f44ef0bd6c699656d7e72bb8bc",
     "semantic_hash": ""
   },
   "components/dashboard/AudienceGroupCreateDialog.tsx": {
@@ -756,9 +756,9 @@
     "semantic_hash": ""
   },
   "components/dashboard/AudienceGroupWorkspace.tsx": {
-    "mtime": 1790584620.4622312,
-    "seen": 1790589169.016941,
-    "ast_hash": "f10ba84f5d80967d8531c908bc85fd50",
+    "mtime": 1790671044.3962855,
+    "seen": 1790682904.056656,
+    "ast_hash": "359bab9be6570e95b23dafab6d9e0d6f",
     "semantic_hash": ""
   },
   "components/dashboard/EmailPanel.tsx": {
@@ -804,15 +804,15 @@
     "semantic_hash": ""
   },
   "components/dashboard/UserDetailsWorkspace.tsx": {
-    "mtime": 1790322050.853419,
-    "seen": 1790322273.3594282,
-    "ast_hash": "c7cb17b0ceede81225bc8fdc0920efa0",
+    "mtime": 1790668758.2039852,
+    "seen": 1790682904.056674,
+    "ast_hash": "6526803c344adbe3d83ab3cd8c256eca",
     "semantic_hash": ""
   },
   "components/dashboard/UserImportDialog.tsx": {
-    "mtime": 1790665481.7538624,
-    "seen": 1790665872.2977438,
-    "ast_hash": "0db40cfadff17729d80bb32659eb2958",
+    "mtime": 1790667492.774363,
+    "seen": 1790682904.056675,
+    "ast_hash": "4f37dfa2e5bde71033077775b6babc87",
     "semantic_hash": ""
   },
   "hooks/projects/use-project-settings.ts": {
@@ -822,9 +822,9 @@
     "semantic_hash": ""
   },
   "components/dashboard/LifecycleSegmentCreateDialog.tsx": {
-    "mtime": 1790664482.976078,
-    "seen": 1790665872.297736,
-    "ast_hash": "3daa8d0cfdbb694731ef6d78ab9834a7",
+    "mtime": 1790670764.3407726,
+    "seen": 1790682904.0566661,
+    "ast_hash": "cd2fad0b37e2d5fea178bf8976d87d81",
     "semantic_hash": ""
   },
   "components/auth/AccountProfile.tsx": {
@@ -837,6 +837,144 @@
     "mtime": 1790589235.1142766,
     "seen": 1790665872.297737,
     "ast_hash": "b25e02b53bba7d85433772baf83f6fce",
+    "semantic_hash": ""
+  },
+  "app/(dashboard)/dashboard/audit-logs/page.tsx": {
+    "mtime": 1790682726.9492993,
+    "seen": 1790682904.05656,
+    "ast_hash": "c8351ea02775a711bfefcada448d5f14",
+    "semantic_hash": ""
+  },
+  "app/(dashboard)/dashboard/settings/sending-domains/callback/page.tsx": {
+    "mtime": 1790672535.871041,
+    "seen": 1790682904.0565708,
+    "ast_hash": "6b3687b999dd706141a93af54bbae375",
+    "semantic_hash": ""
+  },
+  "app/api/audit-logs/[[...path]]/route.ts": {
+    "mtime": 1790682611.4904442,
+    "seen": 1790682904.0566258,
+    "ast_hash": "812d02f6659fcfe01d03103efb3f0ae2",
+    "semantic_hash": ""
+  },
+  "app/api/invitations/accept/route.ts": {
+    "mtime": 1790682611.493396,
+    "seen": 1790682904.056638,
+    "ast_hash": "b0fd6f6156e8a9f03d856d504884aa13",
+    "semantic_hash": ""
+  },
+  "app/invitations/accept/page.tsx": {
+    "mtime": 1790682757.4985914,
+    "seen": 1790682904.056642,
+    "ast_hash": "b2d1e7aed1a5d7442d9c61a87ce37d85",
+    "semantic_hash": ""
+  },
+  "components/auth/InvitationAccept.tsx": {
+    "mtime": 1790682757.5021453,
+    "seen": 1790682904.056649,
+    "ast_hash": "3a91d7c9db3611d0832ca8f28a3adf47",
+    "semantic_hash": ""
+  },
+  "components/dashboard/audit/AuditLogsPanel.tsx": {
+    "mtime": 1790682726.946277,
+    "seen": 1790682904.0566761,
+    "ast_hash": "dec3b024241d738cf6a8e59336cc42cb",
+    "semantic_hash": ""
+  },
+  "components/dashboard/sending-domains/AddDomainDialog.tsx": {
+    "mtime": 1790672439.287427,
+    "seen": 1790682904.056677,
+    "ast_hash": "1a08ccbfcc4d9ff574e2a8a18e306c97",
+    "semantic_hash": ""
+  },
+  "components/dashboard/sending-domains/DnsRecordCard.tsx": {
+    "mtime": 1790672414.0911224,
+    "seen": 1790682904.0566778,
+    "ast_hash": "91d4dae066493e4c8d9f421a165ebae8",
+    "semantic_hash": ""
+  },
+  "components/dashboard/sending-domains/DnsSetupDialog.tsx": {
+    "mtime": 1790672683.5925486,
+    "seen": 1790682904.056679,
+    "ast_hash": "b628297427c222cbe674db7d514a2c02",
+    "semantic_hash": ""
+  },
+  "components/dashboard/sending-domains/DomainAnalysisDialog.tsx": {
+    "mtime": 1790672464.8713531,
+    "seen": 1790682904.05668,
+    "ast_hash": "2cc6f6e39c7e526594d0964af83c8c1d",
+    "semantic_hash": ""
+  },
+  "components/dashboard/sending-domains/DomainStatusBadge.tsx": {
+    "mtime": 1790672414.0883648,
+    "seen": 1790682904.05668,
+    "ast_hash": "1ad39410963bf4e299454ce1ab71cf2c",
+    "semantic_hash": ""
+  },
+  "components/dashboard/sending-domains/SendingDomainsPanel.tsx": {
+    "mtime": 1790672553.078323,
+    "seen": 1790682904.056681,
+    "ast_hash": "59ba29cd42bd6b478f540c150f9445cc",
+    "semantic_hash": ""
+  },
+  "components/dashboard/sending-domains/connection.ts": {
+    "mtime": 1790672439.2847204,
+    "seen": 1790682904.0566819,
+    "ast_hash": "39bca22468300e23f00174103e6fb3cf",
+    "semantic_hash": ""
+  },
+  "components/dashboard/sending-domains/labels.ts": {
+    "mtime": 1790672414.0854824,
+    "seen": 1790682904.0566819,
+    "ast_hash": "f8e75ae3e732a78c22ff52cf35371d14",
+    "semantic_hash": ""
+  },
+  "components/dashboard/team/TeamAccessPanel.tsx": {
+    "mtime": 1790682685.816276,
+    "seen": 1790682904.056683,
+    "ast_hash": "27a82d30341237d8410d1144ed52b86d",
+    "semantic_hash": ""
+  },
+  "lib/sending-domains/api.ts": {
+    "mtime": 1790672372.8144734,
+    "seen": 1790682904.056706,
+    "ast_hash": "d809fe4e0e6f3c0bdd927d82687f922e",
+    "semantic_hash": ""
+  },
+  "lib/sending-domains/errors.ts": {
+    "mtime": 1790672372.817994,
+    "seen": 1790682904.056706,
+    "ast_hash": "019f40a4e38746763d55c5c3d6a81bb6",
+    "semantic_hash": ""
+  },
+  "tests/sending-domains.test.tsx": {
+    "mtime": 1790672683.5931304,
+    "seen": 1790682904.0567129,
+    "ast_hash": "99b484d6f82151e4e304682131000af9",
+    "semantic_hash": ""
+  },
+  "tests/setup.ts": {
+    "mtime": 1790672571.9658394,
+    "seen": 1790682904.056714,
+    "ast_hash": "baf0b4f836509ece2c82aae2c63ee1fb",
+    "semantic_hash": ""
+  },
+  "tests/team-access.test.tsx": {
+    "mtime": 1790682828.545213,
+    "seen": 1790682904.056715,
+    "ast_hash": "6f7bee6363cb314d55a70dca5c309434",
+    "semantic_hash": ""
+  },
+  "types/sending-domain.ts": {
+    "mtime": 1790672372.8115368,
+    "seen": 1790682904.056718,
+    "ast_hash": "c9b8ea13e5f944d80084ab5592315ecf",
+    "semantic_hash": ""
+  },
+  "vitest.config.ts": {
+    "mtime": 1790672571.9584858,
+    "seen": 1790682904.056719,
+    "ast_hash": "d456132eea1de2a2fe794c48a6aa04df",
     "semantic_hash": ""
   }
 }

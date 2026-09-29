@@ -1,6 +1,7 @@
 "use client";
 
 import { useDeferredValue, useEffect, useState } from "react";
+import TeamAccessPanel from './team/TeamAccessPanel';
 import { useRouter } from "next/navigation";
 import { useSelector } from "react-redux";
 import {
@@ -2257,85 +2258,9 @@ export function IntegrationsSection() {
   );
 }
 
+/** Team & Access: real members and invitations of the active Project. */
 export function TeamSection() {
-  return (
-    <Stack gap={2.5}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center">
-        <Box>
-          <Typography variant="h3">Team & Access</Typography>
-          <Typography color="text.secondary" fontSize={12}>
-            Manage who can access the active Project and what they can do.
-          </Typography>
-        </Box>
-        <Button variant="contained" startIcon={<AddRounded />}>
-          Invite member
-        </Button>
-      </Stack>
-      <Card className="saas-card">
-        <Typography variant="h3">Project members</Typography>
-        <Table size="small" sx={{ mt: 1 }}>
-          <TableHead>
-            <TableRow>
-              <TableCell>Member</TableCell>
-              <TableCell>Role</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Last active</TableCell>
-              <TableCell />
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {[
-              ["Hassib", "hassib@pixlpush.com", "Owner", "Activated", "Now"],
-              [
-                "Kamran",
-                "kamran@pixlpush.com",
-                "Admin",
-                "Activated",
-                "2 hrs ago",
-              ],
-              ["Maya Chen", "maya@acme.com", "Analyst", "Pending", "—"],
-            ].map((row) => (
-              <TableRow key={row[0]}>
-                <TableCell>
-                  <Typography fontWeight={800} fontSize={12}>
-                    {row[0]}
-                  </Typography>
-                  <Typography color="text.secondary" fontSize={11}>
-                    {row[1]}
-                  </Typography>
-                </TableCell>
-                {row.slice(2).map((x, i) => (
-                  <TableCell key={x} sx={{ fontSize: 12 }}>
-                    {i === 1 ? (
-                      <Chip
-                        label={x}
-                        size="small"
-                        className={
-                          x === "Activated" ? "active-chip" : "paused-chip"
-                        }
-                      />
-                    ) : (
-                      x
-                    )}
-                  </TableCell>
-                ))}
-                <TableCell>
-                  <MoreHorizRounded fontSize="small" />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Card>
-      <Card className="saas-card">
-        <Typography variant="h3">Project roles</Typography>
-        <Typography color="text.secondary" fontSize={12}>
-          Owner, Admin, Developer, Analyst, Read-only and Billing are scoped to
-          this Project.
-        </Typography>
-      </Card>
-    </Stack>
-  );
+  return <TeamAccessPanel />;
 }
 
 export function BillingSection() {
