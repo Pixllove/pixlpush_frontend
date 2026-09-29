@@ -1,3 +1,14 @@
-import DashboardFrame from '@/components/dashboard/DashboardFrame';
-import ProjectSettingsCenter from '@/components/dashboard/ProjectSettingsCenter';
-export default function IntegrationsPage() { return <DashboardFrame active="Integrations" title="Integrations" description="Connect Firebase, email sending and your PixlPush SDK safely."><ProjectSettingsCenter initialTab="Firebase / FCM" /></DashboardFrame>; }
+import DashboardFrame from "@/components/dashboard/DashboardFrame";
+import IntegrationDocumentation from "@/components/dashboard/IntegrationDocumentation";
+
+export default function IntegrationsPage() {
+  return (
+    <DashboardFrame
+      active="Integrations"
+      title="Integrations"
+      description="Connect your product to PixlPush with the React SDK and start turning behavior into retention."
+    >
+      <IntegrationDocumentation />
+    </DashboardFrame>
+  );
+}
