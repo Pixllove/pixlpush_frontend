@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowBackRounded, CalendarTodayRounded, CloseRounded, DeleteOutlineRounded, EditRounded, LanguageRounded,
-  LinkRounded, NotificationsActiveRounded, PeopleAltRounded, PhoneIphoneRounded,
+  ArrowBackRounded, BatteryFullRounded, CalendarTodayRounded, CheckRounded, ChevronRightRounded, CloseRounded,
+  DeleteOutlineRounded, EditRounded, LanguageRounded, LinkRounded, NotificationsActiveRounded, PeopleAltRounded,
+  PhoneIphoneRounded, SignalCellularAltRounded, TrendingUpRounded, WifiRounded,
   SaveRounded, SendRounded, TranslateRounded,
 } from '@mui/icons-material';
 import {
@@ -12,13 +13,14 @@ import {
   Divider, FormControlLabel, Grid, IconButton, MenuItem, Radio, RadioGroup,
   Select, Stack, Switch, TextField, Typography,
 } from '@mui/material';
-import { audienceGroupsApi, lifecycleSegmentsApi, pushApi, type PushAudience } from '@/lib/projects/api';
+import { audienceGroupsApi, lifecycleSegmentsApi, pushApi, type PushAudience, type PushTranslation } from '@/lib/projects/api';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
 
 type Mode = 'campaign' | 'template';
 type SaveTarget = 'send' | 'drafts' | 'templates';
 
-const languages = ['Any/English', 'Arabic', 'French', 'Korean', 'Japanese', 'Italian', 'Indonesian', 'German', 'Persian', 'Portuguese', 'Russian', 'Spanish', 'Thai', 'Turkish', 'Vietnamese'];
+const languages = ['English', 'Arabic', 'French', 'Korean', 'Japanese', 'Italian', 'Indonesian', 'German', 'Persian', 'Portuguese', 'Russian', 'Spanish', 'Thai', 'Turkish', 'Vietnamese'];
+const languageCodes: Record<string, string> = { English: 'en', Arabic: 'ar', French: 'fr', Korean: 'ko', Japanese: 'ja', Italian: 'it', Indonesian: 'id', German: 'de', Persian: 'fa', Portuguese: 'pt', Russian: 'ru', Spanish: 'es', Thai: 'th', Turkish: 'tr', Vietnamese: 'vi' };
 const countries = ['All Countries', 'United States', 'United Kingdom', 'Germany', 'France', 'Italy'];
 export default function PushComposer({ mode, onBack, onSaved }: { mode: Mode; onBack: () => void; onSaved: (target: SaveTarget) => void }) {
   const { active } = useActiveProject();
@@ -28,7 +30,9 @@ export default function PushComposer({ mode, onBack, onSaved }: { mode: Mode; on
   const [name, setName] = useState('');
   const [country, setCountry] = useState('All Countries');
   const [group, setGroup] = useState('Select group');
-  const [selectedLanguages, setSelectedLanguages] = useState(['Any/English']);
+  const [selectedLanguages, setSelectedLanguages] = useState(['English']);
+  const [activeLanguage, setActiveLanguage] = useState('English');
+  const [translations, setTranslations] = useState<Record<string, PushTranslation>>({});
   const [title, setTitle] = useState('Welcome to PixlPush 🎉');
   const [message, setMessage] = useState('Start your first match now — exciting profiles are waiting for you! ❤️');
   const [deepLinks, setDeepLinks] = useState<string[]>([]);
@@ -44,10 +48,24 @@ export default function PushComposer({ mode, onBack, onSaved }: { mode: Mode; on
   const [testOpen, setTestOpen] = useState(false);
   const [languageOpen, setLanguageOpen] = useState(false);
   const [notice, setNotice] = useState('');
+  const [translationNotice, setTranslationNotice] = useState('');
   const [testUserId, setTestUserId] = useState('');
   const [error, setError] = useState('');
   const groupsQuery = useQuery({ queryKey: ['projects', 'audience-groups', active?.id], queryFn: () => audienceGroupsApi.list(active!.id), enabled: Boolean(active?.id) });
   const segmentsQuery = useQuery({ queryKey: ['projects', 'lifecycle-segments', active?.id], queryFn: () => lifecycleSegmentsApi.list(active!.id), enabled: Boolean(active?.id) });
+  const translateMutation = useMutation({ mutationFn: async () => {
+    if (!active?.id) throw new Error('Select a project before translating.');
+    if (!title.trim() || !message.trim()) throw new Error('Enter an English title and message before translating.');
+    return pushApi.templates.translate(active.id, { title: title.trim(), body: message.trim() });
+  }, onSuccess: result => {
+    const selectedCodes = new Set(selectedLanguages.map(language => languageCodes[language]).filter(code => code && code !== 'en'));
+    const nextTranslations: Record<string, PushTranslation> = {};
+    Object.entries(result.translations ?? {}).forEach(([code, value]) => {
+      if (code === 'en' || selectedCodes.has(code)) nextTranslations[code] = value;
+    });
+    setTranslations(nextTranslations);
+    setTranslationNotice(`Translated into ${selectedCodes.size} selected language${selectedCodes.size === 1 ? '' : 's'}. Click a language tab to review it.`);
+  }, onError: (cause: Error) => setError(cause.message || 'Could not translate the notification.') });
   const previewMutation = useMutation({ mutationFn: async () => {
     if (!active?.id) throw new Error('Select a project before previewing the audience.');
     const audience: PushAudience = group.startsWith('segment:') ? { lifecycleSegmentIds: [group.slice(8)] } : group.startsWith('group:') ? { audienceGroupIds: [group.slice(6)] } : { allUsers: true };
@@ -58,7 +76,7 @@ export default function PushComposer({ mode, onBack, onSaved }: { mode: Mode; on
     if (!name.trim()) throw new Error('Enter a notification name.');
     if (!isTemplate && country !== 'All Countries' && group === 'Select group') throw new Error('Select an audience group for country targeting before sending.');
     if (!isTemplate && delivery === 'specific' && (!scheduledDate || !scheduledTime)) throw new Error('Choose a date and time for the scheduled notification.');
-    const content = { title, body: message, deepLink: deepLink || null, imageUrl: null, data: {}, translations: null };
+    const content = { title, body: message, deepLink: deepLink || null, imageUrl: null, data: {}, translations: Object.keys(translations).length ? translations : null };
     // In Templates mode a draft is still a reusable template, never a campaign.
     if (target === 'templates' || isTemplate) {
       const template = await pushApi.templates.create(active.id, { name: name.trim(), ...content, category: 'template' });
@@ -72,11 +90,21 @@ export default function PushComposer({ mode, onBack, onSaved }: { mode: Mode; on
   const testMutation = useMutation({ mutationFn: async () => {
     if (!active?.id) throw new Error('Select a project before sending a test.');
     if (!testUserId.trim()) throw new Error('Enter an end-user ID for the test device.');
-    const template = await pushApi.templates.create(active.id, { name: `${name || 'Test notification'} · test`, title, body: message, deepLink: deepLink || null, imageUrl: null, data: {}, translations: null, category: 'push_notification' });
+    const template = await pushApi.templates.create(active.id, { name: `${name || 'Test notification'} · test`, title, body: message, deepLink: deepLink || null, imageUrl: null, data: {}, translations: Object.keys(translations).length ? translations : null, category: 'push_notification' });
     return pushApi.templates.test(active.id, template.id, testUserId.trim());
   }, onSuccess: result => { setTestOpen(false); setNotice(result.delivered ? 'Test notification delivered.' : result.error || 'Test notification could not be delivered.'); }, onError: (cause: Error) => setError(cause.message || 'Could not send the test notification.') });
 
-  const toggleLanguage = (language: string) => setSelectedLanguages(current => current.includes(language) ? current.filter(item => item !== language) : [...current, language]);
+  const toggleLanguage = (language: string) => {
+    setSelectedLanguages(current => {
+      const next = current.includes(language) ? current.filter(item => item !== language) : [...current, language];
+      if (!next.includes(activeLanguage)) setActiveLanguage('English');
+      return next;
+    });
+  };
+  const activeCode = languageCodes[activeLanguage] ?? 'en';
+  const activeTranslation = activeCode === 'en' ? { title, body: message } : (translations[activeCode] ?? { title: '', body: '' });
+  const updateActiveTitle = (value: string) => { if (activeCode === 'en') { setTitle(value); setTranslations({}); } else setTranslations(current => ({ ...current, [activeCode]: { ...(current[activeCode] ?? { title: '', body: '' }), title: value } })); };
+  const updateActiveBody = (value: string) => { if (activeCode === 'en') { setMessage(value); setTranslations({}); } else setTranslations(current => ({ ...current, [activeCode]: { ...(current[activeCode] ?? { title: '', body: '' }), body: value } })); };
   const disabled = isTemplate;
   const action = (target: SaveTarget) => { setError(''); saveMutation.mutate({ target }); };
   const previewAudience = () => { setError(''); previewMutation.mutate(); };
@@ -100,11 +128,15 @@ export default function PushComposer({ mode, onBack, onSaved }: { mode: Mode; on
   return <Stack className="push-composer" gap={2.5}>
     {error && <Typography color="error" fontSize={12}>{error}</Typography>}
     <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ md: 'center' }} gap={1.5}>
-      <Stack direction="row" alignItems="center" gap={1.5}><IconButton onClick={onBack} aria-label="Back to push workspace"><ArrowBackRounded /></IconButton><Box><Typography variant="h3">{isTemplate ? 'Create push template' : 'Create push campaign'}</Typography><Typography color="text.secondary" fontSize={12}>Build a notification that feels native to your audience.</Typography></Box></Stack>
+      <Stack direction="row" alignItems="center" gap={1.5} flexWrap="wrap">
+        <Button startIcon={<ArrowBackRounded />} onClick={onBack} className="group-back-button" aria-label="Back to push notifications">
+          Back to push notifications
+        </Button>
+      </Stack>
       <Button variant="outlined" startIcon={<NotificationsActiveRounded />} onClick={() => setTestOpen(true)}>Test notification</Button>
     </Stack>
 
-    <Card className="push-type-card"><Typography fontSize={12} fontWeight={900} color="text.secondary">Notification type</Typography><Stack direction="row" className="push-type-toggle"><Button onClick={() => setCurrentMode('campaign')} className={!isTemplate ? 'active' : ''} startIcon={<SendRounded />}>Push notification</Button><Button onClick={() => setCurrentMode('template')} className={isTemplate ? 'active' : ''} startIcon={<SaveRounded />}>Templates</Button></Stack><Typography color="text.secondary" fontSize={11} sx={{ mt: 1 }}>Templates creates reusable content for My Templates. Save as draft keeps it there too; in Push notification mode a draft is a campaign draft.</Typography></Card>
+    <Card className="push-type-card"><Typography fontSize={12} fontWeight={900} color="text.secondary">Notification type</Typography><Stack direction="row" className="push-type-toggle"><Button onClick={() => setCurrentMode('campaign')} className={!isTemplate ? 'active' : ''} startIcon={<SendRounded />}>Push notification</Button><Button onClick={() => setCurrentMode('template')} className={isTemplate ? 'active' : ''} startIcon={<SaveRounded />}>Templates</Button></Stack></Card>
 
     <Grid container spacing={2.5} alignItems="flex-start">
       <Grid item xs={12} lg={7}><Card className="push-form-card">
@@ -114,10 +146,10 @@ export default function PushComposer({ mode, onBack, onSaved }: { mode: Mode; on
         <Box className={disabled ? 'push-disabled-section' : ''}><PushHeading number="1" color="#477fe4" title="Audience" disabled={disabled} /><Grid container spacing={1.5}><Grid item xs={12} sm={6}><Select fullWidth size="small" value={country} onChange={event => setCountry(event.target.value)} disabled={disabled}>{countries.map(item => <MenuItem key={item} value={item}>{item}</MenuItem>)}</Select></Grid><Grid item xs={12} sm={6}><Select fullWidth size="small" value={group} onChange={event => setGroup(event.target.value)} disabled={disabled}>{<MenuItem value="Select group">{groupsQuery.isLoading ? 'Loading audience groups…' : 'Select group'}</MenuItem>}{groupOptions.map(item => <MenuItem key={item.id} value={`group:${item.id}`}>{item.name} {item.memberCount !== undefined ? `(${item.memberCount})` : ''}</MenuItem>)}{segmentOptions.map(item => <MenuItem key={`segment-${item.id}`} value={`segment:${item.id}`}>{item.name} · lifecycle segment</MenuItem>)}</Select></Grid></Grid>{!disabled && <Button size="small" variant="text" onClick={previewAudience} disabled={previewMutation.isPending}>{previewMutation.isPending ? 'Checking audience…' : 'Preview audience'}</Button>}{country !== 'All Countries' && <Typography color="text.secondary" fontSize={11} sx={{ mt: 1 }}>Country targeting is managed through an audience group. Select a group that contains this country before sending.</Typography>}</Box>
 
         <Divider sx={{ my: 3 }} />
-        <PushHeading number="2" color="#9c43e8" title="Message" /><Stack direction="row" flexWrap="wrap" gap={.5} sx={{ mb: 1.5 }}>{selectedLanguages.map(language => <Button key={language} size="small" className="push-language active">{language}</Button>)}<Button size="small" startIcon={<EditRounded />} onClick={() => setLanguageOpen(true)}>Add language</Button></Stack><Button fullWidth startIcon={<TranslateRounded />} className="push-translate-button" onClick={() => setNotice('Automatic translation needs a backend translation endpoint. Add the endpoint from the backend prompt to enable this action.')}>Auto translate to all selected languages</Button>
-        <TextField fullWidth label="Title (Any/English)" required value={title} onChange={event => setTitle(event.target.value)} sx={{ mt: 2 }} /><TextField fullWidth multiline minRows={3} label="Message (Any/English)" required value={message} onChange={event => setMessage(event.target.value)} sx={{ mt: 2 }} />
-        <TextField fullWidth select label="Deep link" value={deepLink} onChange={event => setDeepLink(event.target.value)} sx={{ mt: 2 }} SelectProps={{ displayEmpty: true, renderValue: value => typeof value === 'string' && value ? value : <Typography color="text.secondary">Select deep link...</Typography> }}>
-          <MenuItem value="">Select deep link...</MenuItem>
+        <PushHeading number="2" color="#9c43e8" title="Message" /><Stack direction="row" flexWrap="wrap" gap={.5} sx={{ mb: 1.5 }}>{selectedLanguages.map(language => <Button key={language} size="small" className={`push-language ${activeLanguage === language ? 'active' : ''}`} onClick={() => setActiveLanguage(language)}>{language}</Button>)}<Button size="small" startIcon={<EditRounded />} onClick={() => setLanguageOpen(true)}>Add language</Button></Stack>{translationNotice && <Typography className="push-form-notice push-translation-notice">{translationNotice}</Typography>}<Button fullWidth startIcon={<TranslateRounded />} className="push-translate-button" onClick={() => { setError(''); translateMutation.mutate(); }} disabled={translateMutation.isPending || selectedLanguages.length < 2}>{translateMutation.isPending ? 'Translating selected languages…' : 'Auto translate to all selected languages'}</Button>
+        <TextField fullWidth label={`Title (${activeLanguage})`} required value={activeTranslation.title} onChange={event => updateActiveTitle(event.target.value)} sx={{ mt: 2 }} /><TextField fullWidth multiline minRows={3} label={`Message (${activeLanguage})`} required value={activeTranslation.body} onChange={event => updateActiveBody(event.target.value)} sx={{ mt: 2 }} />
+        <TextField fullWidth select label="Deep link" value={deepLink} onChange={event => setDeepLink(event.target.value)} sx={{ mt: 2 }} InputLabelProps={{ shrink: true }} SelectProps={{ displayEmpty: true, renderValue: value => typeof value === 'string' && value ? value : <Typography color="text.secondary">Select a deeplink...</Typography> }}>
+          <MenuItem value="">Select a deeplink...</MenuItem>
           {deepLinks.map(item => <MenuItem key={item} value={item} sx={{ pr: 1 }}>
             <Box sx={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item}</Box>
             <IconButton
@@ -143,16 +175,34 @@ export default function PushComposer({ mode, onBack, onSaved }: { mode: Mode; on
 
         <Divider sx={{ my: 3 }} /><Stack direction={{ xs: 'column', sm: 'row' }} gap={1.2} className="push-action-row">{!isTemplate && <Button variant="contained" startIcon={<SendRounded />} disabled={saveMutation.isPending} onClick={() => action('send')}>{saveMutation.isPending ? 'Sending…' : 'Send notification'}</Button>}<Button variant={isTemplate ? 'contained' : 'outlined'} startIcon={<SaveRounded />} disabled={saveMutation.isPending} onClick={() => action('templates')}>Save as template</Button><Button variant="outlined" startIcon={<SaveRounded />} disabled={saveMutation.isPending} onClick={() => action('drafts')}>Save as draft</Button></Stack>{notice && <Typography className="push-form-notice">{notice}</Typography>}
       </Card></Grid>
-      <Grid item xs={12} lg={5}><Box className="push-preview-panel"><Stack direction="row" justifyContent="space-between" alignItems="center"><Box><Typography variant="h3">Live preview</Typography><Typography color="text.secondary" fontSize={12}>See how your notification will appear.</Typography></Box><Button className="push-preview-test-button" onClick={() => setTestOpen(true)} startIcon={<NotificationsActiveRounded />}>Test notification</Button></Stack><Box className="push-phone"><Box className="push-phone-notch" /><Stack direction="row" justifyContent="space-between" fontSize={10} color="text.secondary"><span>11:17</span><span>Tue, Oct 14</span></Stack><Box className="push-notification-card"><Stack direction="row" alignItems="center" gap={1}><Box className="push-avatar">P</Box><Box><Typography fontSize={11} fontWeight={900}>PixlPush</Typography><Typography fontSize={9} color="text.secondary">now</Typography></Box></Stack><Typography fontSize={12} fontWeight={900} sx={{ mt: 1.2 }}>{title || 'Your notification title'}</Typography><Typography fontSize={11} color="text.secondary" sx={{ mt: .6 }}>{message || 'Your notification message will appear here.'}</Typography></Box><Box className="push-placeholder blue" /><Box className="push-placeholder green" /></Box></Box></Grid>
+      <Grid item xs={12} lg={5}>
+        <Box className="push-preview-panel">
+          <Stack className="push-preview-header" direction="row" justifyContent="space-between" alignItems="center">
+            <Box><Typography className="push-preview-title" variant="h3">Live preview</Typography><Typography color="text.secondary" fontSize={12}>Previewing {activeLanguage}</Typography></Box>
+            <Button className="push-preview-test-button" onClick={() => setTestOpen(true)} startIcon={<NotificationsActiveRounded />}>Test notification</Button>
+          </Stack>
+          <Box className="push-phone">
+            <Box className="push-phone-glow glow-one" /><Box className="push-phone-glow glow-two" />
+            <Box className="push-phone-notch" />
+            <Stack className="push-phone-status" direction="row" justifyContent="space-between" alignItems="center"><span>9:41</span><Stack direction="row" gap={.6} alignItems="center"><SignalCellularAltRounded /><WifiRounded /><BatteryFullRounded /></Stack></Stack>
+            <Box className="push-phone-date">Tuesday, September 30</Box>
+            <Box className="push-screen-heading"><Typography>Notifications</Typography><span>Stay updated with your latest activity</span><Box className="push-screen-dots"><i /><i /></Box></Box>
+            <Box className="push-notification-card"><Stack direction="row" alignItems="center" justifyContent="space-between"><Stack direction="row" alignItems="center" gap={1}><Box className="push-avatar">P</Box><Box><Typography fontSize={11} fontWeight={900}>PixlPush</Typography><Typography fontSize={9} color="text.secondary">now</Typography></Box></Stack><ChevronRightRounded className="push-card-chevron" /></Stack><Typography fontSize={12} fontWeight={900} sx={{ mt: 1.2 }}>{activeTranslation.title || 'Your notification title'}</Typography><Typography fontSize={11} color="text.secondary" sx={{ mt: .6 }}>{activeTranslation.body || 'Your notification message will appear here.'}</Typography></Box>
+            <Box className="push-placeholder blue"><Box className="push-placeholder-icon"><TrendingUpRounded /></Box><Box><Typography fontSize={10} fontWeight={800}>PixlPush updates</Typography><Typography fontSize={9} color="text.secondary">New activity waiting for you</Typography></Box><Box className="push-placeholder-meta">2h ago <ChevronRightRounded /></Box></Box>
+            <Box className="push-placeholder green"><Box className="push-placeholder-icon"><CheckRounded /></Box><Box><Typography fontSize={10} fontWeight={800}>Stay connected</Typography><Typography fontSize={9} color="text.secondary">Tap to open the app</Typography></Box><Box className="push-placeholder-meta">5h ago <ChevronRightRounded /></Box></Box>
+            <Box className="push-home-indicator" />
+          </Box>
+        </Box>
+      </Grid>
     </Grid>
 
-    <Dialog open={testOpen} onClose={() => setTestOpen(false)} maxWidth="xs" fullWidth><DialogTitle>Send test notification<IconButton onClick={() => setTestOpen(false)} sx={{ position: 'absolute', right: 8, top: 8 }}><CloseRounded /></IconButton></DialogTitle><DialogContent><Typography color="text.secondary" fontSize={12} sx={{ mb: 1 }}>The backend sends the test to an end user with an active push subscription.</Typography><Stack gap={2} sx={{ pt: 1 }}><TextField label="End-user ID" placeholder="customer_123" value={testUserId} onChange={event => setTestUserId(event.target.value)} fullWidth /><TextField label="Title" value={title} onChange={event => setTitle(event.target.value)} fullWidth /><TextField label="Message" value={message} onChange={event => setMessage(event.target.value)} multiline minRows={3} fullWidth /><TextField label="Deep link" value={deepLink} onChange={event => setDeepLink(event.target.value)} fullWidth /></Stack></DialogContent><DialogActions><Button onClick={() => setTestOpen(false)}>Cancel</Button><Button variant="contained" disabled={testMutation.isPending} onClick={() => { setError(''); testMutation.mutate(); }}>{testMutation.isPending ? 'Sending…' : 'Send test'}</Button></DialogActions></Dialog>
+    <Dialog open={testOpen} onClose={() => setTestOpen(false)} maxWidth="xs" fullWidth><DialogTitle>Send test notification<IconButton onClick={() => setTestOpen(false)} sx={{ position: 'absolute', right: 8, top: 8 }}><CloseRounded /></IconButton></DialogTitle><DialogContent><Typography color="text.secondary" fontSize={12} sx={{ mb: 1 }}>The backend sends the test to an end user with an active push subscription.</Typography><Stack gap={2} sx={{ pt: 1 }}><TextField label="End-user ID" placeholder="customer_123" value={testUserId} onChange={event => setTestUserId(event.target.value)} fullWidth /><TextField label="Title" value={title} onChange={event => setTitle(event.target.value)} fullWidth /><TextField label="Message" value={message} onChange={event => setMessage(event.target.value)} multiline minRows={3} fullWidth /><TextField fullWidth select label="Deep link" value={deepLink} onChange={event => setDeepLink(event.target.value)} InputLabelProps={{ shrink: true }} SelectProps={{ displayEmpty: true, renderValue: value => typeof value === 'string' && value ? value : <Typography color="text.secondary">Select a deeplink...</Typography> }}><MenuItem value="">Select a deeplink...</MenuItem>{deepLinks.map(item => <MenuItem key={`test-${item}`} value={item} sx={{ pr: 1 }}><Box sx={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item}</Box><IconButton size="small" color="error" aria-label={`Delete ${item}`} onMouseDown={event => event.stopPropagation()} onClick={event => { event.stopPropagation(); deleteDeepLink(item); }} sx={{ ml: 1 }}><DeleteOutlineRounded fontSize="small" /></IconButton></MenuItem>)}<Divider /><MenuItem component="div" disableRipple onClick={event => { event.stopPropagation(); setDeepLinkDialogOpen(true); }} sx={{ color: 'primary.main', fontWeight: 700, justifyContent: 'center' }}>Create deeplink</MenuItem></TextField></Stack></DialogContent><DialogActions><Button onClick={() => setTestOpen(false)}>Cancel</Button><Button variant="contained" disabled={testMutation.isPending} onClick={() => { setError(''); testMutation.mutate(); }}>{testMutation.isPending ? 'Sending…' : 'Send test'}</Button></DialogActions></Dialog>
     <Dialog open={deepLinkDialogOpen} onClose={() => { setDeepLinkDialogOpen(false); setNewDeepLink(''); }} maxWidth="xs" fullWidth>
       <DialogTitle>Create deeplink<IconButton onClick={() => { setDeepLinkDialogOpen(false); setNewDeepLink(''); }} sx={{ position: 'absolute', right: 8, top: 8 }}><CloseRounded /></IconButton></DialogTitle>
       <DialogContent><TextField autoFocus fullWidth label="Deep link URL" placeholder="myapp://screen" value={newDeepLink} onChange={event => setNewDeepLink(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') saveDeepLink(); }} helperText="Enter the URL users should open from this notification." sx={{ mt: 1 }} /></DialogContent>
       <DialogActions><Button onClick={() => { setDeepLinkDialogOpen(false); setNewDeepLink(''); }}>Cancel</Button><Button variant="contained" onClick={saveDeepLink} disabled={!newDeepLink.trim()}>Save deeplink</Button></DialogActions>
     </Dialog>
-    <Dialog open={languageOpen} onClose={() => setLanguageOpen(false)} maxWidth="md" fullWidth><DialogTitle>Add languages<IconButton onClick={() => setLanguageOpen(false)} sx={{ position: 'absolute', right: 8, top: 8 }}><CloseRounded /></IconButton></DialogTitle><DialogContent><Typography color="text.secondary" fontSize={13} sx={{ mb: 2 }}>Any/English is the default language. Add translations for the languages your audience uses.</Typography><Grid container spacing={1}>{languages.map(language => <Grid item xs={12} sm={6} md={4} key={language}><Card variant="outlined" sx={{ p: .5 }}><FormControlLabel control={<Checkbox checked={selectedLanguages.includes(language)} onChange={() => toggleLanguage(language)} disabled={language === 'Any/English'} />} label={language} /></Card></Grid>)}</Grid></DialogContent><DialogActions><Button onClick={() => setLanguageOpen(false)}>Cancel</Button><Button variant="contained" onClick={() => setLanguageOpen(false)}>Select languages</Button></DialogActions></Dialog>
+    <Dialog open={languageOpen} onClose={() => setLanguageOpen(false)} maxWidth="md" fullWidth><DialogTitle>Add languages<IconButton onClick={() => setLanguageOpen(false)} sx={{ position: 'absolute', right: 8, top: 8 }}><CloseRounded /></IconButton></DialogTitle><DialogContent><Typography color="text.secondary" fontSize={13} sx={{ mb: 2 }}>English is the default language. Add translations for the languages your audience uses.</Typography><Grid container spacing={1}>{languages.map(language => <Grid item xs={12} sm={6} md={4} key={language}><Card variant="outlined" sx={{ p: .5 }}><FormControlLabel control={<Checkbox checked={selectedLanguages.includes(language)} onChange={() => toggleLanguage(language)} disabled={language === 'English'} />} label={language} /></Card></Grid>)}</Grid></DialogContent><DialogActions><Button onClick={() => setLanguageOpen(false)}>Cancel</Button><Button variant="contained" onClick={() => setLanguageOpen(false)}>Select languages</Button></DialogActions></Dialog>
   </Stack>;
 }
 

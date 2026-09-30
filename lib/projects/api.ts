@@ -559,6 +559,7 @@ export const pushApi = {
     },
     get: (projectId: string, templateId: string) => authRequest<PushTemplate>(at(projectId, `/push-templates/${encodeURIComponent(templateId)}`), undefined, BASE),
     create: (projectId: string, input: Omit<PushTemplate, "id" | "projectId" | "createdAt" | "updatedAt" | "sends" | "opens" | "category" | "status" | "deletedAt"> & { category?: "template" | "push_notification" }) => authRequest<PushTemplate>(at(projectId, "/push-templates"), input, BASE),
+    translate: (projectId: string, input: { title: string; body: string }) => authRequest<{ translations: Record<string, PushTranslation> }>(at(projectId, "/push-templates/translate"), input, BASE),
     update: (projectId: string, templateId: string, input: Partial<Omit<PushTemplate, "id" | "projectId" | "createdAt" | "updatedAt">>) => authRequest<PushTemplate>(at(projectId, `/push-templates/${encodeURIComponent(templateId)}`), input, BASE, "PATCH"),
     duplicate: (projectId: string, templateId: string) => authRequest<PushTemplate>(at(projectId, `/push-templates/${encodeURIComponent(templateId)}/duplicate`), {}, BASE),
     delete: (projectId: string, templateId: string) => authRequest<void>(at(projectId, `/push-templates/${encodeURIComponent(templateId)}`), {}, BASE, "DELETE"),
