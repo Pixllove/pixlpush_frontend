@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowBackRounded, CalendarTodayRounded, CloseRounded, EditRounded, LanguageRounded,
+  ArrowBackRounded, CalendarTodayRounded, CloseRounded, DeleteOutlineRounded, EditRounded, LanguageRounded,
   LinkRounded, NotificationsActiveRounded, PeopleAltRounded, PhoneIphoneRounded,
   SaveRounded, SendRounded, TranslateRounded,
 } from '@mui/icons-material';
@@ -20,8 +20,6 @@ type SaveTarget = 'send' | 'drafts' | 'templates';
 
 const languages = ['Any/English', 'Arabic', 'French', 'Korean', 'Japanese', 'Italian', 'Indonesian', 'German', 'Persian', 'Portuguese', 'Russian', 'Spanish', 'Thai', 'Turkish', 'Vietnamese'];
 const countries = ['All Countries', 'United States', 'United Kingdom', 'Germany', 'France', 'Italy'];
-const deepLinks = ['Select deep link...', 'pixllovemobileapp://home', 'pixllovemobileapp://videochat', 'pixllovemobileapp://textchat', 'pixllovemobileapp://profile', 'pixllovemobileapp://profile-edit', 'pixllovemobileapp://book-of-love'];
-
 export default function PushComposer({ mode, onBack, onSaved }: { mode: Mode; onBack: () => void; onSaved: (target: SaveTarget) => void }) {
   const { active } = useActiveProject();
   const queryClient = useQueryClient();
@@ -33,7 +31,10 @@ export default function PushComposer({ mode, onBack, onSaved }: { mode: Mode; on
   const [selectedLanguages, setSelectedLanguages] = useState(['Any/English']);
   const [title, setTitle] = useState('Welcome to PixlPush 🎉');
   const [message, setMessage] = useState('Start your first match now — exciting profiles are waiting for you! ❤️');
-  const [deepLink, setDeepLink] = useState('Select deep link...');
+  const [deepLinks, setDeepLinks] = useState<string[]>([]);
+  const [deepLink, setDeepLink] = useState('');
+  const [deepLinkDialogOpen, setDeepLinkDialogOpen] = useState(false);
+  const [newDeepLink, setNewDeepLink] = useState('');
   const [ios, setIos] = useState(true);
   const [android, setAndroid] = useState(false);
   const [delivery, setDelivery] = useState('immediately');
@@ -57,7 +58,7 @@ export default function PushComposer({ mode, onBack, onSaved }: { mode: Mode; on
     if (!name.trim()) throw new Error('Enter a notification name.');
     if (!isTemplate && country !== 'All Countries' && group === 'Select group') throw new Error('Select an audience group for country targeting before sending.');
     if (!isTemplate && delivery === 'specific' && (!scheduledDate || !scheduledTime)) throw new Error('Choose a date and time for the scheduled notification.');
-    const content = { title, body: message, deepLink: deepLink === 'Select deep link...' ? null : deepLink, imageUrl: null, data: {}, translations: null };
+    const content = { title, body: message, deepLink: deepLink || null, imageUrl: null, data: {}, translations: null };
     // In Templates mode a draft is still a reusable template, never a campaign.
     if (target === 'templates' || isTemplate) {
       const template = await pushApi.templates.create(active.id, { name: name.trim(), ...content, category: 'template' });
@@ -71,7 +72,7 @@ export default function PushComposer({ mode, onBack, onSaved }: { mode: Mode; on
   const testMutation = useMutation({ mutationFn: async () => {
     if (!active?.id) throw new Error('Select a project before sending a test.');
     if (!testUserId.trim()) throw new Error('Enter an end-user ID for the test device.');
-    const template = await pushApi.templates.create(active.id, { name: `${name || 'Test notification'} · test`, title, body: message, deepLink: deepLink === 'Select deep link...' ? null : deepLink, imageUrl: null, data: {}, translations: null, category: 'push_notification' });
+    const template = await pushApi.templates.create(active.id, { name: `${name || 'Test notification'} · test`, title, body: message, deepLink: deepLink || null, imageUrl: null, data: {}, translations: null, category: 'push_notification' });
     return pushApi.templates.test(active.id, template.id, testUserId.trim());
   }, onSuccess: result => { setTestOpen(false); setNotice(result.delivered ? 'Test notification delivered.' : result.error || 'Test notification could not be delivered.'); }, onError: (cause: Error) => setError(cause.message || 'Could not send the test notification.') });
 
@@ -81,6 +82,20 @@ export default function PushComposer({ mode, onBack, onSaved }: { mode: Mode; on
   const previewAudience = () => { setError(''); previewMutation.mutate(); };
   const groupOptions = groupsQuery.data ?? [];
   const segmentOptions = segmentsQuery.data ?? [];
+  const saveDeepLink = () => {
+    const value = newDeepLink.trim();
+    if (!value) return;
+    const existing = deepLinks.find(item => item.toLowerCase() === value.toLowerCase());
+    const savedValue = existing ?? value;
+    if (!existing) setDeepLinks(current => [...current, value]);
+    setDeepLink(savedValue);
+    setNewDeepLink('');
+    setDeepLinkDialogOpen(false);
+  };
+  const deleteDeepLink = (value: string) => {
+    setDeepLinks(current => current.filter(item => item !== value));
+    if (deepLink === value) setDeepLink('');
+  };
 
   return <Stack className="push-composer" gap={2.5}>
     {error && <Typography color="error" fontSize={12}>{error}</Typography>}
@@ -101,7 +116,24 @@ export default function PushComposer({ mode, onBack, onSaved }: { mode: Mode; on
         <Divider sx={{ my: 3 }} />
         <PushHeading number="2" color="#9c43e8" title="Message" /><Stack direction="row" flexWrap="wrap" gap={.5} sx={{ mb: 1.5 }}>{selectedLanguages.map(language => <Button key={language} size="small" className="push-language active">{language}</Button>)}<Button size="small" startIcon={<EditRounded />} onClick={() => setLanguageOpen(true)}>Add language</Button></Stack><Button fullWidth startIcon={<TranslateRounded />} className="push-translate-button" onClick={() => setNotice('Automatic translation needs a backend translation endpoint. Add the endpoint from the backend prompt to enable this action.')}>Auto translate to all selected languages</Button>
         <TextField fullWidth label="Title (Any/English)" required value={title} onChange={event => setTitle(event.target.value)} sx={{ mt: 2 }} /><TextField fullWidth multiline minRows={3} label="Message (Any/English)" required value={message} onChange={event => setMessage(event.target.value)} sx={{ mt: 2 }} />
-        <TextField fullWidth select label="Deep link" value={deepLink} onChange={event => setDeepLink(event.target.value)} sx={{ mt: 2 }}><MenuItem value="Select deep link...">Select deep link...</MenuItem>{deepLinks.slice(1).map(item => <MenuItem key={item} value={item}>{item}</MenuItem>)}</TextField>
+        <TextField fullWidth select label="Deep link" value={deepLink} onChange={event => setDeepLink(event.target.value)} sx={{ mt: 2 }} SelectProps={{ displayEmpty: true, renderValue: value => typeof value === 'string' && value ? value : <Typography color="text.secondary">Select deep link...</Typography> }}>
+          <MenuItem value="">Select deep link...</MenuItem>
+          {deepLinks.map(item => <MenuItem key={item} value={item} sx={{ pr: 1 }}>
+            <Box sx={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item}</Box>
+            <IconButton
+              size="small"
+              color="error"
+              aria-label={`Delete ${item}`}
+              onMouseDown={event => event.stopPropagation()}
+              onClick={event => { event.stopPropagation(); deleteDeepLink(item); }}
+              sx={{ ml: 1 }}
+            >
+              <DeleteOutlineRounded fontSize="small" />
+            </IconButton>
+          </MenuItem>)}
+          <Divider />
+          <MenuItem component="div" disableRipple onClick={event => { event.stopPropagation(); setDeepLinkDialogOpen(true); }} sx={{ color: 'primary.main', fontWeight: 700, justifyContent: 'center' }}>Create deeplink</MenuItem>
+        </TextField>
 
         <Divider sx={{ my: 3 }} />
         <Box className={disabled ? 'push-disabled-section' : ''}><PushHeading number="▣" color="#ef7049" title="Platforms" disabled={disabled} /><Typography color="text.secondary" fontSize={12} sx={{ mb: 1.5 }}>Select which platforms to send this notification to.</Typography><Grid container spacing={1.5}><Grid item xs={12} sm={6}><PlatformCard icon={<PhoneIphoneRounded />} title="Apple iOS" subtitle="iPhone & iPad users" checked={ios} onChange={setIos} disabled={disabled} /></Grid><Grid item xs={12} sm={6}><PlatformCard icon={<PhoneIphoneRounded />} title="Google Android" subtitle="Android phone users" checked={android} onChange={setAndroid} disabled={disabled} /></Grid></Grid></Box>
@@ -115,6 +147,11 @@ export default function PushComposer({ mode, onBack, onSaved }: { mode: Mode; on
     </Grid>
 
     <Dialog open={testOpen} onClose={() => setTestOpen(false)} maxWidth="xs" fullWidth><DialogTitle>Send test notification<IconButton onClick={() => setTestOpen(false)} sx={{ position: 'absolute', right: 8, top: 8 }}><CloseRounded /></IconButton></DialogTitle><DialogContent><Typography color="text.secondary" fontSize={12} sx={{ mb: 1 }}>The backend sends the test to an end user with an active push subscription.</Typography><Stack gap={2} sx={{ pt: 1 }}><TextField label="End-user ID" placeholder="customer_123" value={testUserId} onChange={event => setTestUserId(event.target.value)} fullWidth /><TextField label="Title" value={title} onChange={event => setTitle(event.target.value)} fullWidth /><TextField label="Message" value={message} onChange={event => setMessage(event.target.value)} multiline minRows={3} fullWidth /><TextField label="Deep link" value={deepLink} onChange={event => setDeepLink(event.target.value)} fullWidth /></Stack></DialogContent><DialogActions><Button onClick={() => setTestOpen(false)}>Cancel</Button><Button variant="contained" disabled={testMutation.isPending} onClick={() => { setError(''); testMutation.mutate(); }}>{testMutation.isPending ? 'Sending…' : 'Send test'}</Button></DialogActions></Dialog>
+    <Dialog open={deepLinkDialogOpen} onClose={() => { setDeepLinkDialogOpen(false); setNewDeepLink(''); }} maxWidth="xs" fullWidth>
+      <DialogTitle>Create deeplink<IconButton onClick={() => { setDeepLinkDialogOpen(false); setNewDeepLink(''); }} sx={{ position: 'absolute', right: 8, top: 8 }}><CloseRounded /></IconButton></DialogTitle>
+      <DialogContent><TextField autoFocus fullWidth label="Deep link URL" placeholder="myapp://screen" value={newDeepLink} onChange={event => setNewDeepLink(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') saveDeepLink(); }} helperText="Enter the URL users should open from this notification." sx={{ mt: 1 }} /></DialogContent>
+      <DialogActions><Button onClick={() => { setDeepLinkDialogOpen(false); setNewDeepLink(''); }}>Cancel</Button><Button variant="contained" onClick={saveDeepLink} disabled={!newDeepLink.trim()}>Save deeplink</Button></DialogActions>
+    </Dialog>
     <Dialog open={languageOpen} onClose={() => setLanguageOpen(false)} maxWidth="md" fullWidth><DialogTitle>Add languages<IconButton onClick={() => setLanguageOpen(false)} sx={{ position: 'absolute', right: 8, top: 8 }}><CloseRounded /></IconButton></DialogTitle><DialogContent><Typography color="text.secondary" fontSize={13} sx={{ mb: 2 }}>Any/English is the default language. Add translations for the languages your audience uses.</Typography><Grid container spacing={1}>{languages.map(language => <Grid item xs={12} sm={6} md={4} key={language}><Card variant="outlined" sx={{ p: .5 }}><FormControlLabel control={<Checkbox checked={selectedLanguages.includes(language)} onChange={() => toggleLanguage(language)} disabled={language === 'Any/English'} />} label={language} /></Card></Grid>)}</Grid></DialogContent><DialogActions><Button onClick={() => setLanguageOpen(false)}>Cancel</Button><Button variant="contained" onClick={() => setLanguageOpen(false)}>Select languages</Button></DialogActions></Dialog>
   </Stack>;
 }
