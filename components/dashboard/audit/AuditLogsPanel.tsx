@@ -85,6 +85,12 @@ export function EventBadge({ action }: { action: string }) {
 }
 
 /** Who did what, where and when, across the projects you manage. */
+const fieldSx = {
+  '& .MuiInputBase-root': { height: 40, bgcolor: '#fff', borderRadius: 2.5, fontSize: 13 },
+  '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e2dfe9' },
+  '& .MuiInputLabel-root': { fontSize: 13 },
+};
+
 export default function AuditLogsPanel() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<AuditCategory | 'all'>('all');
@@ -119,49 +125,52 @@ export default function AuditLogsPanel() {
 
   return (
     <Stack gap={2}>
-      <Stack direction={{ xs: 'column', lg: 'row' }} gap={1.5} alignItems={{ lg: 'center' }} flexWrap="wrap">
-        <ToggleButtonGroup
-          exclusive
-          size="small"
-          value={category}
-          onChange={(_, v) => v && setCategory(v)}
-          aria-label="Activity type"
-          sx={{
-            bgcolor: '#f3f2f6',
-            p: 0.4,
-            borderRadius: 2,
-            flexWrap: 'wrap',
-            '& .MuiToggleButton-root': { border: 0, borderRadius: '6px !important', px: 1.5, py: 0.5, fontSize: 12, fontWeight: 600, textTransform: 'none', color: '#6b6577' },
-            '& .Mui-selected': { bgcolor: '#fff !important', color: '#1d1a26 !important', boxShadow: '0 1px 2px rgba(0,0,0,.08)' },
-          }}
-        >
-          <ToggleButton value="all">All</ToggleButton>
-          {(Object.keys(CATEGORY_LABEL) as AuditCategory[]).map((c) => <ToggleButton key={c} value={c}>{CATEGORY_LABEL[c]}</ToggleButton>)}
-        </ToggleButtonGroup>
-        <TextField
-          size="small"
-          placeholder="Search activity, user or project…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          inputProps={{ 'aria-label': 'Search' }}
-          InputProps={{ startAdornment: <InputAdornment position="start"><SearchRounded fontSize="small" /></InputAdornment> }}
-          sx={{ minWidth: 240, flex: 1, '& .MuiInputBase-root': { bgcolor: '#fff', fontSize: 13 } }}
-        />
-      </Stack>
+      <Box sx={{ p: 1.5, border: '1px solid #ece9f2', borderRadius: 3, bgcolor: '#fff', display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+        <Stack direction={{ xs: 'column', lg: 'row' }} gap={1.5} alignItems={{ lg: 'center' }}>
+          <ToggleButtonGroup
+            exclusive
+            size="small"
+            value={category}
+            onChange={(_, v) => v && setCategory(v)}
+            aria-label="Activity type"
+            sx={{
+              bgcolor: '#f3f2f6',
+              p: 0.4,
+              borderRadius: 2.5,
+              flexWrap: 'wrap',
+              flexShrink: 0,
+              '& .MuiToggleButton-root': { border: 0, borderRadius: '8px !important', px: 1.5, height: 32, fontSize: 12.5, fontWeight: 600, textTransform: 'none', color: '#6b6577' },
+              '& .Mui-selected': { bgcolor: '#fff !important', color: '#1d1a26 !important', boxShadow: '0 1px 2px rgba(0,0,0,.08)' },
+            }}
+          >
+            <ToggleButton value="all">All</ToggleButton>
+            {(Object.keys(CATEGORY_LABEL) as AuditCategory[]).map((c) => <ToggleButton key={c} value={c}>{CATEGORY_LABEL[c]}</ToggleButton>)}
+          </ToggleButtonGroup>
+          <TextField
+            size="small"
+            placeholder="Search activity, user or project…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            inputProps={{ 'aria-label': 'Search' }}
+            InputProps={{ startAdornment: <InputAdornment position="start"><SearchRounded fontSize="small" /></InputAdornment> }}
+            sx={{ ...fieldSx, flex: 1, minWidth: 240 }}
+          />
+        </Stack>
 
-      <Stack direction={{ xs: 'column', md: 'row' }} gap={1.2} alignItems={{ md: 'center' }} flexWrap="wrap">
-        <TextField size="small" select label="Project" value={filters.projectId ?? ''} onChange={(e) => setFilters((f) => ({ ...f, projectId: e.target.value || undefined }))} sx={{ minWidth: 170, bgcolor: '#fff' }}>
-          <MenuItem value="">All projects</MenuItem>
-          {options.data?.projects.map((p) => <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>)}
-        </TextField>
-        <TextField size="small" select label="User" value={filters.actorAccountId ?? ''} onChange={(e) => setFilters((f) => ({ ...f, actorAccountId: e.target.value || undefined }))} sx={{ minWidth: 170, bgcolor: '#fff' }}>
-          <MenuItem value="">All users</MenuItem>
-          {options.data?.actors.map((a) => <MenuItem key={a.id} value={a.id}>{a.name ?? a.email}</MenuItem>)}
-        </TextField>
-        <TextField size="small" type="date" label="From" value={dates.from} onChange={(e) => setDates((d) => ({ ...d, from: e.target.value }))} InputLabelProps={{ shrink: true }} sx={{ bgcolor: '#fff' }} />
-        <TextField size="small" type="date" label="To" value={dates.to} onChange={(e) => setDates((d) => ({ ...d, to: e.target.value }))} InputLabelProps={{ shrink: true }} sx={{ bgcolor: '#fff' }} />
-        {filtered && <Button size="small" onClick={clear}>Clear filters</Button>}
-      </Stack>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, minmax(0, 1fr)) auto' }, gap: 1.2, alignItems: 'center' }}>
+          <TextField size="small" select label="Project" value={filters.projectId ?? ''} onChange={(e) => setFilters((f) => ({ ...f, projectId: e.target.value || undefined }))} SelectProps={{ displayEmpty: true }} InputLabelProps={{ shrink: true }} sx={fieldSx}>
+            <MenuItem value="">All projects</MenuItem>
+            {options.data?.projects.map((p) => <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>)}
+          </TextField>
+          <TextField size="small" select label="User" value={filters.actorAccountId ?? ''} onChange={(e) => setFilters((f) => ({ ...f, actorAccountId: e.target.value || undefined }))} SelectProps={{ displayEmpty: true }} InputLabelProps={{ shrink: true }} sx={fieldSx}>
+            <MenuItem value="">All users</MenuItem>
+            {options.data?.actors.map((a) => <MenuItem key={a.id} value={a.id}>{a.name ?? a.email}</MenuItem>)}
+          </TextField>
+          <TextField size="small" type="date" label="From" value={dates.from} onChange={(e) => setDates((d) => ({ ...d, from: e.target.value }))} InputLabelProps={{ shrink: true }} sx={fieldSx} />
+          <TextField size="small" type="date" label="To" value={dates.to} onChange={(e) => setDates((d) => ({ ...d, to: e.target.value }))} InputLabelProps={{ shrink: true }} sx={fieldSx} />
+          {filtered ? <Button size="small" onClick={clear} sx={{ height: 40, textTransform: 'none', fontWeight: 600 }}>Clear filters</Button> : <span />}
+        </Box>
+      </Box>
 
       {feed.isError && (
         <Alert severity="error" action={<Button color="inherit" size="small" onClick={() => feed.refetch()}>Retry</Button>}>{errorText(feed.error)}</Alert>
