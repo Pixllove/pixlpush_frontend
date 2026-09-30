@@ -58,9 +58,10 @@ export default function PushComposer({ mode, onBack, onSaved }: { mode: Mode; on
     if (!isTemplate && country !== 'All Countries' && group === 'Select group') throw new Error('Select an audience group for country targeting before sending.');
     if (!isTemplate && delivery === 'specific' && (!scheduledDate || !scheduledTime)) throw new Error('Choose a date and time for the scheduled notification.');
     const content = { title, body: message, deepLink: deepLink === 'Select deep link...' ? null : deepLink, imageUrl: null, data: {}, translations: null };
-    if (target === 'templates') {
+    // In Templates mode a draft is still a reusable template, never a campaign.
+    if (target === 'templates' || isTemplate) {
       const template = await pushApi.templates.create(active.id, { name: name.trim(), ...content, category: 'template' });
-      return { target, template };
+      return { target: 'templates' as const, template };
     }
     const audience: PushAudience = group.startsWith('segment:') ? { lifecycleSegmentIds: [group.slice(8)] } : group.startsWith('group:') ? { audienceGroupIds: [group.slice(6)] } : { allUsers: true };
     const scheduledAt = delivery === 'specific' ? new Date(`${scheduledDate}T${scheduledTime}`).toISOString() : undefined;
@@ -88,7 +89,7 @@ export default function PushComposer({ mode, onBack, onSaved }: { mode: Mode; on
       <Button variant="outlined" startIcon={<NotificationsActiveRounded />} onClick={() => setTestOpen(true)}>Test notification</Button>
     </Stack>
 
-    <Card className="push-type-card"><Typography fontSize={12} fontWeight={900} color="text.secondary">Notification type</Typography><Stack direction="row" className="push-type-toggle"><Button onClick={() => setCurrentMode('campaign')} className={!isTemplate ? 'active' : ''} startIcon={<SendRounded />}>Push notification</Button><Button onClick={() => setCurrentMode('template')} className={isTemplate ? 'active' : ''} startIcon={<SaveRounded />}>Templates</Button></Stack><Typography color="text.secondary" fontSize={11} sx={{ mt: 1 }}>Templates creates reusable content. Save as draft creates a push campaign draft, so the backend categorizes it as <strong>push_notification</strong>.</Typography></Card>
+    <Card className="push-type-card"><Typography fontSize={12} fontWeight={900} color="text.secondary">Notification type</Typography><Stack direction="row" className="push-type-toggle"><Button onClick={() => setCurrentMode('campaign')} className={!isTemplate ? 'active' : ''} startIcon={<SendRounded />}>Push notification</Button><Button onClick={() => setCurrentMode('template')} className={isTemplate ? 'active' : ''} startIcon={<SaveRounded />}>Templates</Button></Stack><Typography color="text.secondary" fontSize={11} sx={{ mt: 1 }}>Templates creates reusable content for My Templates. Save as draft keeps it there too; in Push notification mode a draft is a campaign draft.</Typography></Card>
 
     <Grid container spacing={2.5} alignItems="flex-start">
       <Grid item xs={12} lg={7}><Card className="push-form-card">
