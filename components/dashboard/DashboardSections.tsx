@@ -79,6 +79,8 @@ import JourneyWorkspace from "./JourneyWorkspace";
 import AudienceGroupCreateDialog from "./AudienceGroupCreateDialog";
 import LifecycleSegmentCreateDialog from "./LifecycleSegmentCreateDialog";
 import UserImportDialog from "./UserImportDialog";
+import DeleteConfirmDialog from "./DeleteConfirmDialog";
+import { Toast } from "@/components/auth/AuthFeedback";
 
 export function StatCard({
   label,
@@ -1744,6 +1746,14 @@ function PushSection() {
   const [composer, setComposer] = useState<"campaign" | "template" | null>(
     null,
   );
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    severity: "success" | "error";
+  } | null>(null);
   const deferredSearch = useDeferredValue(search);
   const templatesQuery = useQuery({
     queryKey: ["push", "templates", active?.id, page, deferredSearch],
@@ -1794,7 +1804,22 @@ function PushSection() {
         ? pushApi.templates.delete(active.id, id)
         : pushApi.campaigns.delete(active.id, id);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["push"] }),
+    onSuccess: (_result, variables) => {
+      setDeleteTarget(null);
+      setToast({
+        message:
+          variables.kind === "remove"
+            ? "Deleted successfully."
+            : "Duplicated successfully.",
+        severity: "success",
+      });
+      queryClient.invalidateQueries({ queryKey: ["push"] });
+    },
+    onError: (cause: Error) =>
+      setToast({
+        message: cause.message || "Could not delete this item.",
+        severity: "error",
+      }),
   });
   if (composer)
     return (
@@ -1994,9 +2019,7 @@ function PushSection() {
             aria-label={
               tab === "send" ? `Cancel ${row.name}` : `Delete ${row.name}`
             }
-            onClick={() =>
-              actionMutation.mutate({ kind: "remove", id: row.id })
-            }
+            onClick={() => setDeleteTarget({ id: row.id, name: row.name })}
             disabled={actionMutation.isPending}
           >
             <DeleteOutlineRounded fontSize="small" />
@@ -2160,6 +2183,13 @@ function PushSection() {
           serverPageSize={25}
         />
       </Card>
+      <DeleteConfirmDialog
+        open={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        loading={actionMutation.isPending}
+        onConfirm={() => { if (deleteTarget) actionMutation.mutate({ kind: "remove", id: deleteTarget.id }); }}
+      />
+      <Toast message={toast?.message ?? null} severity={toast?.severity} onClose={() => setToast(null)} />
     </Stack>
   );
 }
