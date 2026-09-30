@@ -65,10 +65,12 @@ import { projectContext } from "@/lib/projects";
 import {
   audienceGroupsApi,
   lifecycleSegmentsApi,
+  pushApi,
   userStatsApi,
   usersApi,
 } from "@/lib/projects/api";
 import type { AudienceGroup, EndUser, LifecycleSegment } from "@/types/project";
+import type { PushCampaign, PushTemplate } from "@/lib/projects/api";
 import { useActiveProject } from "@/hooks/projects/use-active-project";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import ReusableDataTable, { DataTableColumn } from "./ReusableDataTable";
@@ -1734,182 +1736,25 @@ function EmailSection() {
 }
 
 function PushSection() {
+  const { active } = useActiveProject();
+  const queryClient = useQueryClient();
   const [tab, setTab] = useState<"send" | "drafts" | "templates">("templates");
-  const [composer, setComposer] = useState<"campaign" | "template" | null>(
-    null,
-  );
-  if (composer)
-    return (
-      <PushComposer
-        mode={composer}
-        onBack={() => setComposer(null)}
-        onSaved={(target) => {
-          setComposer(null);
-          setTab(target === "send" ? "send" : target);
-        }}
-      />
-    );
-  const pushRows =
-    tab === "templates"
-      ? [
-          {
-            id: "push-welcome",
-            name: "Welcome back",
-            title: "Someone liked you... 👀",
-            message: "Find out who it is now.",
-            category: "Push template",
-            created: "Updated today",
-            status: "Template",
-            target: "New users",
-            sends: "—",
-            clicks: "—",
-          },
-          {
-            id: "push-offer",
-            name: "Premium offer",
-            title: "Last chance ⏳",
-            message:
-              "Your 50% offer is about to expire. 👉 Open now to claim it.",
-            category: "Push template",
-            created: "Updated yesterday",
-            status: "Template",
-            target: "At-risk users",
-            sends: "—",
-            clicks: "—",
-          },
-          {
-            id: "push-reengagement",
-            name: "Re-engagement",
-            title: "Someone you liked might...",
-            message: "Don’t miss your chance to reconnect.",
-            category: "Push template",
-            created: "Updated 2 days ago",
-            status: "Template",
-            target: "Inactive users",
-            sends: "—",
-            clicks: "—",
-          },
-          {
-            id: "push-update",
-            name: "Product update",
-            title: "Discover what’s new ✨",
-            message: "New features and improvements are waiting for you.",
-            category: "Push template",
-            created: "Updated 4 days ago",
-            status: "Template",
-            target: "All eligible users",
-            sends: "—",
-            clicks: "—",
-          },
-        ]
-      : tab === "drafts"
-        ? [
-            {
-              id: "push-draft-1",
-              name: "Urgency Peak",
-              title: "Last Chance ⏳",
-              message: "Your 50% offer is about to expire.",
-              category: "Push notification",
-              created: "Edited 2 hrs ago",
-              status: "Draft",
-              target: "Android + iOS",
-              sends: "—",
-              clicks: "—",
-            },
-            {
-              id: "push-draft-2",
-              name: "Welcome onboarding",
-              title: "Welcome to PixlLove 🎉",
-              message:
-                "Start your first match now — exciting profiles are waiting.",
-              category: "Push notification",
-              created: "Edited yesterday",
-              status: "Draft",
-              target: "Android + iOS",
-              sends: "—",
-              clicks: "—",
-            },
-            {
-              id: "push-draft-3",
-              name: "Swiping reminder",
-              title: "You got a like 💜",
-              message:
-                "Click on the eye icon to view the profile behind the like.",
-              category: "Push notification",
-              created: "Edited Dec 11",
-              status: "Draft",
-              target: "Android + iOS",
-              sends: "—",
-              clicks: "—",
-            },
-          ]
-        : [
-            {
-              id: "push-campaign-1",
-              name: "Hot lead 6",
-              title: "Someone liked you... 👀",
-              message: "Find out who it is now.",
-              category: "Templates",
-              created: "Apr 1, 2026",
-              status: "Sent",
-              target: "Android + iOS",
-              sends: "1,199",
-              clicks: "13 · 1.1%",
-            },
-            {
-              id: "push-campaign-2",
-              name: "Hot lead 5",
-              title: "Last Chance ⏳",
-              message:
-                "Your 50% offer is about to expire. 👉 Open now to claim it.",
-              category: "Templates",
-              created: "Apr 1, 2026",
-              status: "Sent",
-              target: "Android + iOS",
-              sends: "1,519",
-              clicks: "17 · 1.1%",
-            },
-            {
-              id: "push-campaign-3",
-              name: "Hot lead 4",
-              title: "50% OFF — just for you 🤩",
-              message:
-                "Unlock Premium now with 50% off! Enjoy unlimited live chats.",
-              category: "Templates",
-              created: "Apr 1, 2026",
-              status: "Sent",
-              target: "Android + iOS",
-              sends: "1,850",
-              clicks: "11 · 0.6%",
-            },
-            {
-              id: "push-campaign-4",
-              name: "Hot lead 3",
-              title: "Unlock everything instantly 🏆",
-              message:
-                "Unlimited chats. More visibility. More matches. Your upgrade changes everything.",
-              category: "Templates",
-              created: "Apr 1, 2026",
-              status: "Sent",
-              target: "Android + iOS",
-              sends: "2,225",
-              clicks: "19 · 0.9%",
-            },
-            {
-              id: "push-campaign-5",
-              name: "Hot lead 2",
-              title: "Your matches won’t wait... 💔",
-              message:
-                "Someone you liked might already be talking to someone else.",
-              category: "Templates",
-              created: "Apr 1, 2026",
-              status: "Sent",
-              target: "Android + iOS",
-              sends: "2,793",
-              clicks: "47 · 1.7%",
-            },
-          ];
-  const pushColumns: DataTableColumn<(typeof pushRows)[number]>[] = [
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [composer, setComposer] = useState<"campaign" | "template" | null>(null);
+  const deferredSearch = useDeferredValue(search);
+  const templatesQuery = useQuery({ queryKey: ["push", "templates", active?.id, page, deferredSearch], queryFn: () => pushApi.templates.list(active!.id, { page, limit: 25, search: deferredSearch, category: "template" }), enabled: Boolean(active?.id) });
+  const draftsQuery = useQuery({ queryKey: ["push", "campaigns", active?.id, "draft", page, deferredSearch], queryFn: () => pushApi.campaigns.list(active!.id, { tab: "draft", page, limit: 25, search: deferredSearch }), enabled: Boolean(active?.id) });
+  const sentQuery = useQuery({ queryKey: ["push", "campaigns", active?.id, "sent", page, deferredSearch], queryFn: () => pushApi.campaigns.list(active!.id, { tab: "sent", page, limit: 25, search: deferredSearch }), enabled: Boolean(active?.id) });
+  const actionMutation = useMutation({ mutationFn: async ({ kind, id }: { kind: "duplicate" | "remove"; id: string }) => { if (!active?.id) throw new Error("Select a project first."); if (kind === "duplicate") return pushApi.templates.duplicate(active.id, id); if (tab === "send") return pushApi.campaigns.cancel(active.id, id); return tab === "templates" ? pushApi.templates.delete(active.id, id) : pushApi.campaigns.delete(active.id, id); }, onSuccess: () => queryClient.invalidateQueries({ queryKey: ["push"] }) });
+  if (composer) return <PushComposer mode={composer} onBack={() => setComposer(null)} onSaved={(target) => { setComposer(null); setTab(target === "send" ? "send" : target); setPage(1); }} />;
+  type PushRow = { id: string; name: string; title: string; message: string; category: string; created: string; status: string; target: string; sends: string; clicks: string };
+  const formatDate = (value?: string) => value ? new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—";
+  const templateRows: PushRow[] = (templatesQuery.data?.items ?? []).map((item: PushTemplate) => ({ id: item.id, name: item.name, title: item.title, message: item.body, category: item.category === "push_notification" ? "Push notification" : "Template", created: formatDate(item.updatedAt), status: item.status === "active" ? "Active" : item.status ?? "Active", target: "Reusable content", sends: item.sends === undefined ? "—" : item.sends.toLocaleString(), clicks: item.opens === undefined ? "—" : item.opens.toLocaleString() }));
+  const campaignRows: PushRow[] = ((tab === "drafts" ? draftsQuery.data?.items : sentQuery.data?.items) ?? []).map((item: PushCampaign) => ({ id: item.id, name: item.name, title: item.template?.title ?? "—", message: item.template?.body ?? "—", category: item.category === "push_notification" ? "Push notification" : "Push notification", created: formatDate(item.updatedAt), status: item.status.charAt(0).toUpperCase() + item.status.slice(1), target: item.audience?.allUsers ? "All eligible users" : item.audience?.audienceGroupIds?.length ? "Audience group" : item.audience?.lifecycleSegmentIds?.length ? "Lifecycle segment" : "Selected users", sends: item.stats?.sent === undefined ? "—" : item.stats.sent.toLocaleString(), clicks: item.stats?.opened === undefined ? "—" : `${item.stats.opened.toLocaleString()} · ${item.stats.openRate.toFixed(1)}%` }));
+  const activeQuery = tab === "templates" ? templatesQuery : tab === "drafts" ? draftsQuery : sentQuery;
+  const pushRows: PushRow[] = tab === "templates" ? templateRows : campaignRows;
+  const pushColumns: DataTableColumn<PushRow>[] = [
     {
       key: "name",
       label: "Notification name",
@@ -1939,7 +1784,7 @@ function PushSection() {
       label: "Category",
       render: (row) => (
         <Chip
-          label={row.category === "Templates" ? "Templates" : row.status}
+          label={row.category}
           size="small"
           className="neutral-chip"
         />
@@ -1996,7 +1841,7 @@ function PushSection() {
     },
     {
       key: "clicks",
-      label: "Clicks",
+      label: "Opens",
       align: "right",
       render: (row) => (
         <Typography color="text.secondary" fontSize={11}>
@@ -2014,10 +1859,10 @@ function PushSection() {
           justifyContent="flex-end"
           className="table-row-actions"
         >
-          <IconButton size="small" aria-label={`Duplicate ${row.name}`}>
+          {tab === "templates" && <IconButton size="small" aria-label={`Duplicate ${row.name}`} onClick={() => actionMutation.mutate({ kind: "duplicate", id: row.id })} disabled={actionMutation.isPending}>
             <ContentCopyRounded fontSize="small" />
-          </IconButton>
-          <IconButton size="small" aria-label={`Delete ${row.name}`}>
+          </IconButton>}
+          <IconButton size="small" aria-label={tab === "send" ? `Cancel ${row.name}` : `Delete ${row.name}`} onClick={() => actionMutation.mutate({ kind: "remove", id: row.id })} disabled={actionMutation.isPending}>
             <DeleteOutlineRounded fontSize="small" />
           </IconButton>
         </Stack>
@@ -2025,12 +1870,12 @@ function PushSection() {
     },
   ];
   const pushTabs = [
-    { id: "send" as const, label: "Send", count: "23", icon: SendRounded },
-    { id: "drafts" as const, label: "Drafts", count: "3", icon: EditRounded },
+    { id: "send" as const, label: "Send", count: String(sentQuery.data?.tabCounts?.send ?? sentQuery.data?.total ?? 0), icon: SendRounded },
+    { id: "drafts" as const, label: "Drafts", count: String(draftsQuery.data?.tabCounts?.drafts ?? draftsQuery.data?.total ?? 0), icon: EditRounded },
     {
       id: "templates" as const,
       label: "My Templates",
-      count: "26",
+      count: String(templatesQuery.data?.tabCounts?.templates ?? templatesQuery.data?.total ?? 0),
       icon: GridViewRounded,
     },
   ];
@@ -2063,7 +1908,7 @@ function PushSection() {
         {pushTabs.map(({ id, label, count, icon: Icon }) => (
           <Button
             key={id}
-            onClick={() => setTab(id)}
+            onClick={() => { setTab(id); setPage(1); }}
             className={`workspace-tab ${id}-tab ${tab === id ? "active" : ""}`}
             startIcon={<Icon />}
           >
@@ -2098,7 +1943,9 @@ function PushSection() {
           <Stack direction="row" gap={1} className="data-toolbar email-toolbar">
             <TextField
               size="small"
-              placeholder="Search by name, title, or description ..."
+              placeholder="Search by name, title, or message ..."
+              value={search}
+              onChange={(event) => { setSearch(event.target.value); setPage(1); }}
               className="table-search"
               InputProps={{
                 startAdornment: (
@@ -2118,12 +1965,11 @@ function PushSection() {
             </Select>
           </Stack>
         </Stack>
+        {activeQuery.isError && <Typography color="warning.main" fontSize={11}>The push API is unavailable. Refresh after the backend is reachable.</Typography>}
         <ReusableDataTable
           columns={pushColumns}
           rows={pushRows}
-          totalCount={
-            tab === "templates" ? "26" : tab === "drafts" ? "3" : "23"
-          }
+          totalCount={activeQuery.data?.total ?? (activeQuery.isError || !active ? pushRows.length : 0)}
           noun={
             tab === "templates"
               ? "templates"
@@ -2132,6 +1978,13 @@ function PushSection() {
                 : "campaigns"
           }
           showMenu={false}
+          loading={activeQuery.isLoading || (activeQuery.isFetching && !activeQuery.data)}
+          hasPreviousPage={page > 1}
+          hasNextPage={Boolean(activeQuery.data && page * activeQuery.data.limit < activeQuery.data.total)}
+          onPreviousPage={() => setPage(current => Math.max(1, current - 1))}
+          onNextPage={() => setPage(current => current + 1)}
+          page={page}
+          serverPageSize={25}
         />
       </Card>
     </Stack>

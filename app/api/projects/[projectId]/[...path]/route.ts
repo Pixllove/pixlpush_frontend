@@ -2,7 +2,26 @@ import { NextResponse } from 'next/server';
 import { callBackendWithRefresh } from '@/lib/auth/server';
 
 /** Project-scoped backend areas this proxy may reach. Anything else is a 404. */
-const ALLOWED = ['deactivate', 'restore', 'firebase', 'sdk-keys', 'email-settings', 'billing', 'members', 'users', 'lifecycle-segments', 'user-imports', 'audience-groups', 'sending-domains', 'invitations', 'audit-logs'];
+const ALLOWED = [
+  'deactivate',
+  'restore',
+  'firebase',
+  'sdk-keys',
+  'email-settings',
+  'billing',
+  'members',
+  'users',
+  'events',
+  'lifecycle-segments',
+  'user-imports',
+  'audience-groups',
+  'sending-domains',
+  'invitations',
+  'audit-logs',
+  'push-templates',
+  'push-campaigns',
+  'push-deliveries',
+];
 
 type Params = { params: { projectId: string; path: string[] } };
 

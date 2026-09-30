@@ -477,6 +477,111 @@ export const audienceGroupsApi = {
     ),
 };
 
+export interface PushTranslation {
+  title: string;
+  body: string;
+}
+
+export interface PushTemplate {
+  id: string;
+  projectId: string;
+  name: string;
+  title: string;
+  body: string;
+  imageUrl?: string | null;
+  deepLink?: string | null;
+  data?: Record<string, string> | null;
+  translations?: Record<string, PushTranslation> | null;
+  category: "template" | "push_notification";
+  status: "active";
+  deletedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  sends?: number;
+  opens?: number;
+}
+
+export interface PushCampaignStats {
+  total: number;
+  queued: number;
+  processing: number;
+  sent: number;
+  failed: number;
+  skipped: number;
+  canceled: number;
+  opened: number;
+  openRate: number;
+  clicked?: number;
+  clickRate?: number;
+}
+
+export type PushAudience = {
+  allUsers?: boolean;
+  userIds?: string[];
+  lifecycleSegmentIds?: string[];
+  audienceGroupIds?: string[];
+};
+
+export interface PushCampaign {
+  id: string;
+  projectId: string;
+  name: string;
+  category?: "push_notification";
+  templateId: string;
+  template?: PushTemplate;
+  audience: PushAudience;
+  status: "draft" | "scheduled" | "dispatching" | "sending" | "completed" | "canceled" | "failed";
+  scheduledAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  stats?: PushCampaignStats;
+}
+
+export interface PushPaginated<T> {
+  items: T[];
+  total: number;
+  page: number;
+  limit: number;
+  counts?: Record<string, number>;
+  tabCounts?: { send?: number; drafts?: number; templates?: number };
+}
+
+const pushList = <T>(projectId: string, path: string) =>
+  authRequest<PushPaginated<T>>(at(projectId, path), undefined, BASE);
+
+export const pushApi = {
+  templates: {
+    list: (projectId: string, params: { search?: string; category?: "template" | "push_notification" | "all"; page?: number; limit?: number } = {}) => {
+      const query = new URLSearchParams({ page: String(params.page ?? 1), limit: String(params.limit ?? 25) });
+      if (params.search) query.set("search", params.search);
+      if (params.category) query.set("category", params.category);
+      return pushList<PushTemplate>(projectId, `/push-templates?${query.toString()}`);
+    },
+    get: (projectId: string, templateId: string) => authRequest<PushTemplate>(at(projectId, `/push-templates/${encodeURIComponent(templateId)}`), undefined, BASE),
+    create: (projectId: string, input: Omit<PushTemplate, "id" | "projectId" | "createdAt" | "updatedAt" | "sends" | "opens" | "category" | "status" | "deletedAt"> & { category?: "template" | "push_notification" }) => authRequest<PushTemplate>(at(projectId, "/push-templates"), input, BASE),
+    update: (projectId: string, templateId: string, input: Partial<Omit<PushTemplate, "id" | "projectId" | "createdAt" | "updatedAt">>) => authRequest<PushTemplate>(at(projectId, `/push-templates/${encodeURIComponent(templateId)}`), input, BASE, "PATCH"),
+    duplicate: (projectId: string, templateId: string) => authRequest<PushTemplate>(at(projectId, `/push-templates/${encodeURIComponent(templateId)}/duplicate`), {}, BASE),
+    delete: (projectId: string, templateId: string) => authRequest<void>(at(projectId, `/push-templates/${encodeURIComponent(templateId)}`), {}, BASE, "DELETE"),
+    test: (projectId: string, templateId: string, userId: string) => authRequest<{ delivered: boolean; failed: boolean; error?: string }>(at(projectId, `/push-templates/${encodeURIComponent(templateId)}/test`), { userId }, BASE),
+  },
+  campaigns: {
+    list: (projectId: string, params: { tab?: "sent" | "draft"; status?: string; search?: string; page?: number; limit?: number } = {}) => {
+      const query = new URLSearchParams({ tab: params.tab ?? "sent", page: String(params.page ?? 1), limit: String(params.limit ?? 25) });
+      if (params.status) query.set("status", params.status);
+      if (params.search) query.set("search", params.search);
+      return pushList<PushCampaign>(projectId, `/push-campaigns?${query.toString()}`);
+    },
+    get: (projectId: string, campaignId: string) => authRequest<PushCampaign>(at(projectId, `/push-campaigns/${encodeURIComponent(campaignId)}`), undefined, BASE),
+    audiencePreview: (projectId: string, audience: PushAudience) => authRequest<{ matching: number; reachable: number }>(at(projectId, "/push-campaigns/audience-preview"), { audience }, BASE),
+    create: (projectId: string, input: { name: string; templateId?: string; content?: { title: string; body: string; imageUrl?: string | null; deepLink?: string | null; data?: Record<string, string>; translations?: Record<string, PushTranslation> | null }; audience?: PushAudience; sendNow?: boolean; scheduledAt?: string }) => authRequest<PushCampaign>(at(projectId, "/push-campaigns"), input, BASE),
+    update: (projectId: string, campaignId: string, input: { name?: string; templateId?: string; audience?: PushAudience }) => authRequest<PushCampaign>(at(projectId, `/push-campaigns/${encodeURIComponent(campaignId)}`), input, BASE, "PATCH"),
+    delete: (projectId: string, campaignId: string) => authRequest<void>(at(projectId, `/push-campaigns/${encodeURIComponent(campaignId)}`), {}, BASE, "DELETE"),
+    schedule: (projectId: string, campaignId: string, scheduledAt: string) => authRequest<PushCampaign>(at(projectId, `/push-campaigns/${encodeURIComponent(campaignId)}/schedule`), { scheduledAt }, BASE),
+    sendNow: (projectId: string, campaignId: string) => authRequest<PushCampaign>(at(projectId, `/push-campaigns/${encodeURIComponent(campaignId)}/send-now`), {}, BASE),
+    cancel: (projectId: string, campaignId: string) => authRequest<{ canceled: boolean; canceledJobs: number }>(at(projectId, `/push-campaigns/${encodeURIComponent(campaignId)}/cancel`), {}, BASE),
+  },
+};
+
 export const projectKeys = {
   all: ["projects"] as const,
   list: () => [...projectKeys.all, "list"] as const,
