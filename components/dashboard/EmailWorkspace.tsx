@@ -49,6 +49,7 @@ import {
   MenuItem,
   Paper,
   Select,
+  Skeleton,
   Stack,
   Tab,
   Tabs,
@@ -71,6 +72,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { BlockDesign } from "./BlockDesign";
 import { reorderByInsertionIndex } from "./dragEmailOrdering";
 import SimpleEmailEditor from "@/components/dashboard/SimpleEmailEditor";
+import DeleteConfirmDialog from "@/components/dashboard/DeleteConfirmDialog";
+import { Toast } from "@/components/auth/AuthFeedback";
+import { useActiveProject } from "@/hooks/projects/use-active-project";
+import { emailApi } from "@/lib/projects/api";
+import type { EmailCampaign, EmailTemplate } from "@/lib/projects/api";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 type TabId = "send" | "drafts" | "templates";
 type Editor = "simple" | "drag";
@@ -97,77 +104,6 @@ type EmailItem = {
   style?: { primary: string; background: string; width: number };
 };
 
-const STORAGE_KEY = "pixlpush.emailWorkspace.v1";
-const initialItems: EmailItem[] = [
-  {
-    id: "welcome",
-    name: "Welcome New Users",
-    subject: "Get started with PixlPush",
-    description:
-      "Introduce your product, highlight profile setup, and invite users to start matching.",
-    editor: "drag",
-    kind: "templates",
-    updated: "Updated today",
-    blocks: [
-      {
-        id: 1,
-        type: "hero",
-        title: "A fresh update for your audience",
-        body: "Share your latest news, offer, or announcement with a clear message.",
-      },
-      { id: 2, type: "button", title: "Explore now", body: "" },
-    ],
-  },
-  {
-    id: "premium",
-    name: "Premium Offer",
-    subject: "Unlock your exclusive offer",
-    description:
-      "A clean offer layout with benefits, pricing nudge, and a strong upgrade action.",
-    editor: "simple",
-    kind: "templates",
-    updated: "Updated yesterday",
-    content:
-      "<p>Hi {{first_name}},</p><p>Here is something special for you.</p>",
-  },
-  {
-    id: "draft-welcome",
-    name: "Welcome back",
-    subject: "We saved your place",
-    description: "Continue editing your onboarding email draft.",
-    editor: "simple",
-    kind: "drafts",
-    updated: "Edited 2 hrs ago",
-    content: "<p>Welcome back, {{first_name}}.</p>",
-  },
-  {
-    id: "draft-spring",
-    name: "Spring promotion",
-    subject: "A limited-time offer",
-    description: "Draft campaign for the next seasonal promotion.",
-    editor: "drag",
-    kind: "drafts",
-    updated: "Edited yesterday",
-    blocks: [
-      {
-        id: 1,
-        type: "heading",
-        title: "Spring is here",
-        body: "Make every message count.",
-      },
-    ],
-  },
-  {
-    id: "sent-back",
-    name: "Back in Action",
-    subject: "Come see what is new",
-    description: "Re-engagement campaign sent to at-risk users.",
-    editor: "simple",
-    kind: "send",
-    updated: "125.4K delivered · 42.8% open rate",
-    content: "<p>We have missed you.</p>",
-  },
-];
 const blockDefaults: Record<BlockType, Omit<Block, "id">> = {
   navigation: { type: "navigation", title: "About Products Contact", body: "" },
   hero: {
@@ -477,18 +413,10 @@ const dragLibrary: Record<DragCategory, LibraryItem[]> = {
     },
   ],
 };
-function readItems(): EmailItem[] {
-  if (typeof window === "undefined") return initialItems;
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as EmailItem[]) : initialItems;
-  } catch {
-    return initialItems;
-  }
-}
-
 export default function EmailWorkspace() {
-  const [items, setItems] = useState<EmailItem[]>(initialItems);
+  const { active: activeProject } = useActiveProject();
+  const queryClient = useQueryClient();
+  const [items, setItems] = useState<EmailItem[]>([]);
   const [tab, setTab] = useState<TabId>("templates");
   const [query, setQuery] = useState("");
   const [view, setView] = useState<"list" | "choice" | "editor">("list");
@@ -496,16 +424,84 @@ export default function EmailWorkspace() {
   const [editor, setEditor] = useState<Editor>("simple");
   const [active, setActive] = useState<EmailItem | null>(null);
   const [notice, setNotice] = useState("");
-  useEffect(() => setItems(readItems()), []);
-  useEffect(() => {
-    if (typeof window !== "undefined")
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-  }, [items]);
+  const [deleteTarget, setDeleteTarget] = useState<EmailItem | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [toast, setToast] = useState<{
+    message: string;
+    severity: "success" | "error";
+  } | null>(null);
   useEffect(() => {
     if (!notice) return;
     const timer = window.setTimeout(() => setNotice(""), 2600);
     return () => window.clearTimeout(timer);
   }, [notice]);
+  const templatesQuery = useQuery({
+    queryKey: ["email", "templates", activeProject?.id, query],
+    queryFn: () => emailApi.templates.list(activeProject!.id, {
+      page: 1,
+      limit: 25,
+      search: query,
+      category: "template",
+    }),
+    enabled: Boolean(activeProject?.id),
+  });
+  const draftsQuery = useQuery({
+    queryKey: ["email", "campaigns", activeProject?.id, "draft", query],
+    queryFn: () => emailApi.campaigns.list(activeProject!.id, {
+      tab: "draft",
+      page: 1,
+      limit: 25,
+      search: query,
+    }),
+    enabled: Boolean(activeProject?.id),
+  });
+  const sentQuery = useQuery({
+    queryKey: ["email", "campaigns", activeProject?.id, "sent", query],
+    queryFn: () => emailApi.campaigns.list(activeProject!.id, {
+      tab: "sent",
+      page: 1,
+      limit: 25,
+      search: query,
+    }),
+    enabled: Boolean(activeProject?.id),
+  });
+  const formatUpdated = (value?: string) => value
+    ? `Updated ${new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`
+    : "—";
+  const apiItems = useMemo<EmailItem[]>(() => [
+    ...(sentQuery.data?.items ?? []).map((item: EmailCampaign) => ({
+      id: item.id,
+      name: item.name,
+      subject: item.template?.subject ?? "",
+      description: item.template?.previewText ?? "",
+      editor: "simple" as const,
+      kind: "send" as const,
+      updated: formatUpdated(item.updatedAt),
+    })),
+    ...(draftsQuery.data?.items ?? []).map((item: EmailCampaign) => ({
+      id: item.id,
+      name: item.name,
+      subject: item.template?.subject ?? "",
+      description: item.template?.previewText ?? "",
+      editor: "simple" as const,
+      kind: "drafts" as const,
+      updated: formatUpdated(item.updatedAt),
+    })),
+    ...(templatesQuery.data?.items ?? []).map((item: EmailTemplate) => ({
+      id: item.id,
+      name: item.name,
+      subject: item.subject,
+      description: item.previewText ?? "",
+      editor: item.editor === "drag_drop" ? "drag" as const : "simple" as const,
+      kind: "templates" as const,
+      updated: formatUpdated(item.updatedAt),
+    })),
+  ], [draftsQuery.data, sentQuery.data, templatesQuery.data]);
+  useEffect(() => {
+    if (activeProject?.id && !templatesQuery.isFetching && !draftsQuery.isFetching && !sentQuery.isFetching) {
+      setItems(apiItems);
+    }
+  }, [activeProject?.id, apiItems, draftsQuery.isFetching, sentQuery.isFetching, templatesQuery.isFetching]);
   const visible = useMemo(
     () =>
       items.filter(
@@ -517,16 +513,47 @@ export default function EmailWorkspace() {
       ),
     [items, tab, query],
   );
+  const activeListQuery = tab === "templates" ? templatesQuery : tab === "drafts" ? draftsQuery : sentQuery;
+  const isListLoading = activeListQuery.isLoading || (activeListQuery.isFetching && !activeListQuery.data);
+  const tabCounts = sentQuery.data?.tabCounts;
   const start = (nextKind: "drafts" | "templates") => {
     setKind(nextKind);
     setActive(null);
     setView("choice");
   };
-  const open = (item: EmailItem) => {
+  const open = async (item: EmailItem) => {
     setKind(item.kind === "templates" ? "templates" : "drafts");
     setEditor(item.editor);
     setActive(item);
     setView("editor");
+    if (!activeProject?.id) return;
+    try {
+      if (item.kind === "templates") {
+        const detail = await emailApi.templates.get(activeProject.id, item.id);
+        setActive((current) => current && {
+          ...current,
+          id: detail.id,
+          name: detail.name || current.name,
+          subject: detail.subject || current.subject,
+          description: detail.previewText ?? current.description,
+          content: detail.html ?? detail.text ?? current.content,
+        });
+      } else {
+        const detail = await emailApi.campaigns.get(activeProject.id, item.id);
+        setActive((current) => current && {
+          ...current,
+          id: detail.id,
+          name: detail.name || current.name,
+          subject: detail.template?.subject ?? current.subject,
+          description: detail.template?.previewText ?? current.description,
+        });
+      }
+    } catch (cause) {
+      setToast({
+        message: cause instanceof Error ? cause.message : "Could not load the email for editing.",
+        severity: "error",
+      });
+    }
   };
   const save = (item: EmailItem, message: string) => {
     setItems((current) => [
@@ -537,26 +564,56 @@ export default function EmailWorkspace() {
     setView("list");
     setNotice(message);
   };
-  const duplicate = (item: EmailItem) => {
-    setItems((current) => [
-      {
-        ...item,
-        id: `${item.id}-${Date.now()}`,
-        name: `${item.name} copy`,
-        updated: "Updated just now",
-      },
-      ...current,
-    ]);
-    setNotice("Email duplicated");
+  const duplicate = async (item: EmailItem) => {
+    if (!activeProject?.id || item.kind !== "templates") {
+      setToast({ message: "Only email templates can be duplicated.", severity: "error" });
+      return;
+    }
+    setActionLoading(true);
+    try {
+      const copy = await emailApi.templates.duplicate(activeProject.id, item.id);
+      setItems((current) => [
+        {
+          ...item,
+          id: copy.id,
+          name: copy.name || `${item.name} copy`,
+          subject: copy.subject || item.subject,
+          updated: "Updated just now",
+        },
+        ...current,
+      ]);
+      setToast({ message: "Email duplicated successfully.", severity: "success" });
+      queryClient.invalidateQueries({ queryKey: ["email"] });
+    } catch (cause) {
+      setToast({ message: cause instanceof Error ? cause.message : "Could not duplicate the email.", severity: "error" });
+    } finally {
+      setActionLoading(false);
+    }
   };
   const discardEditor = () => {
     if (active) setItems(current => current.filter(entry => entry.id !== active.id));
     setActive(null);
     setView("list");
   };
-  const remove = (item: EmailItem) => {
-    setItems((current) => current.filter((entry) => entry.id !== item.id));
-    setNotice("Email deleted");
+  const remove = (item: EmailItem) => setDeleteTarget(item);
+  const confirmRemove = async () => {
+    if (!deleteTarget || !activeProject?.id) return;
+    setActionLoading(true);
+    try {
+      if (deleteTarget.kind === "templates") {
+        await emailApi.templates.delete(activeProject.id, deleteTarget.id);
+      } else {
+        await emailApi.campaigns.delete(activeProject.id, deleteTarget.id);
+      }
+      setItems((current) => current.filter((entry) => entry.id !== deleteTarget.id));
+      setDeleteTarget(null);
+      setToast({ message: "Email deleted successfully.", severity: "success" });
+      queryClient.invalidateQueries({ queryKey: ["email"] });
+    } catch (cause) {
+      setToast({ message: cause instanceof Error ? cause.message : "Could not delete the email.", severity: "error" });
+    } finally {
+      setActionLoading(false);
+    }
   };
   if (view === "choice")
     return (
@@ -618,7 +675,7 @@ export default function EmailWorkspace() {
         <WorkspaceTab
           active={tab === "send"}
           label="Send"
-          count={items.filter((x) => x.kind === "send").length}
+          count={tabCounts?.send ?? sentQuery.data?.total ?? 0}
           icon={<SendRounded />}
           onClick={() => setTab("send")}
           color="send-tab"
@@ -626,7 +683,7 @@ export default function EmailWorkspace() {
         <WorkspaceTab
           active={tab === "drafts"}
           label="Drafts"
-          count={items.filter((x) => x.kind === "drafts").length}
+          count={tabCounts?.drafts ?? draftsQuery.data?.total ?? 0}
           icon={<EditRounded />}
           onClick={() => setTab("drafts")}
           color="drafts-tab"
@@ -634,7 +691,7 @@ export default function EmailWorkspace() {
         <WorkspaceTab
           active={tab === "templates"}
           label="My Templates"
-          count={items.filter((x) => x.kind === "templates").length}
+          count={templatesQuery.data?.total ?? 0}
           icon={<GridViewRounded />}
           onClick={() => setTab("templates")}
           color="templates-tab"
@@ -704,18 +761,28 @@ export default function EmailWorkspace() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {visible.map((item) => (
-                <EmailTableRow
-                  key={item.id}
-                  item={item}
-                  onEdit={() => open(item)}
-                  onDuplicate={() => duplicate(item)}
-                  onDelete={() => remove(item)}
-                />
-              ))}
+              {isListLoading
+                ? Array.from({ length: 4 }, (_, index) => (
+                    <TableRow key={`email-skeleton-${index}`}>
+                      {Array.from({ length: 9 }, (_, cell) => (
+                        <TableCell key={cell}>
+                          <Skeleton variant="rounded" height={cell === 0 ? 34 : 22} />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                : visible.map((item) => (
+                    <EmailTableRow
+                      key={item.id}
+                      item={item}
+                      onEdit={() => open(item)}
+                      onDuplicate={() => duplicate(item)}
+                      onDelete={() => remove(item)}
+                    />
+                  ))}
             </TableBody>
           </Table>
-          {!visible.length && (
+          {!isListLoading && !visible.length && (
             <Typography className="table-empty" color="text.secondary">
               No emails match your search.
             </Typography>
@@ -728,7 +795,7 @@ export default function EmailWorkspace() {
           className="table-footer"
         >
           <Typography color="text.secondary" fontSize={11}>
-            Showing {visible.length} result{visible.length === 1 ? "" : "s"}
+            {isListLoading ? "Loading emails…" : `Showing ${visible.length} result${visible.length === 1 ? "" : "s"}`}
             {tab === "templates" ? " · templates" : ""}
           </Typography>
           <Stack direction="row" alignItems="center" gap={1}>
@@ -747,6 +814,19 @@ export default function EmailWorkspace() {
           </Stack>
         </Stack>
       </Card>
+      <DeleteConfirmDialog
+        open={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        loading={actionLoading}
+        onConfirm={confirmRemove}
+        title="Are you sure you want to delete this email?"
+        description="This email and its saved content will be permanently removed."
+      />
+      <Toast
+        message={toast?.message ?? null}
+        severity={toast?.severity}
+        onClose={() => setToast(null)}
+      />
     </Stack>
   );
 }

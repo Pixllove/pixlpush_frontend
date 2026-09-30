@@ -64,13 +64,19 @@ import { RootState } from "@/lib/store";
 import { projectContext } from "@/lib/projects";
 import {
   audienceGroupsApi,
+  emailApi,
   lifecycleSegmentsApi,
   pushApi,
   userStatsApi,
   usersApi,
 } from "@/lib/projects/api";
 import type { AudienceGroup, EndUser, LifecycleSegment } from "@/types/project";
-import type { PushCampaign, PushTemplate } from "@/lib/projects/api";
+import type {
+  EmailCampaign,
+  EmailTemplate,
+  PushCampaign,
+  PushTemplate,
+} from "@/lib/projects/api";
 import { useActiveProject } from "@/hooks/projects/use-active-project";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import ReusableDataTable, { DataTableColumn } from "./ReusableDataTable";
@@ -1502,8 +1508,143 @@ export function UsersSection() {
 
 export function ChannelSection({ channel }: { channel: "email" | "push" }) {
   const email = channel === "email";
-  if (email) return <EmailSection />;
+  if (email) return <EmailDataSection />;
   return <PushSection />;
+}
+
+function EmailDataSection() {
+  const { active } = useActiveProject();
+  const project = projectContext(
+    useSelector((state: RootState) => state.ui.selectedProject),
+  );
+  const [tab, setTab] = useState<"send" | "drafts" | "templates">("send");
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const deferredSearch = useDeferredValue(search);
+  const templatesQuery = useQuery({
+    queryKey: ["email", "templates", active?.id, page, deferredSearch],
+    queryFn: () => emailApi.templates.list(active!.id, {
+      page, limit: 25, search: deferredSearch, category: "template",
+    }),
+    enabled: Boolean(active?.id),
+  });
+  const draftsQuery = useQuery({
+    queryKey: ["email", "campaigns", active?.id, "draft", page, deferredSearch],
+    queryFn: () => emailApi.campaigns.list(active!.id, {
+      tab: "draft", page, limit: 25, search: deferredSearch,
+    }),
+    enabled: Boolean(active?.id),
+  });
+  const sentQuery = useQuery({
+    queryKey: ["email", "campaigns", active?.id, "sent", page, deferredSearch],
+    queryFn: () => emailApi.campaigns.list(active!.id, {
+      tab: "sent", page, limit: 25, search: deferredSearch,
+    }),
+    enabled: Boolean(active?.id),
+  });
+  type EmailRow = { id: string; name: string; detail: string; meta: string; status: string };
+  const date = (value?: string) => value
+    ? new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
+    : "—";
+  const templateRows: EmailRow[] = (templatesQuery.data?.items ?? []).map((item: EmailTemplate) => ({
+    id: item.id,
+    name: item.name,
+    detail: item.subject || "No subject",
+    meta: `${item.category === "template" ? "Reusable template" : item.category ?? "Email template"} · Updated ${date(item.updatedAt)}`,
+    status: "Reusable template",
+  }));
+  const campaignRows: EmailRow[] = ((tab === "drafts" ? draftsQuery.data?.items : sentQuery.data?.items) ?? [])
+    .map((item: EmailCampaign) => ({
+      id: item.id,
+      name: item.name,
+      detail: item.template?.subject || "No subject",
+      meta: tab === "drafts"
+        ? `Draft · Updated ${date(item.updatedAt)}`
+        : `${item.stats?.sent?.toLocaleString() ?? "—"} sent · ${item.stats?.openRate?.toFixed(1) ?? "—"}% open rate`,
+      status: item.status ? item.status.charAt(0).toUpperCase() + item.status.slice(1) : "Sent",
+    }));
+  const activeQuery = tab === "templates" ? templatesQuery : tab === "drafts" ? draftsQuery : sentQuery;
+  const rows: EmailRow[] = tab === "templates" ? templateRows : campaignRows;
+  const campaignCounts = sentQuery.data?.tabCounts;
+  const emailTabs = [
+    { id: "send" as const, label: "Send", count: campaignCounts?.send ?? sentQuery.data?.total ?? 0, icon: SendRounded },
+    { id: "drafts" as const, label: "Drafts", count: campaignCounts?.drafts ?? draftsQuery.data?.total ?? 0, icon: EditRounded },
+    { id: "templates" as const, label: "My Templates", count: templatesQuery.data?.total ?? 0, icon: GridViewRounded },
+  ];
+  const columns: DataTableColumn<EmailRow>[] = [
+    {
+      key: "name",
+      label: "Email",
+      render: (row) => (
+        <Stack direction="row" alignItems="center" gap={1.5}>
+          <Box className="email-preview"><Box /><Box /><Box /></Box>
+          <Box>
+            <Stack direction="row" alignItems="center" gap={1}>
+              <Typography fontSize={12} fontWeight={800}>{row.name}</Typography>
+              <Chip label={row.status} size="small" className={row.status === "Sent" || row.status === "Delivered" ? "active-chip" : "neutral-chip"} />
+            </Stack>
+            <Typography color="text.secondary" fontSize={10}>{row.detail}</Typography>
+            <Typography color="text.secondary" fontSize={10} sx={{ mt: 0.5 }}>{row.meta}</Typography>
+          </Box>
+        </Stack>
+      ),
+    },
+    { key: "status", label: "Type", render: (row) => <Typography color="text.secondary" fontSize={11}>{row.status}</Typography> },
+    { key: "meta", label: "Updated", render: (row) => <Typography color="text.secondary" fontSize={11}>{row.meta.split(" · ")[1] ?? row.meta}</Typography> },
+    {
+      key: "action",
+      label: "",
+      align: "right",
+      render: () => <Button size="small" variant="contained">{tab === "drafts" ? "Continue editing" : tab === "templates" ? "Edit" : "View"}</Button>,
+    },
+  ];
+  return (
+    <Stack gap={2.5} className="email-workspace">
+      <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" alignItems={{ md: "center" }} gap={2}>
+        <Box>
+          <Typography variant="h3">Email workspace</Typography>
+          <Typography color="text.secondary" fontSize={12}>Create, manage, and reuse email content for {project.name} campaigns and journeys.</Typography>
+        </Box>
+        <Stack direction="row" gap={1}>
+          <Button variant="contained" startIcon={<AddRounded />}>Create email campaign</Button>
+          <Button variant="outlined" startIcon={<GridViewRounded />}>Create email template</Button>
+        </Stack>
+      </Stack>
+      <Box className="workspace-tabs">
+        {emailTabs.map(({ id, label, count: tabCount, icon: Icon }) => (
+          <Button key={id} onClick={() => { setTab(id); setPage(1); }} className={`workspace-tab ${id}-tab ${tab === id ? "active" : ""}`} startIcon={<Icon />}>
+            <span>{label}</span><Chip label={tabCount} size="small" />
+          </Button>
+        ))}
+      </Box>
+      <Card className="saas-card data-panel email-data-panel">
+        <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ sm: "center" }} gap={2}>
+          <Box>
+            <Typography variant="h3">{tab === "templates" ? "My Templates" : tab === "drafts" ? "Draft emails" : "Sent campaigns"}</Typography>
+            <Typography color="text.secondary" fontSize={12}>{tab === "templates" ? "Reusable content blocks ready for your next campaign." : tab === "drafts" ? "Continue editing saved email drafts." : "Track the latest email campaigns and their performance."}</Typography>
+          </Box>
+          <Stack direction="row" gap={1} className="data-toolbar email-toolbar">
+            <TextField size="small" placeholder={`Search ${tab === "templates" ? "templates" : tab === "drafts" ? "drafts" : "campaigns"}`} className="table-search" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchRounded fontSize="small" /></InputAdornment> }} />
+            <Select size="small" defaultValue="recent" className="filter-select"><MenuItem value="recent">Recently updated</MenuItem><MenuItem value="name">Name</MenuItem></Select>
+          </Stack>
+        </Stack>
+        <ReusableDataTable
+          columns={columns}
+          rows={rows}
+          totalCount={String(activeQuery.data?.total ?? 0)}
+          noun={tab === "templates" ? "templates" : tab === "drafts" ? "drafts" : "campaigns"}
+          showMenu={false}
+          loading={activeQuery.isLoading || (activeQuery.isFetching && !activeQuery.data)}
+          page={page}
+          serverPageSize={25}
+          hasPreviousPage={page > 1}
+          hasNextPage={rows.length === 25}
+          onPreviousPage={() => setPage((current) => Math.max(1, current - 1))}
+          onNextPage={() => setPage((current) => current + 1)}
+        />
+      </Card>
+    </Stack>
+  );
 }
 
 function EmailSection() {

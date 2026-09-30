@@ -115,6 +115,52 @@ export const sdkKeyApi = {
     ),
 };
 
+export interface EmailTemplate {
+  id: string;
+  projectId: string;
+  name: string;
+  subject: string;
+  previewText?: string | null;
+  html?: string | null;
+  text?: string | null;
+  editor?: string | null;
+  category?: string;
+  status?: string;
+  createdAt: string;
+  updatedAt: string;
+  sends?: number;
+  opens?: number;
+}
+
+export interface EmailCampaignStats {
+  total?: number;
+  sent?: number;
+  opened?: number;
+  openRate?: number;
+  clicked?: number;
+  clickRate?: number;
+}
+
+export interface EmailCampaign {
+  id: string;
+  projectId: string;
+  name: string;
+  category?: string;
+  templateId?: string;
+  template?: {
+    id: string;
+    name: string;
+    subject: string;
+    previewText?: string | null;
+  };
+  audience?: PushAudience;
+  status: string;
+  scheduledAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  stats?: EmailCampaignStats;
+}
+
 export const emailApi = {
   get: (projectId: string) =>
     authRequest<EmailSettings>(
@@ -138,6 +184,106 @@ export const emailApi = {
       {},
       BASE,
     ),
+  templates: {
+    list: (
+      projectId: string,
+      params: { search?: string; category?: "template" | "email" | "all"; page?: number; limit?: number } = {},
+    ) => {
+      const query = new URLSearchParams({
+        page: String(params.page ?? 1),
+        limit: String(params.limit ?? 25),
+      });
+      if (params.search) query.set("search", params.search);
+      if (params.category) query.set("category", params.category);
+      return pushList<EmailTemplate>(
+        projectId,
+        `/email-templates?${query.toString()}`,
+      );
+    },
+    get: (projectId: string, templateId: string) =>
+      authRequest<EmailTemplate>(
+        at(projectId, `/email-templates/${encodeURIComponent(templateId)}`),
+        undefined,
+        BASE,
+      ),
+    update: (
+      projectId: string,
+      templateId: string,
+      input: Partial<Pick<EmailTemplate, "name" | "subject" | "previewText" | "html" | "text" | "editor">>,
+    ) =>
+      authRequest<EmailTemplate>(
+        at(projectId, `/email-templates/${encodeURIComponent(templateId)}`),
+        input,
+        BASE,
+        "PATCH",
+      ),
+    duplicate: (projectId: string, templateId: string) =>
+      authRequest<EmailTemplate>(
+        at(projectId, `/email-templates/${encodeURIComponent(templateId)}/duplicate`),
+        {},
+        BASE,
+      ),
+    delete: (projectId: string, templateId: string) =>
+      authRequest<void>(
+        at(projectId, `/email-templates/${encodeURIComponent(templateId)}`),
+        {},
+        BASE,
+        "DELETE",
+      ),
+  },
+  campaigns: {
+    list: (
+      projectId: string,
+      params: {
+        tab?: "sent" | "draft";
+        status?: string;
+        search?: string;
+        page?: number;
+        limit?: number;
+      } = {},
+    ) => {
+      const query = new URLSearchParams({
+        tab: params.tab ?? "sent",
+        page: String(params.page ?? 1),
+        limit: String(params.limit ?? 25),
+      });
+      if (params.status) query.set("status", params.status);
+      if (params.search) query.set("search", params.search);
+      return pushList<EmailCampaign>(
+        projectId,
+        `/email-campaigns?${query.toString()}`,
+      );
+    },
+    get: (projectId: string, campaignId: string) =>
+      authRequest<EmailCampaign>(
+        at(projectId, `/email-campaigns/${encodeURIComponent(campaignId)}`),
+        undefined,
+        BASE,
+      ),
+    update: (
+      projectId: string,
+      campaignId: string,
+      input: {
+        name?: string;
+        templateId?: string;
+        audience?: PushAudience;
+        content?: Record<string, unknown>;
+      },
+    ) =>
+      authRequest<EmailCampaign>(
+        at(projectId, `/email-campaigns/${encodeURIComponent(campaignId)}`),
+        input,
+        BASE,
+        "PATCH",
+      ),
+    delete: (projectId: string, campaignId: string) =>
+      authRequest<void>(
+        at(projectId, `/email-campaigns/${encodeURIComponent(campaignId)}`),
+        {},
+        BASE,
+        "DELETE",
+      ),
+  },
 };
 
 export const billingApi = {
