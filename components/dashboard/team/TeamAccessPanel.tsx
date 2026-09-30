@@ -194,7 +194,7 @@ export default function TeamAccessPanel() {
           <Typography variant="h3">Pending invitations</Typography>
           {invitations.isError && <Alert severity="error" sx={{ mt: 1 }}>{teamError(invitations.error)}</Alert>}
           {invitations.data && pending.length === 0 && (
-            <Typography color="text.secondary" fontSize={12} sx={{ mt: 1 }}>No pending invitations. People who already have a PixlPush account get access right away.</Typography>
+            <Typography color="text.secondary" fontSize={12} sx={{ mt: 1 }}>No pending invitations. Invitees join once they accept the emailed invitation.</Typography>
           )}
           {pending.length > 0 && (
             <Box sx={{ overflowX: 'auto' }}>
@@ -342,7 +342,7 @@ function InviteDialog({
         <DialogContent>
           <Stack gap={2} sx={{ pt: 1 }}>
             <Typography color="text.secondary" fontSize={13}>
-              People with a PixlPush account get access right away. Others receive an invitation to create one.
+              We email an invitation. Existing PixlPush users sign in to accept; new users create an account. Access starts once they accept.
             </Typography>
             {error && <Alert severity="error">{error}</Alert>}
             <TextField label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoFocus required fullWidth />
