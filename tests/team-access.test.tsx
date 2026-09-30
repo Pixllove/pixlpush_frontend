@@ -133,7 +133,7 @@ describe('Team & Access', () => {
 describe('Audit Logs', () => {
   const entry = (over: Partial<AuditLogEntry>): AuditLogEntry => ({
     id: 'l1',
-    action: 'MEMBER_ROLE_CHANGED',
+    action: 'member_role_changed',
     category: 'team',
     entityType: 'member',
     entityId: 'a-dimi',
@@ -166,7 +166,7 @@ describe('Audit Logs', () => {
     expect(within(drawer).getByText('Changes')).toBeInTheDocument();
     expect(within(drawer).getByText('read_only')).toBeInTheDocument();
     expect(within(drawer).getByText('admin')).toBeInTheDocument();
-    expect(within(drawer).getByText('MEMBER_ROLE_CHANGED')).toBeInTheDocument();
+    expect(within(drawer).getByText('member_role_changed')).toBeInTheDocument();
     expect(within(drawer).queryByText(/"before"/)).not.toBeInTheDocument();
     await userEvent.click(within(drawer).getByRole('button', { name: 'Close details' }));
 

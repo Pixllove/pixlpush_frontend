@@ -73,6 +73,17 @@ function CategoryChip({ category }: { category: AuditCategory }) {
   return <Chip size="small" label={CATEGORY_LABEL[category] ?? category} sx={{ color: c.color, bgcolor: c.bg, fontWeight: 600, fontSize: 11, height: 22 }} />;
 }
 
+/** Event code as a small badge, e.g. "resource_deleted". */
+export function EventBadge({ action }: { action: string }) {
+  return (
+    <Chip
+      size="small"
+      label={action.toLowerCase()}
+      sx={{ height: 20, fontSize: 11, fontFamily: 'monospace', color: '#4a4556', bgcolor: '#f0eef3', borderRadius: 1 }}
+    />
+  );
+}
+
 /** Who did what, where and when, across the projects you manage. */
 export default function AuditLogsPanel() {
   const [search, setSearch] = useState('');
@@ -267,7 +278,7 @@ function DetailsDrawer({ entry, onClose }: { entry: AuditLogEntry | null; onClos
             <DetailRow k="User" v={<>{actorName(entry)}{entry.actor?.name && <Typography fontSize={12} color="text.secondary">{entry.actor.email}</Typography>}</>} />
             <DetailRow k="Project" v={entry.project?.name ?? 'Account-level'} />
             <DetailRow k="Category" v={<CategoryChip category={entry.category} />} />
-            <DetailRow k="Event" v={<Typography component="code" fontSize={12} sx={{ fontFamily: 'monospace' }}>{entry.action}</Typography>} />
+            <DetailRow k="Event" v={<EventBadge action={entry.action} />} />
             {entry.ipAddress && <DetailRow k="IP address" v={entry.ipAddress} />}
           </Box>
 
