@@ -24,9 +24,9 @@
     "semantic_hash": ""
   },
   "app/(dashboard)/dashboard/integrations/page.tsx": {
-    "mtime": 1790685758.3603523,
-    "seen": 1790762603.397608,
-    "ast_hash": "6f84c069ce229c224ca4e4b4a3352ba2",
+    "mtime": 1789972551.0813434,
+    "seen": 1790147750.267624,
+    "ast_hash": "2307aa425984b377a884e8765436d7a6",
     "semantic_hash": ""
   },
   "app/(dashboard)/dashboard/journeys/page.tsx": {
@@ -42,9 +42,9 @@
     "semantic_hash": ""
   },
   "app/(dashboard)/dashboard/push/page.tsx": {
-    "mtime": 1790747381.269983,
-    "seen": 1790762603.397612,
-    "ast_hash": "9370bb5b4368e39d7f3a7017290bdd81",
+    "mtime": 1789972551.0818682,
+    "seen": 1790147750.267626,
+    "ast_hash": "6bc1a7ca9892f7ff65ef347b012ab7d9",
     "semantic_hash": ""
   },
   "app/(dashboard)/dashboard/settings/page.tsx": {
@@ -306,9 +306,9 @@
     "semantic_hash": ""
   },
   "components/auth/GoogleButton.tsx": {
-    "mtime": 1790750869.9640381,
-    "seen": 1790762603.397655,
-    "ast_hash": "8fac3005be6f174a16ac18d7ff4a431d",
+    "mtime": 1790666119.0499046,
+    "seen": 1790666127.785627,
+    "ast_hash": "4a7d6cd84fefb77f3d0e3571c0a1a077",
     "semantic_hash": ""
   },
   "components/auth/LoginForm.tsx": {
@@ -366,9 +366,9 @@
     "semantic_hash": ""
   },
   "components/dashboard/DashboardSections.tsx": {
-    "mtime": 1790760763.6521013,
-    "seen": 1790762603.3976672,
-    "ast_hash": "b41e4079c8599f7cb576d1b2a182ef99",
+    "mtime": 1790682685.8175008,
+    "seen": 1790682904.05666,
+    "ast_hash": "1cb7ed7ec106910890fc35af124726f3",
     "semantic_hash": ""
   },
   "components/dashboard/DashboardSidebar.tsx": {
@@ -390,15 +390,15 @@
     "semantic_hash": ""
   },
   "components/dashboard/ReusableDataTable.tsx": {
-    "mtime": 1790747381.2730803,
-    "seen": 1790762603.397679,
-    "ast_hash": "090ccfab6f01ba74af58bcb121c33372",
+    "mtime": 1790331982.472958,
+    "seen": 1790589169.016957,
+    "ast_hash": "f8d7af1af278e044c7575ca50de5d4cf",
     "semantic_hash": ""
   },
   "components/website/AuthShell.tsx": {
-    "mtime": 1790750080.8893156,
-    "seen": 1790762603.3976908,
-    "ast_hash": "30b59f6cb3894fccca604be897b751ec",
+    "mtime": 1790162709.9229074,
+    "seen": 1790163213.8520079,
+    "ast_hash": "cb2e6d5cf2df99bccce19f5d4a108c19",
     "semantic_hash": ""
   },
   "components/website/HeroLightTrails.tsx": {
@@ -558,9 +558,9 @@
     "semantic_hash": ""
   },
   "lib/projects/api.ts": {
-    "mtime": 1790761652.655987,
-    "seen": 1790762603.3977118,
-    "ast_hash": "11b451863ccf315c818553d978295ba7",
+    "mtime": 1790682611.4792364,
+    "seen": 1790682904.056705,
+    "ast_hash": "af3875416f50faca4c89cbcb3b139c05",
     "semantic_hash": ""
   },
   "lib/store.ts": {
@@ -660,9 +660,9 @@
     "semantic_hash": ""
   },
   "components/dashboard/PushComposer.tsx": {
-    "mtime": 1790762590.2023373,
-    "seen": 1790762603.3976781,
-    "ast_hash": "265c8328a6097308be8e9cbdb9dd2485",
+    "mtime": 1790162709.9208345,
+    "seen": 1790163213.852006,
+    "ast_hash": "3fc69eb4fb019bb483c060b8355af0fe",
     "semantic_hash": ""
   },
   "components/dashboard/SimpleEmailEditor.tsx": {
@@ -744,9 +744,9 @@
     "semantic_hash": ""
   },
   "app/api/projects/[projectId]/[...path]/route.ts": {
-    "mtime": 1790762032.6859355,
-    "seen": 1790762603.3976471,
-    "ast_hash": "209ba9046c1c8aec77e9bc54bfd8f1f8",
+    "mtime": 1790682611.4795053,
+    "seen": 1790682904.056639,
+    "ast_hash": "5c37a9f44ef0bd6c699656d7e72bb8bc",
     "semantic_hash": ""
   },
   "components/dashboard/AudienceGroupCreateDialog.tsx": {
@@ -864,21 +864,21 @@
     "semantic_hash": ""
   },
   "app/invitations/accept/page.tsx": {
-    "mtime": 1790750898.715859,
-    "seen": 1790762603.3976488,
-    "ast_hash": "0f28491de0f7495f6bfe0c691d90ca18",
+    "mtime": 1790682757.4985914,
+    "seen": 1790682904.056642,
+    "ast_hash": "b2d1e7aed1a5d7442d9c61a87ce37d85",
     "semantic_hash": ""
   },
   "components/auth/InvitationAccept.tsx": {
-    "mtime": 1790750967.9967725,
-    "seen": 1790762603.397656,
-    "ast_hash": "28c348364c1231d49ff30b690b56e893",
+    "mtime": 1790682757.5021453,
+    "seen": 1790682904.056649,
+    "ast_hash": "3a91d7c9db3611d0832ca8f28a3adf47",
     "semantic_hash": ""
   },
   "components/dashboard/audit/AuditLogsPanel.tsx": {
-    "mtime": 1790686402.5257127,
-    "seen": 1790762603.397683,
-    "ast_hash": "5fc46df8306d5e608b1cb661b192a9a1",
+    "mtime": 1790682726.946277,
+    "seen": 1790682904.0566761,
+    "ast_hash": "dec3b024241d738cf6a8e59336cc42cb",
     "semantic_hash": ""
   },
   "components/dashboard/sending-domains/AddDomainDialog.tsx": {
@@ -930,9 +930,9 @@
     "semantic_hash": ""
   },
   "components/dashboard/team/TeamAccessPanel.tsx": {
-    "mtime": 1790750148.2207053,
-    "seen": 1790762603.3976908,
-    "ast_hash": "126a60e26305fffb0d221144dd5c1bf7",
+    "mtime": 1790682685.816276,
+    "seen": 1790682904.056683,
+    "ast_hash": "27a82d30341237d8410d1144ed52b86d",
     "semantic_hash": ""
   },
   "lib/sending-domains/api.ts": {
@@ -960,9 +960,9 @@
     "semantic_hash": ""
   },
   "tests/team-access.test.tsx": {
-    "mtime": 1790748621.6976032,
-    "seen": 1790762603.397724,
-    "ast_hash": "6aed394a29f2699090b459684aef8de5",
+    "mtime": 1790682828.545213,
+    "seen": 1790682904.056715,
+    "ast_hash": "6f7bee6363cb314d55a70dca5c309434",
     "semantic_hash": ""
   },
   "types/sending-domain.ts": {
@@ -975,30 +975,6 @@
     "mtime": 1790672571.9584858,
     "seen": 1790682904.056719,
     "ast_hash": "d456132eea1de2a2fe794c48a6aa04df",
-    "semantic_hash": ""
-  },
-  "app/api/invitations/preview/route.ts": {
-    "mtime": 1790750065.2908428,
-    "seen": 1790762603.3976462,
-    "ast_hash": "7c69b059a2e1fc9cbf3d252b4af678b9",
-    "semantic_hash": ""
-  },
-  "components/dashboard/IntegrationDocumentation.tsx": {
-    "mtime": 1790685758.3607168,
-    "seen": 1790762603.3976698,
-    "ast_hash": "8cb626fc0b011f730575a8292ee0d619",
-    "semantic_hash": ""
-  },
-  "tests/invitation-accept.test.tsx": {
-    "mtime": 1790750938.4861608,
-    "seen": 1790762603.397721,
-    "ast_hash": "e5eb376812a40364a032566c6d1e17b6",
-    "semantic_hash": ""
-  },
-  "tests/push-composer.test.tsx": {
-    "mtime": 1790761752.1685147,
-    "seen": 1790762603.397722,
-    "ast_hash": "9e8f99e0316e0c84ac46493c0f17dd74",
     "semantic_hash": ""
   }
 }

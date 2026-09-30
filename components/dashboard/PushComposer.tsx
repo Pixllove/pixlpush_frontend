@@ -5,12 +5,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowBackRounded,
   BatteryFullRounded,
+  CameraAltRounded,
   CalendarTodayRounded,
   CheckRounded,
   ChevronRightRounded,
   CloseRounded,
   DeleteOutlineRounded,
   EditRounded,
+  FlashlightOnRounded,
   LanguageRounded,
   LinkRounded,
   NotificationsActiveRounded,
@@ -860,96 +862,60 @@ export default function PushComposer({
                 Test notification
               </Button>
             </Stack>
-            <Box className="push-phone">
-              <Box className="push-phone-glow glow-one" />
-              <Box className="push-phone-glow glow-two" />
-              <Box className="push-phone-notch" />
-              <Stack
-                className="push-phone-status"
-                direction="row"
-                justifyContent="space-between"
-                alignItems="center"
-              >
-                <span>9:41</span>
-                <Stack direction="row" gap={0.6} alignItems="center">
-                  <SignalCellularAltRounded />
-                  <WifiRounded />
-                  <BatteryFullRounded />
-                </Stack>
-              </Stack>
-              <Box className="push-phone-date">Tuesday, September 30</Box>
-              <Box className="push-screen-heading">
-                <Typography>Notifications</Typography>
-                <span>Stay updated with your latest activity</span>
-                <Box className="push-screen-dots">
-                  <i />
-                  <i />
+            <Box className="ios-device">
+              <i className="ios-btn ios-btn-action" />
+              <i className="ios-btn ios-btn-vol-up" />
+              <i className="ios-btn ios-btn-vol-down" />
+              <i className="ios-btn ios-btn-power" />
+              <Box className="ios-screen">
+                <Box className="ios-island" />
+                <Box className="ios-status">
+                  <span className="ios-carrier">9:41</span>
+                  <Box className="ios-status-icons">
+                    <SignalCellularAltRounded />
+                    <WifiRounded />
+                    <span className="ios-battery">
+                      <i />
+                    </span>
+                  </Box>
                 </Box>
-              </Box>
-              <Box className="push-notification-card">
-                <Stack
-                  direction="row"
-                  alignItems="center"
-                  justifyContent="space-between"
-                >
-                  <Stack direction="row" alignItems="center" gap={1}>
-                    <Box className="push-avatar">P</Box>
-                    <Box>
-                      <Typography fontSize={11} fontWeight={900}>
-                        PixlPush
-                      </Typography>
-                      <Typography fontSize={9} color="text.secondary">
-                        now
-                      </Typography>
+                <Box className="ios-lock-icon">
+                  <svg viewBox="0 0 24 24" width="14" height="14">
+                    <path
+                      fill="currentColor"
+                      d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5Zm-3 8V7a3 3 0 1 1 6 0v3H9Z"
+                    />
+                  </svg>
+                </Box>
+                <Box className="ios-date">Tuesday, September 30</Box>
+                <Box className="ios-time">9:41</Box>
+                <Box className="ios-stack">
+                  <Box className="ios-notif">
+                    <Box className="ios-app-icon">
+                      <img src="/assets/site-icon.png" alt="PixlPush" />
                     </Box>
-                  </Stack>
-                  <ChevronRightRounded className="push-card-chevron" />
-                </Stack>
-                <Typography fontSize={12} fontWeight={900} sx={{ mt: 1.2 }}>
-                  {activeTranslation.title || "Your notification title"}
-                </Typography>
-                <Typography
-                  fontSize={11}
-                  color="text.secondary"
-                  sx={{ mt: 0.6 }}
-                >
-                  {activeTranslation.body ||
-                    "Your notification message will appear here."}
-                </Typography>
+                    <Box className="ios-notif-body">
+                      <Box className="ios-notif-head">
+                        <b>{activeTranslation.title || "Your notification title"}</b>
+                        <span>now</span>
+                      </Box>
+                      <p>
+                        {activeTranslation.body ||
+                          "Your notification message will appear here."}
+                      </p>
+                    </Box>
+                  </Box>
+                </Box>
+                <Box className="ios-lock-controls">
+                  <Box className="ios-lock-control">
+                    <FlashlightOnRounded />
+                  </Box>
+                  <Box className="ios-lock-control">
+                    <CameraAltRounded />
+                  </Box>
+                </Box>
+                <Box className="ios-home-indicator" />
               </Box>
-              <Box className="push-placeholder blue">
-                <Box className="push-placeholder-icon">
-                  <TrendingUpRounded />
-                </Box>
-                <Box>
-                  <Typography fontSize={10} fontWeight={800}>
-                    PixlPush updates
-                  </Typography>
-                  <Typography fontSize={9} color="text.secondary">
-                    New activity waiting for you
-                  </Typography>
-                </Box>
-                <Box className="push-placeholder-meta">
-                  2h ago <ChevronRightRounded />
-                </Box>
-              </Box>
-              <Box className="push-placeholder green">
-                <Box className="push-placeholder-icon">
-                  <CheckRounded />
-                </Box>
-                <Box>
-                  <Typography fontSize={10} fontWeight={800}>
-                    Stay connected
-                  </Typography>
-                  <Typography fontSize={9} color="text.secondary">
-                    Tap to open the app
-                  </Typography>
-                </Box>
-                <Box className="push-placeholder-meta">
-                  5h ago <ChevronRightRounded />
-                </Box>
-              </Box>
-              <Box className="push-home-indicator" />
             </Box>
           </Box>
         </Grid>
