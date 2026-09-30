@@ -55,6 +55,8 @@ import {
   type PushTranslation,
 } from "@/lib/projects/api";
 import { useActiveProject } from "@/hooks/projects/use-active-project";
+import { Toast } from "@/components/auth/AuthFeedback";
+import DeleteConfirmDialog from "@/components/dashboard/DeleteConfirmDialog";
 
 type Mode = "campaign" | "template";
 type SaveTarget = "send" | "drafts" | "templates";
@@ -139,6 +141,8 @@ export default function PushComposer({
   const [languageOpen, setLanguageOpen] = useState(false);
   const [notice, setNotice] = useState("");
   const [translationNotice, setTranslationNotice] = useState("");
+  const [toast, setToast] = useState<{ message: string; severity: "success" | "error" } | null>(null);
+  const [deepLinkDeleteTarget, setDeepLinkDeleteTarget] = useState<{ id: string; url: string } | null>(null);
   const [testUserId, setTestUserId] = useState("");
   const [error, setError] = useState("");
   const groupsQuery = useQuery({
@@ -166,12 +170,16 @@ export default function PushComposer({
       setDeepLink(createdLink.url);
       setNewDeepLink("");
       setDeepLinkDialogOpen(false);
+      setToast({ message: "Deeplink created successfully.", severity: "success" });
       queryClient.invalidateQueries({
         queryKey: ["projects", "push-deeplinks", active?.id],
       });
     },
-    onError: (cause: Error) =>
-      setError(cause.message || "Could not create the deeplink."),
+    onError: (cause: Error) => {
+      const message = cause.message || "Could not create the deeplink.";
+      setError(message);
+      setToast({ message, severity: "error" });
+    },
   });
   const deepLinkDeleteMutation = useMutation({
     mutationFn: async (deepLinkId: string) => {
@@ -185,12 +193,17 @@ export default function PushComposer({
         deepLink
       )
         setDeepLink("");
+      setDeepLinkDeleteTarget(null);
+      setToast({ message: "Deeplink deleted successfully.", severity: "success" });
       queryClient.invalidateQueries({
         queryKey: ["projects", "push-deeplinks", active?.id],
       });
     },
-    onError: (cause: Error) =>
-      setError(cause.message || "Could not delete the deeplink."),
+    onError: (cause: Error) => {
+      const message = cause.message || "Could not delete the deeplink.";
+      setError(message);
+      setToast({ message, severity: "error" });
+    },
   });
   const translateMutation = useMutation({
     mutationFn: async () => {
@@ -220,12 +233,15 @@ export default function PushComposer({
           nextTranslations[code] = value;
       });
       setTranslations(nextTranslations);
-      setTranslationNotice(
-        `Translated into ${selectedCodes.size} selected language${selectedCodes.size === 1 ? "" : "s"}. Click a language tab to review it.`,
-      );
+      const message = `Translated into ${selectedCodes.size} selected language${selectedCodes.size === 1 ? "" : "s"}. Click a language tab to review it.`;
+      setTranslationNotice(message);
+      setToast({ message, severity: "success" });
     },
-    onError: (cause: Error) =>
-      setError(cause.message || "Could not translate the notification."),
+    onError: (cause: Error) => {
+      const message = cause.message || "Could not translate the notification.";
+      setError(message);
+      setToast({ message, severity: "error" });
+    },
   });
   const previewMutation = useMutation({
     mutationFn: async () => {
@@ -412,9 +428,8 @@ export default function PushComposer({
     setError("");
     deepLinkCreateMutation.mutate(value);
   };
-  const deleteDeepLink = (id: string) => {
-    setError("");
-    deepLinkDeleteMutation.mutate(id);
+  const deleteDeepLink = (item: { id: string; url: string }) => {
+    setDeepLinkDeleteTarget(item);
   };
 
   return (
@@ -662,7 +677,7 @@ export default function PushComposer({
                     onMouseDown={(event) => event.stopPropagation()}
                     onClick={(event) => {
                       event.stopPropagation();
-                      deleteDeepLink(item.id);
+                      deleteDeepLink(item);
                     }}
                     sx={{ ml: 1 }}
                   >
@@ -1006,7 +1021,7 @@ export default function PushComposer({
                     onMouseDown={(event) => event.stopPropagation()}
                     onClick={(event) => {
                       event.stopPropagation();
-                      deleteDeepLink(item.id);
+                      deleteDeepLink(item);
                     }}
                     sx={{ ml: 1 }}
                   >
@@ -1106,6 +1121,7 @@ export default function PushComposer({
         onClose={() => setLanguageOpen(false)}
         maxWidth="md"
         fullWidth
+        className="push-language-dialog"
       >
         <DialogTitle>
           Add languages
@@ -1124,7 +1140,7 @@ export default function PushComposer({
           <Grid container spacing={1}>
             {languages.map((language) => (
               <Grid item xs={12} sm={6} md={4} key={language}>
-                <Card variant="outlined" sx={{ p: 0.5 }}>
+                <Card variant="outlined" className="push-language-option" sx={{ p: 0.5 }}>
                   <FormControlLabel
                     control={
                       <Checkbox
@@ -1140,13 +1156,27 @@ export default function PushComposer({
             ))}
           </Grid>
         </DialogContent>
-        <DialogActions>
+        <DialogActions className="push-language-dialog-actions">
           <Button onClick={() => setLanguageOpen(false)}>Cancel</Button>
           <Button variant="contained" onClick={() => setLanguageOpen(false)}>
             Select languages
           </Button>
         </DialogActions>
       </Dialog>
+      <DeleteConfirmDialog
+        open={Boolean(deepLinkDeleteTarget)}
+        onClose={() => setDeepLinkDeleteTarget(null)}
+        loading={deepLinkDeleteMutation.isPending}
+        onConfirm={() => {
+          if (deepLinkDeleteTarget) {
+            setError("");
+            deepLinkDeleteMutation.mutate(deepLinkDeleteTarget.id);
+          }
+        }}
+        title="Are you sure you want to delete this deeplink?"
+        description="This deeplink will be removed from the project and cannot be used in future notifications."
+      />
+      <Toast message={toast?.message ?? null} severity={toast?.severity} onClose={() => setToast(null)} />
     </Stack>
   );
 }
