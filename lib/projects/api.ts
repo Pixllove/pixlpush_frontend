@@ -509,6 +509,14 @@ export interface PushTranslation {
   body: string;
 }
 
+export interface PushDeepLink {
+  id: string;
+  projectId: string;
+  url: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface PushTemplate {
   id: string;
   projectId: string;
@@ -520,6 +528,7 @@ export interface PushTemplate {
   data?: Record<string, string> | null;
   translations?: Record<string, PushTranslation> | null;
   category: "template" | "push_notification";
+  campaignOnly?: boolean;
   status: "active";
   deletedAt?: string | null;
   createdAt: string;
@@ -584,6 +593,27 @@ const pushList = <T>(projectId: string, path: string) =>
   authRequest<PushPaginated<T>>(at(projectId, path), undefined, BASE);
 
 export const pushApi = {
+  deepLinks: {
+    list: (projectId: string) =>
+      authRequest<PushDeepLink[]>(
+        at(projectId, "/push-deeplinks"),
+        undefined,
+        BASE,
+      ),
+    create: (projectId: string, url: string) =>
+      authRequest<PushDeepLink>(
+        at(projectId, "/push-deeplinks"),
+        { url },
+        BASE,
+      ),
+    delete: (projectId: string, deepLinkId: string) =>
+      authRequest<void>(
+        at(projectId, `/push-deeplinks/${encodeURIComponent(deepLinkId)}`),
+        {},
+        BASE,
+        "DELETE",
+      ),
+  },
   templates: {
     list: (
       projectId: string,

@@ -124,7 +124,6 @@ export default function PushComposer({
   const [message, setMessage] = useState(
     "Start your first match now — exciting profiles are waiting for you! ❤️",
   );
-  const [deepLinks, setDeepLinks] = useState<string[]>([]);
   const [deepLink, setDeepLink] = useState("");
   const [deepLinkDialogOpen, setDeepLinkDialogOpen] = useState(false);
   const [newDeepLink, setNewDeepLink] = useState("");
@@ -149,6 +148,47 @@ export default function PushComposer({
     queryKey: ["projects", "lifecycle-segments", active?.id],
     queryFn: () => lifecycleSegmentsApi.list(active!.id),
     enabled: Boolean(active?.id),
+  });
+  const deepLinksQuery = useQuery({
+    queryKey: ["projects", "push-deeplinks", active?.id],
+    queryFn: () => pushApi.deepLinks.list(active!.id),
+    enabled: Boolean(active?.id),
+  });
+  const deepLinkCreateMutation = useMutation({
+    mutationFn: async (url: string) => {
+      if (!active?.id)
+        throw new Error("Select a project before creating a deeplink.");
+      return pushApi.deepLinks.create(active.id, url);
+    },
+    onSuccess: (createdLink) => {
+      setDeepLink(createdLink.url);
+      setNewDeepLink("");
+      setDeepLinkDialogOpen(false);
+      queryClient.invalidateQueries({
+        queryKey: ["projects", "push-deeplinks", active?.id],
+      });
+    },
+    onError: (cause: Error) =>
+      setError(cause.message || "Could not create the deeplink."),
+  });
+  const deepLinkDeleteMutation = useMutation({
+    mutationFn: async (deepLinkId: string) => {
+      if (!active?.id)
+        throw new Error("Select a project before deleting a deeplink.");
+      return pushApi.deepLinks.delete(active.id, deepLinkId);
+    },
+    onSuccess: (_, deepLinkId) => {
+      if (
+        deepLinksQuery.data?.find((item) => item.id === deepLinkId)?.url ===
+        deepLink
+      )
+        setDeepLink("");
+      queryClient.invalidateQueries({
+        queryKey: ["projects", "push-deeplinks", active?.id],
+      });
+    },
+    onError: (cause: Error) =>
+      setError(cause.message || "Could not delete the deeplink."),
   });
   const translateMutation = useMutation({
     mutationFn: async () => {
@@ -354,21 +394,25 @@ export default function PushComposer({
   };
   const groupOptions = groupsQuery.data ?? [];
   const segmentOptions = segmentsQuery.data ?? [];
+  const deepLinks = deepLinksQuery.data ?? [];
   const saveDeepLink = () => {
     const value = newDeepLink.trim();
     if (!value) return;
     const existing = deepLinks.find(
-      (item) => item.toLowerCase() === value.toLowerCase(),
+      (item) => item.url.toLowerCase() === value.toLowerCase(),
     );
-    const savedValue = existing ?? value;
-    if (!existing) setDeepLinks((current) => [...current, value]);
-    setDeepLink(savedValue);
-    setNewDeepLink("");
-    setDeepLinkDialogOpen(false);
+    if (existing) {
+      setDeepLink(existing.url);
+      setNewDeepLink("");
+      setDeepLinkDialogOpen(false);
+      return;
+    }
+    setError("");
+    deepLinkCreateMutation.mutate(value);
   };
-  const deleteDeepLink = (value: string) => {
-    setDeepLinks((current) => current.filter((item) => item !== value));
-    if (deepLink === value) setDeepLink("");
+  const deleteDeepLink = (id: string) => {
+    setError("");
+    deepLinkDeleteMutation.mutate(id);
   };
 
   return (
@@ -598,7 +642,7 @@ export default function PushComposer({
             >
               <MenuItem value="">Select a deeplink...</MenuItem>
               {deepLinks.map((item) => (
-                <MenuItem key={item} value={item} sx={{ pr: 1 }}>
+                <MenuItem key={item.id} value={item.url} sx={{ pr: 1 }}>
                   <Box
                     sx={{
                       flex: 1,
@@ -607,16 +651,16 @@ export default function PushComposer({
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {item}
+                    {item.url}
                   </Box>
                   <IconButton
                     size="small"
                     color="error"
-                    aria-label={`Delete ${item}`}
+                    aria-label={`Delete ${item.url}`}
                     onMouseDown={(event) => event.stopPropagation()}
                     onClick={(event) => {
                       event.stopPropagation();
-                      deleteDeepLink(item);
+                      deleteDeepLink(item.id);
                     }}
                     sx={{ ml: 1 }}
                   >
@@ -974,7 +1018,11 @@ export default function PushComposer({
             >
               <MenuItem value="">Select a deeplink...</MenuItem>
               {deepLinks.map((item) => (
-                <MenuItem key={`test-${item}`} value={item} sx={{ pr: 1 }}>
+                <MenuItem
+                  key={`test-${item.id}`}
+                  value={item.url}
+                  sx={{ pr: 1 }}
+                >
                   <Box
                     sx={{
                       flex: 1,
@@ -983,16 +1031,16 @@ export default function PushComposer({
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {item}
+                    {item.url}
                   </Box>
                   <IconButton
                     size="small"
                     color="error"
-                    aria-label={`Delete ${item}`}
+                    aria-label={`Delete ${item.url}`}
                     onMouseDown={(event) => event.stopPropagation()}
                     onClick={(event) => {
                       event.stopPropagation();
-                      deleteDeepLink(item);
+                      deleteDeepLink(item.id);
                     }}
                     sx={{ ml: 1 }}
                   >

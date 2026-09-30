@@ -1,7 +1,7 @@
 "use client";
 
 import { useDeferredValue, useEffect, useState } from "react";
-import TeamAccessPanel from './team/TeamAccessPanel';
+import TeamAccessPanel from "./team/TeamAccessPanel";
 import { useRouter } from "next/navigation";
 import { useSelector } from "react-redux";
 import {
@@ -1741,18 +1741,140 @@ function PushSection() {
   const [tab, setTab] = useState<"send" | "drafts" | "templates">("templates");
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [composer, setComposer] = useState<"campaign" | "template" | null>(null);
+  const [composer, setComposer] = useState<"campaign" | "template" | null>(
+    null,
+  );
   const deferredSearch = useDeferredValue(search);
-  const templatesQuery = useQuery({ queryKey: ["push", "templates", active?.id, page, deferredSearch], queryFn: () => pushApi.templates.list(active!.id, { page, limit: 25, search: deferredSearch, category: "template" }), enabled: Boolean(active?.id) });
-  const draftsQuery = useQuery({ queryKey: ["push", "campaigns", active?.id, "draft", page, deferredSearch], queryFn: () => pushApi.campaigns.list(active!.id, { tab: "draft", page, limit: 25, search: deferredSearch }), enabled: Boolean(active?.id) });
-  const sentQuery = useQuery({ queryKey: ["push", "campaigns", active?.id, "sent", page, deferredSearch], queryFn: () => pushApi.campaigns.list(active!.id, { tab: "sent", page, limit: 25, search: deferredSearch }), enabled: Boolean(active?.id) });
-  const actionMutation = useMutation({ mutationFn: async ({ kind, id }: { kind: "duplicate" | "remove"; id: string }) => { if (!active?.id) throw new Error("Select a project first."); if (kind === "duplicate") return pushApi.templates.duplicate(active.id, id); if (tab === "send") return pushApi.campaigns.cancel(active.id, id); return tab === "templates" ? pushApi.templates.delete(active.id, id) : pushApi.campaigns.delete(active.id, id); }, onSuccess: () => queryClient.invalidateQueries({ queryKey: ["push"] }) });
-  if (composer) return <PushComposer mode={composer} onBack={() => setComposer(null)} onSaved={(target) => { setComposer(null); setTab(target === "send" ? "send" : target); setPage(1); }} />;
-  type PushRow = { id: string; name: string; title: string; message: string; category: string; created: string; status: string; target: string; sends: string; clicks: string };
-  const formatDate = (value?: string) => value ? new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—";
-  const templateRows: PushRow[] = (templatesQuery.data?.items ?? []).map((item: PushTemplate) => ({ id: item.id, name: item.name, title: item.title, message: item.body, category: item.category === "push_notification" ? "Push notification" : "Template", created: formatDate(item.updatedAt), status: item.status === "active" ? "Active" : item.status ?? "Active", target: "Reusable content", sends: item.sends === undefined ? "—" : item.sends.toLocaleString(), clicks: item.opens === undefined ? "—" : item.opens.toLocaleString() }));
-  const campaignRows: PushRow[] = ((tab === "drafts" ? draftsQuery.data?.items : sentQuery.data?.items) ?? []).map((item: PushCampaign) => ({ id: item.id, name: item.name, title: item.template?.title ?? "—", message: item.template?.body ?? "—", category: item.category === "push_notification" ? "Push notification" : "Push notification", created: formatDate(item.updatedAt), status: item.status.charAt(0).toUpperCase() + item.status.slice(1), target: item.audience?.allUsers ? "All eligible users" : item.audience?.audienceGroupIds?.length ? "Audience group" : item.audience?.lifecycleSegmentIds?.length ? "Lifecycle segment" : "Selected users", sends: item.stats?.sent === undefined ? "—" : item.stats.sent.toLocaleString(), clicks: item.stats?.opened === undefined ? "—" : `${item.stats.opened.toLocaleString()} · ${item.stats.openRate.toFixed(1)}%` }));
-  const activeQuery = tab === "templates" ? templatesQuery : tab === "drafts" ? draftsQuery : sentQuery;
+  const templatesQuery = useQuery({
+    queryKey: ["push", "templates", active?.id, page, deferredSearch],
+    queryFn: () =>
+      pushApi.templates.list(active!.id, {
+        page,
+        limit: 25,
+        search: deferredSearch,
+        category: "template",
+      }),
+    enabled: Boolean(active?.id),
+  });
+  const draftsQuery = useQuery({
+    queryKey: ["push", "campaigns", active?.id, "draft", page, deferredSearch],
+    queryFn: () =>
+      pushApi.campaigns.list(active!.id, {
+        tab: "draft",
+        page,
+        limit: 25,
+        search: deferredSearch,
+      }),
+    enabled: Boolean(active?.id),
+  });
+  const sentQuery = useQuery({
+    queryKey: ["push", "campaigns", active?.id, "sent", page, deferredSearch],
+    queryFn: () =>
+      pushApi.campaigns.list(active!.id, {
+        tab: "sent",
+        page,
+        limit: 25,
+        search: deferredSearch,
+      }),
+    enabled: Boolean(active?.id),
+  });
+  const actionMutation = useMutation({
+    mutationFn: async ({
+      kind,
+      id,
+    }: {
+      kind: "duplicate" | "remove";
+      id: string;
+    }) => {
+      if (!active?.id) throw new Error("Select a project first.");
+      if (kind === "duplicate")
+        return pushApi.templates.duplicate(active.id, id);
+      if (tab === "send") return pushApi.campaigns.cancel(active.id, id);
+      return tab === "templates"
+        ? pushApi.templates.delete(active.id, id)
+        : pushApi.campaigns.delete(active.id, id);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["push"] }),
+  });
+  if (composer)
+    return (
+      <PushComposer
+        mode={composer}
+        onBack={() => setComposer(null)}
+        onSaved={(target) => {
+          setComposer(null);
+          setTab(target === "send" ? "send" : target);
+          setPage(1);
+        }}
+      />
+    );
+  type PushRow = {
+    id: string;
+    name: string;
+    title: string;
+    message: string;
+    category: string;
+    created: string;
+    status: string;
+    target: string;
+    sends: string;
+    clicks: string;
+  };
+  const formatDate = (value?: string) =>
+    value
+      ? new Date(value).toLocaleDateString(undefined, {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        })
+      : "—";
+  const templateRows: PushRow[] = (templatesQuery.data?.items ?? []).map(
+    (item: PushTemplate) => ({
+      id: item.id,
+      name: item.name,
+      title: item.title,
+      message: item.body,
+      category:
+        item.category === "push_notification"
+          ? "Push notification"
+          : "Template",
+      created: formatDate(item.updatedAt),
+      status: item.status === "active" ? "Active" : (item.status ?? "Active"),
+      target: "Reusable content",
+      sends: item.sends === undefined ? "—" : item.sends.toLocaleString(),
+      clicks: item.opens === undefined ? "—" : item.opens.toLocaleString(),
+    }),
+  );
+  const campaignRows: PushRow[] = (
+    (tab === "drafts" ? draftsQuery.data?.items : sentQuery.data?.items) ?? []
+  ).map((item: PushCampaign) => ({
+    id: item.id,
+    name: item.name,
+    title: item.template?.title ?? "—",
+    message: item.template?.body ?? "—",
+    category: item.category === "template" ? "Template" : "Push notification",
+    created: formatDate(item.updatedAt),
+    status: item.status.charAt(0).toUpperCase() + item.status.slice(1),
+    target: item.audience?.allUsers
+      ? "All eligible users"
+      : item.audience?.audienceGroupIds?.length
+        ? "Audience group"
+        : item.audience?.lifecycleSegmentIds?.length
+          ? "Lifecycle segment"
+          : "Selected users",
+    sends:
+      item.stats?.sent === undefined ? "—" : item.stats.sent.toLocaleString(),
+    clicks:
+      item.stats?.opened === undefined
+        ? "—"
+        : `${item.stats.opened.toLocaleString()} · ${item.stats.openRate.toFixed(1)}%`,
+  }));
+  const activeQuery =
+    tab === "templates"
+      ? templatesQuery
+      : tab === "drafts"
+        ? draftsQuery
+        : sentQuery;
   const pushRows: PushRow[] = tab === "templates" ? templateRows : campaignRows;
   const pushColumns: DataTableColumn<PushRow>[] = [
     {
@@ -1783,11 +1905,7 @@ function PushSection() {
       key: "category",
       label: "Category",
       render: (row) => (
-        <Chip
-          label={row.category}
-          size="small"
-          className="neutral-chip"
-        />
+        <Chip label={row.category} size="small" className="neutral-chip" />
       ),
     },
     {
@@ -1859,10 +1977,28 @@ function PushSection() {
           justifyContent="flex-end"
           className="table-row-actions"
         >
-          {tab === "templates" && <IconButton size="small" aria-label={`Duplicate ${row.name}`} onClick={() => actionMutation.mutate({ kind: "duplicate", id: row.id })} disabled={actionMutation.isPending}>
-            <ContentCopyRounded fontSize="small" />
-          </IconButton>}
-          <IconButton size="small" aria-label={tab === "send" ? `Cancel ${row.name}` : `Delete ${row.name}`} onClick={() => actionMutation.mutate({ kind: "remove", id: row.id })} disabled={actionMutation.isPending}>
+          {tab === "templates" && (
+            <IconButton
+              size="small"
+              aria-label={`Duplicate ${row.name}`}
+              onClick={() =>
+                actionMutation.mutate({ kind: "duplicate", id: row.id })
+              }
+              disabled={actionMutation.isPending}
+            >
+              <ContentCopyRounded fontSize="small" />
+            </IconButton>
+          )}
+          <IconButton
+            size="small"
+            aria-label={
+              tab === "send" ? `Cancel ${row.name}` : `Delete ${row.name}`
+            }
+            onClick={() =>
+              actionMutation.mutate({ kind: "remove", id: row.id })
+            }
+            disabled={actionMutation.isPending}
+          >
             <DeleteOutlineRounded fontSize="small" />
           </IconButton>
         </Stack>
@@ -1870,12 +2006,30 @@ function PushSection() {
     },
   ];
   const pushTabs = [
-    { id: "send" as const, label: "Send", count: String(sentQuery.data?.tabCounts?.send ?? sentQuery.data?.total ?? 0), icon: SendRounded },
-    { id: "drafts" as const, label: "Drafts", count: String(draftsQuery.data?.tabCounts?.drafts ?? draftsQuery.data?.total ?? 0), icon: EditRounded },
+    {
+      id: "send" as const,
+      label: "Send",
+      count: String(
+        sentQuery.data?.tabCounts?.send ?? sentQuery.data?.total ?? 0,
+      ),
+      icon: SendRounded,
+    },
+    {
+      id: "drafts" as const,
+      label: "Drafts",
+      count: String(
+        draftsQuery.data?.tabCounts?.drafts ?? draftsQuery.data?.total ?? 0,
+      ),
+      icon: EditRounded,
+    },
     {
       id: "templates" as const,
       label: "My Templates",
-      count: String(templatesQuery.data?.tabCounts?.templates ?? templatesQuery.data?.total ?? 0),
+      count: String(
+        templatesQuery.data?.tabCounts?.templates ??
+          templatesQuery.data?.total ??
+          0,
+      ),
       icon: GridViewRounded,
     },
   ];
@@ -1908,7 +2062,10 @@ function PushSection() {
         {pushTabs.map(({ id, label, count, icon: Icon }) => (
           <Button
             key={id}
-            onClick={() => { setTab(id); setPage(1); }}
+            onClick={() => {
+              setTab(id);
+              setPage(1);
+            }}
             className={`workspace-tab ${id}-tab ${tab === id ? "active" : ""}`}
             startIcon={<Icon />}
           >
@@ -1945,7 +2102,10 @@ function PushSection() {
               size="small"
               placeholder="Search by name, title, or message ..."
               value={search}
-              onChange={(event) => { setSearch(event.target.value); setPage(1); }}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(1);
+              }}
               className="table-search"
               InputProps={{
                 startAdornment: (
@@ -1965,11 +2125,18 @@ function PushSection() {
             </Select>
           </Stack>
         </Stack>
-        {activeQuery.isError && <Typography color="warning.main" fontSize={11}>The push API is unavailable. Refresh after the backend is reachable.</Typography>}
+        {activeQuery.isError && (
+          <Typography color="warning.main" fontSize={11}>
+            The push API is unavailable. Refresh after the backend is reachable.
+          </Typography>
+        )}
         <ReusableDataTable
           columns={pushColumns}
           rows={pushRows}
-          totalCount={activeQuery.data?.total ?? (activeQuery.isError || !active ? pushRows.length : 0)}
+          totalCount={
+            activeQuery.data?.total ??
+            (activeQuery.isError || !active ? pushRows.length : 0)
+          }
           noun={
             tab === "templates"
               ? "templates"
@@ -1978,11 +2145,17 @@ function PushSection() {
                 : "campaigns"
           }
           showMenu={false}
-          loading={activeQuery.isLoading || (activeQuery.isFetching && !activeQuery.data)}
+          loading={
+            activeQuery.isLoading ||
+            (activeQuery.isFetching && !activeQuery.data)
+          }
           hasPreviousPage={page > 1}
-          hasNextPage={Boolean(activeQuery.data && page * activeQuery.data.limit < activeQuery.data.total)}
-          onPreviousPage={() => setPage(current => Math.max(1, current - 1))}
-          onNextPage={() => setPage(current => current + 1)}
+          hasNextPage={Boolean(
+            activeQuery.data &&
+            page * activeQuery.data.limit < activeQuery.data.total,
+          )}
+          onPreviousPage={() => setPage((current) => Math.max(1, current - 1))}
+          onNextPage={() => setPage((current) => current + 1)}
           page={page}
           serverPageSize={25}
         />

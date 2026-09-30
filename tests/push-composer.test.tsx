@@ -6,6 +6,7 @@ import { pushApi } from "@/lib/projects/api";
 
 vi.mock("@/lib/projects/api", () => ({
   pushApi: {
+    deepLinks: { list: vi.fn(), create: vi.fn(), delete: vi.fn() },
     templates: { create: vi.fn(), translate: vi.fn() },
     campaigns: { create: vi.fn(), audiencePreview: vi.fn() },
   },
@@ -36,6 +37,12 @@ const saveDraft = async (mode: "campaign" | "template") => {
 describe("PushComposer · Save as draft", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    push.deepLinks.list.mockResolvedValue([]);
+    push.deepLinks.create.mockResolvedValue({
+      id: "d1",
+      url: "pixlpush://home",
+    } as never);
+    push.deepLinks.delete.mockResolvedValue(undefined);
     push.templates.create.mockResolvedValue({ id: "t1" } as never);
     push.templates.translate.mockResolvedValue({ translations: {} } as never);
     push.campaigns.create.mockResolvedValue({ id: "c1" } as never);
