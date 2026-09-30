@@ -86,7 +86,7 @@ export function EventBadge({ action }: { action: string }) {
 
 /** Who did what, where and when, across the projects you manage. */
 const fieldSx = {
-  '& .MuiInputBase-root': { height: 40, bgcolor: '#fff', borderRadius: 2.5, fontSize: 13 },
+  '& .MuiInputBase-root': { height: 40, bgcolor: '#fff', borderRadius: '10px', fontSize: 13 },
   '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e2dfe9' },
   '& .MuiInputLabel-root': { fontSize: 13 },
 };
@@ -125,7 +125,7 @@ export default function AuditLogsPanel() {
 
   return (
     <Stack gap={2}>
-      <Box sx={{ p: 1.5, border: '1px solid #ece9f2', borderRadius: 3, bgcolor: '#fff', display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+      <Box sx={{ p: 1.5, border: '1px solid #ece9f2', borderRadius: '12px', bgcolor: '#fff', display: 'flex', flexDirection: 'column', gap: 1.5 }}>
         <Stack direction={{ xs: 'column', lg: 'row' }} gap={1.5} alignItems={{ lg: 'center' }}>
           <ToggleButtonGroup
             exclusive
@@ -136,10 +136,10 @@ export default function AuditLogsPanel() {
             sx={{
               bgcolor: '#f3f2f6',
               p: 0.4,
-              borderRadius: 2.5,
+              borderRadius: '10px',
               flexWrap: 'wrap',
               flexShrink: 0,
-              '& .MuiToggleButton-root': { border: 0, borderRadius: '8px !important', px: 1.5, height: 32, fontSize: 12.5, fontWeight: 600, textTransform: 'none', color: '#6b6577' },
+              '& .MuiToggleButton-root': { border: 0, borderRadius: '7px !important', px: 1.5, height: 32, fontSize: 12.5, fontWeight: 600, textTransform: 'none', color: '#6b6577' },
               '& .Mui-selected': { bgcolor: '#fff !important', color: '#1d1a26 !important', boxShadow: '0 1px 2px rgba(0,0,0,.08)' },
             }}
           >
@@ -176,7 +176,7 @@ export default function AuditLogsPanel() {
         <Alert severity="error" action={<Button color="inherit" size="small" onClick={() => feed.refetch()}>Retry</Button>}>{errorText(feed.error)}</Alert>
       )}
 
-      <Box sx={{ border, borderRadius: 2, bgcolor: '#fff', overflowX: 'auto' }}>
+      <Box sx={{ border, borderRadius: '12px', bgcolor: '#fff', overflowX: 'auto' }}>
         <Table size="small" sx={{ minWidth: 820 }}>
           <TableHead>
             <TableRow>
@@ -226,7 +226,7 @@ export default function AuditLogsPanel() {
                 <TableCell><CategoryChip category={entry.category} /></TableCell>
                 <TableCell>{entry.project?.name ?? <Typography component="span" fontSize={13} color="text.secondary">Account</Typography>}</TableCell>
                 <TableCell align="right">
-                  <IconButton size="small" aria-label={`View details: ${entry.description}`} sx={{ border, borderRadius: 1.5 }}>
+                  <IconButton size="small" aria-label={`View details: ${entry.description}`} sx={{ border, borderRadius: '8px' }}>
                     <ChevronRightRounded fontSize="small" />
                   </IconButton>
                 </TableCell>
@@ -294,7 +294,7 @@ function DetailsDrawer({ entry, onClose }: { entry: AuditLogEntry | null; onClos
           {changeKeys.length > 0 && (
             <Box>
               <Typography fontWeight={700} fontSize={13} sx={{ mb: 1 }}>Changes</Typography>
-              <Box sx={{ border, borderRadius: 1.5 }}>
+              <Box sx={{ border, borderRadius: '8px' }}>
                 <Table size="small">
                   <TableHead>
                     <TableRow>
