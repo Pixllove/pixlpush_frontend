@@ -112,7 +112,7 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
       <Button
         startIcon={<ArrowBackRounded />}
         onClick={() => router.push("/dashboard/users")}
-        className="user-back-button"
+        className="group-back-button"
       >
         Back to Users
       </Button>
@@ -265,12 +265,11 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
               />
             </UserDetailSection>
           </Card>
-          <Card className="saas-card user-engagement-card">
-            <DetailHeader
-              icon={TimelineRounded}
-              title="Engagement"
-              subtitle="Email and push performance are calculated independently by channel"
-            />
+          <Card className="group-section-card user-engagement-card">
+            <Typography variant="h3">Engagement</Typography>
+            <Typography color="text.secondary" fontSize={12}>
+              Email and push performance are calculated independently by channel
+            </Typography>
             <Grid container spacing={1.2} sx={{ mt: 1 }}>
               {metric(EmailRounded, "Emails sent", "0")}
               {metric(EmailRounded, "Emails opened", "0")}
@@ -280,31 +279,33 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
             <Divider sx={{ my: 1.5 }} />
             <Grid container spacing={2}>
               <Grid item xs={12} md={6}>
-                <Typography fontSize={11} fontWeight={900}>
-                  ✉ Email engagement
-                </Typography>
+                <Box className="group-engagement-panel">
+                <Typography fontWeight={900}>Email engagement</Typography>
                 <MetricRows
                   rows={[
-                    "Open rate                 0%",
-                    "Delivery rate             0%",
-                    "Unsubscribe status        None",
-                    "Click rate                 0%",
-                    "Bounces status             None",
-                    "Spam complaints            None",
+                    "Open rate|0%",
+                    "Click rate|0%",
+                    "Delivery rate|0%",
+                    "Bounce rate|0%",
+                    "Unsubscribe rate|0%",
+                    "Spam complaint rate|0%",
                   ]}
                 />
+                </Box>
               </Grid>
               <Grid item xs={12} md={6}>
-                <Typography fontSize={11} fontWeight={900}>
-                  ♧ Push engagement
-                </Typography>
+                <Box className="group-engagement-panel">
+                <Typography fontWeight={900}>Push engagement</Typography>
                 <MetricRows
                   rows={[
-                    "Delivered                    0",
-                    "Click rate                  0%",
-                    "Failed                         0",
+                    "Sent|0",
+                    "Delivered|0",
+                    "Failed|0",
+                    "Click rate|0%",
+                    "No token|0%",
                   ]}
                 />
+                </Box>
               </Grid>
             </Grid>
             <Divider sx={{ my: 1.5 }} />
@@ -613,21 +614,22 @@ function MetricRows({ rows, empty = "—" }: { rows: string[]; empty?: string })
     <Stack gap={0.5} sx={{ mt: 0.8 }}>
       {rows.length ? (
         rows.map((row) => (
-          <Box key={row} className="user-metric-row">
-            <Typography fontSize={9}>{row}</Typography>
-          </Box>
+          <Stack key={row} direction="row" justifyContent="space-between" alignItems="center" className="group-metric-row">
+            <Typography fontSize={10}>{row.split("|")[0]}</Typography>
+            <Typography fontSize={10} fontWeight={900}>{row.split("|")[1] ?? "—"}</Typography>
+          </Stack>
         ))
       ) : (
-        <Box className="user-metric-row">
-          <Typography fontSize={9}>{empty}</Typography>
-        </Box>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" className="group-metric-row">
+          <Typography fontSize={10}>{empty}</Typography>
+        </Stack>
       )}
     </Stack>
   );
 }
 function metric(Icon: ElementType, label: string, value: string) {
   return (
-    <Card className="user-engagement-metric">
+    <Card className="group-metric user-engagement-metric">
       <Box className="user-detail-icon">
         <Icon fontSize="small" />
       </Box>
