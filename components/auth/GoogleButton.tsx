@@ -24,9 +24,12 @@ const REDIRECT_FLAG = 'pixlpush:google-redirect';
 export default function GoogleButton({
   label = 'Continue with Google',
   onError,
+  redirect,
 }: {
   label?: string;
   onError: (message: string) => void;
+  /** Where to land after sign-in; defaults to the page's ?redirect=. */
+  redirect?: string;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -72,7 +75,7 @@ export default function GoogleButton({
 
         const { account } = await googleLogin.mutateAsync(idToken);
         // Verified addresses go to the app, unverified ones to the verify screen.
-        router.replace(postLoginPath(account, searchParams.get('redirect')));
+        router.replace(postLoginPath(account, redirect ?? searchParams.get('redirect')));
         router.refresh();
       } catch (error) {
         reportError(error);

@@ -8,6 +8,10 @@ vi.mock('@/hooks/auth/use-current-user', () => ({ useCurrentUser: () => ({ accou
 const logout = vi.fn(async () => ({ message: 'ok' }));
 vi.mock('@/lib/auth/api', () => ({ authApi: { logout: () => logout() } }));
 
+vi.mock('@/components/auth/GoogleButton', () => ({
+  default: ({ label, redirect }: { label: string; redirect?: string }) => <button data-redirect={redirect}>{label}</button>,
+}));
+
 const assign = vi.fn();
 const pending = {
   state: 'pending',
@@ -37,12 +41,14 @@ beforeEach(() => {
 });
 
 describe('Invitation accept page', () => {
-  it('new user: invited email is read-only, signup accepts and opens the project', async () => {
+  it('new user: invited email shown, signup accepts and opens the project', async () => {
     backend(pending);
     show();
     expect(await screen.findByText('Join test')).toBeInTheDocument();
     expect(screen.getByText('Developer')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('dimi@example.com')).toHaveAttribute('readonly');
+    expect(screen.getAllByText('dimi@example.com').length).toBeGreaterThan(0);
+    // Google returns to this same invitation.
+    expect(screen.getByRole('button', { name: 'Join with Google' })).toHaveAttribute('data-redirect', '/invitations/accept?token=tok_123456789');
     fireEvent.change(screen.getByLabelText('Your name'), { target: { value: 'Dimi' } });
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'a-long-password' } });
     fireEvent.click(screen.getByRole('button', { name: 'Create account and join' }));
@@ -57,6 +63,7 @@ describe('Invitation accept page', () => {
     const link = await screen.findByRole('link', { name: 'Sign in to accept' });
     expect(link).toHaveAttribute('href', `/login?redirect=${encodeURIComponent('/invitations/accept?token=tok_123456789')}`);
     expect(screen.queryByLabelText('Password')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sign in with Google' })).toBeInTheDocument();
   });
 
   it('signed in as the invited account: one click accepts', async () => {

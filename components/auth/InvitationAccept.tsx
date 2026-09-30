@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, Avatar, Box, Button, Card, CardContent, Skeleton, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Avatar, Box, Button, Card, CardContent, Divider, Skeleton, Stack, TextField, Typography } from '@mui/material';
 import ErrorOutlineRounded from '@mui/icons-material/ErrorOutlineRounded';
 import EventBusyRounded from '@mui/icons-material/EventBusyRounded';
 import CheckCircleRounded from '@mui/icons-material/CheckCircleRounded';
@@ -13,6 +13,7 @@ import type { ApiError } from '@/types/auth';
 import type { ProjectRole } from '@/types/project';
 import PasswordField from './PasswordField';
 import SubmitButton from './SubmitButton';
+import GoogleButton from './GoogleButton';
 import { FormError } from './AuthFeedback';
 
 type State = 'pending' | 'expired' | 'revoked' | 'accepted' | 'invalid' | 'project_inactive';
@@ -103,8 +104,8 @@ export default function InvitationAccept() {
   const loading = !data || (data.state === 'pending' && meLoading);
 
   return (
-    <Card className="auth-card" sx={{ maxWidth: 620, mx: 'auto', border: '1px solid #eee7f1', borderRadius: 4, boxShadow: '0 22px 70px rgba(44,16,58,.08)' }}>
-      <CardContent sx={{ p: { xs: 3, md: 5 } }}>
+    <Card sx={{ maxWidth: 620, mx: 'auto', border: '1px solid #eee7f1', borderRadius: 4, boxShadow: '0 22px 70px rgba(44,16,58,.08)', height: { md: 650 }, overflowY: 'auto' }}>
+      <CardContent sx={{ p: { xs: 3, md: 5 }, minHeight: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
         {preview.isError && <Ended icon={<ErrorOutlineRounded />} title="We could not load this invitation" body={message(preview.error)} action={<Button variant="outlined" onClick={() => preview.refetch()}>Try again</Button>} />}
 
         {!preview.isError && loading && (
@@ -128,27 +129,28 @@ export default function InvitationAccept() {
         )}
 
         {!loading && data?.state === 'pending' && (
-          <Stack gap={3}>
-            <Stack gap={1.5}>
-              <Avatar variant="rounded" sx={{ width: 56, height: 56, borderRadius: 3, fontWeight: 900, fontSize: 24, background: 'linear-gradient(145deg,#5517b8,#a0208f 55%,#f3542e)' }}>
+          <Stack gap={2.25}>
+            <Stack direction="row" gap={1.75} alignItems="center">
+              <Avatar variant="rounded" sx={{ width: 48, height: 48, borderRadius: '12px', fontWeight: 900, fontSize: 20, background: 'linear-gradient(145deg,#5517b8,#a0208f 55%,#f3542e)' }}>
                 {data.project!.name.charAt(0).toUpperCase()}
               </Avatar>
-              <Typography variant="h3" sx={{ fontSize: { xs: 30, md: 38 } }}>Join {data.project!.name}</Typography>
-              <Typography color="text.secondary">
-                <strong>{data.invitedBy?.name ?? data.invitedBy?.email}</strong>
-                {data.invitedBy?.name && ` (${data.invitedBy.email})`} invited you to collaborate on this project in PixlPush.
-              </Typography>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography variant="h3" sx={{ fontSize: { xs: 26, md: 32 }, lineHeight: 1.1, overflowWrap: 'anywhere' }}>Join {data.project!.name}</Typography>
+                <Typography color="text.secondary" fontSize={13} sx={{ mt: 0.5 }}>
+                  Invited by <strong>{data.invitedBy?.name ?? data.invitedBy?.email}</strong>
+                  {data.invitedBy?.name && ` · ${data.invitedBy.email}`}
+                </Typography>
+              </Box>
             </Stack>
 
-            <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', columnGap: 3, rowGap: 1.25, p: 2.25, borderRadius: 3, bgcolor: '#f7f2fb', border: '1px solid #eee7f1' }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', sm: '1fr 1fr' }, gap: 1.5, p: 1.75, borderRadius: '12px', bgcolor: '#f7f2fb', border: '1px solid #eee7f1' }}>
               {[
-                ['Project', data.project!.name],
                 ['Role', ROLE[data.role!]],
-                ['Invited email', data.email!],
                 ['Expires', new Date(data.expiresAt!).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })],
-              ].map(([k, v]) => (
-                <Box key={k} sx={{ display: 'contents' }}>
-                  <Typography fontSize={13} color="text.secondary">{k}</Typography>
+                ['Invited email', data.email!],
+              ].map(([k, v], i) => (
+                <Box key={k} sx={{ minWidth: 0, gridColumn: i === 2 ? '1 / -1' : undefined }}>
+                  <Typography fontSize={11} fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: '.06em' }}>{k}</Typography>
                   <Typography fontSize={14} fontWeight={800} sx={{ overflowWrap: 'anywhere' }}>{v}</Typography>
                 </Box>
               ))}
@@ -164,7 +166,7 @@ export default function InvitationAccept() {
             )}
 
             {account && account.email.toLowerCase() !== data.email!.toLowerCase() && (
-              <Stack gap={2}>
+              <Stack gap={1.5}>
                 <Alert severity="warning" icon={<SwapHorizRounded />}>
                   You are signed in as <strong>{account.email}</strong>, but this invitation is for <strong>{data.email}</strong>. Switch to the invited account to accept it.
                 </Alert>
@@ -173,30 +175,43 @@ export default function InvitationAccept() {
               </Stack>
             )}
 
-            {!account && data.accountExists && (
-              <Stack gap={1.5}>
-                <Typography color="text.secondary" fontSize={14}><strong>{data.email}</strong> already has a PixlPush account. Sign in to accept. You will come right back here.</Typography>
-                <Button variant="contained" size="large" href={loginHref} sx={{ py: 1.4 }}>Sign in to accept</Button>
-              </Stack>
-            )}
+            {!account && (
+              <Stack gap={1.75}>
+                <GoogleButton label={data.accountExists ? 'Sign in with Google' : 'Join with Google'} redirect={here} onError={setError} />
+                <Stack direction="row" alignItems="center" gap={2}>
+                  <Divider sx={{ flex: 1 }} />
+                  <Typography fontSize={12} color="text.secondary" whiteSpace="nowrap">
+                    {data.accountExists ? 'or sign in with email' : 'or create an account with email'}
+                  </Typography>
+                  <Divider sx={{ flex: 1 }} />
+                </Stack>
 
-            {!account && !data.accountExists && (
-              <Box
-                component="form"
-                noValidate
-                sx={{ display: 'grid', gap: 2 }}
-                onSubmit={(e: React.FormEvent) => {
-                  e.preventDefault();
-                  if (form.password.length < 12) return setError(MESSAGES.VALIDATION_ERROR);
-                  void run({ password: form.password, ...(form.name.trim() ? { name: form.name.trim() } : {}) });
-                }}
-              >
-                <Typography fontSize={14} fontWeight={800}>Create your account to join</Typography>
-                <TextField label="Email" value={data.email} fullWidth InputProps={{ readOnly: true }} helperText="Your account uses the invited email address." />
-                <TextField label="Your name" autoComplete="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} disabled={busy} fullWidth />
-                <PasswordField label="Password" autoComplete="new-password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} disabled={busy} helperText="At least 12 characters." fullWidth />
-                <SubmitButton type="submit" variant="contained" size="large" pending={busy} sx={{ mt: 1, py: 1.4 }}>Create account and join</SubmitButton>
-              </Box>
+                {data.accountExists ? (
+                  <Button variant="contained" size="large" href={loginHref} sx={{ py: 1.4 }}>Sign in to accept</Button>
+                ) : (
+                  <Box
+                    component="form"
+                    noValidate
+                    sx={{ display: 'grid', gap: 1.75 }}
+                    onSubmit={(e: React.FormEvent) => {
+                      e.preventDefault();
+                      if (form.password.length < 12) return setError(MESSAGES.VALIDATION_ERROR);
+                      void run({ password: form.password, ...(form.name.trim() ? { name: form.name.trim() } : {}) });
+                    }}
+                  >
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
+                      <TextField label="Your name" autoComplete="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} disabled={busy} fullWidth />
+                      <PasswordField label="Password" autoComplete="new-password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} disabled={busy} fullWidth />
+                    </Box>
+                    <Typography fontSize={12} color="text.secondary">
+                      Password of at least 12 characters. Your account uses <strong>{data.email}</strong>.
+                    </Typography>
+                    {/* Hidden username field so password managers save the invited email. */}
+                    <input type="email" name="email" value={data.email} readOnly autoComplete="username" hidden />
+                    <SubmitButton type="submit" variant="contained" size="large" pending={busy} sx={{ py: 1.4 }}>Create account and join</SubmitButton>
+                  </Box>
+                )}
+              </Stack>
             )}
           </Stack>
         )}
