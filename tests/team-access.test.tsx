@@ -25,6 +25,10 @@ vi.mock('@/hooks/projects/use-active-project', () => ({
   useActiveProject: () => ({ active: { id: 'e1', name: 'Project E1', role } }),
 }));
 
+vi.mock('@/hooks/auth/use-current-user', () => ({
+  useCurrentUser: () => ({ account: { id: 'a-emi@example.com' } }),
+}));
+
 const team = vi.mocked(teamApi);
 const audit = vi.mocked(auditApi);
 
@@ -66,6 +70,16 @@ describe('Team & Access', () => {
     expect(screen.queryByText('Team & Access')).not.toBeInTheDocument();
     expect(screen.queryByText('Maya Chen')).not.toBeInTheDocument();
     expect(team.members).toHaveBeenCalledWith('e1');
+  });
+
+  it('never offers to change or remove your own access', async () => {
+    wrap(<TeamAccessPanel />);
+    const me = await screen.findByTestId('member-emi@example.com');
+    expect(within(me).getByText('You')).toBeInTheDocument();
+    expect(within(me).queryByLabelText('Role of emi@example.com')).not.toBeInTheDocument();
+    expect(within(me).queryByRole('button', { name: 'Remove access' })).not.toBeInTheDocument();
+    const dimi = screen.getByTestId('member-dimi@example.com');
+    expect(within(dimi).getByRole('button', { name: 'Remove access' })).toBeInTheDocument();
   });
 
   it('invites an existing account and shows duplicate access clearly', async () => {

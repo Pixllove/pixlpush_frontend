@@ -26,6 +26,7 @@ import {
   Typography,
 } from '@mui/material';
 import { Toast } from '@/components/auth/AuthFeedback';
+import { useCurrentUser } from '@/hooks/auth/use-current-user';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
 import { teamApi } from '@/lib/projects/api';
 import type { ApiError } from '@/types/auth';
@@ -47,6 +48,7 @@ const MESSAGES: Record<string, string> = {
   ALREADY_MEMBER: 'User already has access to this project.',
   INSUFFICIENT_ROLE: 'Your role does not allow this change.',
   LAST_OWNER: 'A project must always have at least one owner.',
+  CANNOT_CHANGE_OWN_ACCESS: 'You cannot change or remove your own access. Ask another owner or admin.',
   MEMBER_NOT_FOUND: 'This member no longer has access. Refresh the list.',
   INVITATION_NOT_FOUND: 'This invitation no longer exists.',
   INVITATION_NOT_PENDING: 'Only pending or expired invitations can be changed.',
@@ -68,6 +70,7 @@ export default function TeamAccessPanel() {
   const myRole = active?.role;
   const canManage = Boolean(myRole && MANAGE.includes(myRole));
   const isOwner = myRole === 'owner';
+  const me = useCurrentUser().account?.id;
   const queryClient = useQueryClient();
 
   const members = useQuery({ queryKey: ['projects', 'team', projectId, 'members'], queryFn: () => teamApi.members(projectId!), enabled: Boolean(projectId) });
@@ -98,7 +101,8 @@ export default function TeamAccessPanel() {
   };
 
   /** Owners may touch anyone; admins may not touch owners or grant ownership. */
-  const canEdit = (m: ProjectMember) => canManage && (isOwner || m.role !== 'owner');
+  /// Nobody edits their own row: another owner/admin changes or removes them.
+  const canEdit = (m: ProjectMember) => canManage && Boolean(me) && m.account.id !== me && (isOwner || m.role !== 'owner');
   const pending = (invitations.data ?? []).filter((i) => i.status === 'pending' || i.status === 'expired');
 
   if (!projectId) return <Skeleton height={40} />;
@@ -141,7 +145,10 @@ export default function TeamAccessPanel() {
                 {members.data.map((m) => (
                   <TableRow key={m.id} data-testid={`member-${m.account.email}`}>
                     <TableCell>
-                      <Typography fontWeight={800} fontSize={12}>{m.account.name ?? m.account.email}</Typography>
+                      <Typography fontWeight={800} fontSize={12}>
+                        {m.account.name ?? m.account.email}
+                        {m.account.id === me && <Chip size="small" label="You" sx={{ ml: 1, height: 18, fontSize: 10 }} />}
+                      </Typography>
                       <Typography color="text.secondary" fontSize={11}>{m.account.email}</Typography>
                     </TableCell>
                     <TableCell>
