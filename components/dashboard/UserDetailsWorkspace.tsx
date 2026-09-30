@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { ElementType } from "react";
 import {
   ArrowBackRounded,
@@ -59,6 +59,7 @@ const display = (value: unknown) =>
 
 export default function UserDetailsWorkspace({ userId }: { userId: string }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { active } = useActiveProject();
   const [activityCursor, setActivityCursor] = useState<string | null>(null);
   const [history, setHistory] = useState<string[]>([]);
@@ -111,7 +112,7 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
     <Stack gap={2.2} className="user-details-workspace">
       <Button
         startIcon={<ArrowBackRounded />}
-        onClick={() => router.push("/dashboard/users")}
+        onClick={() => router.push(`/dashboard/users?tab=${searchParams.get("tab") || "users"}`)}
         className="group-back-button"
       >
         Back to Users

@@ -648,6 +648,8 @@ a { color: inherit; text-decoration: none; }
 
 .user-table-link { margin:-4px; padding:4px; border-radius:7px; cursor:pointer; outline:none; transition:background .15s, color .15s; }
 .user-table-link:hover, .user-table-link:focus-visible { background:#f1edff; color:#5d20c6; }
+.group-table-link { padding:4px; margin:-4px; border-radius:7px; cursor:pointer; outline:none; transition:background .15s, color .15s; }
+.group-table-link:hover, .group-table-link:focus-visible { background:#f1edff; color:#5d20c6; }
 .segment-table-link { display:inline-block; padding:4px; margin:-4px; border-radius:7px; cursor:pointer; outline:none; transition:background .15s, color .15s; }
 .segment-table-link:hover, .segment-table-link:focus-visible { background:#f1edff; color:#5d20c6; }
 .user-details-workspace { width:100%; max-width:none; margin:0; }

@@ -2,7 +2,7 @@
 
 import { useDeferredValue, useEffect, useState } from "react";
 import TeamAccessPanel from "./team/TeamAccessPanel";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSelector } from "react-redux";
 import {
   AddRounded,
@@ -632,7 +632,11 @@ export function OverviewSection() {
 
 export function UsersSection() {
   const router = useRouter();
-  const [tab, setTab] = useState<"users" | "segments" | "groups">("users");
+  const searchParams = useSearchParams();
+  const requestedTab = searchParams.get("tab");
+  const [tab, setTab] = useState<"users" | "segments" | "groups">(
+    requestedTab === "segments" || requestedTab === "groups" ? requestedTab : "users",
+  );
   const [createGroupOpen, setCreateGroupOpen] = useState(false);
   const [createSegmentOpen, setCreateSegmentOpen] = useState(false);
   const [importUsersOpen, setImportUsersOpen] = useState(false);
@@ -706,7 +710,7 @@ export function UsersSection() {
         queryKey: ["projects", "audience-groups", active?.id],
       });
       setCreateGroupOpen(false);
-      router.push(`/dashboard/users/groups/${group.id}`);
+      router.push(`/dashboard/users/groups/${group.id}?tab=groups`);
     },
   });
   const createSegment = useMutation({
@@ -728,10 +732,13 @@ export function UsersSection() {
         queryKey: ["projects", "lifecycle-segments", active?.id],
       });
       setCreateSegmentOpen(false);
-      router.push(`/dashboard/users/segments/${segment.id}`);
+      router.push(`/dashboard/users/segments/${segment.id}?tab=segments`);
     },
   });
   useEffect(() => setUserCursors([]), [deferredUserSearch, active?.id]);
+  useEffect(() => {
+    if (requestedTab === "users" || requestedTab === "segments" || requestedTab === "groups") setTab(requestedTab);
+  }, [requestedTab]);
   const statsQuery = useQuery({
     queryKey: ["projects", "users", "stats", active?.id],
     queryFn: () => userStatsApi.get(active!.id),
@@ -816,10 +823,10 @@ export function UsersSection() {
           className="user-table-link"
           role="link"
           tabIndex={0}
-          onClick={() => router.push(`/dashboard/users/${row.id}`)}
+          onClick={() => router.push(`/dashboard/users/${row.id}?tab=users`)}
           onKeyDown={(event) => {
             if (event.key === "Enter" || event.key === " ")
-              router.push(`/dashboard/users/${row.id}`);
+              router.push(`/dashboard/users/${row.id}?tab=users`);
           }}
         >
           <Typography fontSize={12} fontWeight={800}>
@@ -880,10 +887,10 @@ export function UsersSection() {
           className="segment-table-link"
           role="link"
           tabIndex={0}
-          onClick={() => router.push(`/dashboard/users/segments/${row.id}`)}
+          onClick={() => router.push(`/dashboard/users/segments/${row.id}?tab=segments`)}
           onKeyDown={(event) => {
             if (event.key === "Enter" || event.key === " ")
-              router.push(`/dashboard/users/segments/${row.id}`);
+              router.push(`/dashboard/users/segments/${row.id}?tab=segments`);
           }}
         >
           <Stack direction="row" alignItems="center" gap={1.2}>
@@ -976,7 +983,21 @@ export function UsersSection() {
       key: "name",
       label: "Audience group",
       render: (row) => (
-        <Stack direction="row" alignItems="center" gap={1.2}>
+        <Stack
+          direction="row"
+          alignItems="center"
+          gap={1.2}
+          className="group-table-link"
+          role="link"
+          tabIndex={0}
+          onClick={() => router.push(`/dashboard/users/groups/${row.id}?tab=groups`)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              router.push(`/dashboard/users/groups/${row.id}?tab=groups`);
+            }
+          }}
+        >
           <Box className="group-dot" />
           <Box>
             <Stack direction="row" alignItems="center" gap={1}>
@@ -1033,7 +1054,7 @@ export function UsersSection() {
             size="small"
             variant="outlined"
             className="group-view-button"
-            onClick={() => router.push(`/dashboard/users/groups/${row.id}`)}
+            onClick={() => router.push(`/dashboard/users/groups/${row.id}?tab=groups`)}
           >
             View group
           </Button>

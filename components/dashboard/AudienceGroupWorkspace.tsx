@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { AddRounded, ArrowBackRounded, CloseRounded, EmailRounded, GroupsRounded, NotificationsActiveRounded, SearchRounded, TimelineRounded } from '@mui/icons-material';
 import { Box, Button, Card, Chip, CircularProgress, Divider, Grid, MenuItem, Select, Skeleton, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -37,6 +37,7 @@ function toBackendRules(blocks: Block[], schema?: AudienceGroupSchema) {
 
 export default function AudienceGroupWorkspace({ groupId }: { groupId: string }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { active } = useActiveProject();
   const groupQuery = useQuery({ queryKey: ['projects', 'audience-groups', active?.id, groupId], queryFn: () => audienceGroupsApi.get(active!.id, groupId), enabled: Boolean(active?.id) });
   const membersQuery = useQuery({ queryKey: ['projects', 'audience-groups', active?.id, groupId, 'members'], queryFn: () => audienceGroupsApi.members(active!.id, groupId), enabled: Boolean(active?.id) });
@@ -97,9 +98,9 @@ export default function AudienceGroupWorkspace({ groupId }: { groupId: string })
   const removeRule = (blockId: number, ruleId: number) => setBlocks(current => current.map(block => block.id === blockId ? { ...block, rules: block.rules.filter(rule => rule.id !== ruleId) } : block).filter(block => block.rules.length));
   const users = membersQuery.data?.members ?? [];
   const filteredUsers = users.filter(user => `${user.externalUserId ?? ''} ${user.name ?? ''} ${user.email ?? ''}`.toLowerCase().includes(query.toLowerCase()));
-  const openUser = (userId: string) => router.push(`/dashboard/users/${userId}`);
+  const openUser = (userId: string) => router.push(`/dashboard/users/${userId}?tab=groups`);
   return <Stack gap={2} className="audience-group-workspace">
-    <Button startIcon={<ArrowBackRounded />} onClick={() => router.push('/dashboard/users')} className="group-back-button">Back to audience groups</Button>
+    <Button startIcon={<ArrowBackRounded />} onClick={() => router.push(`/dashboard/users?tab=${searchParams.get('tab') || 'groups'}`)} className="group-back-button">Back to audience groups</Button>
     <Card className="group-title-card"><Typography color="text.secondary" fontSize={10}>Audience group</Typography><Typography variant="h3">{groupQuery.isLoading ? <Skeleton width={180} /> : title}</Typography></Card>
     <Card className="group-section-card"><Typography variant="h3">Group conditions</Typography><Typography color="text.secondary" fontSize={12}>Build the audience using filters for user data, lifecycle, and engagement.</Typography><Stack gap={1.5} sx={{ mt: 2 }}><Box className="condition-groups"><Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ px: 1, pb: 1 }}><Box><Typography fontWeight={900}>Match {blocks.length > 1 ? 'any' : 'all'} of these conditions</Typography><Typography color="text.secondary" fontSize={11}>Conditions joined with <strong>{blocks.length > 1 ? 'OR' : 'AND'}</strong></Typography></Box><Chip label={blocks.length > 1 ? 'OR' : 'AND'} className="condition-logic-chip" size="small" /></Stack>{blocks.map((block, index) => <Fragment key={block.id}><Box className="condition-block"><Stack gap={1.2} className="condition-block-inner">{block.rules.map(rule => <ConditionRow key={rule.id} rule={rule} schema={schemaQuery.data} onChange={(field, value) => updateRule(block.id, rule.id, field, value)} onRemove={() => removeRule(block.id, rule.id)} />)}<Button size="small" startIcon={<AddRounded />} onClick={() => addAnd(block.id)} className="condition-add-button">AND</Button></Stack></Box>{index < blocks.length - 1 && <Box className="condition-or-divider"><span>OR</span></Box>}</Fragment>)}<Button size="small" startIcon={<AddRounded />} onClick={addOr} className="condition-add-button condition-add-or">OR</Button></Box></Stack><Divider sx={{ my: 2 }} /><Stack direction="row" justifyContent="space-between" alignItems="center"><Typography color="text.secondary" fontSize={12}>{conditionCount} / {maxConditions} conditions</Typography><Box textAlign="right"><Button variant="contained" disabled={saveConditions.isPending || groupQuery.isLoading} onClick={() => saveConditions.mutate()}>{saveConditions.isPending ? <CircularProgress size={18} color="inherit" /> : "Save conditions"}</Button>{saveConditions.isError && <Typography color="error" fontSize={11} sx={{ mt: 0.5 }}>Could not save conditions. Check that at least one valid condition is selected.</Typography>}</Box></Stack></Card>
     <EngagementCard />
