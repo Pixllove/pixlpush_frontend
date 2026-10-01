@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CheckRounded } from "@mui/icons-material";
 import {
   Box,
@@ -70,6 +70,12 @@ export default function EmailTranslationPanel({
   const languageNames: Record<string, string> = {
     en: "English", ...Object.fromEntries(Object.entries(languageCodes).map(([name, code]) => [code, name])),
   };
+  useEffect(() => {
+    if (!initialTranslations || !Object.keys(initialTranslations).length) return;
+    setTranslations(initialTranslations);
+    setTranslatedLanguages(Object.keys(initialTranslations).filter((code) => code !== sourceLanguage));
+    setSourceTranslation(initialTranslations[sourceLanguage] || { subject: "", html: "" });
+  }, [initialTranslations, sourceLanguage]);
   const selected = useMemo(
     () => Array.from(new Set([sourceLanguage, ...selectedLanguages, ...translatedLanguages])),
     [selectedLanguages, translatedLanguages, sourceLanguage],

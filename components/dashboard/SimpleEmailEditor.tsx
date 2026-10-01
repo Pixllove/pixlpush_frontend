@@ -460,6 +460,8 @@ export default function SimpleEmailEditor({
   };
   const saveAs = async (destination: EmailKind) => {
     if (saving) return;
+    // Let the selected save endpoint validate the payload so its response is
+    // shown to the user and the request is visible in the network panel.
     setSaving(true);
     try {
       const isExisting = Boolean(item?.id && !item.id.startsWith("email-"));

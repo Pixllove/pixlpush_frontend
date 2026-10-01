@@ -257,7 +257,7 @@ a { color: inherit; text-decoration: none; }
 .email-row:hover { background: #fbf9ff; }
 .email-thumb { width: 52px; height: 58px; flex: 0 0 auto; display: grid; align-content: start; gap: 5px; padding: 9px 8px; border: 1px solid #e5dbf5; border-radius: 9px; background: linear-gradient(145deg,#f7f1ff,#fff); box-shadow: 0 5px 12px rgba(86,39,142,.08); }
 .email-thumb div { height: 4px; border-radius: 5px; background: #e1d6f4; }.email-thumb div:first-child { width: 75%; background: #7132d3; }.email-thumb div:last-child { height: 19px; background: #cceedd; }
-.email-toast { position: fixed; z-index: 100; top: 88px; right: 28px; padding: 12px 18px; border-left: 4px solid #15965e; color: #175d3d; background: #effbf4; }
+.email-toast { position: fixed; z-index: 1500; top: 88px; right: 28px; padding: 12px 18px; border: 1px solid #f6c56f; border-left: 4px solid #f59e0b; border-radius: 8px; color: #92400e; background: #fff7e6; box-shadow: 0 8px 22px rgba(146,64,14,.16); }
 .email-row > .MuiButton-root { min-width: 80px; border-radius: 999px; }
 .email-row .MuiChip-root { height: 24px; color: #5b5067; background: #f2eef6; }
 .email-row .MuiIconButton-root { color: #726979; }

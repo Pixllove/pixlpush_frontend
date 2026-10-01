@@ -675,26 +675,35 @@ export default function EmailWorkspace() {
       />
     );
   if (view === "editor")
-    return editor === "simple" ? (
-      <SimpleEmailEditor
-        item={active as (EmailItem & { editor: "simple" }) | null}
-        kind={kind}
-        projectId={activeProject?.id || ""}
-        language={creationLanguage}
-        onClose={discardEditor}
-        onSave={save}
-        onNotice={setNotice}
-      />
-    ) : (
-      <DragEditor
-        item={active}
-        kind={kind}
-        projectId={activeProject?.id || ""}
-        language={creationLanguage}
-        onClose={discardEditor}
-        onSave={save}
-        onNotice={setNotice}
-      />
+    return (
+      <>
+        {notice && (
+          <Paper className="email-toast" elevation={4}>
+            {notice}
+          </Paper>
+        )}
+        {editor === "simple" ? (
+          <SimpleEmailEditor
+            item={active as (EmailItem & { editor: "simple" }) | null}
+            kind={kind}
+            projectId={activeProject?.id || ""}
+            language={creationLanguage}
+            onClose={discardEditor}
+            onSave={save}
+            onNotice={setNotice}
+          />
+        ) : (
+          <DragEditor
+            item={active}
+            kind={kind}
+            projectId={activeProject?.id || ""}
+            language={creationLanguage}
+            onClose={discardEditor}
+            onSave={save}
+            onNotice={setNotice}
+          />
+        )}
+      </>
     );
   return (
     <Stack gap={2.5} className="email-workspace">
