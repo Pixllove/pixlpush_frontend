@@ -14,6 +14,9 @@ export function useCurrentUser() {
     queryKey: authKeys.currentUser(),
     queryFn: authApi.me,
     retry: (failureCount, error) => !isPermanentAuthError(error) && failureCount < 2,
+    // Identity rarely changes, and whatever changes it invalidates this key.
+    // Past this it is shown from cache and re-checked in the background.
+    staleTime: 5 * 60_000,
   });
 
   return {

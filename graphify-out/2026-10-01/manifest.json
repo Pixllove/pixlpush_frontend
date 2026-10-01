@@ -582,9 +582,9 @@
     "semantic_hash": ""
   },
   "middleware.ts": {
-    "mtime": 1790838107.3254476,
-    "seen": 1790838420.869334,
-    "ast_hash": "f1f92e26dd846f52c871ead1d34742f3",
+    "mtime": 1790836054.0929797,
+    "seen": 1790836541.434249,
+    "ast_hash": "8d4cda9f7c66d814c24d52b6f99fbecb",
     "semantic_hash": ""
   },
   "next-env.d.ts": {
@@ -1011,12 +1011,6 @@
     "mtime": 1790837750.627219,
     "seen": 1790837757.19278,
     "ast_hash": "0db46753336471a1c9f76d84b5a958f9",
-    "semantic_hash": ""
-  },
-  "app/(dashboard)/layout.tsx": {
-    "mtime": 1790838017.4081175,
-    "seen": 1790838420.869229,
-    "ast_hash": "1d6417abce1c278e00d9d0ef214cbc57",
     "semantic_hash": ""
   }
 }

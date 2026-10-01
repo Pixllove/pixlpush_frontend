@@ -2,7 +2,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { authApi, authKeys } from '@/lib/auth/api';
+import { authApi } from '@/lib/auth/api';
 import type { ApiError } from '@/types/auth';
 
 export function useLogout() {
@@ -14,8 +14,10 @@ export function useLogout() {
     onSettled: async () => {
       // Cancel first: an in-flight /me must not land after logout and repaint
       // the UI as authenticated.
-      await queryClient.cancelQueries({ queryKey: authKeys.all });
-      queryClient.removeQueries({ queryKey: authKeys.all });
+      await queryClient.cancelQueries();
+      // Everything, not just the auth keys: the next account to sign in on this
+      // tab must not be shown the previous one's projects and users.
+      queryClient.clear();
       router.replace('/login');
       // Drops any cached RSC payload rendered for the signed-in user.
       router.refresh();
