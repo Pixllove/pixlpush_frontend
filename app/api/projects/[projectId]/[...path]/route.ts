@@ -22,6 +22,8 @@ const ALLOWED = [
   "push-deeplinks",
   "push-campaigns",
   "push-deliveries",
+  // Includes /languages, /default-language, /translate, /suggest, and the
+  // existing template CRUD routes under the same backend resource.
   "email-templates",
   "email-campaigns",
   "email-deliveries",

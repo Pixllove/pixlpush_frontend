@@ -2,6 +2,9 @@
 
 import CloseEmailEditor from "./CloseEmailEditor";
 import EmailTranslationPanel from "./EmailTranslationPanel";
+import EmailLanguageSettings from "./EmailLanguageSettings";
+import { languageName } from "./EmailLanguageSettings";
+import { emailApi } from "@/lib/projects/api";
 import Image from "next/image";
 import aiIcon from "../../assets/ai.png";
 
@@ -81,6 +84,8 @@ type EditorItem = {
 type Props = {
   item: EditorItem | null;
   kind: EmailKind;
+  projectId: string;
+  language: string;
   onClose: () => void;
   onSave: (item: EditorItem, message: string) => void;
   onNotice: (message: string) => void;
@@ -218,6 +223,8 @@ const FONT_SIZE_OPTIONS = [10, 12, 14, 16, 18, 20, 24, 28, 32, 36];
 export default function SimpleEmailEditor({
   item,
   kind,
+  projectId,
+  language,
   onClose,
   onSave,
   onNotice,
@@ -239,6 +246,7 @@ export default function SimpleEmailEditor({
     subject: string;
     content: string;
   } | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
   const [linkText, setLinkText] = useState("");
   const [linkUrl, setLinkUrl] = useState("https://");
@@ -636,16 +644,27 @@ export default function SimpleEmailEditor({
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
   };
-  const generateAiSuggestion = () => {
+  const generateAiSuggestion = async () => {
     const prompt = aiPrompt.trim();
-    setAiResult({
-      subject: prompt.toLowerCase().includes("subject")
-        ? "A quick follow-up for you"
-        : "Quick follow-up",
-      content: prompt
-        ? `Hi,\n\nI wanted to follow up quickly — ${prompt}.\n\nThanks,\nThe PixlPush team`
-        : "Hi,\n\nHere is a clearer, more engaging message for your audience.\n\nThanks,\nThe PixlPush team",
-    });
+    if (!prompt || aiLoading) return;
+    setAiLoading(true);
+    try {
+      const result = await emailApi.suggest(projectId, {
+        prompt,
+        subject: subject || null,
+        content: content || null,
+        language,
+      });
+      setAiResult({ subject: result.subject, content: result.content });
+    } catch (error) {
+      const message =
+        error && typeof error === "object" && "message" in error
+          ? String((error as { message?: unknown }).message)
+          : "Unable to generate a suggestion. Please try again.";
+      onNotice(message);
+    } finally {
+      setAiLoading(false);
+    }
   };
   const drawSignature = (event: ReactPointerEvent<HTMLCanvasElement>) => {
     const canvas = signatureCanvasRef.current;
@@ -677,7 +696,7 @@ export default function SimpleEmailEditor({
           />
           <Select
             size="small"
-            value="English"
+            value={language}
             sx={{
               color: "#fff",
               ".MuiOutlinedInput-notchedOutline": {
@@ -685,7 +704,7 @@ export default function SimpleEmailEditor({
               },
             }}
           >
-            <MenuItem value="English">English</MenuItem>
+            <MenuItem value={language}>{languageName(language)}</MenuItem>
           </Select>
         </Stack>
         <Stack direction="row" alignItems="center" gap={1}>
@@ -748,24 +767,7 @@ export default function SimpleEmailEditor({
                 Choose how new campaigns should start in the editor.
               </Typography>
               <Box className="admin-side-card">
-                <Typography fontWeight={800}>
-                  Default creation language
-                </Typography>
-                <Typography
-                  fontSize={12}
-                  color="rgba(255,255,255,.55)"
-                  sx={{ mt: 1 }}
-                >
-                  New campaigns open directly in English.
-                </Typography>
-                <Stack
-                  direction="row"
-                  justifyContent="space-between"
-                  sx={{ mt: 2 }}
-                >
-                  <Typography fontSize={12}>Saved language</Typography>
-                  <Typography fontWeight={800}>English</Typography>
-                </Stack>
+                <EmailLanguageSettings projectId={projectId} currentLanguage={language} dark onNotice={onNotice} />
               </Box>
               {insertedFooterId && <Box className="admin-side-card footer-settings-card">
                 <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
@@ -1261,8 +1263,12 @@ export default function SimpleEmailEditor({
           >
             Cancel
           </Button>
-          <Button variant="contained" onClick={generateAiSuggestion}>
-            Generate suggestion ✨
+          <Button
+            variant="contained"
+            onClick={generateAiSuggestion}
+            disabled={!aiPrompt.trim() || aiLoading}
+          >
+            {aiLoading ? "Generating…" : "Generate suggestion ✨"}
           </Button>
         </DialogActions>
       </Dialog>

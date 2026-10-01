@@ -161,6 +161,24 @@ export interface EmailCampaign {
   stats?: EmailCampaignStats;
 }
 
+export interface EmailLanguageOption {
+  code: string;
+  name: string;
+}
+
+export interface EmailLanguages {
+  defaultLanguageEnabled: boolean;
+  defaultLanguage: string | null;
+  languages: EmailLanguageOption[];
+}
+
+export interface EmailSuggestion {
+  language: string;
+  subject: string;
+  content: string;
+  html: string;
+}
+
 export const emailApi = {
   get: (projectId: string) =>
     authRequest<EmailSettings>(
@@ -182,6 +200,38 @@ export const emailApi = {
     authRequest<EmailSettings>(
       at(projectId, "/email-settings/verify"),
       {},
+      BASE,
+    ),
+  languages: {
+    get: (projectId: string) =>
+      authRequest<EmailLanguages>(
+        at(projectId, "/email-templates/languages"),
+        undefined,
+        BASE,
+      ),
+    setDefault: (
+      projectId: string,
+      input: { enabled: boolean; language?: string },
+    ) =>
+      authRequest<{ enabled: boolean; defaultLanguage: string | null }>(
+        at(projectId, "/email-templates/default-language"),
+        input,
+        BASE,
+        "PATCH",
+      ),
+  },
+  suggest: (
+    projectId: string,
+    input: {
+      prompt: string;
+      subject?: string | null;
+      content?: string | null;
+      language?: string;
+    },
+  ) =>
+    authRequest<EmailSuggestion>(
+      at(projectId, "/email-templates/suggest"),
+      input,
       BASE,
     ),
   templates: {

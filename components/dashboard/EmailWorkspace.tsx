@@ -3,6 +3,8 @@
 import CloseEmailEditor from "./CloseEmailEditor";
 import Image from "next/image";
 import EmailTranslationPanel from "./EmailTranslationPanel";
+import EmailLanguageSettings from "./EmailLanguageSettings";
+import { languageName } from "./EmailLanguageSettings";
 import aiIcon from "../../assets/ai.png";
 import dragDropPreview from "../../assets/email-drag-drop-editor-preview.png";
 import simpleEditorPreview from "../../assets/email-simple-editor-preview.png";
@@ -427,6 +429,7 @@ export default function EmailWorkspace() {
   const [view, setView] = useState<"list" | "choice" | "editor">("list");
   const [kind, setKind] = useState<"drafts" | "templates">("drafts");
   const [editor, setEditor] = useState<Editor>("simple");
+  const [creationLanguage, setCreationLanguage] = useState("en");
   const [active, setActive] = useState<EmailItem | null>(null);
   const [notice, setNotice] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<EmailItem | null>(null);
@@ -625,8 +628,10 @@ export default function EmailWorkspace() {
       <ChoiceScreen
         kind={kind}
         items={items}
+        projectId={activeProject?.id || ""}
         onBack={() => setView("list")}
-        onChoose={(next) => {
+        onChoose={(next, language) => {
+          setCreationLanguage(language);
           setEditor(next);
           setView("editor");
         }}
@@ -638,6 +643,8 @@ export default function EmailWorkspace() {
       <SimpleEmailEditor
         item={active as (EmailItem & { editor: "simple" }) | null}
         kind={kind}
+        projectId={activeProject?.id || ""}
+        language={creationLanguage}
         onClose={discardEditor}
         onSave={save}
         onNotice={setNotice}
@@ -646,6 +653,8 @@ export default function EmailWorkspace() {
       <DragEditor
         item={active}
         kind={kind}
+        projectId={activeProject?.id || ""}
+        language={creationLanguage}
         onClose={discardEditor}
         onSave={save}
         onNotice={setNotice}
@@ -970,43 +979,73 @@ function EmailTableRow({
 function ChoiceScreen({
   kind,
   items,
+  projectId,
   onBack,
   onChoose,
   onTemplate,
 }: {
   kind: "drafts" | "templates";
   items: EmailItem[];
+  projectId: string;
   onBack: () => void;
-  onChoose: (editor: Editor) => void;
+  onChoose: (editor: Editor, language: string) => void;
   onTemplate: (item: EmailItem) => void;
 }) {
   const [tab, setTab] = useState(0);
   const [languageOpen, setLanguageOpen] = useState(false);
   const [pendingEditor, setPendingEditor] = useState<Editor | null>(null);
-  const [language, setLanguage] = useState("English");
+  const [language, setLanguage] = useState("en");
   const [rememberLanguage, setRememberLanguage] = useState(false);
+  const languagesQuery = useQuery({
+    queryKey: ["email", "languages", projectId],
+    queryFn: () => emailApi.languages.get(projectId),
+    enabled: Boolean(projectId),
+  });
+  const languageOptions = languagesQuery.data?.languages?.length
+    ? languagesQuery.data.languages
+    : Object.entries({
+        en: "English", ar: "Arabic", fr: "French", de: "German", es: "Spanish",
+        id: "Indonesian", ru: "Russian", tr: "Turkish", pt: "Portuguese", ko: "Korean",
+        ja: "Japanese", fa: "Persian", th: "Thai", vi: "Vietnamese", it: "Italian",
+      }).map(([code, name]) => ({ code, name }));
   const chooseEditor = (next: Editor) => {
-    const defaultLanguage =
-      typeof window !== "undefined"
-        ? localStorage.getItem("pixlpush.email.defaultLanguage")
-        : null;
-    if (defaultLanguage) {
-      onChoose(next);
+    if (languagesQuery.isLoading) {
+      setPendingEditor(next);
+      return;
+    }
+    if (languagesQuery.data?.defaultLanguageEnabled && languagesQuery.data.defaultLanguage) {
+      onChoose(next, languagesQuery.data.defaultLanguage);
       return;
     }
     setPendingEditor(next);
-    setLanguage("English");
+    setLanguage("en");
     setRememberLanguage(false);
     setLanguageOpen(true);
   };
-  const continueWithLanguage = () => {
+  useEffect(() => {
+    if (!pendingEditor || languagesQuery.isLoading || !languagesQuery.data) return;
+    if (languagesQuery.data.defaultLanguageEnabled && languagesQuery.data.defaultLanguage) {
+      const next = pendingEditor;
+      setPendingEditor(null);
+      onChoose(next, languagesQuery.data.defaultLanguage);
+    }
+  }, [languagesQuery.data, languagesQuery.isLoading, onChoose, pendingEditor]);
+  const continueWithLanguage = async () => {
     if (!pendingEditor) return;
-    if (rememberLanguage && typeof window !== "undefined")
-      localStorage.setItem("pixlpush.email.defaultLanguage", language);
+    if (rememberLanguage && projectId) {
+      try {
+        await emailApi.languages.setDefault(projectId, { enabled: true, language });
+      } catch {
+        onChoose(pendingEditor, language);
+        setLanguageOpen(false);
+        setPendingEditor(null);
+        return;
+      }
+    }
     const next = pendingEditor;
     setLanguageOpen(false);
     setPendingEditor(null);
-    onChoose(next);
+    onChoose(next, language);
   };
   return (
     <Box className="email-flow">
@@ -1113,25 +1152,9 @@ function ChoiceScreen({
             value={language}
             onChange={(event) => setLanguage(String(event.target.value))}
           >
-            {[
-              "English",
-              "Arabic",
-              "French",
-              "German",
-              "Spanish",
-              "Indonesian",
-              "Russian",
-              "Turkish",
-              "Portuguese",
-              "Korean",
-              "Japanese",
-              "Persian",
-              "Thai",
-              "Vietnamese",
-              "Italian",
-            ].map((option) => (
-              <MenuItem key={option} value={option}>
-                {option}
+            {languageOptions.map((option) => (
+              <MenuItem key={option.code} value={option.code}>
+                {option.name}
               </MenuItem>
             ))}
           </Select>
@@ -1150,7 +1173,7 @@ function ChoiceScreen({
                 Set as default for next time
               </Typography>
               <Typography color="text.secondary" fontSize={11}>
-                Selected language: {language}
+                Selected language: {languageName(language)}
               </Typography>
             </Box>
           </Box>
@@ -1226,6 +1249,7 @@ function EditorChoice({
 function EditorToolbar({
   name,
   setName,
+  language = "en",
   onClose,
   onSave,
   onSaveDraft,
@@ -1235,6 +1259,7 @@ function EditorToolbar({
 }: {
   name: string;
   setName: (value: string) => void;
+  language?: string;
   onClose: () => void;
   onSave: () => void;
   onSaveDraft?: () => void;
@@ -1255,7 +1280,7 @@ function EditorToolbar({
         />
         <Select
           size="small"
-          defaultValue="English"
+          value={language}
           sx={{
             color: "#fff",
             ".MuiOutlinedInput-notchedOutline": {
@@ -1263,9 +1288,7 @@ function EditorToolbar({
             },
           }}
         >
-          <MenuItem value="English">English</MenuItem>
-          <MenuItem value="Spanish">Spanish</MenuItem>
-          <MenuItem value="French">French</MenuItem>
+          <MenuItem value={language}>{languageName(language)}</MenuItem>
         </Select>
       </Stack>
       <Stack direction="row" alignItems="center" gap={1} sx={{ ml: "auto" }}>
@@ -1658,12 +1681,16 @@ function SimpleEditor({
 function DragEditor({
   item,
   kind,
+  projectId,
+  language,
   onClose,
   onSave,
   onNotice,
 }: {
   item: EmailItem | null;
   kind: "drafts" | "templates";
+  projectId: string;
+  language: string;
   onClose: () => void;
   onSave: (item: EmailItem, message: string) => void;
   onNotice: (message: string) => void;
@@ -1822,6 +1849,7 @@ function DragEditor({
       <EditorToolbar
         name={name}
         setName={setName}
+        language={language}
         onClose={onClose}
         onSave={save}
         onSaveDraft={() => saveAs("drafts")}
@@ -1888,14 +1916,9 @@ function DragEditor({
               <Typography color="text.secondary" fontSize={12} sx={{ mt: 1 }}>
                 Configure the visual editor workspace.
               </Typography>
-              <Button
-                fullWidth
-                variant="outlined"
-                sx={{ mt: 2 }}
-                onClick={() => onNotice("Builder settings saved locally")}
-              >
-                Save settings
-              </Button>
+              <Box className="admin-side-card" sx={{ mt: 2 }}>
+                <EmailLanguageSettings projectId={projectId} currentLanguage={language} dark onNotice={onNotice} />
+              </Box>
             </>
           )}
         </Box>
