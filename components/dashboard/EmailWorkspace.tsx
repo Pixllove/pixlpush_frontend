@@ -554,6 +554,7 @@ export default function EmailWorkspace() {
           name: detail.name || current.name,
           subject: detail.template?.subject ?? current.subject,
           description: detail.template?.previewText ?? current.description,
+          content: detail.template?.html ?? detail.template?.text ?? current.content,
         });
       }
     } catch (cause) {
@@ -571,23 +572,48 @@ export default function EmailWorkspace() {
     setTab(item.kind);
     setView("list");
     setNotice(message);
+    queryClient.invalidateQueries({ queryKey: ["email"] });
   };
   const duplicate = async (item: EmailItem) => {
-    if (!activeProject?.id || item.kind !== "templates") {
-      setToast({ message: "Only email templates can be duplicated.", severity: "error" });
+    if (!activeProject?.id) {
+      setToast({ message: "The project is not ready.", severity: "error" });
       return;
     }
     setActionLoading(true);
     try {
-      const copy = await emailApi.templates.duplicate(activeProject.id, item.id);
-      setItems((current) => [
-        {
+      let copy: EmailItem;
+      if (item.kind === "templates") {
+        const template = await emailApi.templates.duplicate(activeProject.id, item.id);
+        copy = {
           ...item,
-          id: copy.id,
-          name: copy.name || `${item.name} copy`,
-          subject: copy.subject || item.subject,
+          id: template.id,
+          name: template.name || `${item.name} copy`,
+          subject: template.subject || item.subject,
           updated: "Updated just now",
-        },
+        };
+      } else if (item.kind === "drafts") {
+        const draft = await emailApi.campaigns.get(activeProject.id, item.id);
+        const campaign = await emailApi.campaigns.create(activeProject.id, {
+          name: `${draft.name} copy`,
+          content: {
+            subject: draft.template?.subject || item.subject,
+            html: draft.template?.html || draft.template?.text || item.content || "",
+            editor: draft.template?.editor === "drag_drop" ? "drag_drop" : "simple",
+          },
+        });
+        copy = {
+          ...item,
+          id: campaign.id,
+          name: campaign.name,
+          subject: campaign.template?.subject || item.subject,
+          updated: "Updated just now",
+        };
+      } else {
+        setToast({ message: "Sent campaigns cannot be duplicated.", severity: "error" });
+        return;
+      }
+      setItems((current) => [
+        copy,
         ...current,
       ]);
       setToast({ message: "Email duplicated successfully.", severity: "success" });
@@ -599,7 +625,9 @@ export default function EmailWorkspace() {
     }
   };
   const discardEditor = () => {
-    if (active) setItems(current => current.filter(entry => entry.id !== active.id));
+    if (active?.id.startsWith("email-")) {
+      setItems((current) => current.filter((entry) => entry.id !== active.id));
+    }
     setActive(null);
     setView("list");
   };

@@ -152,6 +152,9 @@ export interface EmailCampaign {
     name: string;
     subject: string;
     previewText?: string | null;
+    html?: string | null;
+    text?: string | null;
+    editor?: string | null;
   };
   audience?: PushAudience;
   status: string;
@@ -177,6 +180,13 @@ export interface EmailSuggestion {
   subject: string;
   content: string;
   html: string;
+}
+
+export interface EmailTranslation {
+  subject: string;
+  previewText: string | null;
+  html: string;
+  text: string | null;
 }
 
 export const emailApi = {
@@ -234,6 +244,22 @@ export const emailApi = {
       input,
       BASE,
     ),
+  translate: (
+    projectId: string,
+    input: {
+      subject: string;
+      html: string;
+      previewText?: string | null;
+      text?: string | null;
+      sourceLanguage?: string;
+      languages: string[];
+    },
+  ) =>
+    authRequest<{
+      sourceLanguage: string;
+      translations: Record<string, EmailTranslation>;
+      failed: string[];
+    }>(at(projectId, "/email-templates/translate"), input, BASE),
   templates: {
     list: (
       projectId: string,
@@ -256,6 +282,17 @@ export const emailApi = {
         undefined,
         BASE,
       ),
+    create: (
+      projectId: string,
+      input: {
+        name: string;
+        subject: string;
+        previewText?: string | null;
+        html: string;
+        text?: string | null;
+        editor?: "simple" | "drag_drop";
+      },
+    ) => authRequest<EmailTemplate>(at(projectId, "/email-templates"), input, BASE),
     update: (
       projectId: string,
       templateId: string,
@@ -279,6 +316,12 @@ export const emailApi = {
         {},
         BASE,
         "DELETE",
+      ),
+    test: (projectId: string, templateId: string, to: string) =>
+      authRequest<{ delivered: boolean; failed: boolean; error?: string }>(
+        at(projectId, `/email-templates/${encodeURIComponent(templateId)}/test`),
+        { to },
+        BASE,
       ),
   },
   campaigns: {
@@ -310,6 +353,12 @@ export const emailApi = {
         undefined,
         BASE,
       ),
+    create: (projectId: string, input: {
+      name: string;
+      content?: { subject: string; html: string; text?: string | null; editor?: "simple" | "drag_drop" };
+      templateId?: string;
+    }) =>
+      authRequest<EmailCampaign>(at(projectId, "/email-campaigns"), input, BASE),
     update: (
       projectId: string,
       campaignId: string,
@@ -317,7 +366,7 @@ export const emailApi = {
         name?: string;
         templateId?: string;
         audience?: PushAudience;
-        content?: Record<string, unknown>;
+        content?: { subject: string; html: string; text?: string | null; editor?: "simple" | "drag_drop" };
       },
     ) =>
       authRequest<EmailCampaign>(

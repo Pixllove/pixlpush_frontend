@@ -233,6 +233,7 @@ export default function SimpleEmailEditor({
     item?.name ||
       (kind === "templates" ? "New email template" : "New email campaign"),
   );
+  const [activeLanguage, setActiveLanguage] = useState(language);
   const [subject, setSubject] = useState(item?.subject || "");
   const [content, setContent] = useState(item?.content || "");
   const [panel, setPanel] = useState<"ai" | "settings">("ai");
@@ -247,6 +248,8 @@ export default function SimpleEmailEditor({
     content: string;
   } | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [testRecipient, setTestRecipient] = useState("");
   const [linkOpen, setLinkOpen] = useState(false);
   const [linkText, setLinkText] = useState("");
   const [linkUrl, setLinkUrl] = useState("https://");
@@ -280,6 +283,15 @@ export default function SimpleEmailEditor({
     height: number;
   } | null>(null);
   const id = item?.id || `email-${Date.now()}`;
+
+  useEffect(() => {
+    setName(item?.name || (kind === "templates" ? "New email template" : "New email campaign"));
+    setSubject(item?.subject || "");
+    setContent(item?.content || "");
+    setHistory([item?.content || ""]);
+    setHistoryIndex(0);
+    setInsertedFooterId(item?.content?.match(/data-footer-id="([^"]+)"/)?.[1] || null);
+  }, [item?.id, item?.content, item?.name, item?.subject, kind]);
 
   useEffect(() => {
     const editor = contentRef.current;
@@ -443,21 +455,75 @@ export default function SimpleEmailEditor({
     editor.focus();
     updateContent(editor.innerHTML);
   };
-  const saveAs = (destination: EmailKind) =>
-    onSave(
-      {
-        id,
-        name,
-        subject,
-        description: subject || "Saved email content.",
-        editor: "simple",
-        kind: destination,
-        updated: "Updated just now",
-        content,
-      },
-      destination === "templates" ? "Template saved" : "Draft saved",
-    );
+  const saveAs = async (destination: EmailKind) => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const isExisting = Boolean(item?.id && !item.id.startsWith("email-"));
+      let savedId = id;
+      if (destination === "templates") {
+        const saved = isExisting && item?.kind === "templates"
+          ? await emailApi.templates.update(projectId, item.id, { name, subject, html: content, editor: "simple" })
+          : await emailApi.templates.create(projectId, { name, subject, html: content, editor: "simple" });
+        savedId = saved.id;
+      } else {
+        const campaign = isExisting && item?.kind === "drafts"
+          ? await emailApi.campaigns.update(projectId, item.id, { name, content: { subject, html: content, editor: "simple" } })
+          : await emailApi.campaigns.create(projectId, { name, content: { subject, html: content, editor: "simple" } });
+        savedId = campaign.id;
+      }
+      onSave(
+        {
+          id: savedId,
+          name,
+          subject,
+          description: subject || "Saved email content.",
+          editor: "simple",
+          kind: destination,
+          updated: "Updated just now",
+          content,
+        },
+        destination === "templates" ? "Template saved" : "Draft saved",
+      );
+    } catch (error) {
+      onNotice(error && typeof error === "object" && "message" in error
+        ? String((error as { message?: unknown }).message)
+        : "Could not save this email.");
+    } finally {
+      setSaving(false);
+    }
+  };
   const save = () => saveAs(kind);
+  const sendTest = async () => {
+    const to = testRecipient.trim();
+    if (!to || saving) {
+      onNotice("Enter a recipient email address first.");
+      return;
+    }
+    setSaving(true);
+    let temporaryTemplateId: string | null = null;
+    try {
+      const temporary = await emailApi.templates.create(projectId, {
+        name: `${name} test`,
+        subject,
+        html: content,
+        editor: "simple",
+      });
+      temporaryTemplateId = temporary.id;
+      const result = await emailApi.templates.test(projectId, temporary.id, to);
+      onNotice(result.failed ? result.error || "Test email failed." : `Test email sent to ${to}.`);
+      setPreview(false);
+    } catch (error) {
+      onNotice(error && typeof error === "object" && "message" in error
+        ? String((error as { message?: unknown }).message)
+        : "Could not send the test email.");
+    } finally {
+      if (temporaryTemplateId) {
+        await emailApi.templates.delete(projectId, temporaryTemplateId).catch(() => undefined);
+      }
+      setSaving(false);
+    }
+  };
   if (reviewOpen)
     return (
       <SimpleCampaignReview
@@ -653,7 +719,7 @@ export default function SimpleEmailEditor({
         prompt,
         subject: subject || null,
         content: content || null,
-        language,
+        language: activeLanguage,
       });
       setAiResult({ subject: result.subject, content: result.content });
     } catch (error) {
@@ -696,7 +762,7 @@ export default function SimpleEmailEditor({
           />
           <Select
             size="small"
-            value={language}
+            value={activeLanguage}
             sx={{
               color: "#fff",
               ".MuiOutlinedInput-notchedOutline": {
@@ -704,7 +770,7 @@ export default function SimpleEmailEditor({
               },
             }}
           >
-            <MenuItem value={language}>{languageName(language)}</MenuItem>
+            <MenuItem value={activeLanguage}>{languageName(activeLanguage)}</MenuItem>
           </Select>
         </Stack>
         <Stack direction="row" alignItems="center" gap={1}>
@@ -734,10 +800,10 @@ export default function SimpleEmailEditor({
           </Button>
           <Menu anchorEl={saveAnchor} open={Boolean(saveAnchor)} onClose={() => setSaveAnchor(null)}>
             <MenuItem onClick={() => { saveAs("drafts"); setSaveAnchor(null); }}>Save as draft</MenuItem>
-            <MenuItem onClick={() => { onNotice("Template saved locally"); setSaveAnchor(null); }}>Save as template</MenuItem>
+            <MenuItem onClick={() => { void saveAs("templates"); setSaveAnchor(null); }}>Save as template</MenuItem>
             <MenuItem onClick={() => { setReviewOpen(true); setSaveAnchor(null); }}>Prepare to send campaign</MenuItem>
           </Menu>
-          <CloseEmailEditor onDiscard={onClose} onSaveDraft={() => saveAs("drafts")} />
+          <CloseEmailEditor onDiscard={onClose} onSaveDraft={() => { void saveAs("drafts"); }} />
         </Stack>
       </Box>
       <Box className="admin-simple-layout">
@@ -759,7 +825,20 @@ export default function SimpleEmailEditor({
         </Box>
         <Box className="admin-translation-panel">
           {panel === "ai" ? (
-            <EmailTranslationPanel mode="simple" onNotice={onNotice} />
+            <EmailTranslationPanel
+              mode="simple"
+              onNotice={onNotice}
+              projectId={projectId}
+              subject={subject}
+              html={content}
+              sourceLanguage={language}
+              onLanguageChange={setActiveLanguage}
+              onApplyTranslation={(translatedLanguage, translation) => {
+                setActiveLanguage(translatedLanguage);
+                setSubject(translation.subject);
+                updateContent(translation.html);
+              }}
+            />
           ) : (
             <>
               <Typography className="admin-side-title">Settings</Typography>
@@ -767,7 +846,7 @@ export default function SimpleEmailEditor({
                 Choose how new campaigns should start in the editor.
               </Typography>
               <Box className="admin-side-card">
-                <EmailLanguageSettings projectId={projectId} currentLanguage={language} dark onNotice={onNotice} />
+                <EmailLanguageSettings projectId={projectId} currentLanguage={activeLanguage} dark onNotice={onNotice} />
               </Box>
               {insertedFooterId && <Box className="admin-side-card footer-settings-card">
                 <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
@@ -1427,16 +1506,19 @@ export default function SimpleEmailEditor({
             />
           </DialogContent>
           <DialogActions>
-            <TextField size="small" placeholder="test@example.com" />
+            <TextField
+              size="small"
+              placeholder="test@example.com"
+              value={testRecipient}
+              onChange={(event) => setTestRecipient(event.target.value)}
+            />
             <Button
               variant="contained"
               startIcon={<SendRounded />}
-              onClick={() => {
-                onNotice("Test email prepared locally");
-                setPreview(false);
-              }}
+              onClick={() => { void sendTest(); }}
+              disabled={saving || !testRecipient.trim()}
             >
-              Send test
+              {saving ? "Sending…" : "Send test"}
             </Button>
           </DialogActions>
         </Dialog>
