@@ -22,6 +22,9 @@ const ALLOWED = [
   "push-deeplinks",
   "push-campaigns",
   "push-deliveries",
+  "email-templates",
+  "email-campaigns",
+  "email-deliveries",
 ];
 
 type Params = { params: { projectId: string; path: string[] } };
