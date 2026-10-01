@@ -1,6 +1,9 @@
 "use client";
 
 import CloseEmailEditor from "./CloseEmailEditor";
+import EmailTranslationPanel from "./EmailTranslationPanel";
+import Image from "next/image";
+import aiIcon from "../../assets/ai.png";
 
 import {
   ChangeEvent,
@@ -82,22 +85,6 @@ const TOKEN_OPTIONS = [
   ["Email", "{{email}}"],
   ["City", "{{city}}"],
   ["Phone number", "{{phone}}"],
-];
-const TRANSLATION_LANGUAGES = [
-  "Arabic",
-  "French",
-  "German",
-  "Spanish",
-  "Indonesian",
-  "Russian",
-  "Turkish",
-  "Portuguese",
-  "Korean",
-  "Japanese",
-  "Persian",
-  "Thai",
-  "Vietnamese",
-  "Italian",
 ];
 const FONT_OPTIONS = [
   "Inter",
@@ -540,7 +527,7 @@ export default function SimpleEmailEditor({
             onClick={() => setPanel("ai")}
             aria-label="AI translation"
           >
-            <AutoAwesomeRounded />
+            <Image src={aiIcon} alt="AI translation" width={28} height={28} />
           </IconButton>
           <IconButton
             className={panel === "settings" ? "active" : ""}
@@ -552,73 +539,7 @@ export default function SimpleEmailEditor({
         </Box>
         <Box className="admin-translation-panel">
           {panel === "ai" ? (
-            <>
-              <Typography className="admin-side-title">
-                AI translation
-              </Typography>
-              <Typography className="admin-side-copy">
-                Translate this simple email into selected languages, then switch
-                between each version and edit it in the editor.
-              </Typography>
-              <Box className="admin-side-card">
-                <Typography
-                  fontSize={11}
-                  fontWeight={800}
-                  color="rgba(255,255,255,.55)"
-                >
-                  Current editor language
-                </Typography>
-                <Select
-                  fullWidth
-                  size="small"
-                  value="English"
-                  sx={{ mt: 1, background: "#fff" }}
-                >
-                  <MenuItem value="English">English</MenuItem>
-                </Select>
-                <Chip
-                  label="English"
-                  size="small"
-                  color="success"
-                  sx={{ mt: 1 }}
-                />
-              </Box>
-              <Typography className="admin-side-section">
-                Translate into
-              </Typography>
-              {TRANSLATION_LANGUAGES.map((language) => (
-                <Stack
-                  direction="row"
-                  justifyContent="space-between"
-                  key={language}
-                  className="admin-language-row"
-                >
-                  <Typography fontSize={12}>{language}</Typography>
-                  <input type="checkbox" aria-label={language} />
-                </Stack>
-              ))}
-              <Button
-                fullWidth
-                variant="contained"
-                color="success"
-                sx={{ mt: 2 }}
-                onClick={() => onNotice("Translation copied locally")}
-              >
-                Translate selected languages
-              </Button>
-              <Box className="admin-side-card admin-editable-translations-card">
-                <Typography fontWeight={900}>Editable translations</Typography>
-                <Typography
-                  fontSize={12}
-                  color="rgba(255,255,255,.62)"
-                  sx={{ mt: 1, lineHeight: 1.55 }}
-                >
-                  After translating, choose any language above and edit the
-                  visible subject, email content, footer, and links. Your edits
-                  stay saved for that language.
-                </Typography>
-              </Box>
-            </>
+            <EmailTranslationPanel mode="simple" onNotice={onNotice} />
           ) : (
             <>
               <Typography className="admin-side-title">Settings</Typography>

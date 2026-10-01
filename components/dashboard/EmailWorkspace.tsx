@@ -1,6 +1,11 @@
 "use client";
 
 import CloseEmailEditor from "./CloseEmailEditor";
+import Image from "next/image";
+import EmailTranslationPanel from "./EmailTranslationPanel";
+import aiIcon from "../../assets/ai.png";
+import dragDropPreview from "../../assets/email-drag-drop-editor-preview.png";
+import simpleEditorPreview from "../../assets/email-simple-editor-preview.png";
 import KeyboardArrowDownRounded from "@mui/icons-material/KeyboardArrowDownRounded";
 import ZoomInRounded from "@mui/icons-material/ZoomInRounded";
 import ZoomOutRounded from "@mui/icons-material/ZoomOutRounded";
@@ -1011,8 +1016,12 @@ function ChoiceScreen({
         alignItems="center"
         sx={{ mb: 2 }}
       >
-        <Button startIcon={<ArrowBackRounded />} onClick={onBack}>
-          Go back
+        <Button
+          startIcon={<ArrowBackRounded />}
+          onClick={onBack}
+          className="group-back-button"
+        >
+          Back to email templates
         </Button>
         <Typography color="text.secondary" fontSize={12}>
           <b>Design email</b> &nbsp;/&nbsp; Details &nbsp;/&nbsp; Schedule
@@ -1171,35 +1180,13 @@ function EditorChoice({
       onClick={() => onChoose(editor)}
     >
       <Box className={`editor-art ${drag ? "drag-art" : "simple-art"}`}>
-        {drag ? (
-          <Box className="art-builder">
-            <Box className="art-builder-sidebar">
-              <Typography>Drag &amp; drop</Typography>
-              <Box className="art-builder-grid"><span> T </span><span>▧</span><span>▭</span><span>☷</span></Box>
-            </Box>
-            <Box className="art-builder-canvas">
-              <Typography fontWeight={900}>Big ideas, better results</Typography>
-              <Box className="art-hero-shape"><i /><b /><em /></Box>
-              <Box className="art-builder-row"><span /><span /><span /></Box>
-              <Box className="art-builder-action">Preview &amp; send</Box>
-            </Box>
-          </Box>
-        ) : (
-          <Box className="art-simple-preview">
-            <Box className="art-simple-copy">
-              <Typography fontWeight={900}>Simple editor</Typography>
-              <Typography variant="caption">Write and send plain text emails in seconds.</Typography>
-              <span>● No design skills needed</span>
-              <span>● Perfect for quick messages</span>
-              <span>● Personalize with merge tags</span>
-            </Box>
-            <Box className="art-simple-form">
-              <small>Subject</small><i />
-              <small>Email content</small><div />
-              <strong>➤ Send email</strong>
-            </Box>
-          </Box>
-        )}
+        <Image
+          src={drag ? dragDropPreview : simpleEditorPreview}
+          alt={drag ? "Drag and drop email editor preview" : "Simple email editor preview"}
+          fill
+          sizes="(max-width: 900px) 90vw, 560px"
+          className="editor-preview-image"
+        />
       </Box>
       <Box sx={{ p: 2.5 }}>
         <Chip
@@ -1418,7 +1405,7 @@ function SimpleEditor({
             onClick={() => setPanel("ai")}
             aria-label="AI translation"
           >
-            <AutoAwesomeRounded />
+            <Image src={aiIcon} alt="AI translation" width={28} height={28} />
           </IconButton>
           <IconButton
             className={panel === "settings" ? "active" : ""}
@@ -1856,7 +1843,7 @@ function DragEditor({
             onClick={() => setPanel("ai")}
             aria-label="AI translation"
           >
-            <AutoAwesomeRounded />
+            <Image src={aiIcon} alt="AI translation" width={28} height={28} />
           </IconButton>
           <IconButton
             className={panel === "settings" ? "active" : ""}
@@ -1894,30 +1881,7 @@ function DragEditor({
               </Box>
             </>
           ) : panel === "ai" ? (
-            <>
-              <Typography variant="h3">AI translation</Typography>
-              <Typography color="text.secondary" fontSize={12} sx={{ mt: 1 }}>
-                Translate this visual email into editable language versions.
-              </Typography>
-              <Select
-                fullWidth
-                size="small"
-                defaultValue="English"
-                sx={{ mt: 2 }}
-              >
-                <MenuItem value="English">English</MenuItem>
-                <MenuItem value="Spanish">Spanish</MenuItem>
-              </Select>
-              <Button
-                fullWidth
-                variant="contained"
-                color="success"
-                sx={{ mt: 2 }}
-                onClick={() => onNotice("Translation copied locally")}
-              >
-                Translate selected languages
-              </Button>
-            </>
+            <EmailTranslationPanel mode="drag" onNotice={onNotice} />
           ) : (
             <>
               <Typography variant="h3">Builder settings</Typography>
