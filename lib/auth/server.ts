@@ -1,5 +1,5 @@
 import 'server-only';
-import { cookies } from 'next/headers';
+import { cookies, headers as requestHeaders } from 'next/headers';
 import type { ApiErrorBody } from '@/types/auth';
 
 /**
@@ -65,6 +65,11 @@ export async function callBackend<T>(
   // A contentType means a raw text body (CSV user import), forwarded as-is.
   const headers: Record<string, string> = { 'Content-Type': init.contentType ?? 'application/json' };
 
+  // Every browser reaches the backend through this server, so without the
+  // original address its per-IP auth limits would count all users as one.
+  const forwardedFor = requestHeaders().get('x-forwarded-for');
+  if (forwardedFor) headers['X-Forwarded-For'] = forwardedFor;
+
   if (init.auth) {
     const token = getSessionToken();
     if (!token) {
@@ -114,29 +119,61 @@ interface SessionTokens {
   refreshToken: string;
 }
 
+type RefreshResult = UpstreamResult<{ data: SessionTokens }>;
+
+/**
+ * Rotations in progress, keyed by the token being exchanged. A page fires
+ * several requests at once and each lands in its own route handler with the
+ * same expired session; without this every one of them would rotate the same
+ * single-use token and all but the first would be refused.
+ *
+ * A successful result is kept for a few seconds, because a request can still
+ * arrive carrying the old cookie before the browser has stored the new pair.
+ *
+ * Kept on globalThis because each route handler is bundled with its own copy
+ * of this module, and /api/auth/me and /api/projects must share one rotation.
+ * ponytail: per-process. Across server instances the backend covers the same
+ * race by honouring a just-rotated token once more.
+ */
+const shared = globalThis as typeof globalThis & { __pixlpushRotations?: Map<string, Promise<RefreshResult>> };
+const rotations = (shared.__pixlpushRotations ??= new Map<string, Promise<RefreshResult>>());
+const ROTATION_REUSE_MS = 10_000;
+
+function rotate(refreshToken: string): Promise<RefreshResult> {
+  let pending = rotations.get(refreshToken);
+  if (!pending) {
+    pending = callBackend<{ data: SessionTokens }>('/auth/refresh', { method: 'POST', body: { refreshToken } });
+    rotations.set(refreshToken, pending);
+    void pending.then((result) => {
+      if (!result.ok) rotations.delete(refreshToken);
+      else setTimeout(() => rotations.delete(refreshToken), ROTATION_REUSE_MS).unref?.();
+    });
+  }
+  return pending;
+}
+
 /**
  * Exchanges the stored refresh token for a new pair and persists them.
- * Returns undefined when there is nothing to refresh with, or the backend
- * refused - the caller then treats the request as unauthenticated.
+ * Returns undefined when there is no refresh token at all.
+ *
+ * Only a 401 ends the session. A backend that is down, restarting, rate
+ * limiting or mid-deploy says nothing about whether the session is valid, so
+ * the cookies are left alone and the next request simply tries again.
  */
-async function refreshSession(): Promise<string | undefined> {
+export async function refreshSession(): Promise<RefreshResult | undefined> {
   const refreshToken = getRefreshToken();
   if (!refreshToken) return undefined;
 
-  const result = await callBackend<{ data: SessionTokens }>('/auth/refresh', {
-    method: 'POST',
-    body: { refreshToken },
-  });
+  const result = await rotate(refreshToken);
 
-  if (!result.ok) {
-    // Rotated away, expired, or revoked: the session is over.
+  if (result.ok) {
+    const tokens = (result.body as { data: SessionTokens }).data;
+    setSessionCookies(tokens.accessToken, tokens.refreshToken);
+  } else if (result.status === 401) {
+    // Expired, revoked or replayed: the session is over.
     clearSessionCookies();
-    return undefined;
   }
-
-  const tokens = (result.body as { data: SessionTokens }).data;
-  setSessionCookies(tokens.accessToken, tokens.refreshToken);
-  return tokens.accessToken;
+  return result;
 }
 
 /**
@@ -151,8 +188,14 @@ export async function callBackendWithRefresh<T>(
   const first = await callBackend<T>(path, { ...init, auth: true });
   if (first.status !== 401) return first;
 
-  const accessToken = await refreshSession();
-  if (!accessToken) return first;
+  const refreshed = await refreshSession();
+  if (!refreshed) return first;
+  if (!refreshed.ok) {
+    // A backend outage or rate limit is reported as itself, so the browser
+    // shows "try again" rather than treating the user as signed out.
+    const outage = refreshed.status >= 500 || refreshed.status === 429;
+    return outage ? (refreshed as UpstreamResult<T>) : first;
+  }
 
   // Retried exactly once; a second 401 is returned as-is.
   return callBackend<T>(path, { ...init, auth: true });

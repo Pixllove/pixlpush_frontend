@@ -32,21 +32,36 @@ function normalizeError(status: number, body: unknown): ApiError {
  * Shared across every in-flight request, so N simultaneous 401s trigger exactly
  * one refresh and all of them await the same result.
  */
-let refreshInFlight: Promise<boolean> | null = null;
+let refreshInFlight: Promise<RefreshOutcome> | null = null;
 
-function refreshOnce(): Promise<boolean> {
+/** `expired` is the only outcome that means the user is signed out. */
+type RefreshOutcome = 'ok' | 'expired' | 'error';
+
+function refreshOnce(): Promise<RefreshOutcome> {
   refreshInFlight ??= fetch('/api/auth/refresh', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'same-origin',
   })
-    .then((response) => response.ok)
-    .catch(() => false)
+    .then((response): RefreshOutcome => (response.ok ? 'ok' : response.status === 401 ? 'expired' : 'error'))
+    // Offline or the server is restarting: not evidence of a dead session.
+    .catch((): RefreshOutcome => 'error')
     .finally(() => {
       refreshInFlight = null;
     });
 
   return refreshInFlight;
+}
+
+/**
+ * The session is gone for good, so a signed-in page has nothing left to show.
+ * Public pages (invitation, verify email) also ask /me while signed out and
+ * must stay where they are.
+ */
+function leaveIfSignedOut(): void {
+  const { pathname, search } = window.location;
+  if (!pathname.startsWith('/dashboard')) return;
+  window.location.assign(`/login?redirect=${encodeURIComponent(pathname + search)}`);
 }
 
 async function rawRequest(path: string, body?: unknown, base = '/api/auth', method?: string): Promise<Response> {
@@ -73,7 +88,9 @@ export async function authRequest<T>(path: string, body?: unknown, base?: string
     // Retry at most once, and never for the endpoints that establish or end a
     // session - that is what keeps this from looping.
     if (response.status === 401 && !NO_REFRESH.includes(path)) {
-      if (await refreshOnce()) response = await rawRequest(path, body, base, method);
+      const outcome = await refreshOnce();
+      if (outcome === 'ok') response = await rawRequest(path, body, base, method);
+      else if (outcome === 'expired') leaveIfSignedOut();
     }
   } catch {
     throw { status: 0, code: 'NETWORK_ERROR', message: 'Cannot reach the server. Check your connection.' } satisfies ApiError;

@@ -13,6 +13,9 @@ export function useProjects() {
     queryFn: projectApi.list,
     // A 401/403 will not start succeeding on retry.
     retry: (count, error) => !isPermanentAuthError(error) && count < 2,
+    // Every Project mutation invalidates projectKeys.all, so the list only
+    // goes stale through someone else's change.
+    staleTime: 5 * 60_000,
   });
 }
 
