@@ -107,6 +107,7 @@ type EmailItem = {
   kind: TabId;
   updated: string;
   content?: string;
+  translations?: Record<string, { subject: string; html: string }>;
   blocks?: Block[];
   style?: { primary: string; background: string; width: number };
 };
@@ -545,6 +546,7 @@ export default function EmailWorkspace() {
           subject: detail.subject || current.subject,
           description: detail.previewText ?? current.description,
           content: detail.html ?? detail.text ?? current.content,
+          translations: detail.translations ?? current.translations,
         });
       } else {
         const detail = await emailApi.campaigns.get(activeProject.id, item.id);
@@ -555,6 +557,7 @@ export default function EmailWorkspace() {
           subject: detail.template?.subject ?? current.subject,
           description: detail.template?.previewText ?? current.description,
           content: detail.template?.html ?? detail.template?.text ?? current.content,
+          translations: detail.template?.translations ?? current.translations,
         });
       }
     } catch (cause) {
@@ -598,7 +601,12 @@ export default function EmailWorkspace() {
           content: {
             subject: draft.template?.subject || item.subject,
             html: draft.template?.html || draft.template?.text || item.content || "",
-            editor: draft.template?.editor === "drag_drop" ? "drag_drop" : "simple",
+            translations: Object.fromEntries(
+              Object.entries(draft.template?.translations || {}).map(([code, value]) => [code, {
+                subject: value.subject,
+                html: value.html,
+              }]),
+            ),
           },
         });
         copy = {

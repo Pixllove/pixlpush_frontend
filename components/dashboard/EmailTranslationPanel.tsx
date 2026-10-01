@@ -39,8 +39,10 @@ export default function EmailTranslationPanel({
   subject,
   html,
   sourceLanguage = "en",
+  initialTranslations,
   onLanguageChange,
   onApplyTranslation,
+  onTranslationsChange,
 }: {
   mode: "simple" | "drag";
   onNotice: (message: string) => void;
@@ -48,14 +50,16 @@ export default function EmailTranslationPanel({
   subject?: string;
   html?: string;
   sourceLanguage?: string;
+  initialTranslations?: Record<string, { subject: string; html: string }>;
   onLanguageChange?: (language: string) => void;
   onApplyTranslation?: (language: string, translation: { subject: string; html: string }) => void;
+  onTranslationsChange?: (translations: Record<string, { subject: string; html: string }>) => void;
 }) {
   const [currentLanguage, setCurrentLanguage] = useState(sourceLanguage);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
-  const [translatedLanguages, setTranslatedLanguages] = useState<string[]>([]);
-  const [translations, setTranslations] = useState<Record<string, { subject: string; html: string }>>({});
-  const [sourceTranslation, setSourceTranslation] = useState({ subject: subject || "", html: html || "" });
+  const [translatedLanguages, setTranslatedLanguages] = useState<string[]>(() => Object.keys(initialTranslations || {}).filter((code) => code !== sourceLanguage));
+  const [translations, setTranslations] = useState<Record<string, { subject: string; html: string }>>(initialTranslations || {});
+  const [sourceTranslation, setSourceTranslation] = useState(initialTranslations?.[sourceLanguage] || { subject: subject || "", html: html || "" });
   const [loading, setLoading] = useState(false);
   const dark = mode === "drag";
   const languageCodes: Record<string, string> = {
@@ -110,7 +114,12 @@ export default function EmailTranslationPanel({
       const nextTranslations = Object.fromEntries(
         Object.entries(result.translations).map(([code, value]) => [code, { subject: value.subject, html: value.html }]),
       );
+      const allTranslations = {
+        [sourceLanguage]: { subject, html },
+        ...nextTranslations,
+      };
       setTranslations((current) => ({ ...current, ...nextTranslations }));
+      onTranslationsChange?.(allTranslations);
       const completed = Object.keys(nextTranslations);
       setTranslatedLanguages((current) => Array.from(new Set([...current, ...completed])));
       if (completed[0]) {

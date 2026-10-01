@@ -79,6 +79,7 @@ type EditorItem = {
   kind: "send" | "drafts" | "templates";
   updated: string;
   content?: string;
+  translations?: Record<string, { subject: string; html: string }>;
 };
 
 type Props = {
@@ -236,6 +237,7 @@ export default function SimpleEmailEditor({
   const [activeLanguage, setActiveLanguage] = useState(language);
   const [subject, setSubject] = useState(item?.subject || "");
   const [content, setContent] = useState(item?.content || "");
+  const [translations, setTranslations] = useState<Record<string, { subject: string; html: string }>>(item?.translations || {});
   const [panel, setPanel] = useState<"ai" | "settings">("ai");
   const [preview, setPreview] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -288,10 +290,11 @@ export default function SimpleEmailEditor({
     setName(item?.name || (kind === "templates" ? "New email template" : "New email campaign"));
     setSubject(item?.subject || "");
     setContent(item?.content || "");
+    setTranslations(item?.translations || {});
     setHistory([item?.content || ""]);
     setHistoryIndex(0);
     setInsertedFooterId(item?.content?.match(/data-footer-id="([^"]+)"/)?.[1] || null);
-  }, [item?.id, item?.content, item?.name, item?.subject, kind]);
+  }, [item?.id, item?.content, item?.name, item?.subject, item?.translations, kind]);
 
   useEffect(() => {
     const editor = contentRef.current;
@@ -463,13 +466,13 @@ export default function SimpleEmailEditor({
       let savedId = id;
       if (destination === "templates") {
         const saved = isExisting && item?.kind === "templates"
-          ? await emailApi.templates.update(projectId, item.id, { name, subject, html: content, editor: "simple" })
-          : await emailApi.templates.create(projectId, { name, subject, html: content, editor: "simple" });
+          ? await emailApi.templates.update(projectId, item.id, { name, subject, html: content, editor: "simple", translations })
+          : await emailApi.templates.create(projectId, { name, subject, html: content, editor: "simple", translations });
         savedId = saved.id;
       } else {
         const campaign = isExisting && item?.kind === "drafts"
-          ? await emailApi.campaigns.update(projectId, item.id, { name, content: { subject, html: content, editor: "simple" } })
-          : await emailApi.campaigns.create(projectId, { name, content: { subject, html: content, editor: "simple" } });
+          ? await emailApi.campaigns.update(projectId, item.id, { name, content: { subject, html: content, translations } })
+          : await emailApi.campaigns.create(projectId, { name, content: { subject, html: content, translations } });
         savedId = campaign.id;
       }
       onSave(
@@ -482,6 +485,7 @@ export default function SimpleEmailEditor({
           kind: destination,
           updated: "Updated just now",
           content,
+          translations,
         },
         destination === "templates" ? "Template saved" : "Draft saved",
       );
@@ -832,12 +836,14 @@ export default function SimpleEmailEditor({
               subject={subject}
               html={content}
               sourceLanguage={language}
+              initialTranslations={translations}
               onLanguageChange={setActiveLanguage}
               onApplyTranslation={(translatedLanguage, translation) => {
                 setActiveLanguage(translatedLanguage);
                 setSubject(translation.subject);
                 updateContent(translation.html);
               }}
+              onTranslationsChange={setTranslations}
             />
           ) : (
             <>

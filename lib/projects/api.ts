@@ -123,6 +123,7 @@ export interface EmailTemplate {
   previewText?: string | null;
   html?: string | null;
   text?: string | null;
+  translations?: Record<string, { subject: string; html: string }> | null;
   editor?: string | null;
   category?: string;
   status?: string;
@@ -155,6 +156,7 @@ export interface EmailCampaign {
     html?: string | null;
     text?: string | null;
     editor?: string | null;
+    translations?: Record<string, { subject: string; html: string }> | null;
   };
   audience?: PushAudience;
   status: string;
@@ -291,12 +293,13 @@ export const emailApi = {
         html: string;
         text?: string | null;
         editor?: "simple" | "drag_drop";
+        translations?: Record<string, { subject: string; html: string }>;
       },
     ) => authRequest<EmailTemplate>(at(projectId, "/email-templates"), input, BASE),
     update: (
       projectId: string,
       templateId: string,
-      input: Partial<Pick<EmailTemplate, "name" | "subject" | "previewText" | "html" | "text" | "editor">>,
+      input: Partial<Pick<EmailTemplate, "name" | "subject" | "previewText" | "html" | "text" | "editor" | "translations">>,
     ) =>
       authRequest<EmailTemplate>(
         at(projectId, `/email-templates/${encodeURIComponent(templateId)}`),
@@ -355,7 +358,7 @@ export const emailApi = {
       ),
     create: (projectId: string, input: {
       name: string;
-      content?: { subject: string; html: string; text?: string | null; editor?: "simple" | "drag_drop" };
+      content?: { subject: string; html: string; translations?: Record<string, { subject: string; html: string }> };
       templateId?: string;
     }) =>
       authRequest<EmailCampaign>(at(projectId, "/email-campaigns"), input, BASE),
@@ -366,7 +369,7 @@ export const emailApi = {
         name?: string;
         templateId?: string;
         audience?: PushAudience;
-        content?: { subject: string; html: string; text?: string | null; editor?: "simple" | "drag_drop" };
+        content?: { subject: string; html: string; translations?: Record<string, { subject: string; html: string }> };
       },
     ) =>
       authRequest<EmailCampaign>(
