@@ -14,7 +14,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    // The email page may mark <html> before hydration (an editor being restored); that is not a mismatch.
+    <html lang="en" suppressHydrationWarning>
       <body><AppProviders>{children}</AppProviders></body>
     </html>
   );

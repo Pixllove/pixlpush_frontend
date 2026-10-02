@@ -1,11 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Box, Button, Dialog, DialogActions, DialogContent, IconButton, Typography } from "@mui/material";
 import CloseRounded from "@mui/icons-material/CloseRounded";
 
 export default function CloseEmailEditor({ onDiscard, onSaveDraft }: { onDiscard: () => void; onSaveDraft: () => void }) {
   const [open, setOpen] = useState(false);
+  // The browser's Back button would silently leave the editor and drop the work in it. It asks instead:
+  // a marked history entry sits in front of the page, and stepping back off it opens this dialog.
+  useEffect(() => {
+    // Marked, so a remount of the editor (its review screen, a reload) does not stack up extra entries.
+    const guard = () => {
+      if (!window.history.state?.emailEditorGuard) window.history.pushState({ ...window.history.state, emailEditorGuard: true }, "", window.location.href);
+    };
+    const onBack = () => { setOpen(true); guard(); };
+    guard();
+    window.addEventListener("popstate", onBack);
+    return () => window.removeEventListener("popstate", onBack);
+  }, []);
   return <>
     <IconButton onClick={() => setOpen(true)} aria-label="Close editor"><CloseRounded /></IconButton>
     <Dialog open={open} onClose={() => setOpen(false)} aria-labelledby="close-email-title" sx={{ zIndex: 1400 }} PaperProps={{ sx: { width: 448, maxWidth: 'calc(100% - 32px)', m: 2, borderRadius: '12px', p: 1 } }}>

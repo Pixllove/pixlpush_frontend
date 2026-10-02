@@ -12,7 +12,7 @@ import KeyboardArrowDownRounded from "@mui/icons-material/KeyboardArrowDownRound
 import ZoomInRounded from "@mui/icons-material/ZoomInRounded";
 import ZoomOutRounded from "@mui/icons-material/ZoomOutRounded";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   AddRounded,
   FormatAlignCenterRounded,
@@ -177,6 +177,22 @@ async function shrinkForUpload(file: File): Promise<File> {
   const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, type, 0.92));
   return blob ? new File([blob], file.name, { type }) : file;
 }
+/** The editor that is open and the unsaved work in it, kept for the tab so a reload does not lose either. */
+type EditorSession = { projectId: string; editor: Editor; kind: "drafts" | "templates"; language: string; item: EmailItem | null; draft?: Partial<EmailItem> };
+const EDITOR_SESSION_KEY = "pixlpush:email-editor";
+const readEditorSession = (): EditorSession | null => {
+  try { return JSON.parse(sessionStorage.getItem(EDITOR_SESSION_KEY) || "null"); } catch { return null; }
+};
+const writeEditorSession = (session: EditorSession | null) => {
+  try {
+    if (session) sessionStorage.setItem(EDITOR_SESSION_KEY, JSON.stringify(session));
+    else sessionStorage.removeItem(EDITOR_SESSION_KEY);
+  } catch { /* storage full or unavailable: the editor still works, it just will not survive a reload */ }
+  // The page paints a plain backdrop while an editor is being restored (see the script in the email page).
+  if (!session) document.documentElement.removeAttribute("data-email-editor");
+};
+// Layout effects do not run on the server; this keeps React from warning about it there.
+const useIsomorphicLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 const logoSizes = { sm: 80, md: 120, lg: 160, xl: 220 };
 // Editor-only controls drawn on top of a framed image (never part of the exported email).
 const imageTools = [
@@ -489,6 +505,50 @@ export default function EmailWorkspace() {
   const [editor, setEditor] = useState<Editor>("simple");
   const [creationLanguage, setCreationLanguage] = useState("en");
   const [active, setActive] = useState<EmailItem | null>(null);
+  // --- An open editor survives a page reload ------------------------------------------------------------
+  // What is open, and the unsaved work in it, live in sessionStorage. On load the workspace reads that back
+  // before the first paint, so the user lands in the editor exactly where they were, not on the list.
+  const [restored, setRestored] = useState(false);
+  const editorSession = useRef<EditorSession | null>(null);
+  useIsomorphicLayoutEffect(() => {
+    const session = readEditorSession();
+    if (session) {
+      editorSession.current = session;
+      setKind(session.kind);
+      setEditor(session.editor);
+      setCreationLanguage(session.language);
+      // the unsaved work is laid over the item it was opened from; a brand-new email has no item yet
+      setActive(session.draft || session.item ? ({
+        id: `email-${Date.now()}`, name: "", subject: "", description: "", updated: "", ...session.item, ...session.draft, editor: session.editor, kind: session.kind,
+      } as EmailItem) : null);
+      setView("editor");
+    }
+    setRestored(true);
+  }, []);
+  useEffect(() => {
+    if (!restored) return;
+    if (view !== "editor") {
+      editorSession.current = null;
+      writeEditorSession(null);
+      return;
+    }
+    // Another project's editor must not open here; until the project is known, what is stored is left alone.
+    if (!activeProject?.id) return;
+    if (editorSession.current && editorSession.current.projectId !== activeProject.id) {
+      setActive(null);
+      setView("list");
+      return;
+    }
+    editorSession.current = { projectId: activeProject.id, editor, kind, language: creationLanguage, item: active, draft: editorSession.current?.draft };
+    writeEditorSession(editorSession.current);
+  }, [restored, view, editor, kind, creationLanguage, active, activeProject?.id]);
+  // The editors report their unsaved state here. It goes to storage only: putting it in React state would
+  // re-render (and for the drag editor remount) the editor on every keystroke.
+  const rememberDraft = (draft: Partial<EmailItem>) => {
+    if (!editorSession.current) return;
+    editorSession.current = { ...editorSession.current, draft };
+    writeEditorSession(editorSession.current);
+  };
   const [notice, setNotice] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<EmailItem | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
@@ -750,6 +810,7 @@ export default function EmailWorkspace() {
             onClose={discardEditor}
             onSave={save}
             onNotice={setNotice}
+            onDraftChange={rememberDraft}
           />
         ) : (
           <DragEditor
@@ -762,6 +823,7 @@ export default function EmailWorkspace() {
             onClose={discardEditor}
             onSave={save}
             onNotice={setNotice}
+            onDraftChange={rememberDraft}
           />
         )}
       </>
@@ -1808,6 +1870,7 @@ function DragEditor({
   onClose,
   onSave,
   onNotice,
+  onDraftChange,
 }: {
   item: EmailItem | null;
   kind: "drafts" | "templates";
@@ -1816,6 +1879,7 @@ function DragEditor({
   onClose: () => void;
   onSave: (item: EmailItem, message: string) => void;
   onNotice: (message: string) => void;
+  onDraftChange?: (draft: Partial<EmailItem>) => void;
 }) {
   const [name, setName] = useState(
     item?.name ||
@@ -1859,6 +1923,14 @@ function DragEditor({
   const [style, setStyle] = useState(
     item?.style || { primary: "#7132d3", background: "#eef2f8", width: 640 },
   );
+  // Unsaved work is handed to the workspace so a reload reopens the editor as it was. Waiting a moment keeps
+  // a slider drag or a burst of typing to one write.
+  const draftId = useRef(item?.id || `email-${Date.now()}`);
+  useEffect(() => {
+    const timer = window.setTimeout(() => onDraftChange?.({ id: draftId.current, name, subject, blocks, style, translations }), 400);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [name, subject, blocks, style, translations]);
   // Undo/redo: every change to the blocks or the template style is a snapshot. Changes that arrive within
   // half a second of each other (a slider or mouse drag) collapse into one step.
   const history = useRef({ past: [] as { blocks: Block[]; style: typeof style }[], future: [] as { blocks: Block[]; style: typeof style }[], last: { blocks, style }, restoring: false, changedAt: 0 });

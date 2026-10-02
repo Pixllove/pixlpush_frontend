@@ -90,6 +90,8 @@ type Props = {
   onClose: () => void;
   onSave: (item: EditorItem, message: string) => void;
   onNotice: (message: string) => void;
+  /** Unsaved work, reported so a page reload can reopen the editor as it was. */
+  onDraftChange?: (draft: Partial<EditorItem>) => void;
 };
 
 type FooterType = "basic" | "social" | "app" | "social-app";
@@ -229,6 +231,7 @@ export default function SimpleEmailEditor({
   onClose,
   onSave,
   onNotice,
+  onDraftChange,
 }: Props) {
   const [name, setName] = useState(
     item?.name ||
@@ -285,6 +288,12 @@ export default function SimpleEmailEditor({
     height: number;
   } | null>(null);
   const id = item?.id || `email-${Date.now()}`;
+  const draftId = useRef(item?.id || `email-${Date.now()}`);
+  useEffect(() => {
+    const timer = window.setTimeout(() => onDraftChange?.({ id: draftId.current, name, subject, content, translations }), 400);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [name, subject, content, translations]);
 
   useEffect(() => {
     setName(item?.name || (kind === "templates" ? "New email template" : "New email campaign"));

@@ -438,9 +438,9 @@
     "semantic_hash": ""
   },
   "components/website/SiteShell.tsx": {
-    "mtime": 1790162709.9234018,
-    "seen": 1790163213.852014,
-    "ast_hash": "b6e668b7848138cca1af4ed481f771e4",
+    "mtime": 1790938770.3115811,
+    "seen": 1790938835.444452,
+    "ast_hash": "b8015b03dd2f99434fe0f4ae402afa6c",
     "semantic_hash": ""
   },
   "hooks/auth/use-change-password.ts": {
@@ -648,9 +648,9 @@
     "semantic_hash": ""
   },
   "components/dashboard/EmailWorkspace.tsx": {
-    "mtime": 1790935619.0932784,
-    "seen": 1790935650.858562,
-    "ast_hash": "25b334919347b9f934980b76f82cdd8c",
+    "mtime": 1790938172.9553056,
+    "seen": 1790938835.444421,
+    "ast_hash": "b6dc757afcd82dfd3f5874ea628f9804",
     "semantic_hash": ""
   },
   "components/dashboard/JourneyWorkspace.tsx": {
@@ -1077,6 +1077,18 @@
     "mtime": 1790937758.6141262,
     "seen": 1790937781.7029388,
     "ast_hash": "620a9d885e57bbec56f8b993140681ee",
+    "semantic_hash": ""
+  },
+  "components/website/SiteAccount.tsx": {
+    "mtime": 1790938770.2875872,
+    "seen": 1790938835.444451,
+    "ast_hash": "07b78506b62e0ed68bea3c3c4185da95",
+    "semantic_hash": ""
+  },
+  "vercel.json": {
+    "mtime": 1790938172.931641,
+    "seen": 1790938835.444483,
+    "ast_hash": "fe138af0ed28099f75faec6527df49ba",
     "semantic_hash": ""
   }
 }

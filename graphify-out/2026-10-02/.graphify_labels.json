@@ -1,5 +1,5 @@
 {
-  "0": "ResetPasswordView.tsx",
+  "0": "projectContext",
   "1": "LifecycleSegmentWorkspace.tsx",
   "2": "server.ts",
   "3": "SiteShell.tsx",
@@ -30,9 +30,9 @@
   "28": "DashboardSections.tsx",
   "29": "AudienceGroupWorkspace.tsx",
   "30": "UserImportDialog.tsx",
-  "31": "CreateProjectDialog.tsx",
+  "31": "useActiveProject",
   "32": "UserDetailsWorkspace.tsx",
-  "33": "team-access.test.tsx",
+  "33": "vercel.json",
   "34": "projects/api.ts",
   "35": "TeamAccessPanel.tsx",
   "36": "auth.ts",
@@ -40,14 +40,14 @@
   "38": "AuditLogsPanel.tsx",
   "39": "GoogleCallback.tsx",
   "40": "LoginForm.tsx",
-  "41": "JourneyWorkspace.tsx",
-  "42": "LifecycleSegmentCreateDialog.tsx",
-  "43": "ApiError",
+  "41": "invitation-accept.test.tsx",
+  "42": "IntegrationDocumentation.tsx",
+  "43": "useCurrentUser",
   "44": "setup.ts",
   "45": "vitest.config.ts",
   "46": "InvitationAccept.tsx",
   "49": "EmailLanguageSettings.tsx",
-  "50": "AuthShell.tsx",
+  "50": "VerifyEmailView.tsx",
   "52": "AccountProfile.tsx",
-  "53": "useActiveProject"
+  "53": "use-active-project.ts"
 }

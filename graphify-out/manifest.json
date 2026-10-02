@@ -18,9 +18,9 @@
     "semantic_hash": ""
   },
   "app/(dashboard)/dashboard/email/page.tsx": {
-    "mtime": 1790162709.912867,
-    "seen": 1790163213.851958,
-    "ast_hash": "350ee43b7f7a1edbe36814aecba0c68d",
+    "mtime": 1790940310.1709688,
+    "seen": 1790940443.9566112,
+    "ast_hash": "3580a9a970a2ef0a920ce7975f952e0b",
     "semantic_hash": ""
   },
   "app/(dashboard)/dashboard/integrations/page.tsx": {
@@ -270,9 +270,9 @@
     "semantic_hash": ""
   },
   "app/layout.tsx": {
-    "mtime": 1790162709.914251,
-    "seen": 1790163213.851989,
-    "ast_hash": "f68e916e09ed54658f216471402ba68e",
+    "mtime": 1790940310.1711822,
+    "seen": 1790940443.956657,
+    "ast_hash": "bb28037f51674961033bdb4b59c00c40",
     "semantic_hash": ""
   },
   "components/AppProviders.tsx": {
@@ -438,9 +438,9 @@
     "semantic_hash": ""
   },
   "components/website/SiteShell.tsx": {
-    "mtime": 1790938770.3115811,
-    "seen": 1790938835.444452,
-    "ast_hash": "b8015b03dd2f99434fe0f4ae402afa6c",
+    "mtime": 1790938860.2037678,
+    "seen": 1790940443.95672,
+    "ast_hash": "ea16fd57243ed8badaf82f5bc1541fc1",
     "semantic_hash": ""
   },
   "hooks/auth/use-change-password.ts": {
@@ -642,15 +642,15 @@
     "semantic_hash": ""
   },
   "components/dashboard/CloseEmailEditor.tsx": {
-    "mtime": 1790162709.9181173,
-    "seen": 1790163213.851999,
-    "ast_hash": "0bffcccbdeb579f15c471986d2b6efd8",
+    "mtime": 1790940420.2576585,
+    "seen": 1790940443.9566772,
+    "ast_hash": "48402651160539faf59f14e8f5b5240a",
     "semantic_hash": ""
   },
   "components/dashboard/EmailWorkspace.tsx": {
-    "mtime": 1790938172.9553056,
-    "seen": 1790938835.444421,
-    "ast_hash": "b6dc757afcd82dfd3f5874ea628f9804",
+    "mtime": 1790940334.7694442,
+    "seen": 1790940443.956686,
+    "ast_hash": "ecab0537f07538bfcce62d3c79d176fc",
     "semantic_hash": ""
   },
   "components/dashboard/JourneyWorkspace.tsx": {
@@ -666,9 +666,9 @@
     "semantic_hash": ""
   },
   "components/dashboard/SimpleEmailEditor.tsx": {
-    "mtime": 1790922877.4217906,
-    "seen": 1790922898.3467531,
-    "ast_hash": "4d415fbe4641b1ffe2cde813d23dad75",
+    "mtime": 1790940310.169877,
+    "seen": 1790940443.956702,
+    "ast_hash": "061c8482c7cbad0622e9238bf2f74805",
     "semantic_hash": ""
   },
   "components/dashboard/dragEmailOrdering.ts": {
