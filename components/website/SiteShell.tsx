@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { AppBar, Box, Button, Container, Drawer, IconButton, Link, Paper, Stack, Toolbar, Typography } from '@mui/material';
 import MenuRounded from '@mui/icons-material/MenuRounded';
-import ArrowOutwardRounded from '@mui/icons-material/ArrowOutwardRounded';
 import { SiteAccount, SiteAccountDrawer } from './SiteAccount';
 
 const links = [['Product','/product'],['How It Works','/how-it-works'],['Use Cases','/use-cases'],['For Digital Products','/for-digital-products'],['Pricing','/pricing']];
