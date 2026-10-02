@@ -1,6 +1,7 @@
 "use client";
 
 import CloseEmailEditor from "./CloseEmailEditor";
+import EmailPreviewDialog from "./EmailPreviewDialog";
 import EmailTranslationPanel from "./EmailTranslationPanel";
 import EmailLanguageSettings from "./EmailLanguageSettings";
 import { languageName } from "./EmailLanguageSettings";
@@ -254,7 +255,6 @@ export default function SimpleEmailEditor({
   } | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [testRecipient, setTestRecipient] = useState("");
   const [linkOpen, setLinkOpen] = useState(false);
   const [linkText, setLinkText] = useState("");
   const [linkUrl, setLinkUrl] = useState("https://");
@@ -509,23 +509,6 @@ export default function SimpleEmailEditor({
     }
   };
   const save = () => saveAs(kind);
-  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
-  const sendTest = async () => {
-    const to = testRecipient.trim();
-    if (saving) return;
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) { setTestResult({ ok: false, message: "Enter a valid email address." }); return; }
-    setSaving(true);
-    setTestResult(null);
-    try {
-      // what is on screen is sent as it is; nothing has to be saved first
-      const sent = await emailApi.templates.sendTest(projectId, { to, subject: subject.trim() || name, html: content });
-      setTestResult({ ok: true, message: `Test email sent to ${sent.to}.` });
-    } catch (error) {
-      setTestResult({ ok: false, message: error && typeof error === "object" && "message" in error ? String((error as { message?: unknown }).message) : "Could not send the test email." });
-    } finally {
-      setSaving(false);
-    }
-  };
   if (reviewOpen)
     return (
       <SimpleCampaignReview
@@ -1491,49 +1474,14 @@ export default function SimpleEmailEditor({
         </DialogContent>
       </Dialog>
       {preview && (
-        <Dialog
-          open={preview}
+        <EmailPreviewDialog
+          title={name}
+          html={content || "<p>Your email content will appear here.</p>"}
+          projectId={projectId}
+          subject={subject.trim() || name}
           onClose={() => setPreview(false)}
-          maxWidth="md"
-          fullWidth
-        >
-          <DialogTitle>Preview and test</DialogTitle>
-          <DialogContent>
-            <Typography color="text.secondary" fontSize={12}>
-              Recipient-facing preview · {name}
-            </Typography>
-            <Paper
-              className="recipient-preview"
-              dangerouslySetInnerHTML={{
-                __html: `<h3>${subject || "Add a subject"}</h3>${content || "<p>Your email content will appear here.</p>"}`,
-              }}
-            />
-          </DialogContent>
-          <DialogActions sx={{ px: 3, pb: 2.5, gap: 1, flexWrap: 'wrap' }}>
-            {testResult && <Typography role="status" sx={{ flex: 1, fontSize: 12, fontWeight: 700, color: testResult.ok ? '#0d7a48' : '#c0352b' }}>{testResult.message}</Typography>}
-            <TextField
-              size="small"
-              type="email"
-              placeholder="test@example.com"
-              aria-label="Send test to"
-              value={testRecipient}
-              onChange={(event) => setTestRecipient(event.target.value)}
-              onKeyDown={(event) => { if (event.key === "Enter") void sendTest(); }}
-              disabled={saving}
-              sx={{ flex: '1 1 220px', maxWidth: 320, '& .MuiOutlinedInput-root': { height: 40, bgcolor: '#fff' } }}
-            />
-            <Button
-              variant="contained"
-              color="success"
-              onClick={() => { void sendTest(); }}
-              startIcon={<SendRounded />}
-              disabled={saving}
-              sx={{ height: 40, minHeight: 40, px: 2.25, m: 0, fontSize: 13, fontWeight: 800 }}
-            >
-              {saving ? "Sending…" : "Send test"}
-            </Button>
-          </DialogActions>
-        </Dialog>
+          onNotice={onNotice}
+        />
       )}
     </Box>
   );

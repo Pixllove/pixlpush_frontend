@@ -1,5 +1,6 @@
 "use client";
 
+import EmailPreviewDialog from "./EmailPreviewDialog";
 import CloseEmailEditor, { EDITOR_DIRTY_KEY, EDITOR_SESSION_KEY } from "./CloseEmailEditor";
 import Image from "next/image";
 import EmailTranslationPanel from "./EmailTranslationPanel";
@@ -1856,7 +1857,7 @@ function SimpleEditor({
         </Box>
       </Stack>
       {preview && (
-        <PreviewModal
+        <EmailPreviewDialog
           title={subject || name}
           html={content || "<p>Your email content will appear here.</p>"}
           onClose={() => setPreview(false)}
@@ -2573,7 +2574,7 @@ function DragEditor({
         </Box>
       </Box>
       {preview && (
-        <PreviewModal
+        <EmailPreviewDialog
           title={name}
           html={previewHtml}
           projectId={projectId}
@@ -2585,78 +2586,6 @@ function DragEditor({
     </Box>
   );
 }
-function PreviewModal({
-  title,
-  html,
-  projectId,
-  subject,
-  onClose,
-  onNotice,
-}: {
-  title: string;
-  html: string;
-  /** With a project and subject the test is really sent; the legacy editor passes neither. */
-  projectId?: string;
-  subject?: string;
-  onClose: () => void;
-  onNotice: (message: string) => void;
-}) {
-  const [to, setTo] = useState("");
-  const [sending, setSending] = useState(false);
-  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
-  const sendTest = async () => {
-    if (!projectId || !subject) { onNotice("Test email prepared locally"); onClose(); return; }
-    const recipient = to.trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) { setResult({ ok: false, message: "Enter a valid email address." }); return; }
-    setSending(true);
-    setResult(null);
-    try {
-      const sent = await emailApi.templates.sendTest(projectId, { to: recipient, subject, html });
-      setResult({ ok: true, message: `Test email sent to ${sent.to}.` });
-    } catch (error) {
-      setResult({ ok: false, message: error && typeof error === "object" && "message" in error ? String((error as { message?: unknown }).message) : "Could not send the test email." });
-    } finally {
-      setSending(false);
-    }
-  };
-  return (
-    <Box className="email-modal-backdrop">
-      <Paper className="email-preview-modal">
-        <Stack
-          direction="row"
-          justifyContent="space-between"
-          alignItems="center"
-        >
-          <Typography variant="h3">Preview and test</Typography>
-          <IconButton onClick={onClose} aria-label="Close preview">
-            <CloseRounded />
-          </IconButton>
-        </Stack>
-        <Typography color="text.secondary" fontSize={12}>
-          Recipient-facing preview · {title}
-        </Typography>
-        <Paper
-          className="recipient-preview"
-          dangerouslySetInnerHTML={{ __html: html }}
-        />
-        <Stack component="form" direction={{ xs: "column", sm: "row" }} gap={1} justifyContent="flex-end" alignItems={{ sm: "center" }} className="preview-test-row" onSubmit={(event: React.FormEvent) => { event.preventDefault(); void sendTest(); }}>
-          {result && <Typography role="status" className={`preview-test-result ${result.ok ? "ok" : "error"}`}>{result.message}</Typography>}
-          <TextField size="small" type="email" placeholder="test@example.com" aria-label="Send test to" value={to} onChange={(event) => setTo(event.target.value)} disabled={sending} />
-          <Button
-            type="submit"
-            variant="contained"
-            color="success"
-            startIcon={<SendRounded />}
-            disabled={sending}
-          >
-            {sending ? "Sending…" : "Send test"}
-          </Button>
-        </Stack>
-      </Paper>
-    </Box>
-  );
-}
-
 function CampaignReview({
   name,
   subject,
