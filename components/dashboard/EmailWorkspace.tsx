@@ -2112,7 +2112,8 @@ function DragEditor({
     setUploading(true);
     try {
       const file = await shrinkForUpload(picked);
-      if (file.size > 5 * 1024 * 1024) { onNotice("The image is too large. Use one under 5 MB."); return; }
+      // 4 MB, not the backend's 5: on Vercel a request body over 4.5 MB never reaches the API route.
+      if (file.size > 4 * 1024 * 1024) { onNotice("The image is too large. Use one under 4 MB."); return; }
       const asset = await emailApi.templates.uploadAsset(projectId, file, imageKind);
       discardAsset(blocks.find(block => block.id === blockId)?.imageSrc, usedByOtherBlock(blocks.find(block => block.id === blockId)?.imageSrc, blockId));
       setBlocks(current => current.map(block => block.id === blockId ? { ...block, imageSrc: asset.url } : block));
