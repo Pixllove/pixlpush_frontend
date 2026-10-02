@@ -9,14 +9,22 @@
  *   - empty placeholders and editor-only attributes are removed.
  */
 
-/** Stores a generated image and returns its public URL. */
-export type UploadImage = (blob: Blob, name: string) => Promise<string>;
+/**
+ * Stores a generated image and returns its public URL. `key` names the file: uploading the same key
+ * again replaces that file instead of adding a new one.
+ */
+export type UploadImage = (blob: Blob, name: string, key: string) => Promise<string>;
 
-// ponytail: generated images are remembered per browser (localStorage). A new browser re-uploads them once;
-// move the map into the saved design if the duplicates in storage ever matter.
+// Generated images are remembered per browser so a save does not upload them again. Without the memory
+// (another browser, cleared storage) the upload still lands on the same file, because its name is the key.
 const remembered = (key: string) => { try { return localStorage.getItem(key); } catch { return null; } };
 const remember = (key: string, url: string) => { try { localStorage.setItem(key, url); } catch { /* private mode */ } };
-const hash = (text: string) => { let h = 5381; for (let i = 0; i < text.length; i++) h = ((h << 5) + h + text.charCodeAt(i)) | 0; return (h >>> 0).toString(36); };
+/** Two independent 32-bit hashes: short enough for a file name, wide enough that two icons never share one. */
+const hash = (text: string) => {
+  let a = 5381, b = 52711;
+  for (let i = 0; i < text.length; i++) { const code = text.charCodeAt(i); a = ((a << 5) + a + code) | 0; b = ((b << 5) + b) ^ code; }
+  return (a >>> 0).toString(36) + (b >>> 0).toString(36);
+};
 
 const loadImage = (src: string) => new Promise<HTMLImageElement>((resolve, reject) => {
   const image = new Image();
@@ -29,16 +37,34 @@ const loadImage = (src: string) => new Promise<HTMLImageElement>((resolve, rejec
 const toBlob = (canvas: HTMLCanvasElement, type: string) => new Promise<Blob>((resolve, reject) =>
   canvas.toBlob(blob => (blob ? resolve(blob) : reject(new Error("canvas is empty"))), type, 0.9));
 
-async function generated(key: string, name: string, upload: UploadImage, draw: () => Promise<Blob>) {
-  // v2: generated images are opaque now. The version also retires the transparent ones made before, which
-  // were stored as WebP and show as black blocks in Gmail.
-  const cacheKey = `pixlpush-email-asset:v2:${hash(key)}`;
+const inFlight = new Map<string, Promise<string>>();
+/**
+ * @param content  everything the picture depends on; unchanged content is never uploaded twice
+ * @param file     what decides the file it is stored as. For an icon that is the content itself. For a cropped
+ *                 picture it is the source image, so a new crop replaces the old file rather than adding one.
+ */
+function generated(content: string, file: string, name: string, upload: UploadImage, draw: () => Promise<Blob>) {
+  const cacheKey = `pixlpush-email-asset:v3:${hash(content)}`;
   const known = remembered(cacheKey);
-  if (known) return known;
-  const url = await upload(await draw(), name);
-  remember(cacheKey, url);
-  return url;
+  if (known) return Promise.resolve(known);
+  // the same icon appears several times in one email: draw and upload it once
+  let pending = inFlight.get(cacheKey);
+  if (!pending) {
+    pending = (async () => {
+      const stored = await upload(await draw(), name, `g${hash(file)}`);
+      // the file name is reused when its content changes, so the address carries a version for mail clients' caches
+      const url = file === content ? stored : `${stored}?v=${hash(content)}`;
+      remember(cacheKey, url);
+      if (file !== content) remember(companionKey(file), url);
+      return url;
+    })().finally(() => inFlight.delete(cacheKey));
+    inFlight.set(cacheKey, pending);
+  }
+  return pending;
 }
+const companionKey = (source: string) => `pixlpush-email-crop:${hash(source)}`;
+/** The cropped copy made from an uploaded image, if this browser made one: it goes when the image goes. */
+export const croppedCopyOf = (source: string) => remembered(companionKey(source));
 
 /** The colour actually behind an element: the nearest ancestor that paints a background, else white. */
 function backgroundBehind(el: Element): string {
@@ -65,7 +91,8 @@ async function svgToImage(svg: SVGElement, upload: UploadImage) {
   copy.setAttribute("fill", getComputedStyle(svg).color || "#000000"); // paths with their own fill keep it
   const markup = new XMLSerializer().serializeToString(copy);
   const background = backgroundBehind(svg);
-  const url = await generated(`${markup}|${background}`, "icon.png", upload, async () => {
+  const content = `${markup}|${background}`;
+  const url = await generated(content, content, "icon.png", upload, async () => {
     const image = await loadImage(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(markup)}`);
     const canvas = document.createElement("canvas");
     canvas.width = width * 4;
@@ -101,7 +128,7 @@ async function bakeFramedImage(slot: HTMLElement, upload: UploadImage) {
   const zoom = parseFloat(/scale\(([\d.]+)\)/.exec(img.style.transform)?.[1] || "1");
   const width = Math.round(box.width), height = Math.round(box.height);
   if (!width || !height) return;
-  const url = await generated(`${img.src}|${x}|${y}|${zoom}|${width}x${height}`, /\.png($|\?)/i.test(img.src) ? "image.png" : "image.jpg", upload, async () => {
+  const url = await generated(`${img.src}|${x}|${y}|${zoom}|${width}x${height}`, img.src, /\.png($|\?)/i.test(img.src) ? "image.png" : "image.jpg", upload, async () => {
     const source = await loadImage(img.src);
     const canvas = document.createElement("canvas");
     const density = Math.min(2, 1600 / width);

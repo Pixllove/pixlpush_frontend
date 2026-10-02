@@ -90,7 +90,7 @@ import {
 import { renderToStaticMarkup } from "react-dom/server";
 import { BlockDesign, SocialLink, sectionTextFeatures, socialNetworks } from "./BlockDesign";
 import { reorderByInsertionIndex } from "./dragEmailOrdering";
-import { compileEmailHtml } from "./emailExport";
+import { compileEmailHtml, croppedCopyOf } from "./emailExport";
 import SimpleEmailEditor from "@/components/dashboard/SimpleEmailEditor";
 import DeleteConfirmDialog from "@/components/dashboard/DeleteConfirmDialog";
 import { Toast } from "@/components/auth/AuthFeedback";
@@ -1842,6 +1842,9 @@ function DragEditor({
     if (!url) return;
     discardedAssets.current.add(url);
     if (usedElsewhere) return; // a duplicated block still shows it
+    // the cropped copy the email was sent with belongs to this image and goes with it
+    const cropped = croppedCopyOf(url);
+    if (cropped) { discardedAssets.current.add(cropped); void emailApi.templates.deleteAsset(projectId, cropped).catch(() => undefined); }
     void emailApi.templates.deleteAsset(projectId, url)
       .then(result => { if (result.deleted) { deletedAssets.current.add(url); discardedAssets.current.delete(url); } })
       .catch(() => undefined); // only leaves an unused file behind
@@ -2128,8 +2131,8 @@ function DragEditor({
   // As the editor shows it. Good for the on-screen review; mail clients need the compiled version below.
   const emailHtml = wrapEmail(documentHtml);
   // What is saved, tested and sent: tables instead of flexbox, hosted images instead of inline SVG, crops baked in.
-  const compileEmail = async () => wrapEmail(await compileEmailHtml(documentHtml, style.width, (blob, fileName) =>
-    emailApi.templates.uploadAsset(projectId, new File([blob], fileName, { type: blob.type }), "image").then(asset => asset.url)));
+  const compileEmail = async () => wrapEmail(await compileEmailHtml(documentHtml, style.width, (blob, fileName, key) =>
+    emailApi.templates.uploadAsset(projectId, new File([blob], fileName, { type: blob.type }), "image", key).then(asset => asset.url)));
   const [previewHtml, setPreviewHtml] = useState("");
   const openPreview = async () => {
     setPreviewHtml(emailHtml); // show at once, then swap in exactly what a test would send

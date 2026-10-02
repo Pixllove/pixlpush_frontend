@@ -300,14 +300,17 @@ export const emailApi = {
         translations?: Record<string, { subject: string; html: string }>;
       },
     ) => authRequest<EmailTemplate>(at(projectId, "/email-templates"), input, BASE),
-    /** Uploads a block image or logo as multipart/form-data (field "file"). Returns its public URL. */
-    uploadAsset: async (projectId: string, file: File, kind: "image" | "logo") => {
+    /**
+     * Uploads a block image or logo as multipart/form-data (field "file"). Returns its public URL.
+     * With a `key` the file is stored under that name and replaces any earlier upload with the same key.
+     */
+    uploadAsset: async (projectId: string, file: File, kind: "image" | "logo", key?: string) => {
       const form = new FormData();
       form.append("file", file);
       let response: Response;
       try {
         // No Content-Type header: the browser adds the multipart boundary itself.
-        response = await fetch(`${BASE}${at(projectId, `/email-templates/assets?kind=${kind}`)}`, {
+        response = await fetch(`${BASE}${at(projectId, `/email-templates/assets?kind=${kind}${key ? `&key=${key}` : ""}`)}`, {
           method: "POST",
           body: form,
           credentials: "same-origin",
