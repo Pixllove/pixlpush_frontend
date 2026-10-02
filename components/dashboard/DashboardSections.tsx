@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue, useEffect, useState } from "react";
+import { useDeferredValue, useEffect, useRef, useState } from "react";
 import TeamAccessPanel from "./team/TeamAccessPanel";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSelector } from "react-redux";
@@ -128,7 +128,13 @@ export function OverviewSection() {
   const projectName = active?.name ?? "this project";
   const project = projectContext(selectedProject);
   const [switching, setSwitching] = useState(false);
+  // The fade is for switching Projects. Opening the page, and the remembered Project being restored just
+  // after it, are not switches: animating those made the whole page dip on every visit.
+  const shownProject = useRef(selectedProject);
   useEffect(() => {
+    const previous = shownProject.current;
+    shownProject.current = selectedProject;
+    if (!previous || previous === selectedProject) return;
     setSwitching(true);
     const timer = window.setTimeout(() => setSwitching(false), 260);
     return () => window.clearTimeout(timer);

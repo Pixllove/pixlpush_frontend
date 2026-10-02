@@ -87,9 +87,9 @@ a { color: inherit; text-decoration: none; }
 .dashboard-nav .MuiButton-startIcon svg { font-size: 17px; }
 .dashboard-nav:hover { color: #fff !important; background: rgba(255,255,255,.06) !important; transform: translateX(2px); }
 .dashboard-nav:hover .MuiButton-startIcon { color: #fff; background: rgba(255,255,255,.1); }
-.dashboard-nav.active { color: #fff !important; font-weight: 800 !important; background: linear-gradient(90deg, rgba(138,69,240,.38) 0%, rgba(176,75,216,.16) 60%, rgba(242,118,74,.10) 100%) !important; box-shadow: inset 0 0 0 1px rgba(255,255,255,.10), 0 10px 24px -12px rgba(138,69,240,.9); transform: none; }
-.dashboard-nav.active::before { content: ""; position: absolute; left: -16px; top: 9px; bottom: 9px; width: 4px; border-radius: 0 4px 4px 0; background: linear-gradient(180deg, #a56bff, #f2764a); box-shadow: 0 0 14px rgba(165,107,255,.9); }
-.dashboard-nav.active .MuiButton-startIcon { color: #fff; background: linear-gradient(135deg, #8a45f0 0%, #b04bd8 55%, #f2764a 100%); box-shadow: 0 8px 16px -6px rgba(138,69,240,.9), inset 0 1px 0 rgba(255,255,255,.4); }
+.dashboard-nav.active { color: #fff !important; font-weight: 800 !important; background: linear-gradient(90deg, rgba(138,69,240,.38) 0%, rgba(176,75,216,.16) 60%, rgba(242,118,74,.10) 100%) !important; box-shadow: inset 0 0 0 1px rgba(255,255,255,.10); transform: none; }
+.dashboard-nav.active::before { content: ""; position: absolute; left: -16px; top: 9px; bottom: 9px; width: 4px; border-radius: 0 4px 4px 0; background: linear-gradient(180deg, #a56bff, #f2764a); }
+.dashboard-nav.active .MuiButton-startIcon { color: #fff; background: linear-gradient(135deg, #8a45f0 0%, #b04bd8 55%, #f2764a 100%); box-shadow: none; }
 .sidebar-kicker { display: flex; align-items: center; gap: 10px; color: #7d6a94; font-size: 10px; font-weight: 800; letter-spacing: .2em; padding: 0 10px 10px; }
 .sidebar-kicker::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(255,255,255,.12), transparent); }
 .project-select { min-width: 155px; }.project-select .MuiOutlinedInput-root { border-radius: 10px; background: #fff; }.project-select fieldset { border-color: #e9e6ef; }
