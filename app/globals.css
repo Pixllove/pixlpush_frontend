@@ -76,8 +76,8 @@ a { color: inherit; text-decoration: none; }
 
 /* Dashboard feature area: intentionally scoped so the public marketing pages stay independent. */
 .dashboard-app { min-height: 100vh; display: grid !important; grid-template-columns: 212px minmax(0, 1fr); background: #f7f6ff; color: #16121d; }
-/* Sidebar: the app shell from DESIGN.md. One near-black surface, hairlines for structure, a single green accent. */
-.dashboard-sidebar { --sb-canvas: #101010; --sb-canvas-soft: #1a1a1a; --sb-hairline: #3d3a39; --sb-ink: #f2f2f2; --sb-body: #bdbdbd; --sb-mute: #8b949e; --sb-primary: #00d992; grid-column: 1; width: 212px; min-height: 100vh; display: flex; flex-direction: column; color: var(--sb-ink); background: var(--sb-canvas); border-right: 1px solid var(--sb-hairline); font-feature-settings: "calt", "rlig"; }
+/* Sidebar: the app-shell composition from DESIGN.md (flat surface, hairlines, one accent), in the dashboard's own purple. */
+.dashboard-sidebar { --sb-canvas: #1b1025; --sb-canvas-soft: #281838; --sb-hairline: #3b2a4f; --sb-ink: #f6f1fb; --sb-body: #c7bace; --sb-mute: #8d7899; --sb-primary: #a67bf5; grid-column: 1; width: 212px; min-height: 100vh; display: flex; flex-direction: column; color: var(--sb-ink); background: var(--sb-canvas); border-right: 1px solid var(--sb-hairline); font-feature-settings: "calt", "rlig"; }
 .sidebar-brand { flex: 0 0 76px; display: flex; align-items: center; padding: 0 20px; border-bottom: 1px solid var(--sb-hairline); }
 .sidebar-brand img { display: block; width: 116px; height: auto; }
 .sidebar-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 20px 8px 16px; scrollbar-width: none; }
@@ -89,7 +89,7 @@ a { color: inherit; text-decoration: none; }
 .dashboard-nav .MuiButton-startIcon svg { font-size: 16px; }
 .dashboard-nav:hover { color: var(--sb-ink) !important; background: var(--sb-canvas-soft) !important; }
 .dashboard-nav:hover .MuiButton-startIcon { color: var(--sb-body); }
-.dashboard-nav:focus-visible { outline: 2px solid #2fd6a1; outline-offset: 1px; }
+.dashboard-nav:focus-visible { outline: 2px solid var(--sb-primary); outline-offset: 1px; }
 .dashboard-nav.active { color: #fff !important; font-weight: 600 !important; background: var(--sb-canvas-soft) !important; box-shadow: inset 0 0 0 1px var(--sb-hairline); }
 .dashboard-nav.active .MuiButton-startIcon { color: var(--sb-ink); }
 .dashboard-nav::before { content: ""; position: absolute; left: 0; top: 11px; bottom: 11px; width: 2px; border-radius: 0 2px 2px 0; background: var(--sb-primary); transform: scaleY(0); transition: transform .18s ease; }
