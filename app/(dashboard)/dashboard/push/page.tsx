@@ -3,6 +3,7 @@ import { ChannelSection } from "@/components/dashboard/DashboardSections";
 export default function PushPage() {
   return (
     <DashboardFrame
+      requiresProject
       active="Push Notifications"
       title="Push Notifications"
       description="Send timely messages to the right users across their devices."
