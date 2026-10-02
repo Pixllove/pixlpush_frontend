@@ -403,14 +403,14 @@ export const DashboardBlockDesign = (item: DesignItem) => {
             <div className="mt-1 text-body">Add your postal address here</div>
             <div className="mt-3 font-bold">Use our app on the go</div>
             <div className="mt-2 flex gap-2">
-              <span className="inline-flex h-6 min-w-[58px] items-center gap-1 rounded bg-black px-1.5 text-white">
-                <FaApple className="h-3.5 w-3.5" />
+              <span className="inline-flex h-6 min-w-[64px] items-center justify-center gap-1 rounded bg-black px-1.5 text-white">
+                <FaApple className="h-4 w-4" />
                 <span className="leading-none">
                   <span className="block text-[4px]">Download on the</span>
                   <span className="block text-[7px] font-bold">App Store</span>
                 </span>
               </span>
-              <span className="inline-flex h-6 min-w-[66px] items-center gap-1 rounded bg-black px-1.5 text-white">
+              <span className="inline-flex h-6 min-w-[64px] items-center justify-center gap-1 rounded bg-black px-1.5 text-white">
                 <svg
                   width="13"
                   height="13"

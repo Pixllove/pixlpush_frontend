@@ -11,7 +11,7 @@ import { emailApi } from "@/lib/projects/api";
 // A narrow preview is a narrow box, not a narrow screen, so nothing in the email knows to shrink. These rules
 // make every fixed-width part of it fit the box instead of running out of it.
 const narrow = {
-  '& *': { maxWidth: '100% !important', minWidth: '0 !important', boxSizing: 'border-box' },
+  '& *': { maxWidth: '100% !important', boxSizing: 'border-box' },
   '& img': { height: 'auto !important' },
   '& table': { tableLayout: 'auto' },
 };
