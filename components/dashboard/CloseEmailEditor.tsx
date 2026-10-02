@@ -16,9 +16,8 @@ export default function CloseEmailEditor({ onDiscard, onSaveDraft, snapshot }: {
     if (!touched.current) opened.current = snapshot;
     dirty.current = snapshot !== opened.current;
   }, [snapshot]);
-  // An untouched editor reloads freely. With changes, the reload shortcut opens the dialog below. The browser's
-  // own reload button is left alone: its built-in question cannot be styled and Chrome keeps it on screen over
-  // every other tab until it is answered.
+  // An untouched editor reloads freely. With changes, the reload shortcut opens the dialog below; the browser's
+  // own reload button cannot be given a custom dialog, so there the browser shows its built-in question.
   useEffect(() => {
     const onTouch = () => { touched.current = true; };
     const onKey = (event: KeyboardEvent) => {
@@ -28,9 +27,11 @@ export default function CloseEmailEditor({ onDiscard, onSaveDraft, snapshot }: {
       event.preventDefault();
       setReloadOpen(true);
     };
+    const onUnload = (event: BeforeUnloadEvent) => { if (dirty.current) event.preventDefault(); };
     window.addEventListener("keydown", onKey, true);
     window.addEventListener("pointerdown", onTouch, true);
-    return () => { window.removeEventListener("keydown", onKey, true); window.removeEventListener("pointerdown", onTouch, true); };
+    window.addEventListener("beforeunload", onUnload);
+    return () => { window.removeEventListener("keydown", onKey, true); window.removeEventListener("pointerdown", onTouch, true); window.removeEventListener("beforeunload", onUnload); };
   }, []);
   const reload = () => { dirty.current = false; window.location.reload(); };
   // The browser's Back button would silently leave the editor and drop the work in it. It asks instead:
