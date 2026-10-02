@@ -509,6 +509,9 @@ export default function EmailWorkspace() {
   // before the first paint, so the user lands in the editor exactly where they were, not on the list.
   const [restored, setRestored] = useState(false);
   const editorSession = useRef<EditorSession | null>(null);
+  // The item a reload reopened: saved item + unsaved work. It must not be stored as the saved item, or
+  // discarding the unsaved work after the reload would have nothing to go back to.
+  const restoredActive = useRef<EmailItem | null | undefined>(undefined);
   useIsomorphicLayoutEffect(() => {
     const session = readEditorSession();
     if (session) {
@@ -517,9 +520,10 @@ export default function EmailWorkspace() {
       setEditor(session.editor);
       setCreationLanguage(session.language);
       // the unsaved work is laid over the item it was opened from; a brand-new email has no item yet
-      setActive(session.draft || session.item ? ({
+      restoredActive.current = session.draft || session.item ? ({
         id: `email-${Date.now()}`, name: "", subject: "", description: "", updated: "", ...session.item, ...session.draft, editor: session.editor, kind: session.kind,
-      } as EmailItem) : null);
+      } as EmailItem) : null;
+      setActive(restoredActive.current);
       setView("editor");
     }
     setRestored(true);
@@ -538,7 +542,7 @@ export default function EmailWorkspace() {
       setView("list");
       return;
     }
-    editorSession.current = { projectId: activeProject.id, editor, kind, language: creationLanguage, item: active, draft: editorSession.current?.draft };
+    editorSession.current = { projectId: activeProject.id, editor, kind, language: creationLanguage, item: active === restoredActive.current ? editorSession.current?.item ?? null : active, draft: editorSession.current?.draft };
     writeEditorSession(editorSession.current);
   }, [restored, view, editor, kind, creationLanguage, active, activeProject?.id]);
   // The editors report their unsaved state here. It goes to storage only: putting it in React state would
