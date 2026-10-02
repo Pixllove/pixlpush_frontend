@@ -1,11 +1,11 @@
 # Graph Report - pixlpush_frontend  (2026-10-02)
 
 ## Corpus Check
-- 171 files · ~277,600 words
+- 171 files · ~278,172 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 913 nodes · 1826 edges · 50 communities (44 shown, 6 thin omitted)
+- 918 nodes · 1831 edges · 51 communities (46 shown, 5 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 8 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
@@ -15,7 +15,7 @@
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- create/page.tsx
+- ResetPasswordView.tsx
 - LifecycleSegmentWorkspace.tsx
 - server.ts
 - SiteShell.tsx
@@ -32,7 +32,7 @@
 - next.config.mjs
 - next-env.d.ts
 - README.md
-- DashboardFrame
+- DashboardFrame.tsx
 - EmailWorkspace.tsx
 - BlockDesign.tsx
 - SimpleEmailEditor.tsx
@@ -41,22 +41,23 @@
 - DashboardSections.tsx
 - AudienceGroupWorkspace.tsx
 - UserImportDialog.tsx
-- DashboardFrame.tsx
+- CreateProjectDialog.tsx
 - UserDetailsWorkspace.tsx
+- team-access.test.tsx
 - projects/api.ts
 - TeamAccessPanel.tsx
 - auth.ts
 - auth.schema.ts
 - AuditLogsPanel.tsx
-- GoogleButton.tsx
+- GoogleCallback.tsx
 - LoginForm.tsx
 - JourneyWorkspace.tsx
-- invitation-accept.test.tsx
-- AuthFeedback.tsx
+- LifecycleSegmentCreateDialog.tsx
+- ApiError
 - InvitationAccept.tsx
 - EmailLanguageSettings.tsx
 - AuthShell.tsx
-- account/page.tsx
+- AccountProfile.tsx
 - useActiveProject
 
 ## God Nodes (most connected - your core abstractions)
@@ -86,15 +87,19 @@
 ## Import Cycles
 - None detected.
 
-## Communities (50 total, 6 thin omitted)
+## Communities (51 total, 5 thin omitted)
+
+### Community 0 - "ResetPasswordView.tsx"
+Cohesion: 0.38
+Nodes (7): cardSx, RequestResetLink(), SetNewPassword(), useForgotPassword(), useResetPassword(), applyApiError(), ForgotPasswordInput
 
 ### Community 1 - "LifecycleSegmentWorkspace.tsx"
 Cohesion: 0.38
 Nodes (3): LifecycleSegmentWorkspace(), metric(), lifecycleSegmentsApi
 
 ### Community 2 - "server.ts"
-Cohesion: 0.07
-Nodes (43): GET(), Params, ChangePasswordData, POST(), POST(), LoginData, POST(), LoginData (+35 more)
+Cohesion: 0.06
+Nodes (44): GET(), Params, ChangePasswordData, POST(), POST(), LoginData, POST(), LoginData (+36 more)
 
 ### Community 3 - "SiteShell.tsx"
 Cohesion: 0.06
@@ -132,9 +137,9 @@ Nodes (6): AddTarget, Block, blockOptions, BlockType, EntranceConfig, JourneyBui
 Cohesion: 0.36
 Nodes (7): AUTH_ONLY, config, cookieOptions(), middleware(), PROTECTED, renewSession(), sameHost()
 
-### Community 22 - "DashboardFrame"
+### Community 22 - "DashboardFrame.tsx"
 Cohesion: 0.09
-Nodes (5): DashboardFrame(), ChannelSection(), JourneysSection(), TeamSection(), ProjectSettingsCenter()
+Nodes (9): DashboardFrame(), JourneysSection(), TeamSection(), JourneyCreateWorkspace(), templates, initialNotifications, NotificationMenu(), ProductNotification (+1 more)
 
 ### Community 23 - "EmailWorkspace.tsx"
 Cohesion: 0.08
@@ -157,8 +162,8 @@ Cohesion: 0.06
 Nodes (65): AddDomainDialog(), domainFromEmail(), email, Props, consumeCallbackParams(), PendingConnection, redirectToProvider(), rememberConnection() (+57 more)
 
 ### Community 28 - "DashboardSections.tsx"
-Cohesion: 0.10
-Nodes (16): metadata, AudienceGroupCreateDialog(), BillingSection(), EmailSection(), OverviewSection(), UsersSection(), EventOption, LifecycleSegmentCreateDialog() (+8 more)
+Cohesion: 0.12
+Nodes (13): metadata, AudienceGroupCreateDialog(), BillingSection(), ChannelSection(), EmailSection(), OverviewSection(), UsersSection(), EmailCampaign (+5 more)
 
 ### Community 29 - "AudienceGroupWorkspace.tsx"
 Cohesion: 0.13
@@ -168,92 +173,96 @@ Nodes (16): allCountries, AudienceGroupWorkspace(), backendField, backendOperato
 Cohesion: 0.18
 Nodes (10): Field, fields, headerLanguages, sources, UserImportDialog(), userImportApi, CustomPropertyDef, ImportMappingInput (+2 more)
 
-### Community 31 - "DashboardFrame.tsx"
-Cohesion: 0.17
-Nodes (13): CreateProjectDialog(), DashboardSidebar(), navigation, initialNotifications, NotificationMenu(), ProductNotification, planLabel(), useCreateProject() (+5 more)
+### Community 31 - "CreateProjectDialog.tsx"
+Cohesion: 0.24
+Nodes (7): CreateProjectDialog(), useCreateProject(), ProjectId, projects, SelectedProject, uiReducer, uiSlice
 
 ### Community 32 - "UserDetailsWorkspace.tsx"
-Cohesion: 0.19
-Nodes (8): ActivityCard(), display(), formatDate(), metric(), UserDetailsWorkspace(), eventsApi, usersApi, UserActivity
+Cohesion: 0.16
+Nodes (10): ActivityCard(), display(), formatDate(), metric(), UserDetailsWorkspace(), eventsApi, usersApi, EndUser (+2 more)
+
+### Community 33 - "team-access.test.tsx"
+Cohesion: 0.22
+Nodes (6): auditApi, audit, members, team, AuditLogEntry, ProjectMember
 
 ### Community 34 - "projects/api.ts"
 Cohesion: 0.07
-Nodes (46): at(), EmailCampaignStats, EmailLanguageOption, EmailLanguages, EmailSuggestion, EmailTranslation, projectApi, projectKeys (+38 more)
+Nodes (43): at(), EmailCampaignStats, EmailLanguageOption, EmailLanguages, EmailSuggestion, EmailTranslation, projectApi, PushCampaignStats (+35 more)
 
 ### Community 35 - "TeamAccessPanel.tsx"
-Cohesion: 0.13
-Nodes (17): Preview, EmailDataSection(), Confirm, date(), InviteDialog(), MANAGE, MESSAGES, person() (+9 more)
+Cohesion: 0.21
+Nodes (12): Toast(), EmailDataSection(), Confirm, date(), InviteDialog(), MANAGE, MESSAGES, person() (+4 more)
 
 ### Community 36 - "auth.ts"
-Cohesion: 0.23
-Nodes (13): startSession(), useGoogleLogin(), useLogin(), authApi, authKeys, ForgotPasswordInput, LoginInput, SignupInput (+5 more)
+Cohesion: 0.20
+Nodes (14): PasswordForm(), useChangePassword(), startSession(), useGoogleLogin(), useLogin(), authApi, authKeys, LoginInput (+6 more)
 
 ### Community 37 - "auth.schema.ts"
-Cohesion: 0.17
-Nodes (13): PasswordForm(), useChangePassword(), ChangePasswordInput, changePasswordSchema, email, loginSchema, newPassword, resendVerificationSchema (+5 more)
+Cohesion: 0.15
+Nodes (13): ChangePasswordForm(), ChangePasswordInput, changePasswordSchema, email, forgotPasswordSchema, newPassword, resendVerificationSchema, ResetPasswordInput (+5 more)
 
 ### Community 38 - "AuditLogsPanel.tsx"
-Cohesion: 0.11
-Nodes (19): actorName(), AuditLogsPanel(), CATEGORY_COLOR, CATEGORY_LABEL, DetailsDrawer(), errorText(), fieldSx, fullDate() (+11 more)
+Cohesion: 0.17
+Nodes (14): actorName(), AuditLogsPanel(), CATEGORY_COLOR, CATEGORY_LABEL, DetailsDrawer(), errorText(), fieldSx, fullDate() (+6 more)
 
-### Community 39 - "GoogleButton.tsx"
-Cohesion: 0.19
-Nodes (12): metadata, GoogleButton(), googleErrorMessage(), GoogleCallback(), config, firebaseApp(), getGoogleRedirectIdToken(), GOOGLE_CALLBACK_PATH (+4 more)
+### Community 39 - "GoogleCallback.tsx"
+Cohesion: 0.13
+Nodes (17): metadata, GoogleButton(), googleErrorMessage(), breathe, GoogleCallback(), pulse, rise, spin (+9 more)
 
 ### Community 40 - "LoginForm.tsx"
-Cohesion: 0.17
-Nodes (16): FormError(), LoginForm(), PasswordField, cardSx, RequestResetLink(), SetNewPassword(), SignupForm(), SubmitButton() (+8 more)
+Cohesion: 0.22
+Nodes (8): FormError(), PasswordField, SignupForm(), SubmitButton(), useClearOnRestore(), useSignup(), loginSchema, signupSchema
 
 ### Community 41 - "JourneyWorkspace.tsx"
 Cohesion: 0.24
 Nodes (8): guide, JourneyRow, journeyRows, JourneyStatus, JourneyWorkspace(), DataTableColumn, ReusableDataTable(), ReusableDataTableProps
 
-### Community 42 - "invitation-accept.test.tsx"
-Cohesion: 0.29
-Nodes (3): assign, logout, pending
+### Community 42 - "LifecycleSegmentCreateDialog.tsx"
+Cohesion: 0.50
+Nodes (3): EventOption, LifecycleSegmentCreateDialog(), LifecycleSegmentSchema
 
-### Community 43 - "AuthFeedback.tsx"
-Cohesion: 0.31
-Nodes (6): Toast(), cardSx, VerifyEmailView(), useResendVerification(), useVerifyEmail(), ResendVerificationInput
+### Community 43 - "ApiError"
+Cohesion: 0.32
+Nodes (8): AccountMenu(), cardSx, VerifyEmailView(), useCurrentUser(), useResendVerification(), useVerifyEmail(), useLogout(), ApiError
 
 ### Community 46 - "InvitationAccept.tsx"
-Cohesion: 0.21
-Nodes (11): AccountMenu(), accept(), ENDED, InvitationAccept(), loadPreview(), message(), MESSAGES, ROLE (+3 more)
+Cohesion: 0.13
+Nodes (13): accept(), ENDED, InvitationAccept(), loadPreview(), message(), MESSAGES, Preview, ROLE (+5 more)
 
 ### Community 49 - "EmailLanguageSettings.tsx"
 Cohesion: 0.40
 Nodes (5): EMAIL_LANGUAGE_NAMES, EmailLanguageSettings(), languageName(), ChoiceScreen(), EditorToolbar()
 
 ### Community 50 - "AuthShell.tsx"
-Cohesion: 0.23
-Nodes (3): ResetPasswordView(), AuthShell(), Logo()
+Cohesion: 0.21
+Nodes (4): LoginForm(), ResetPasswordView(), AuthShell(), Logo()
 
-### Community 52 - "account/page.tsx"
+### Community 52 - "AccountProfile.tsx"
 Cohesion: 0.40
-Nodes (3): AccountProfile(), display(), ChangePasswordForm()
+Nodes (4): AccountProfile(), display(), billingApi, teamApi
 
 ### Community 53 - "useActiveProject"
-Cohesion: 0.22
-Nodes (6): IntegrationsSection(), PushSection(), SettingsSection(), IntegrationDocumentation(), useActiveProject(), useProjects()
+Cohesion: 0.16
+Nodes (11): IntegrationsSection(), PushSection(), SettingsSection(), DashboardSidebar(), navigation, IntegrationDocumentation(), planLabel(), useActiveProject() (+3 more)
 
 ## Knowledge Gaps
-- **244 isolated node(s):** `extends`, `next/core-web-vitals`, `metadata`, `posts`, `stories` (+239 more)
+- **249 isolated node(s):** `extends`, `next/core-web-vitals`, `metadata`, `posts`, `stories` (+244 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **6 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **5 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `useActiveProject()` connect `useActiveProject` to `UserDetailsWorkspace.tsx`, `LifecycleSegmentWorkspace.tsx`, `TeamAccessPanel.tsx`, `ProjectSettingsCenter.tsx`, `account/page.tsx`, `DashboardFrame`, `EmailWorkspace.tsx`, `PushComposer.tsx`, `SendingDomainsPanel.tsx`, `DashboardSections.tsx`, `AudienceGroupWorkspace.tsx`, `UserImportDialog.tsx`, `DashboardFrame.tsx`?**
-  _High betweenness centrality (0.062) - this node is a cross-community bridge._
-- **Why does `ApiError` connect `auth.ts` to `projects/api.ts`, `TeamAccessPanel.tsx`, `ProjectSettingsCenter.tsx`, `AuditLogsPanel.tsx`, `GoogleButton.tsx`, `LoginForm.tsx`, `AuthFeedback.tsx`, `InvitationAccept.tsx`, `SendingDomainsPanel.tsx`, `UserImportDialog.tsx`, `DashboardFrame.tsx`?**
-  _High betweenness centrality (0.026) - this node is a cross-community bridge._
+- **Why does `useActiveProject()` connect `useActiveProject` to `UserDetailsWorkspace.tsx`, `LifecycleSegmentWorkspace.tsx`, `TeamAccessPanel.tsx`, `ProjectSettingsCenter.tsx`, `AccountProfile.tsx`, `DashboardFrame.tsx`, `EmailWorkspace.tsx`, `PushComposer.tsx`, `SendingDomainsPanel.tsx`, `DashboardSections.tsx`, `AudienceGroupWorkspace.tsx`, `UserImportDialog.tsx`?**
+  _High betweenness centrality (0.061) - this node is a cross-community bridge._
+- **Why does `ApiError` connect `ApiError` to `ResetPasswordView.tsx`, `projects/api.ts`, `TeamAccessPanel.tsx`, `ProjectSettingsCenter.tsx`, `auth.ts`, `AuditLogsPanel.tsx`, `GoogleCallback.tsx`, `InvitationAccept.tsx`, `SendingDomainsPanel.tsx`, `UserImportDialog.tsx`, `CreateProjectDialog.tsx`?**
+  _High betweenness centrality (0.027) - this node is a cross-community bridge._
 - **Why does `authRequest()` connect `SendingDomainsPanel.tsx` to `projects/api.ts`, `auth.ts`?**
   _High betweenness centrality (0.024) - this node is a cross-community bridge._
 - **What connects `extends`, `next/core-web-vitals`, `metadata` to the rest of the system?**
-  _244 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _249 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `server.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.06504494976203067 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06349206349206349 - nodes in this community are weakly interconnected._
 - **Should `SiteShell.tsx` be split into smaller, more focused modules?**
   _Cohesion score 0.055130784708249496 - nodes in this community are weakly interconnected._
 - **Should `ProjectSettingsCenter.tsx` be split into smaller, more focused modules?**

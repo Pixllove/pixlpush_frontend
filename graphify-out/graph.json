@@ -4,17 +4,17 @@
   "graph": {},
   "nodes": [
     {
-      "id": "schemas_auth_schema_forgotpasswordinput",
-      "label": "ForgotPasswordInput",
+      "id": "lib_projects_projectcontext",
+      "label": "projectContext",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
       "community": 0,
-      "community_name": "ResetPasswordView.tsx",
+      "community_name": "projectContext",
       "file_type": "code",
-      "norm_label": "forgotpasswordinput",
-      "source_file": "schemas/auth.schema.ts",
-      "source_location": "L72"
+      "norm_label": "projectcontext",
+      "source_file": "lib/projects.ts",
+      "source_location": "L43"
     },
     {
       "id": "components_dashboard_journeybuilder_addtarget",
@@ -680,6 +680,71 @@
       "source_location": "L2"
     },
     {
+      "id": "components_dashboard_journeyworkspace_journeyrow",
+      "label": "JourneyRow",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 28,
+      "community_name": "DashboardSections.tsx",
+      "file_type": "code",
+      "norm_label": "journeyrow",
+      "source_file": "components/dashboard/JourneyWorkspace.tsx",
+      "source_location": "L10"
+    },
+    {
+      "id": "components_dashboard_journeyworkspace_journeystatus",
+      "label": "JourneyStatus",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 28,
+      "community_name": "DashboardSections.tsx",
+      "file_type": "code",
+      "norm_label": "journeystatus",
+      "source_file": "components/dashboard/JourneyWorkspace.tsx",
+      "source_location": "L9"
+    },
+    {
+      "id": "components_dashboard_lifecyclesegmentcreatedialog_eventoption",
+      "label": "EventOption",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 28,
+      "community_name": "DashboardSections.tsx",
+      "file_type": "code",
+      "norm_label": "eventoption",
+      "source_file": "components/dashboard/LifecycleSegmentCreateDialog.tsx",
+      "source_location": "L32"
+    },
+    {
+      "id": "components_dashboard_reusabledatatable_datatablecolumn",
+      "label": "DataTableColumn",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 28,
+      "community_name": "DashboardSections.tsx",
+      "file_type": "code",
+      "norm_label": "datatablecolumn",
+      "source_file": "components/dashboard/ReusableDataTable.tsx",
+      "source_location": "L7"
+    },
+    {
+      "id": "components_dashboard_reusabledatatable_reusabledatatableprops",
+      "label": "ReusableDataTableProps",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 28,
+      "community_name": "DashboardSections.tsx",
+      "file_type": "code",
+      "norm_label": "reusabledatatableprops",
+      "source_file": "components/dashboard/ReusableDataTable.tsx",
+      "source_location": "L9"
+    },
+    {
       "id": "lib_projects_api_emailcampaign",
       "label": "EmailCampaign",
       "_callable": true,
@@ -730,19 +795,6 @@
       "norm_label": "pushtemplate",
       "source_file": "lib/projects/api.ts",
       "source_location": "L815"
-    },
-    {
-      "id": "lib_projects_projectcontext",
-      "label": "projectContext",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "DashboardSections.tsx",
-      "file_type": "code",
-      "norm_label": "projectcontext",
-      "source_file": "lib/projects.ts",
-      "source_location": "L43"
     },
     {
       "id": "components_dashboard_audiencegroupworkspace_block",
@@ -836,32 +888,6 @@
       "source_location": "L347"
     },
     {
-      "id": "lib_projects_projectid",
-      "label": "ProjectId",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 31,
-      "community_name": "CreateProjectDialog.tsx",
-      "file_type": "code",
-      "norm_label": "projectid",
-      "source_file": "lib/projects.ts",
-      "source_location": "L1"
-    },
-    {
-      "id": "lib_uislice_selectedproject",
-      "label": "SelectedProject",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 31,
-      "community_name": "CreateProjectDialog.tsx",
-      "file_type": "code",
-      "norm_label": "selectedproject",
-      "source_file": "lib/uiSlice.ts",
-      "source_location": "L10"
-    },
-    {
       "id": "types_project_enduser",
       "label": "EndUser",
       "_callable": true,
@@ -899,32 +925,6 @@
       "norm_label": "userprofile",
       "source_file": "types/project.ts",
       "source_location": "L135"
-    },
-    {
-      "id": "types_project_auditlogentry",
-      "label": "AuditLogEntry",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "team-access.test.tsx",
-      "file_type": "code",
-      "norm_label": "auditlogentry",
-      "source_file": "types/project.ts",
-      "source_location": "L86"
-    },
-    {
-      "id": "types_project_projectmember",
-      "label": "ProjectMember",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "team-access.test.tsx",
-      "file_type": "code",
-      "norm_label": "projectmember",
-      "source_file": "types/project.ts",
-      "source_location": "L57"
     },
     {
       "id": "lib_projects_api_emailcampaignstats",
@@ -1291,6 +1291,19 @@
       "source_location": "L213"
     },
     {
+      "id": "types_project_lifecyclesegmentschema",
+      "label": "LifecycleSegmentSchema",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 34,
+      "community_name": "projects/api.ts",
+      "file_type": "code",
+      "norm_label": "lifecyclesegmentschema",
+      "source_file": "types/project.ts",
+      "source_location": "L220"
+    },
+    {
       "id": "types_project_lifecyclesegmentschemaevent",
       "label": "LifecycleSegmentSchemaEvent",
       "_callable": true,
@@ -1341,19 +1354,6 @@
       "norm_label": "projectdetail",
       "source_file": "types/project.ts",
       "source_location": "L29"
-    },
-    {
-      "id": "types_project_projectinvitation",
-      "label": "ProjectInvitation",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 34,
-      "community_name": "projects/api.ts",
-      "file_type": "code",
-      "norm_label": "projectinvitation",
-      "source_file": "types/project.ts",
-      "source_location": "L68"
     },
     {
       "id": "types_project_projectstatus",
@@ -1460,6 +1460,58 @@
       "source_location": "L64"
     },
     {
+      "id": "types_project_auditlogentry",
+      "label": "AuditLogEntry",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "TeamAccessPanel.tsx",
+      "file_type": "code",
+      "norm_label": "auditlogentry",
+      "source_file": "types/project.ts",
+      "source_location": "L86"
+    },
+    {
+      "id": "types_project_projectinvitation",
+      "label": "ProjectInvitation",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "TeamAccessPanel.tsx",
+      "file_type": "code",
+      "norm_label": "projectinvitation",
+      "source_file": "types/project.ts",
+      "source_location": "L68"
+    },
+    {
+      "id": "types_project_projectmember",
+      "label": "ProjectMember",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "TeamAccessPanel.tsx",
+      "file_type": "code",
+      "norm_label": "projectmember",
+      "source_file": "types/project.ts",
+      "source_location": "L57"
+    },
+    {
+      "id": "schemas_auth_schema_forgotpasswordinput",
+      "label": "ForgotPasswordInput",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 36,
+      "community_name": "auth.ts",
+      "file_type": "code",
+      "norm_label": "forgotpasswordinput",
+      "source_file": "schemas/auth.schema.ts",
+      "source_location": "L72"
+    },
+    {
       "id": "schemas_auth_schema_logininput",
       "label": "LoginInput",
       "_callable": true,
@@ -1471,19 +1523,6 @@
       "norm_label": "logininput",
       "source_file": "schemas/auth.schema.ts",
       "source_location": "L70"
-    },
-    {
-      "id": "schemas_auth_schema_resendverificationinput",
-      "label": "ResendVerificationInput",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 36,
-      "community_name": "auth.ts",
-      "file_type": "code",
-      "norm_label": "resendverificationinput",
-      "source_file": "schemas/auth.schema.ts",
-      "source_location": "L76"
     },
     {
       "id": "schemas_auth_schema_signupinput",
@@ -1538,6 +1577,19 @@
       "source_location": "L31"
     },
     {
+      "id": "types_auth_apierror",
+      "label": "ApiError",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 36,
+      "community_name": "auth.ts",
+      "file_type": "code",
+      "norm_label": "apierror",
+      "source_file": "types/auth.ts",
+      "source_location": "L45"
+    },
+    {
       "id": "types_auth_currentuser",
       "label": "CurrentUser",
       "_callable": true,
@@ -1551,17 +1603,17 @@
       "source_location": "L25"
     },
     {
-      "id": "schemas_auth_schema_changepasswordinput",
-      "label": "ChangePasswordInput",
+      "id": "schemas_auth_schema_resendverificationinput",
+      "label": "ResendVerificationInput",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
       "community": 37,
       "community_name": "auth.schema.ts",
       "file_type": "code",
-      "norm_label": "changepasswordinput",
+      "norm_label": "resendverificationinput",
       "source_file": "schemas/auth.schema.ts",
-      "source_location": "L74"
+      "source_location": "L76"
     },
     {
       "id": "schemas_auth_schema_resetpasswordinput",
@@ -1629,121 +1681,30 @@
       "source_location": "L8"
     },
     {
+      "id": "schemas_auth_schema_changepasswordinput",
+      "label": "ChangePasswordInput",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 40,
+      "community_name": "LoginForm.tsx",
+      "file_type": "code",
+      "norm_label": "changepasswordinput",
+      "source_file": "schemas/auth.schema.ts",
+      "source_location": "L74"
+    },
+    {
       "id": "types_project_projectenvironment",
       "label": "ProjectEnvironment",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "community": 4,
-      "community_name": "ProjectSettingsCenter.tsx",
+      "community": 40,
+      "community_name": "LoginForm.tsx",
       "file_type": "code",
       "norm_label": "projectenvironment",
       "source_file": "types/project.ts",
       "source_location": "L7"
-    },
-    {
-      "id": "components_dashboard_journeyworkspace_journeyrow",
-      "label": "JourneyRow",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 41,
-      "community_name": "JourneyWorkspace.tsx",
-      "file_type": "code",
-      "norm_label": "journeyrow",
-      "source_file": "components/dashboard/JourneyWorkspace.tsx",
-      "source_location": "L10"
-    },
-    {
-      "id": "components_dashboard_journeyworkspace_journeystatus",
-      "label": "JourneyStatus",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 41,
-      "community_name": "JourneyWorkspace.tsx",
-      "file_type": "code",
-      "norm_label": "journeystatus",
-      "source_file": "components/dashboard/JourneyWorkspace.tsx",
-      "source_location": "L9"
-    },
-    {
-      "id": "components_dashboard_reusabledatatable_datatablecolumn",
-      "label": "DataTableColumn",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 41,
-      "community_name": "JourneyWorkspace.tsx",
-      "file_type": "code",
-      "norm_label": "datatablecolumn",
-      "source_file": "components/dashboard/ReusableDataTable.tsx",
-      "source_location": "L7"
-    },
-    {
-      "id": "components_dashboard_reusabledatatable_reusabledatatableprops",
-      "label": "ReusableDataTableProps",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 41,
-      "community_name": "JourneyWorkspace.tsx",
-      "file_type": "code",
-      "norm_label": "reusabledatatableprops",
-      "source_file": "components/dashboard/ReusableDataTable.tsx",
-      "source_location": "L9"
-    },
-    {
-      "id": "components_dashboard_lifecyclesegmentcreatedialog_eventoption",
-      "label": "EventOption",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 42,
-      "community_name": "LifecycleSegmentCreateDialog.tsx",
-      "file_type": "code",
-      "norm_label": "eventoption",
-      "source_file": "components/dashboard/LifecycleSegmentCreateDialog.tsx",
-      "source_location": "L32"
-    },
-    {
-      "id": "types_project_lifecyclesegmentschema",
-      "label": "LifecycleSegmentSchema",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 42,
-      "community_name": "LifecycleSegmentCreateDialog.tsx",
-      "file_type": "code",
-      "norm_label": "lifecyclesegmentschema",
-      "source_file": "types/project.ts",
-      "source_location": "L220"
-    },
-    {
-      "id": "types_auth_apierror",
-      "label": "ApiError",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 43,
-      "community_name": "ApiError",
-      "file_type": "code",
-      "norm_label": "apierror",
-      "source_file": "types/auth.ts",
-      "source_location": "L45"
-    },
-    {
-      "id": "components_auth_invitationaccept_preview",
-      "label": "Preview",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 46,
-      "community_name": "InvitationAccept.tsx",
-      "file_type": "code",
-      "norm_label": "preview",
-      "source_file": "components/auth/InvitationAccept.tsx",
-      "source_location": "L20"
     },
     {
       "id": "components_auth_invitationaccept_state",
@@ -1759,17 +1720,43 @@
       "source_location": "L19"
     },
     {
+      "id": "components_auth_invitationaccept_preview",
+      "label": "Preview",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 52,
+      "community_name": "AccountProfile.tsx",
+      "file_type": "code",
+      "norm_label": "preview",
+      "source_file": "components/auth/InvitationAccept.tsx",
+      "source_location": "L20"
+    },
+    {
       "id": "types_project_projectrole",
       "label": "ProjectRole",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "community": 46,
-      "community_name": "InvitationAccept.tsx",
+      "community": 52,
+      "community_name": "AccountProfile.tsx",
       "file_type": "code",
       "norm_label": "projectrole",
       "source_file": "types/project.ts",
       "source_location": "L2"
+    },
+    {
+      "id": "lib_projects_projectid",
+      "label": "ProjectId",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 53,
+      "community_name": "use-active-project.ts",
+      "file_type": "code",
+      "norm_label": "projectid",
+      "source_file": "lib/projects.ts",
+      "source_location": "L1"
     },
     {
       "id": "lib_store_appdispatch",
@@ -1778,7 +1765,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 53,
-      "community_name": "useActiveProject",
+      "community_name": "use-active-project.ts",
       "file_type": "code",
       "norm_label": "appdispatch",
       "source_file": "lib/store.ts",
@@ -1791,11 +1778,24 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 53,
-      "community_name": "useActiveProject",
+      "community_name": "use-active-project.ts",
       "file_type": "code",
       "norm_label": "rootstate",
       "source_file": "lib/store.ts",
       "source_location": "L5"
+    },
+    {
+      "id": "lib_uislice_selectedproject",
+      "label": "SelectedProject",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 53,
+      "community_name": "use-active-project.ts",
+      "file_type": "code",
+      "norm_label": "selectedproject",
+      "source_file": "lib/uiSlice.ts",
+      "source_location": "L10"
     },
     {
       "id": "components_dashboard_emailexport_uploadimage",
@@ -1811,64 +1811,112 @@
       "source_location": "L16"
     },
     {
-      "id": "components_auth_resetpasswordview_requestresetlink",
-      "label": "RequestResetLink()",
+      "id": "app_dashboard_dashboard_billing_page_billingpage",
+      "label": "BillingPage()",
       "_callable": true,
       "_origin": "ast",
       "community": 0,
-      "community_name": "ResetPasswordView.tsx",
+      "community_name": "projectContext",
       "file_type": "code",
-      "norm_label": "requestresetlink()",
-      "source_file": "components/auth/ResetPasswordView.tsx",
-      "source_location": "L45"
+      "norm_label": "billingpage()",
+      "source_file": "app/(dashboard)/dashboard/billing/page.tsx",
+      "source_location": "L3"
     },
     {
-      "id": "components_auth_resetpasswordview_setnewpassword",
-      "label": "SetNewPassword()",
+      "id": "app_dashboard_dashboard_page_dashboardpage",
+      "label": "DashboardPage()",
       "_callable": true,
       "_origin": "ast",
       "community": 0,
-      "community_name": "ResetPasswordView.tsx",
+      "community_name": "projectContext",
       "file_type": "code",
-      "norm_label": "setnewpassword()",
-      "source_file": "components/auth/ResetPasswordView.tsx",
-      "source_location": "L130"
+      "norm_label": "dashboardpage()",
+      "source_file": "app/(dashboard)/dashboard/page.tsx",
+      "source_location": "L6"
     },
     {
-      "id": "hooks_auth_use_password_reset_useforgotpassword",
-      "label": "useForgotPassword()",
+      "id": "app_dashboard_dashboard_users_page_userspage",
+      "label": "UsersPage()",
       "_callable": true,
       "_origin": "ast",
       "community": 0,
-      "community_name": "ResetPasswordView.tsx",
+      "community_name": "projectContext",
       "file_type": "code",
-      "norm_label": "useforgotpassword()",
-      "source_file": "hooks/auth/use-password-reset.ts",
-      "source_location": "L9"
+      "norm_label": "userspage()",
+      "source_file": "app/(dashboard)/dashboard/users/page.tsx",
+      "source_location": "L3"
     },
     {
-      "id": "hooks_auth_use_password_reset_useresetpassword",
-      "label": "useResetPassword()",
+      "id": "components_dashboard_dashboardsections_billingsection",
+      "label": "BillingSection()",
       "_callable": true,
       "_origin": "ast",
       "community": 0,
-      "community_name": "ResetPasswordView.tsx",
+      "community_name": "projectContext",
       "file_type": "code",
-      "norm_label": "useresetpassword()",
-      "source_file": "hooks/auth/use-password-reset.ts",
-      "source_location": "L15"
+      "norm_label": "billingsection()",
+      "source_file": "components/dashboard/DashboardSections.tsx",
+      "source_location": "L2484"
     },
     {
-      "id": "lib_auth_form_applyapierror",
-      "label": "applyApiError()",
+      "id": "components_dashboard_dashboardsections_emaildatasection",
+      "label": "EmailDataSection()",
       "_callable": true,
       "_origin": "ast",
       "community": 0,
-      "community_name": "ResetPasswordView.tsx",
+      "community_name": "projectContext",
       "file_type": "code",
-      "norm_label": "applyapierror()",
-      "source_file": "lib/auth/form.ts",
-      "source_location": "L8"
+      "norm_label": "emaildatasection()",
+      "source_file": "components/dashboard/DashboardSections.tsx",
+      "source_location": "L1515"
+    },
+    {
+      "id": "components_dashboard_dashboardsections_emailsection",
+      "label": "EmailSection()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "projectContext",
+      "file_type": "code",
+      "norm_label": "emailsection()",
+      "source_file": "components/dashboard/DashboardSections.tsx",
+      "source_location": "L1650"
+    },
+    {
+      "id": "components_dashboard_dashboardsections_overviewsection",
+      "label": "OverviewSection()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "projectContext",
+      "file_type": "code",
+      "norm_label": "overviewsection()",
+      "source_file": "components/dashboard/DashboardSections.tsx",
+      "source_location": "L123"
+    },
+    {
+      "id": "components_dashboard_dashboardsections_userssection",
+      "label": "UsersSection()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "projectContext",
+      "file_type": "code",
+      "norm_label": "userssection()",
+      "source_file": "components/dashboard/DashboardSections.tsx",
+      "source_location": "L639"
+    },
+    {
+      "id": "components_dashboard_team_teamaccesspanel_date",
+      "label": "date()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "projectContext",
+      "file_type": "code",
+      "norm_label": "date()",
+      "source_file": "components/dashboard/team/TeamAccessPanel.tsx",
+      "source_location": "L62"
     },
     {
       "id": "app_dashboard_dashboard_users_segments_id_page_lifecyclesegmentpage",
@@ -2651,18 +2699,6 @@
       "source_location": "L5"
     },
     {
-      "id": "app_dashboard_dashboard_team_page_teampage",
-      "label": "TeamPage()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 22,
-      "community_name": "DashboardFrame.tsx",
-      "file_type": "code",
-      "norm_label": "teampage()",
-      "source_file": "app/(dashboard)/dashboard/team/page.tsx",
-      "source_location": "L3"
-    },
-    {
       "id": "app_dashboard_dashboard_users_groups_id_page_audiencegrouppage",
       "label": "AudienceGroupPage()",
       "_callable": true,
@@ -2709,18 +2745,6 @@
       "norm_label": "journeyssection()",
       "source_file": "components/dashboard/DashboardSections.tsx",
       "source_location": "L2359"
-    },
-    {
-      "id": "components_dashboard_dashboardsections_teamsection",
-      "label": "TeamSection()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 22,
-      "community_name": "DashboardFrame.tsx",
-      "file_type": "code",
-      "norm_label": "teamsection()",
-      "source_file": "components/dashboard/DashboardSections.tsx",
-      "source_location": "L2480"
     },
     {
       "id": "components_dashboard_journeycreateworkspace_journeycreateworkspace",
@@ -2792,7 +2816,7 @@
       "file_type": "code",
       "norm_label": "campaignreview()",
       "source_file": "components/dashboard/EmailWorkspace.tsx",
-      "source_location": "L2581"
+      "source_location": "L2582"
     },
     {
       "id": "components_dashboard_emailworkspace_designof",
@@ -2876,7 +2900,7 @@
       "file_type": "code",
       "norm_label": "previewmodal()",
       "source_file": "components/dashboard/EmailWorkspace.tsx",
-      "source_location": "L2509"
+      "source_location": "L2510"
     },
     {
       "id": "components_dashboard_emailworkspace_reviewinfocard",
@@ -2888,7 +2912,7 @@
       "file_type": "code",
       "norm_label": "reviewinfocard()",
       "source_file": "components/dashboard/EmailWorkspace.tsx",
-      "source_location": "L2637"
+      "source_location": "L2638"
     },
     {
       "id": "components_dashboard_emailworkspace_shrinkforupload",
@@ -3719,30 +3743,6 @@
       "source_location": "L8"
     },
     {
-      "id": "app_dashboard_dashboard_billing_page_billingpage",
-      "label": "BillingPage()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "DashboardSections.tsx",
-      "file_type": "code",
-      "norm_label": "billingpage()",
-      "source_file": "app/(dashboard)/dashboard/billing/page.tsx",
-      "source_location": "L3"
-    },
-    {
-      "id": "app_dashboard_dashboard_page_dashboardpage",
-      "label": "DashboardPage()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "DashboardSections.tsx",
-      "file_type": "code",
-      "norm_label": "dashboardpage()",
-      "source_file": "app/(dashboard)/dashboard/page.tsx",
-      "source_location": "L6"
-    },
-    {
       "id": "app_dashboard_dashboard_push_page_pushpage",
       "label": "PushPage()",
       "_callable": true,
@@ -3755,15 +3755,15 @@
       "source_location": "L3"
     },
     {
-      "id": "app_dashboard_dashboard_users_page_userspage",
-      "label": "UsersPage()",
+      "id": "app_dashboard_dashboard_team_page_teampage",
+      "label": "TeamPage()",
       "_callable": true,
       "_origin": "ast",
       "community": 28,
       "community_name": "DashboardSections.tsx",
       "file_type": "code",
-      "norm_label": "userspage()",
-      "source_file": "app/(dashboard)/dashboard/users/page.tsx",
+      "norm_label": "teampage()",
+      "source_file": "app/(dashboard)/dashboard/team/page.tsx",
       "source_location": "L3"
     },
     {
@@ -3779,18 +3779,6 @@
       "source_location": "L7"
     },
     {
-      "id": "components_dashboard_dashboardsections_billingsection",
-      "label": "BillingSection()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "DashboardSections.tsx",
-      "file_type": "code",
-      "norm_label": "billingsection()",
-      "source_file": "components/dashboard/DashboardSections.tsx",
-      "source_location": "L2484"
-    },
-    {
       "id": "components_dashboard_dashboardsections_channelsection",
       "label": "ChannelSection()",
       "_callable": true,
@@ -3801,30 +3789,6 @@
       "norm_label": "channelsection()",
       "source_file": "components/dashboard/DashboardSections.tsx",
       "source_location": "L1509"
-    },
-    {
-      "id": "components_dashboard_dashboardsections_emailsection",
-      "label": "EmailSection()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "DashboardSections.tsx",
-      "file_type": "code",
-      "norm_label": "emailsection()",
-      "source_file": "components/dashboard/DashboardSections.tsx",
-      "source_location": "L1650"
-    },
-    {
-      "id": "components_dashboard_dashboardsections_overviewsection",
-      "label": "OverviewSection()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "DashboardSections.tsx",
-      "file_type": "code",
-      "norm_label": "overviewsection()",
-      "source_file": "components/dashboard/DashboardSections.tsx",
-      "source_location": "L123"
     },
     {
       "id": "components_dashboard_dashboardsections_statcard",
@@ -3839,16 +3803,52 @@
       "source_location": "L91"
     },
     {
-      "id": "components_dashboard_dashboardsections_userssection",
-      "label": "UsersSection()",
+      "id": "components_dashboard_dashboardsections_teamsection",
+      "label": "TeamSection()",
       "_callable": true,
       "_origin": "ast",
       "community": 28,
       "community_name": "DashboardSections.tsx",
       "file_type": "code",
-      "norm_label": "userssection()",
+      "norm_label": "teamsection()",
       "source_file": "components/dashboard/DashboardSections.tsx",
-      "source_location": "L639"
+      "source_location": "L2480"
+    },
+    {
+      "id": "components_dashboard_journeyworkspace_journeyworkspace",
+      "label": "JourneyWorkspace()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 28,
+      "community_name": "DashboardSections.tsx",
+      "file_type": "code",
+      "norm_label": "journeyworkspace()",
+      "source_file": "components/dashboard/JourneyWorkspace.tsx",
+      "source_location": "L28"
+    },
+    {
+      "id": "components_dashboard_lifecyclesegmentcreatedialog_lifecyclesegmentcreatedialog",
+      "label": "LifecycleSegmentCreateDialog()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 28,
+      "community_name": "DashboardSections.tsx",
+      "file_type": "code",
+      "norm_label": "lifecyclesegmentcreatedialog()",
+      "source_file": "components/dashboard/LifecycleSegmentCreateDialog.tsx",
+      "source_location": "L38"
+    },
+    {
+      "id": "components_dashboard_reusabledatatable_reusabledatatable",
+      "label": "ReusableDataTable()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 28,
+      "community_name": "DashboardSections.tsx",
+      "file_type": "code",
+      "norm_label": "reusabledatatable()",
+      "source_file": "components/dashboard/ReusableDataTable.tsx",
+      "source_location": "L25"
     },
     {
       "id": "components_dashboard_audiencegroupworkspace_audiencegroupworkspace",
@@ -4376,7 +4376,7 @@
       "file_type": "code",
       "norm_label": "megamenu()",
       "source_file": "components/website/SiteShell.tsx",
-      "source_location": "L18"
+      "source_location": "L19"
     },
     {
       "id": "components_website_siteshell_pagehero",
@@ -4388,7 +4388,7 @@
       "file_type": "code",
       "norm_label": "pagehero()",
       "source_file": "components/website/SiteShell.tsx",
-      "source_location": "L22"
+      "source_location": "L23"
     },
     {
       "id": "components_website_siteshell_sectionintro",
@@ -4400,7 +4400,7 @@
       "file_type": "code",
       "norm_label": "sectionintro()",
       "source_file": "components/website/SiteShell.tsx",
-      "source_location": "L23"
+      "source_location": "L24"
     },
     {
       "id": "components_website_siteshell_sitefooter",
@@ -4412,7 +4412,7 @@
       "file_type": "code",
       "norm_label": "sitefooter()",
       "source_file": "components/website/SiteShell.tsx",
-      "source_location": "L20"
+      "source_location": "L21"
     },
     {
       "id": "components_website_siteshell_siteheader",
@@ -4424,7 +4424,7 @@
       "file_type": "code",
       "norm_label": "siteheader()",
       "source_file": "components/website/SiteShell.tsx",
-      "source_location": "L19"
+      "source_location": "L20"
     },
     {
       "id": "components_website_siteshell_siteshell",
@@ -4436,7 +4436,7 @@
       "file_type": "code",
       "norm_label": "siteshell()",
       "source_file": "components/website/SiteShell.tsx",
-      "source_location": "L21"
+      "source_location": "L22"
     },
     {
       "id": "components_dashboard_userimportdialog_userimportdialog",
@@ -4456,11 +4456,83 @@
       "_callable": true,
       "_origin": "ast",
       "community": 31,
-      "community_name": "CreateProjectDialog.tsx",
+      "community_name": "useActiveProject",
       "file_type": "code",
       "norm_label": "createprojectdialog()",
       "source_file": "components/dashboard/CreateProjectDialog.tsx",
       "source_location": "L15"
+    },
+    {
+      "id": "components_dashboard_dangerzonepanel_dangerzonepanel",
+      "label": "DangerZonePanel()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 31,
+      "community_name": "useActiveProject",
+      "file_type": "code",
+      "norm_label": "dangerzonepanel()",
+      "source_file": "components/dashboard/DangerZonePanel.tsx",
+      "source_location": "L11"
+    },
+    {
+      "id": "components_dashboard_dashboardsections_integrationssection",
+      "label": "IntegrationsSection()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 31,
+      "community_name": "useActiveProject",
+      "file_type": "code",
+      "norm_label": "integrationssection()",
+      "source_file": "components/dashboard/DashboardSections.tsx",
+      "source_location": "L2363"
+    },
+    {
+      "id": "components_dashboard_dashboardsections_pushsection",
+      "label": "PushSection()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 31,
+      "community_name": "useActiveProject",
+      "file_type": "code",
+      "norm_label": "pushsection()",
+      "source_file": "components/dashboard/DashboardSections.tsx",
+      "source_location": "L1902"
+    },
+    {
+      "id": "components_dashboard_dashboardsections_settingssection",
+      "label": "SettingsSection()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 31,
+      "community_name": "useActiveProject",
+      "file_type": "code",
+      "norm_label": "settingssection()",
+      "source_file": "components/dashboard/DashboardSections.tsx",
+      "source_location": "L2576"
+    },
+    {
+      "id": "components_dashboard_projectdetailspanel_projectdetailspanel",
+      "label": "ProjectDetailsPanel()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 31,
+      "community_name": "useActiveProject",
+      "file_type": "code",
+      "norm_label": "projectdetailspanel()",
+      "source_file": "components/dashboard/ProjectDetailsPanel.tsx",
+      "source_location": "L12"
+    },
+    {
+      "id": "hooks_projects_use_active_project_useactiveproject",
+      "label": "useActiveProject()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 31,
+      "community_name": "useActiveProject",
+      "file_type": "code",
+      "norm_label": "useactiveproject()",
+      "source_file": "hooks/projects/use-active-project.ts",
+      "source_location": "L23"
     },
     {
       "id": "hooks_projects_use_projects_usecreateproject",
@@ -4468,11 +4540,59 @@
       "_callable": true,
       "_origin": "ast",
       "community": 31,
-      "community_name": "CreateProjectDialog.tsx",
+      "community_name": "useActiveProject",
       "file_type": "code",
       "norm_label": "usecreateproject()",
       "source_file": "hooks/projects/use-projects.ts",
       "source_location": "L35"
+    },
+    {
+      "id": "hooks_projects_use_projects_useproject",
+      "label": "useProject()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 31,
+      "community_name": "useActiveProject",
+      "file_type": "code",
+      "norm_label": "useproject()",
+      "source_file": "hooks/projects/use-projects.ts",
+      "source_location": "L26"
+    },
+    {
+      "id": "hooks_projects_use_projects_useprojects",
+      "label": "useProjects()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 31,
+      "community_name": "useActiveProject",
+      "file_type": "code",
+      "norm_label": "useprojects()",
+      "source_file": "hooks/projects/use-projects.ts",
+      "source_location": "L10"
+    },
+    {
+      "id": "hooks_projects_use_projects_useprojectstatus",
+      "label": "useProjectStatus()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 31,
+      "community_name": "useActiveProject",
+      "file_type": "code",
+      "norm_label": "useprojectstatus()",
+      "source_file": "hooks/projects/use-projects.ts",
+      "source_location": "L60"
+    },
+    {
+      "id": "hooks_projects_use_projects_useupdateproject",
+      "label": "useUpdateProject()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 31,
+      "community_name": "useActiveProject",
+      "file_type": "code",
+      "norm_label": "useupdateproject()",
+      "source_file": "hooks/projects/use-projects.ts",
+      "source_location": "L47"
     },
     {
       "id": "components_dashboard_userdetailsworkspace_activitycard",
@@ -4595,30 +4715,6 @@
       "source_location": "L60"
     },
     {
-      "id": "tests_team_access_test_member",
-      "label": "member()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "team-access.test.tsx",
-      "file_type": "code",
-      "norm_label": "member()",
-      "source_file": "tests/team-access.test.tsx",
-      "source_location": "L35"
-    },
-    {
-      "id": "tests_team_access_test_wrap",
-      "label": "wrap()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "team-access.test.tsx",
-      "file_type": "code",
-      "norm_label": "wrap()",
-      "source_file": "tests/team-access.test.tsx",
-      "source_location": "L49"
-    },
-    {
       "id": "lib_projects_api_at",
       "label": "at()",
       "_callable": true,
@@ -4653,42 +4749,6 @@
       "norm_label": "pushlist()",
       "source_file": "lib/projects/api.ts",
       "source_location": "L887"
-    },
-    {
-      "id": "components_auth_authfeedback_toast",
-      "label": "Toast()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 35,
-      "community_name": "TeamAccessPanel.tsx",
-      "file_type": "code",
-      "norm_label": "toast()",
-      "source_file": "components/auth/AuthFeedback.tsx",
-      "source_location": "L20"
-    },
-    {
-      "id": "components_dashboard_dashboardsections_emaildatasection",
-      "label": "EmailDataSection()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 35,
-      "community_name": "TeamAccessPanel.tsx",
-      "file_type": "code",
-      "norm_label": "emaildatasection()",
-      "source_file": "components/dashboard/DashboardSections.tsx",
-      "source_location": "L1515"
-    },
-    {
-      "id": "components_dashboard_team_teamaccesspanel_date",
-      "label": "date()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 35,
-      "community_name": "TeamAccessPanel.tsx",
-      "file_type": "code",
-      "norm_label": "date()",
-      "source_file": "components/dashboard/team/TeamAccessPanel.tsx",
-      "source_location": "L62"
     },
     {
       "id": "components_dashboard_team_teamaccesspanel_invitedialog",
@@ -4739,88 +4799,76 @@
       "source_location": "L59"
     },
     {
-      "id": "components_auth_changepasswordform_passwordform",
-      "label": "PasswordForm()",
+      "id": "tests_team_access_test_member",
+      "label": "member()",
       "_callable": true,
       "_origin": "ast",
-      "community": 36,
-      "community_name": "auth.ts",
+      "community": 35,
+      "community_name": "TeamAccessPanel.tsx",
       "file_type": "code",
-      "norm_label": "passwordform()",
-      "source_file": "components/auth/ChangePasswordForm.tsx",
-      "source_location": "L41"
+      "norm_label": "member()",
+      "source_file": "tests/team-access.test.tsx",
+      "source_location": "L35"
     },
     {
-      "id": "hooks_auth_use_change_password_usechangepassword",
-      "label": "useChangePassword()",
+      "id": "tests_team_access_test_wrap",
+      "label": "wrap()",
       "_callable": true,
       "_origin": "ast",
-      "community": 36,
-      "community_name": "auth.ts",
+      "community": 35,
+      "community_name": "TeamAccessPanel.tsx",
       "file_type": "code",
-      "norm_label": "usechangepassword()",
-      "source_file": "hooks/auth/use-change-password.ts",
-      "source_location": "L12"
+      "norm_label": "wrap()",
+      "source_file": "tests/team-access.test.tsx",
+      "source_location": "L49"
     },
     {
-      "id": "hooks_auth_use_login_startsession",
-      "label": "startSession()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 36,
-      "community_name": "auth.ts",
-      "file_type": "code",
-      "norm_label": "startsession()",
-      "source_file": "hooks/auth/use-login.ts",
-      "source_location": "L14"
-    },
-    {
-      "id": "hooks_auth_use_login_usegooglelogin",
-      "label": "useGoogleLogin()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 36,
-      "community_name": "auth.ts",
-      "file_type": "code",
-      "norm_label": "usegooglelogin()",
-      "source_file": "hooks/auth/use-login.ts",
-      "source_location": "L32"
-    },
-    {
-      "id": "hooks_auth_use_login_uselogin",
-      "label": "useLogin()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 36,
-      "community_name": "auth.ts",
-      "file_type": "code",
-      "norm_label": "uselogin()",
-      "source_file": "hooks/auth/use-login.ts",
-      "source_location": "L19"
-    },
-    {
-      "id": "app_dashboard_dashboard_account_page_accountprofilepage",
-      "label": "AccountProfilePage()",
+      "id": "components_auth_resetpasswordview_requestresetlink",
+      "label": "RequestResetLink()",
       "_callable": true,
       "_origin": "ast",
       "community": 37,
       "community_name": "auth.schema.ts",
       "file_type": "code",
-      "norm_label": "accountprofilepage()",
-      "source_file": "app/(dashboard)/dashboard/account/page.tsx",
-      "source_location": "L5"
+      "norm_label": "requestresetlink()",
+      "source_file": "components/auth/ResetPasswordView.tsx",
+      "source_location": "L45"
     },
     {
-      "id": "components_auth_changepasswordform_changepasswordform",
-      "label": "ChangePasswordForm()",
+      "id": "components_auth_resetpasswordview_setnewpassword",
+      "label": "SetNewPassword()",
       "_callable": true,
       "_origin": "ast",
       "community": 37,
       "community_name": "auth.schema.ts",
       "file_type": "code",
-      "norm_label": "changepasswordform()",
-      "source_file": "components/auth/ChangePasswordForm.tsx",
-      "source_location": "L19"
+      "norm_label": "setnewpassword()",
+      "source_file": "components/auth/ResetPasswordView.tsx",
+      "source_location": "L130"
+    },
+    {
+      "id": "hooks_auth_use_password_reset_useforgotpassword",
+      "label": "useForgotPassword()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 37,
+      "community_name": "auth.schema.ts",
+      "file_type": "code",
+      "norm_label": "useforgotpassword()",
+      "source_file": "hooks/auth/use-password-reset.ts",
+      "source_location": "L9"
+    },
+    {
+      "id": "hooks_auth_use_password_reset_useresetpassword",
+      "label": "useResetPassword()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 37,
+      "community_name": "auth.schema.ts",
+      "file_type": "code",
+      "norm_label": "useresetpassword()",
+      "source_file": "hooks/auth/use-password-reset.ts",
+      "source_location": "L15"
     },
     {
       "id": "components_dashboard_audit_auditlogspanel_actorname",
@@ -5015,6 +5063,30 @@
       "source_location": "L24"
     },
     {
+      "id": "hooks_auth_use_login_startsession",
+      "label": "startSession()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 39,
+      "community_name": "GoogleCallback.tsx",
+      "file_type": "code",
+      "norm_label": "startsession()",
+      "source_file": "hooks/auth/use-login.ts",
+      "source_location": "L14"
+    },
+    {
+      "id": "hooks_auth_use_login_usegooglelogin",
+      "label": "useGoogleLogin()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 39,
+      "community_name": "GoogleCallback.tsx",
+      "file_type": "code",
+      "norm_label": "usegooglelogin()",
+      "source_file": "hooks/auth/use-login.ts",
+      "source_location": "L32"
+    },
+    {
       "id": "lib_auth_firebase_firebaseapp",
       "label": "firebaseApp()",
       "_callable": true,
@@ -5099,18 +5171,6 @@
       "source_location": "L9"
     },
     {
-      "id": "components_dashboard_dangerzonepanel_dangerzonepanel",
-      "label": "DangerZonePanel()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "ProjectSettingsCenter.tsx",
-      "file_type": "code",
-      "norm_label": "dangerzonepanel()",
-      "source_file": "components/dashboard/DangerZonePanel.tsx",
-      "source_location": "L11"
-    },
-    {
       "id": "components_dashboard_emailpanel_emailpanel",
       "label": "EmailPanel()",
       "_callable": true,
@@ -5133,18 +5193,6 @@
       "norm_label": "firebasepanel()",
       "source_file": "components/dashboard/FirebasePanel.tsx",
       "source_location": "L14"
-    },
-    {
-      "id": "components_dashboard_projectdetailspanel_projectdetailspanel",
-      "label": "ProjectDetailsPanel()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "ProjectSettingsCenter.tsx",
-      "file_type": "code",
-      "norm_label": "projectdetailspanel()",
-      "source_file": "components/dashboard/ProjectDetailsPanel.tsx",
-      "source_location": "L12"
     },
     {
       "id": "components_dashboard_projectsettingscenter_privacypanel",
@@ -5267,42 +5315,6 @@
       "source_location": "L38"
     },
     {
-      "id": "hooks_projects_use_projects_useproject",
-      "label": "useProject()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "ProjectSettingsCenter.tsx",
-      "file_type": "code",
-      "norm_label": "useproject()",
-      "source_file": "hooks/projects/use-projects.ts",
-      "source_location": "L26"
-    },
-    {
-      "id": "hooks_projects_use_projects_useprojectstatus",
-      "label": "useProjectStatus()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "ProjectSettingsCenter.tsx",
-      "file_type": "code",
-      "norm_label": "useprojectstatus()",
-      "source_file": "hooks/projects/use-projects.ts",
-      "source_location": "L60"
-    },
-    {
-      "id": "hooks_projects_use_projects_useupdateproject",
-      "label": "useUpdateProject()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "ProjectSettingsCenter.tsx",
-      "file_type": "code",
-      "norm_label": "useupdateproject()",
-      "source_file": "hooks/projects/use-projects.ts",
-      "source_location": "L47"
-    },
-    {
       "id": "lib_auth_client_ispermanentautherror",
       "label": "isPermanentAuthError()",
       "_callable": true,
@@ -5327,6 +5339,18 @@
       "source_location": "L5"
     },
     {
+      "id": "app_website_login_page_loginpage",
+      "label": "LoginPage()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 40,
+      "community_name": "LoginForm.tsx",
+      "file_type": "code",
+      "norm_label": "loginpage()",
+      "source_file": "app/(website)/login/page.tsx",
+      "source_location": "L5"
+    },
+    {
       "id": "components_auth_authfeedback_formerror",
       "label": "FormError()",
       "_callable": true,
@@ -5339,6 +5363,18 @@
       "source_location": "L11"
     },
     {
+      "id": "components_auth_authfeedback_toast",
+      "label": "Toast()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 40,
+      "community_name": "LoginForm.tsx",
+      "file_type": "code",
+      "norm_label": "toast()",
+      "source_file": "components/auth/AuthFeedback.tsx",
+      "source_location": "L20"
+    },
+    {
       "id": "components_auth_authfeedback_toasttransition",
       "label": "ToastTransition()",
       "_callable": true,
@@ -5349,6 +5385,30 @@
       "norm_label": "toasttransition()",
       "source_file": "components/auth/AuthFeedback.tsx",
       "source_location": "L6"
+    },
+    {
+      "id": "components_auth_changepasswordform_passwordform",
+      "label": "PasswordForm()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 40,
+      "community_name": "LoginForm.tsx",
+      "file_type": "code",
+      "norm_label": "passwordform()",
+      "source_file": "components/auth/ChangePasswordForm.tsx",
+      "source_location": "L41"
+    },
+    {
+      "id": "components_auth_loginform_loginform",
+      "label": "LoginForm()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 40,
+      "community_name": "LoginForm.tsx",
+      "file_type": "code",
+      "norm_label": "loginform()",
+      "source_file": "components/auth/LoginForm.tsx",
+      "source_location": "L27"
     },
     {
       "id": "components_auth_signupform_signupform",
@@ -5375,6 +5435,18 @@
       "source_location": "L12"
     },
     {
+      "id": "hooks_auth_use_change_password_usechangepassword",
+      "label": "useChangePassword()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 40,
+      "community_name": "LoginForm.tsx",
+      "file_type": "code",
+      "norm_label": "usechangepassword()",
+      "source_file": "hooks/auth/use-change-password.ts",
+      "source_location": "L12"
+    },
+    {
       "id": "hooks_auth_use_clear_on_restore_useclearonrestore",
       "label": "useClearOnRestore()",
       "_callable": true,
@@ -5385,6 +5457,18 @@
       "norm_label": "useclearonrestore()",
       "source_file": "hooks/auth/use-clear-on-restore.ts",
       "source_location": "L13"
+    },
+    {
+      "id": "hooks_auth_use_login_uselogin",
+      "label": "useLogin()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 40,
+      "community_name": "LoginForm.tsx",
+      "file_type": "code",
+      "norm_label": "uselogin()",
+      "source_file": "hooks/auth/use-login.ts",
+      "source_location": "L19"
     },
     {
       "id": "hooks_auth_use_signup_usesignup",
@@ -5399,40 +5483,112 @@
       "source_location": "L13"
     },
     {
-      "id": "components_dashboard_journeyworkspace_journeyworkspace",
-      "label": "JourneyWorkspace()",
+      "id": "lib_auth_form_applyapierror",
+      "label": "applyApiError()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 40,
+      "community_name": "LoginForm.tsx",
+      "file_type": "code",
+      "norm_label": "applyapierror()",
+      "source_file": "lib/auth/form.ts",
+      "source_location": "L8"
+    },
+    {
+      "id": "tests_invitation_accept_test_accepts",
+      "label": "accepts()",
       "_callable": true,
       "_origin": "ast",
       "community": 41,
-      "community_name": "JourneyWorkspace.tsx",
+      "community_name": "invitation-accept.test.tsx",
       "file_type": "code",
-      "norm_label": "journeyworkspace()",
-      "source_file": "components/dashboard/JourneyWorkspace.tsx",
-      "source_location": "L28"
+      "norm_label": "accepts()",
+      "source_file": "tests/invitation-accept.test.tsx",
+      "source_location": "L35"
     },
     {
-      "id": "components_dashboard_reusabledatatable_reusabledatatable",
-      "label": "ReusableDataTable()",
+      "id": "tests_invitation_accept_test_backend",
+      "label": "backend()",
       "_callable": true,
       "_origin": "ast",
       "community": 41,
-      "community_name": "JourneyWorkspace.tsx",
+      "community_name": "invitation-accept.test.tsx",
       "file_type": "code",
-      "norm_label": "reusabledatatable()",
-      "source_file": "components/dashboard/ReusableDataTable.tsx",
-      "source_location": "L25"
+      "norm_label": "backend()",
+      "source_file": "tests/invitation-accept.test.tsx",
+      "source_location": "L27"
     },
     {
-      "id": "components_dashboard_lifecyclesegmentcreatedialog_lifecyclesegmentcreatedialog",
-      "label": "LifecycleSegmentCreateDialog()",
+      "id": "tests_invitation_accept_test_show",
+      "label": "show()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 41,
+      "community_name": "invitation-accept.test.tsx",
+      "file_type": "code",
+      "norm_label": "show()",
+      "source_file": "tests/invitation-accept.test.tsx",
+      "source_location": "L34"
+    },
+    {
+      "id": "app_dashboard_dashboard_integrations_page_integrationspage",
+      "label": "IntegrationsPage()",
       "_callable": true,
       "_origin": "ast",
       "community": 42,
-      "community_name": "LifecycleSegmentCreateDialog.tsx",
+      "community_name": "IntegrationDocumentation.tsx",
       "file_type": "code",
-      "norm_label": "lifecyclesegmentcreatedialog()",
-      "source_file": "components/dashboard/LifecycleSegmentCreateDialog.tsx",
-      "source_location": "L38"
+      "norm_label": "integrationspage()",
+      "source_file": "app/(dashboard)/dashboard/integrations/page.tsx",
+      "source_location": "L4"
+    },
+    {
+      "id": "components_dashboard_integrationdocumentation_codeblock",
+      "label": "CodeBlock()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 42,
+      "community_name": "IntegrationDocumentation.tsx",
+      "file_type": "code",
+      "norm_label": "codeblock()",
+      "source_file": "components/dashboard/IntegrationDocumentation.tsx",
+      "source_location": "L120"
+    },
+    {
+      "id": "components_dashboard_integrationdocumentation_integrationdocumentation",
+      "label": "IntegrationDocumentation()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 42,
+      "community_name": "IntegrationDocumentation.tsx",
+      "file_type": "code",
+      "norm_label": "integrationdocumentation()",
+      "source_file": "components/dashboard/IntegrationDocumentation.tsx",
+      "source_location": "L254"
+    },
+    {
+      "id": "components_dashboard_integrationdocumentation_sectionheading",
+      "label": "SectionHeading()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 42,
+      "community_name": "IntegrationDocumentation.tsx",
+      "file_type": "code",
+      "norm_label": "sectionheading()",
+      "source_file": "components/dashboard/IntegrationDocumentation.tsx",
+      "source_location": "L190"
+    },
+    {
+      "id": "app_dashboard_dashboard_account_page_accountprofilepage",
+      "label": "AccountProfilePage()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 43,
+      "community_name": "useCurrentUser",
+      "file_type": "code",
+      "norm_label": "accountprofilepage()",
+      "source_file": "app/(dashboard)/dashboard/account/page.tsx",
+      "source_location": "L5"
     },
     {
       "id": "components_auth_accountmenu_accountmenu",
@@ -5440,23 +5596,47 @@
       "_callable": true,
       "_origin": "ast",
       "community": 43,
-      "community_name": "ApiError",
+      "community_name": "useCurrentUser",
       "file_type": "code",
       "norm_label": "accountmenu()",
       "source_file": "components/auth/AccountMenu.tsx",
       "source_location": "L9"
     },
     {
-      "id": "components_auth_verifyemailview_verifyemailview",
-      "label": "VerifyEmailView()",
+      "id": "components_auth_changepasswordform_changepasswordform",
+      "label": "ChangePasswordForm()",
       "_callable": true,
       "_origin": "ast",
       "community": 43,
-      "community_name": "ApiError",
+      "community_name": "useCurrentUser",
       "file_type": "code",
-      "norm_label": "verifyemailview()",
-      "source_file": "components/auth/VerifyEmailView.tsx",
-      "source_location": "L31"
+      "norm_label": "changepasswordform()",
+      "source_file": "components/auth/ChangePasswordForm.tsx",
+      "source_location": "L19"
+    },
+    {
+      "id": "components_website_siteaccount_siteaccount",
+      "label": "SiteAccount()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 43,
+      "community_name": "useCurrentUser",
+      "file_type": "code",
+      "norm_label": "siteaccount()",
+      "source_file": "components/website/SiteAccount.tsx",
+      "source_location": "L18"
+    },
+    {
+      "id": "components_website_siteaccount_siteaccountdrawer",
+      "label": "SiteAccountDrawer()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 43,
+      "community_name": "useCurrentUser",
+      "file_type": "code",
+      "norm_label": "siteaccountdrawer()",
+      "source_file": "components/website/SiteAccount.tsx",
+      "source_location": "L98"
     },
     {
       "id": "hooks_auth_use_current_user_usecurrentuser",
@@ -5464,35 +5644,11 @@
       "_callable": true,
       "_origin": "ast",
       "community": 43,
-      "community_name": "ApiError",
+      "community_name": "useCurrentUser",
       "file_type": "code",
       "norm_label": "usecurrentuser()",
       "source_file": "hooks/auth/use-current-user.ts",
       "source_location": "L12"
-    },
-    {
-      "id": "hooks_auth_use_email_verification_useresendverification",
-      "label": "useResendVerification()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 43,
-      "community_name": "ApiError",
-      "file_type": "code",
-      "norm_label": "useresendverification()",
-      "source_file": "hooks/auth/use-email-verification.ts",
-      "source_location": "L14"
-    },
-    {
-      "id": "hooks_auth_use_email_verification_useverifyemail",
-      "label": "useVerifyEmail()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 43,
-      "community_name": "ApiError",
-      "file_type": "code",
-      "norm_label": "useverifyemail()",
-      "source_file": "hooks/auth/use-email-verification.ts",
-      "source_location": "L8"
     },
     {
       "id": "hooks_auth_use_logout_uselogout",
@@ -5500,7 +5656,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 43,
-      "community_name": "ApiError",
+      "community_name": "useCurrentUser",
       "file_type": "code",
       "norm_label": "uselogout()",
       "source_file": "hooks/auth/use-logout.ts",
@@ -5579,42 +5735,6 @@
       "source_location": "L65"
     },
     {
-      "id": "tests_invitation_accept_test_accepts",
-      "label": "accepts()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 46,
-      "community_name": "InvitationAccept.tsx",
-      "file_type": "code",
-      "norm_label": "accepts()",
-      "source_file": "tests/invitation-accept.test.tsx",
-      "source_location": "L35"
-    },
-    {
-      "id": "tests_invitation_accept_test_backend",
-      "label": "backend()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 46,
-      "community_name": "InvitationAccept.tsx",
-      "file_type": "code",
-      "norm_label": "backend()",
-      "source_file": "tests/invitation-accept.test.tsx",
-      "source_location": "L27"
-    },
-    {
-      "id": "tests_invitation_accept_test_show",
-      "label": "show()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 46,
-      "community_name": "InvitationAccept.tsx",
-      "file_type": "code",
-      "norm_label": "show()",
-      "source_file": "tests/invitation-accept.test.tsx",
-      "source_location": "L34"
-    },
-    {
       "id": "components_dashboard_emaillanguagesettings_emaillanguagesettings",
       "label": "EmailLanguageSettings()",
       "_callable": true,
@@ -5668,22 +5788,10 @@
       "_callable": true,
       "_origin": "ast",
       "community": 50,
-      "community_name": "AuthShell.tsx",
+      "community_name": "VerifyEmailView.tsx",
       "file_type": "code",
       "norm_label": "acceptinvitationpage()",
       "source_file": "app/invitations/accept/page.tsx",
-      "source_location": "L5"
-    },
-    {
-      "id": "app_website_login_page_loginpage",
-      "label": "LoginPage()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 50,
-      "community_name": "AuthShell.tsx",
-      "file_type": "code",
-      "norm_label": "loginpage()",
-      "source_file": "app/(website)/login/page.tsx",
       "source_location": "L5"
     },
     {
@@ -5692,7 +5800,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 50,
-      "community_name": "AuthShell.tsx",
+      "community_name": "VerifyEmailView.tsx",
       "file_type": "code",
       "norm_label": "resetpasswordpage()",
       "source_file": "app/(website)/reset-password/page.tsx",
@@ -5704,23 +5812,11 @@
       "_callable": true,
       "_origin": "ast",
       "community": 50,
-      "community_name": "AuthShell.tsx",
+      "community_name": "VerifyEmailView.tsx",
       "file_type": "code",
       "norm_label": "verifyemailpage()",
       "source_file": "app/(website)/verify-email/page.tsx",
       "source_location": "L5"
-    },
-    {
-      "id": "components_auth_loginform_loginform",
-      "label": "LoginForm()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 50,
-      "community_name": "AuthShell.tsx",
-      "file_type": "code",
-      "norm_label": "loginform()",
-      "source_file": "components/auth/LoginForm.tsx",
-      "source_location": "L27"
     },
     {
       "id": "components_auth_resetpasswordview_resetpasswordview",
@@ -5728,11 +5824,23 @@
       "_callable": true,
       "_origin": "ast",
       "community": 50,
-      "community_name": "AuthShell.tsx",
+      "community_name": "VerifyEmailView.tsx",
       "file_type": "code",
       "norm_label": "resetpasswordview()",
       "source_file": "components/auth/ResetPasswordView.tsx",
       "source_location": "L40"
+    },
+    {
+      "id": "components_auth_verifyemailview_verifyemailview",
+      "label": "VerifyEmailView()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 50,
+      "community_name": "VerifyEmailView.tsx",
+      "file_type": "code",
+      "norm_label": "verifyemailview()",
+      "source_file": "components/auth/VerifyEmailView.tsx",
+      "source_location": "L31"
     },
     {
       "id": "components_website_authshell_authshell",
@@ -5740,7 +5848,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 50,
-      "community_name": "AuthShell.tsx",
+      "community_name": "VerifyEmailView.tsx",
       "file_type": "code",
       "norm_label": "authshell()",
       "source_file": "components/website/AuthShell.tsx",
@@ -5752,11 +5860,35 @@
       "_callable": true,
       "_origin": "ast",
       "community": 50,
-      "community_name": "AuthShell.tsx",
+      "community_name": "VerifyEmailView.tsx",
       "file_type": "code",
       "norm_label": "logo()",
       "source_file": "components/website/SiteShell.tsx",
-      "source_location": "L17"
+      "source_location": "L18"
+    },
+    {
+      "id": "hooks_auth_use_email_verification_useresendverification",
+      "label": "useResendVerification()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 50,
+      "community_name": "VerifyEmailView.tsx",
+      "file_type": "code",
+      "norm_label": "useresendverification()",
+      "source_file": "hooks/auth/use-email-verification.ts",
+      "source_location": "L14"
+    },
+    {
+      "id": "hooks_auth_use_email_verification_useverifyemail",
+      "label": "useVerifyEmail()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 50,
+      "community_name": "VerifyEmailView.tsx",
+      "file_type": "code",
+      "norm_label": "useverifyemail()",
+      "source_file": "hooks/auth/use-email-verification.ts",
+      "source_location": "L8"
     },
     {
       "id": "components_auth_accountprofile_accountprofile",
@@ -5795,60 +5927,12 @@
       "source_location": "L75"
     },
     {
-      "id": "app_dashboard_dashboard_integrations_page_integrationspage",
-      "label": "IntegrationsPage()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 53,
-      "community_name": "useActiveProject",
-      "file_type": "code",
-      "norm_label": "integrationspage()",
-      "source_file": "app/(dashboard)/dashboard/integrations/page.tsx",
-      "source_location": "L4"
-    },
-    {
-      "id": "components_dashboard_dashboardsections_integrationssection",
-      "label": "IntegrationsSection()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 53,
-      "community_name": "useActiveProject",
-      "file_type": "code",
-      "norm_label": "integrationssection()",
-      "source_file": "components/dashboard/DashboardSections.tsx",
-      "source_location": "L2363"
-    },
-    {
-      "id": "components_dashboard_dashboardsections_pushsection",
-      "label": "PushSection()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 53,
-      "community_name": "useActiveProject",
-      "file_type": "code",
-      "norm_label": "pushsection()",
-      "source_file": "components/dashboard/DashboardSections.tsx",
-      "source_location": "L1902"
-    },
-    {
-      "id": "components_dashboard_dashboardsections_settingssection",
-      "label": "SettingsSection()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 53,
-      "community_name": "useActiveProject",
-      "file_type": "code",
-      "norm_label": "settingssection()",
-      "source_file": "components/dashboard/DashboardSections.tsx",
-      "source_location": "L2576"
-    },
-    {
       "id": "components_dashboard_dashboardsidebar_brand",
       "label": "Brand()",
       "_callable": true,
       "_origin": "ast",
       "community": 53,
-      "community_name": "useActiveProject",
+      "community_name": "use-active-project.ts",
       "file_type": "code",
       "norm_label": "brand()",
       "source_file": "components/dashboard/DashboardSidebar.tsx",
@@ -5860,47 +5944,11 @@
       "_callable": true,
       "_origin": "ast",
       "community": 53,
-      "community_name": "useActiveProject",
+      "community_name": "use-active-project.ts",
       "file_type": "code",
       "norm_label": "dashboardsidebar()",
       "source_file": "components/dashboard/DashboardSidebar.tsx",
       "source_location": "L19"
-    },
-    {
-      "id": "components_dashboard_integrationdocumentation_codeblock",
-      "label": "CodeBlock()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 53,
-      "community_name": "useActiveProject",
-      "file_type": "code",
-      "norm_label": "codeblock()",
-      "source_file": "components/dashboard/IntegrationDocumentation.tsx",
-      "source_location": "L120"
-    },
-    {
-      "id": "components_dashboard_integrationdocumentation_integrationdocumentation",
-      "label": "IntegrationDocumentation()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 53,
-      "community_name": "useActiveProject",
-      "file_type": "code",
-      "norm_label": "integrationdocumentation()",
-      "source_file": "components/dashboard/IntegrationDocumentation.tsx",
-      "source_location": "L254"
-    },
-    {
-      "id": "components_dashboard_integrationdocumentation_sectionheading",
-      "label": "SectionHeading()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 53,
-      "community_name": "useActiveProject",
-      "file_type": "code",
-      "norm_label": "sectionheading()",
-      "source_file": "components/dashboard/IntegrationDocumentation.tsx",
-      "source_location": "L190"
     },
     {
       "id": "hooks_projects_use_active_project_planlabel",
@@ -5908,35 +5956,11 @@
       "_callable": true,
       "_origin": "ast",
       "community": 53,
-      "community_name": "useActiveProject",
+      "community_name": "use-active-project.ts",
       "file_type": "code",
       "norm_label": "planlabel()",
       "source_file": "hooks/projects/use-active-project.ts",
       "source_location": "L11"
-    },
-    {
-      "id": "hooks_projects_use_active_project_useactiveproject",
-      "label": "useActiveProject()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 53,
-      "community_name": "useActiveProject",
-      "file_type": "code",
-      "norm_label": "useactiveproject()",
-      "source_file": "hooks/projects/use-active-project.ts",
-      "source_location": "L23"
-    },
-    {
-      "id": "hooks_projects_use_projects_useprojects",
-      "label": "useProjects()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 53,
-      "community_name": "useActiveProject",
-      "file_type": "code",
-      "norm_label": "useprojects()",
-      "source_file": "hooks/projects/use-projects.ts",
-      "source_location": "L10"
     },
     {
       "id": "components_dashboard_emailexport_backgroundbehind",
@@ -6191,47 +6215,47 @@
       "source_location": "L3"
     },
     {
-      "id": "components_auth_resetpasswordview",
-      "label": "ResetPasswordView.tsx",
+      "id": "app_dashboard_dashboard_billing_page",
+      "label": "billing/page.tsx",
       "_origin": "ast",
       "community": 0,
-      "community_name": "ResetPasswordView.tsx",
+      "community_name": "projectContext",
       "file_type": "code",
-      "norm_label": "resetpasswordview.tsx",
-      "source_file": "components/auth/ResetPasswordView.tsx",
+      "norm_label": "billing/page.tsx",
+      "source_file": "app/(dashboard)/dashboard/billing/page.tsx",
       "source_location": "L1"
     },
     {
-      "id": "components_auth_resetpasswordview_cardsx",
-      "label": "cardSx",
+      "id": "app_dashboard_dashboard_page",
+      "label": "dashboard/page.tsx",
       "_origin": "ast",
       "community": 0,
-      "community_name": "ResetPasswordView.tsx",
+      "community_name": "projectContext",
       "file_type": "code",
-      "norm_label": "cardsx",
-      "source_file": "components/auth/ResetPasswordView.tsx",
-      "source_location": "L28"
-    },
-    {
-      "id": "hooks_auth_use_password_reset",
-      "label": "use-password-reset.ts",
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "ResetPasswordView.tsx",
-      "file_type": "code",
-      "norm_label": "use-password-reset.ts",
-      "source_file": "hooks/auth/use-password-reset.ts",
+      "norm_label": "dashboard/page.tsx",
+      "source_file": "app/(dashboard)/dashboard/page.tsx",
       "source_location": "L1"
     },
     {
-      "id": "lib_auth_form",
-      "label": "form.ts",
+      "id": "app_dashboard_dashboard_page_metadata",
+      "label": "metadata",
       "_origin": "ast",
       "community": 0,
-      "community_name": "ResetPasswordView.tsx",
+      "community_name": "projectContext",
       "file_type": "code",
-      "norm_label": "form.ts",
-      "source_file": "lib/auth/form.ts",
+      "norm_label": "metadata",
+      "source_file": "app/(dashboard)/dashboard/page.tsx",
+      "source_location": "L4"
+    },
+    {
+      "id": "app_dashboard_dashboard_users_page",
+      "label": "users/page.tsx",
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "projectContext",
+      "file_type": "code",
+      "norm_label": "users/page.tsx",
+      "source_file": "app/(dashboard)/dashboard/users/page.tsx",
       "source_location": "L1"
     },
     {
@@ -6850,17 +6874,6 @@
       "file_type": "code",
       "norm_label": "callback/page.tsx",
       "source_file": "app/(dashboard)/dashboard/settings/sending-domains/callback/page.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "app_dashboard_dashboard_team_page",
-      "label": "team/page.tsx",
-      "_origin": "ast",
-      "community": 22,
-      "community_name": "DashboardFrame.tsx",
-      "file_type": "code",
-      "norm_label": "team/page.tsx",
-      "source_file": "app/(dashboard)/dashboard/team/page.tsx",
       "source_location": "L1"
     },
     {
@@ -7678,39 +7691,6 @@
       "source_location": "L1"
     },
     {
-      "id": "app_dashboard_dashboard_billing_page",
-      "label": "billing/page.tsx",
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "DashboardSections.tsx",
-      "file_type": "code",
-      "norm_label": "billing/page.tsx",
-      "source_file": "app/(dashboard)/dashboard/billing/page.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "app_dashboard_dashboard_page",
-      "label": "dashboard/page.tsx",
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "DashboardSections.tsx",
-      "file_type": "code",
-      "norm_label": "dashboard/page.tsx",
-      "source_file": "app/(dashboard)/dashboard/page.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "app_dashboard_dashboard_page_metadata",
-      "label": "metadata",
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "DashboardSections.tsx",
-      "file_type": "code",
-      "norm_label": "metadata",
-      "source_file": "app/(dashboard)/dashboard/page.tsx",
-      "source_location": "L4"
-    },
-    {
       "id": "app_dashboard_dashboard_push_page",
       "label": "push/page.tsx",
       "_origin": "ast",
@@ -7722,14 +7702,14 @@
       "source_location": "L1"
     },
     {
-      "id": "app_dashboard_dashboard_users_page",
-      "label": "users/page.tsx",
+      "id": "app_dashboard_dashboard_team_page",
+      "label": "team/page.tsx",
       "_origin": "ast",
       "community": 28,
       "community_name": "DashboardSections.tsx",
       "file_type": "code",
-      "norm_label": "users/page.tsx",
-      "source_file": "app/(dashboard)/dashboard/users/page.tsx",
+      "norm_label": "team/page.tsx",
+      "source_file": "app/(dashboard)/dashboard/team/page.tsx",
       "source_location": "L1"
     },
     {
@@ -7752,6 +7732,61 @@
       "file_type": "code",
       "norm_label": "dashboardsections.tsx",
       "source_file": "components/dashboard/DashboardSections.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "components_dashboard_journeyworkspace",
+      "label": "JourneyWorkspace.tsx",
+      "_origin": "ast",
+      "community": 28,
+      "community_name": "DashboardSections.tsx",
+      "file_type": "code",
+      "norm_label": "journeyworkspace.tsx",
+      "source_file": "components/dashboard/JourneyWorkspace.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "components_dashboard_journeyworkspace_guide",
+      "label": "guide",
+      "_origin": "ast",
+      "community": 28,
+      "community_name": "DashboardSections.tsx",
+      "file_type": "code",
+      "norm_label": "guide",
+      "source_file": "components/dashboard/JourneyWorkspace.tsx",
+      "source_location": "L12"
+    },
+    {
+      "id": "components_dashboard_journeyworkspace_journeyrows",
+      "label": "journeyRows",
+      "_origin": "ast",
+      "community": 28,
+      "community_name": "DashboardSections.tsx",
+      "file_type": "code",
+      "norm_label": "journeyrows",
+      "source_file": "components/dashboard/JourneyWorkspace.tsx",
+      "source_location": "L21"
+    },
+    {
+      "id": "components_dashboard_lifecyclesegmentcreatedialog",
+      "label": "LifecycleSegmentCreateDialog.tsx",
+      "_origin": "ast",
+      "community": 28,
+      "community_name": "DashboardSections.tsx",
+      "file_type": "code",
+      "norm_label": "lifecyclesegmentcreatedialog.tsx",
+      "source_file": "components/dashboard/LifecycleSegmentCreateDialog.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "components_dashboard_reusabledatatable",
+      "label": "ReusableDataTable.tsx",
+      "_origin": "ast",
+      "community": 28,
+      "community_name": "DashboardSections.tsx",
+      "file_type": "code",
+      "norm_label": "reusabledatatable.tsx",
+      "source_file": "components/dashboard/ReusableDataTable.tsx",
       "source_location": "L1"
     },
     {
@@ -8181,7 +8216,7 @@
       "file_type": "code",
       "norm_label": "links",
       "source_file": "components/website/SiteShell.tsx",
-      "source_location": "L8"
+      "source_location": "L9"
     },
     {
       "id": "components_website_siteshell_productgroups",
@@ -8192,7 +8227,7 @@
       "file_type": "code",
       "norm_label": "productgroups",
       "source_file": "components/website/SiteShell.tsx",
-      "source_location": "L9"
+      "source_location": "L10"
     },
     {
       "id": "components_website_siteshell_resourcegroups",
@@ -8203,7 +8238,7 @@
       "file_type": "code",
       "norm_label": "resourcegroups",
       "source_file": "components/website/SiteShell.tsx",
-      "source_location": "L13"
+      "source_location": "L14"
     },
     {
       "id": "components_dashboard_userimportdialog",
@@ -8265,66 +8300,44 @@
       "label": "CreateProjectDialog.tsx",
       "_origin": "ast",
       "community": 31,
-      "community_name": "CreateProjectDialog.tsx",
+      "community_name": "useActiveProject",
       "file_type": "code",
       "norm_label": "createprojectdialog.tsx",
       "source_file": "components/dashboard/CreateProjectDialog.tsx",
       "source_location": "L1"
     },
     {
-      "id": "lib_projects",
-      "label": "projects.ts",
+      "id": "components_dashboard_dangerzonepanel",
+      "label": "DangerZonePanel.tsx",
       "_origin": "ast",
       "community": 31,
-      "community_name": "CreateProjectDialog.tsx",
+      "community_name": "useActiveProject",
       "file_type": "code",
-      "norm_label": "projects.ts",
-      "source_file": "lib/projects.ts",
+      "norm_label": "dangerzonepanel.tsx",
+      "source_file": "components/dashboard/DangerZonePanel.tsx",
       "source_location": "L1"
     },
     {
-      "id": "lib_projects_projects",
-      "label": "projects",
+      "id": "hooks_projects_use_projects",
+      "label": "use-projects.ts",
       "_origin": "ast",
       "community": 31,
-      "community_name": "CreateProjectDialog.tsx",
+      "community_name": "useActiveProject",
       "file_type": "code",
-      "norm_label": "projects",
-      "source_file": "lib/projects.ts",
-      "source_location": "L24"
-    },
-    {
-      "id": "lib_uislice",
-      "label": "uiSlice.ts",
-      "_origin": "ast",
-      "community": 31,
-      "community_name": "CreateProjectDialog.tsx",
-      "file_type": "code",
-      "norm_label": "uislice.ts",
-      "source_file": "lib/uiSlice.ts",
+      "norm_label": "use-projects.ts",
+      "source_file": "hooks/projects/use-projects.ts",
       "source_location": "L1"
     },
     {
-      "id": "lib_uislice_uireducer",
-      "label": "uiReducer",
+      "id": "lib_projects_api_projectapi",
+      "label": "projectApi",
       "_origin": "ast",
       "community": 31,
-      "community_name": "CreateProjectDialog.tsx",
+      "community_name": "useActiveProject",
       "file_type": "code",
-      "norm_label": "uireducer",
-      "source_file": "lib/uiSlice.ts",
-      "source_location": "L14"
-    },
-    {
-      "id": "lib_uislice_uislice",
-      "label": "uiSlice",
-      "_origin": "ast",
-      "community": 31,
-      "community_name": "CreateProjectDialog.tsx",
-      "file_type": "code",
-      "norm_label": "uislice",
-      "source_file": "lib/uiSlice.ts",
-      "source_location": "L12"
+      "norm_label": "projectapi",
+      "source_file": "lib/projects/api.ts",
+      "source_location": "L41"
     },
     {
       "id": "components_dashboard_userdetailsworkspace",
@@ -8360,70 +8373,114 @@
       "source_location": "L525"
     },
     {
-      "id": "lib_projects_api_auditapi",
-      "label": "auditApi",
+      "id": "vercel",
+      "label": "vercel.json",
       "_origin": "ast",
       "community": 33,
-      "community_name": "team-access.test.tsx",
+      "community_name": "vercel.json",
       "file_type": "code",
-      "norm_label": "auditapi",
-      "source_file": "lib/projects/api.ts",
-      "source_location": "L508"
-    },
-    {
-      "id": "tests_team_access_test",
-      "label": "team-access.test.tsx",
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "team-access.test.tsx",
-      "file_type": "code",
-      "norm_label": "team-access.test.tsx",
-      "source_file": "tests/team-access.test.tsx",
+      "norm_label": "vercel.json",
+      "source_file": "vercel.json",
       "source_location": "L1"
     },
     {
-      "id": "tests_team_access_test_audit",
-      "label": "audit",
+      "id": "vercel_app_api_route_ts_maxduration",
+      "label": "maxDuration",
       "_origin": "ast",
       "community": 33,
-      "community_name": "team-access.test.tsx",
+      "community_name": "vercel.json",
       "file_type": "code",
-      "norm_label": "audit",
-      "source_file": "tests/team-access.test.tsx",
-      "source_location": "L33"
+      "norm_label": "maxduration",
+      "source_file": "vercel.json",
+      "source_location": "L8"
     },
     {
-      "id": "tests_team_access_test_members",
-      "label": "members",
+      "id": "vercel_buildcommand",
+      "label": "buildCommand",
       "_origin": "ast",
       "community": 33,
-      "community_name": "team-access.test.tsx",
+      "community_name": "vercel.json",
       "file_type": "code",
-      "norm_label": "members",
-      "source_file": "tests/team-access.test.tsx",
-      "source_location": "L44"
+      "norm_label": "buildcommand",
+      "source_file": "vercel.json",
+      "source_location": "L5"
     },
     {
-      "id": "tests_team_access_test_team",
-      "label": "team",
+      "id": "vercel_framework",
+      "label": "framework",
       "_origin": "ast",
       "community": 33,
-      "community_name": "team-access.test.tsx",
+      "community_name": "vercel.json",
       "file_type": "code",
-      "norm_label": "team",
-      "source_file": "tests/team-access.test.tsx",
-      "source_location": "L32"
+      "norm_label": "framework",
+      "source_file": "vercel.json",
+      "source_location": "L3"
     },
     {
-      "id": "hooks_projects_use_projects",
-      "label": "use-projects.ts",
+      "id": "vercel_functions",
+      "label": "functions",
       "_origin": "ast",
-      "community": 34,
-      "community_name": "projects/api.ts",
+      "community": 33,
+      "community_name": "vercel.json",
       "file_type": "code",
-      "norm_label": "use-projects.ts",
-      "source_file": "hooks/projects/use-projects.ts",
-      "source_location": "L1"
+      "norm_label": "functions",
+      "source_file": "vercel.json",
+      "source_location": "L7"
+    },
+    {
+      "id": "vercel_functions_app_api_route_ts",
+      "label": "app/api/**/route.ts",
+      "_origin": "ast",
+      "community": 33,
+      "community_name": "vercel.json",
+      "file_type": "code",
+      "norm_label": "app/api/**/route.ts",
+      "source_file": "vercel.json",
+      "source_location": "L8"
+    },
+    {
+      "id": "vercel_installcommand",
+      "label": "installCommand",
+      "_origin": "ast",
+      "community": 33,
+      "community_name": "vercel.json",
+      "file_type": "code",
+      "norm_label": "installcommand",
+      "source_file": "vercel.json",
+      "source_location": "L4"
+    },
+    {
+      "id": "vercel_regions",
+      "label": "regions",
+      "_origin": "ast",
+      "community": 33,
+      "community_name": "vercel.json",
+      "file_type": "code",
+      "norm_label": "regions",
+      "source_file": "vercel.json",
+      "source_location": "L6"
+    },
+    {
+      "id": "vercel_schema",
+      "label": "$schema",
+      "_origin": "ast",
+      "community": 33,
+      "community_name": "vercel.json",
+      "file_type": "code",
+      "norm_label": "$schema",
+      "source_file": "vercel.json",
+      "source_location": "L2"
+    },
+    {
+      "id": "ref_hnd1",
+      "label": "hnd1",
+      "_origin": "ast",
+      "community": 33,
+      "community_name": "vercel.json",
+      "file_type": "concept",
+      "norm_label": "hnd1",
+      "source_file": "vercel.json",
+      "source_location": "L6"
     },
     {
       "id": "lib_projects_api",
@@ -8435,17 +8492,6 @@
       "norm_label": "projects/api.ts",
       "source_file": "lib/projects/api.ts",
       "source_location": "L1"
-    },
-    {
-      "id": "lib_projects_api_projectapi",
-      "label": "projectApi",
-      "_origin": "ast",
-      "community": 34,
-      "community_name": "projects/api.ts",
-      "file_type": "code",
-      "norm_label": "projectapi",
-      "source_file": "lib/projects/api.ts",
-      "source_location": "L41"
     },
     {
       "id": "types_project",
@@ -8514,6 +8560,61 @@
       "source_location": "L43"
     },
     {
+      "id": "lib_projects_api_auditapi",
+      "label": "auditApi",
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "TeamAccessPanel.tsx",
+      "file_type": "code",
+      "norm_label": "auditapi",
+      "source_file": "lib/projects/api.ts",
+      "source_location": "L508"
+    },
+    {
+      "id": "tests_team_access_test",
+      "label": "team-access.test.tsx",
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "TeamAccessPanel.tsx",
+      "file_type": "code",
+      "norm_label": "team-access.test.tsx",
+      "source_file": "tests/team-access.test.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "tests_team_access_test_audit",
+      "label": "audit",
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "TeamAccessPanel.tsx",
+      "file_type": "code",
+      "norm_label": "audit",
+      "source_file": "tests/team-access.test.tsx",
+      "source_location": "L33"
+    },
+    {
+      "id": "tests_team_access_test_members",
+      "label": "members",
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "TeamAccessPanel.tsx",
+      "file_type": "code",
+      "norm_label": "members",
+      "source_file": "tests/team-access.test.tsx",
+      "source_location": "L44"
+    },
+    {
+      "id": "tests_team_access_test_team",
+      "label": "team",
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "TeamAccessPanel.tsx",
+      "file_type": "code",
+      "norm_label": "team",
+      "source_file": "tests/team-access.test.tsx",
+      "source_location": "L32"
+    },
+    {
       "id": "hooks_auth_use_change_password",
       "label": "use-change-password.ts",
       "_origin": "ast",
@@ -8544,6 +8645,28 @@
       "file_type": "code",
       "norm_label": "use-login.ts",
       "source_file": "hooks/auth/use-login.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "hooks_auth_use_logout",
+      "label": "use-logout.ts",
+      "_origin": "ast",
+      "community": 36,
+      "community_name": "auth.ts",
+      "file_type": "code",
+      "norm_label": "use-logout.ts",
+      "source_file": "hooks/auth/use-logout.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "hooks_auth_use_password_reset",
+      "label": "use-password-reset.ts",
+      "_origin": "ast",
+      "community": 36,
+      "community_name": "auth.ts",
+      "file_type": "code",
+      "norm_label": "use-password-reset.ts",
+      "source_file": "hooks/auth/use-password-reset.ts",
       "source_location": "L1"
     },
     {
@@ -8602,26 +8725,26 @@
       "source_location": "L1"
     },
     {
-      "id": "app_dashboard_dashboard_account_page",
-      "label": "account/page.tsx",
+      "id": "components_auth_resetpasswordview",
+      "label": "ResetPasswordView.tsx",
       "_origin": "ast",
       "community": 37,
       "community_name": "auth.schema.ts",
       "file_type": "code",
-      "norm_label": "account/page.tsx",
-      "source_file": "app/(dashboard)/dashboard/account/page.tsx",
+      "norm_label": "resetpasswordview.tsx",
+      "source_file": "components/auth/ResetPasswordView.tsx",
       "source_location": "L1"
     },
     {
-      "id": "components_auth_changepasswordform",
-      "label": "ChangePasswordForm.tsx",
+      "id": "components_auth_resetpasswordview_cardsx",
+      "label": "cardSx",
       "_origin": "ast",
       "community": 37,
       "community_name": "auth.schema.ts",
       "file_type": "code",
-      "norm_label": "changepasswordform.tsx",
-      "source_file": "components/auth/ChangePasswordForm.tsx",
-      "source_location": "L1"
+      "norm_label": "cardsx",
+      "source_file": "components/auth/ResetPasswordView.tsx",
+      "source_location": "L28"
     },
     {
       "id": "schemas_auth_schema",
@@ -8633,17 +8756,6 @@
       "norm_label": "auth.schema.ts",
       "source_file": "schemas/auth.schema.ts",
       "source_location": "L1"
-    },
-    {
-      "id": "schemas_auth_schema_changepasswordschema",
-      "label": "changePasswordSchema",
-      "_origin": "ast",
-      "community": 37,
-      "community_name": "auth.schema.ts",
-      "file_type": "code",
-      "norm_label": "changepasswordschema",
-      "source_file": "schemas/auth.schema.ts",
-      "source_location": "L44"
     },
     {
       "id": "schemas_auth_schema_email",
@@ -8666,6 +8778,17 @@
       "norm_label": "forgotpasswordschema",
       "source_file": "schemas/auth.schema.ts",
       "source_location": "L31"
+    },
+    {
+      "id": "schemas_auth_schema_loginschema",
+      "label": "loginSchema",
+      "_origin": "ast",
+      "community": 37,
+      "community_name": "auth.schema.ts",
+      "file_type": "code",
+      "norm_label": "loginschema",
+      "source_file": "schemas/auth.schema.ts",
+      "source_location": "L18"
     },
     {
       "id": "schemas_auth_schema_newpassword",
@@ -8699,17 +8822,6 @@
       "norm_label": "resetpasswordschema",
       "source_file": "schemas/auth.schema.ts",
       "source_location": "L33"
-    },
-    {
-      "id": "schemas_auth_schema_setpasswordschema",
-      "label": "setPasswordSchema",
-      "_origin": "ast",
-      "community": 37,
-      "community_name": "auth.schema.ts",
-      "file_type": "code",
-      "norm_label": "setpasswordschema",
-      "source_file": "schemas/auth.schema.ts",
-      "source_location": "L56"
     },
     {
       "id": "schemas_auth_schema_token",
@@ -8976,17 +9088,6 @@
       "source_location": "L1"
     },
     {
-      "id": "components_dashboard_dangerzonepanel",
-      "label": "DangerZonePanel.tsx",
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "ProjectSettingsCenter.tsx",
-      "file_type": "code",
-      "norm_label": "dangerzonepanel.tsx",
-      "source_file": "components/dashboard/DangerZonePanel.tsx",
-      "source_location": "L1"
-    },
-    {
       "id": "components_dashboard_emailpanel",
       "label": "EmailPanel.tsx",
       "_origin": "ast",
@@ -9040,17 +9141,6 @@
       "norm_label": "config_roles",
       "source_file": "components/dashboard/FirebasePanel.tsx",
       "source_location": "L11"
-    },
-    {
-      "id": "components_dashboard_projectdetailspanel",
-      "label": "ProjectDetailsPanel.tsx",
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "ProjectSettingsCenter.tsx",
-      "file_type": "code",
-      "norm_label": "projectdetailspanel.tsx",
-      "source_file": "components/dashboard/ProjectDetailsPanel.tsx",
-      "source_location": "L1"
     },
     {
       "id": "components_dashboard_projectsettingscenter",
@@ -9207,6 +9297,17 @@
       "source_location": "L1"
     },
     {
+      "id": "app_website_login_page",
+      "label": "login/page.tsx",
+      "_origin": "ast",
+      "community": 40,
+      "community_name": "LoginForm.tsx",
+      "file_type": "code",
+      "norm_label": "login/page.tsx",
+      "source_file": "app/(website)/login/page.tsx",
+      "source_location": "L1"
+    },
+    {
       "id": "components_auth_authfeedback",
       "label": "AuthFeedback.tsx",
       "_origin": "ast",
@@ -9215,6 +9316,17 @@
       "file_type": "code",
       "norm_label": "authfeedback.tsx",
       "source_file": "components/auth/AuthFeedback.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "components_auth_changepasswordform",
+      "label": "ChangePasswordForm.tsx",
+      "_origin": "ast",
+      "community": 40,
+      "community_name": "LoginForm.tsx",
+      "file_type": "code",
+      "norm_label": "changepasswordform.tsx",
+      "source_file": "components/auth/ChangePasswordForm.tsx",
       "source_location": "L1"
     },
     {
@@ -9273,6 +9385,17 @@
       "source_location": "L1"
     },
     {
+      "id": "components_dashboard_projectdetailspanel",
+      "label": "ProjectDetailsPanel.tsx",
+      "_origin": "ast",
+      "community": 40,
+      "community_name": "LoginForm.tsx",
+      "file_type": "code",
+      "norm_label": "projectdetailspanel.tsx",
+      "source_file": "components/dashboard/ProjectDetailsPanel.tsx",
+      "source_location": "L1"
+    },
+    {
       "id": "hooks_auth_use_clear_on_restore",
       "label": "use-clear-on-restore.ts",
       "_origin": "ast",
@@ -9284,15 +9407,37 @@
       "source_location": "L1"
     },
     {
-      "id": "schemas_auth_schema_loginschema",
-      "label": "loginSchema",
+      "id": "lib_auth_form",
+      "label": "form.ts",
       "_origin": "ast",
       "community": 40,
       "community_name": "LoginForm.tsx",
       "file_type": "code",
-      "norm_label": "loginschema",
+      "norm_label": "form.ts",
+      "source_file": "lib/auth/form.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "schemas_auth_schema_changepasswordschema",
+      "label": "changePasswordSchema",
+      "_origin": "ast",
+      "community": 40,
+      "community_name": "LoginForm.tsx",
+      "file_type": "code",
+      "norm_label": "changepasswordschema",
       "source_file": "schemas/auth.schema.ts",
-      "source_location": "L18"
+      "source_location": "L44"
+    },
+    {
+      "id": "schemas_auth_schema_setpasswordschema",
+      "label": "setPasswordSchema",
+      "_origin": "ast",
+      "community": 40,
+      "community_name": "LoginForm.tsx",
+      "file_type": "code",
+      "norm_label": "setpasswordschema",
+      "source_file": "schemas/auth.schema.ts",
+      "source_location": "L56"
     },
     {
       "id": "schemas_auth_schema_signupschema",
@@ -9306,58 +9451,80 @@
       "source_location": "L24"
     },
     {
-      "id": "components_dashboard_journeyworkspace",
-      "label": "JourneyWorkspace.tsx",
+      "id": "tests_invitation_accept_test",
+      "label": "invitation-accept.test.tsx",
       "_origin": "ast",
       "community": 41,
-      "community_name": "JourneyWorkspace.tsx",
+      "community_name": "invitation-accept.test.tsx",
       "file_type": "code",
-      "norm_label": "journeyworkspace.tsx",
-      "source_file": "components/dashboard/JourneyWorkspace.tsx",
+      "norm_label": "invitation-accept.test.tsx",
+      "source_file": "tests/invitation-accept.test.tsx",
       "source_location": "L1"
     },
     {
-      "id": "components_dashboard_journeyworkspace_guide",
-      "label": "guide",
+      "id": "tests_invitation_accept_test_assign",
+      "label": "assign",
       "_origin": "ast",
       "community": 41,
-      "community_name": "JourneyWorkspace.tsx",
+      "community_name": "invitation-accept.test.tsx",
       "file_type": "code",
-      "norm_label": "guide",
-      "source_file": "components/dashboard/JourneyWorkspace.tsx",
-      "source_location": "L12"
+      "norm_label": "assign",
+      "source_file": "tests/invitation-accept.test.tsx",
+      "source_location": "L15"
     },
     {
-      "id": "components_dashboard_journeyworkspace_journeyrows",
-      "label": "journeyRows",
+      "id": "tests_invitation_accept_test_logout",
+      "label": "logout",
       "_origin": "ast",
       "community": 41,
-      "community_name": "JourneyWorkspace.tsx",
+      "community_name": "invitation-accept.test.tsx",
       "file_type": "code",
-      "norm_label": "journeyrows",
-      "source_file": "components/dashboard/JourneyWorkspace.tsx",
-      "source_location": "L21"
+      "norm_label": "logout",
+      "source_file": "tests/invitation-accept.test.tsx",
+      "source_location": "L8"
     },
     {
-      "id": "components_dashboard_reusabledatatable",
-      "label": "ReusableDataTable.tsx",
+      "id": "tests_invitation_accept_test_pending",
+      "label": "pending",
       "_origin": "ast",
       "community": 41,
-      "community_name": "JourneyWorkspace.tsx",
+      "community_name": "invitation-accept.test.tsx",
       "file_type": "code",
-      "norm_label": "reusabledatatable.tsx",
-      "source_file": "components/dashboard/ReusableDataTable.tsx",
-      "source_location": "L1"
+      "norm_label": "pending",
+      "source_file": "tests/invitation-accept.test.tsx",
+      "source_location": "L16"
     },
     {
-      "id": "components_dashboard_lifecyclesegmentcreatedialog",
-      "label": "LifecycleSegmentCreateDialog.tsx",
+      "id": "app_dashboard_dashboard_integrations_page",
+      "label": "integrations/page.tsx",
       "_origin": "ast",
       "community": 42,
-      "community_name": "LifecycleSegmentCreateDialog.tsx",
+      "community_name": "IntegrationDocumentation.tsx",
       "file_type": "code",
-      "norm_label": "lifecyclesegmentcreatedialog.tsx",
-      "source_file": "components/dashboard/LifecycleSegmentCreateDialog.tsx",
+      "norm_label": "integrations/page.tsx",
+      "source_file": "app/(dashboard)/dashboard/integrations/page.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "components_dashboard_integrationdocumentation",
+      "label": "IntegrationDocumentation.tsx",
+      "_origin": "ast",
+      "community": 42,
+      "community_name": "IntegrationDocumentation.tsx",
+      "file_type": "code",
+      "norm_label": "integrationdocumentation.tsx",
+      "source_file": "components/dashboard/IntegrationDocumentation.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "app_dashboard_dashboard_account_page",
+      "label": "account/page.tsx",
+      "_origin": "ast",
+      "community": 43,
+      "community_name": "useCurrentUser",
+      "file_type": "code",
+      "norm_label": "account/page.tsx",
+      "source_file": "app/(dashboard)/dashboard/account/page.tsx",
       "source_location": "L1"
     },
     {
@@ -9365,54 +9532,21 @@
       "label": "AccountMenu.tsx",
       "_origin": "ast",
       "community": 43,
-      "community_name": "ApiError",
+      "community_name": "useCurrentUser",
       "file_type": "code",
       "norm_label": "accountmenu.tsx",
       "source_file": "components/auth/AccountMenu.tsx",
       "source_location": "L1"
     },
     {
-      "id": "components_auth_verifyemailview",
-      "label": "VerifyEmailView.tsx",
+      "id": "components_website_siteaccount",
+      "label": "SiteAccount.tsx",
       "_origin": "ast",
       "community": 43,
-      "community_name": "ApiError",
+      "community_name": "useCurrentUser",
       "file_type": "code",
-      "norm_label": "verifyemailview.tsx",
-      "source_file": "components/auth/VerifyEmailView.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "components_auth_verifyemailview_cardsx",
-      "label": "cardSx",
-      "_origin": "ast",
-      "community": 43,
-      "community_name": "ApiError",
-      "file_type": "code",
-      "norm_label": "cardsx",
-      "source_file": "components/auth/VerifyEmailView.tsx",
-      "source_location": "L23"
-    },
-    {
-      "id": "hooks_auth_use_email_verification",
-      "label": "use-email-verification.ts",
-      "_origin": "ast",
-      "community": 43,
-      "community_name": "ApiError",
-      "file_type": "code",
-      "norm_label": "use-email-verification.ts",
-      "source_file": "hooks/auth/use-email-verification.ts",
-      "source_location": "L1"
-    },
-    {
-      "id": "hooks_auth_use_logout",
-      "label": "use-logout.ts",
-      "_origin": "ast",
-      "community": 43,
-      "community_name": "ApiError",
-      "file_type": "code",
-      "norm_label": "use-logout.ts",
-      "source_file": "hooks/auth/use-logout.ts",
+      "norm_label": "siteaccount.tsx",
+      "source_file": "components/website/SiteAccount.tsx",
       "source_location": "L1"
     },
     {
@@ -9469,50 +9603,6 @@
       "norm_label": "role",
       "source_file": "components/auth/InvitationAccept.tsx",
       "source_location": "L30"
-    },
-    {
-      "id": "tests_invitation_accept_test",
-      "label": "invitation-accept.test.tsx",
-      "_origin": "ast",
-      "community": 46,
-      "community_name": "InvitationAccept.tsx",
-      "file_type": "code",
-      "norm_label": "invitation-accept.test.tsx",
-      "source_file": "tests/invitation-accept.test.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "tests_invitation_accept_test_assign",
-      "label": "assign",
-      "_origin": "ast",
-      "community": 46,
-      "community_name": "InvitationAccept.tsx",
-      "file_type": "code",
-      "norm_label": "assign",
-      "source_file": "tests/invitation-accept.test.tsx",
-      "source_location": "L15"
-    },
-    {
-      "id": "tests_invitation_accept_test_logout",
-      "label": "logout",
-      "_origin": "ast",
-      "community": 46,
-      "community_name": "InvitationAccept.tsx",
-      "file_type": "code",
-      "norm_label": "logout",
-      "source_file": "tests/invitation-accept.test.tsx",
-      "source_location": "L8"
-    },
-    {
-      "id": "tests_invitation_accept_test_pending",
-      "label": "pending",
-      "_origin": "ast",
-      "community": 46,
-      "community_name": "InvitationAccept.tsx",
-      "file_type": "code",
-      "norm_label": "pending",
-      "source_file": "tests/invitation-accept.test.tsx",
-      "source_location": "L16"
     },
     {
       "id": "components_dashboard_emaillanguagesettings",
@@ -9882,21 +9972,10 @@
       "label": "accept/page.tsx",
       "_origin": "ast",
       "community": 50,
-      "community_name": "AuthShell.tsx",
+      "community_name": "VerifyEmailView.tsx",
       "file_type": "code",
       "norm_label": "accept/page.tsx",
       "source_file": "app/invitations/accept/page.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "app_website_login_page",
-      "label": "login/page.tsx",
-      "_origin": "ast",
-      "community": 50,
-      "community_name": "AuthShell.tsx",
-      "file_type": "code",
-      "norm_label": "login/page.tsx",
-      "source_file": "app/(website)/login/page.tsx",
       "source_location": "L1"
     },
     {
@@ -9904,7 +9983,7 @@
       "label": "reset-password/page.tsx",
       "_origin": "ast",
       "community": 50,
-      "community_name": "AuthShell.tsx",
+      "community_name": "VerifyEmailView.tsx",
       "file_type": "code",
       "norm_label": "reset-password/page.tsx",
       "source_file": "app/(website)/reset-password/page.tsx",
@@ -9915,21 +9994,54 @@
       "label": "verify-email/page.tsx",
       "_origin": "ast",
       "community": 50,
-      "community_name": "AuthShell.tsx",
+      "community_name": "VerifyEmailView.tsx",
       "file_type": "code",
       "norm_label": "verify-email/page.tsx",
       "source_file": "app/(website)/verify-email/page.tsx",
       "source_location": "L1"
     },
     {
+      "id": "components_auth_verifyemailview",
+      "label": "VerifyEmailView.tsx",
+      "_origin": "ast",
+      "community": 50,
+      "community_name": "VerifyEmailView.tsx",
+      "file_type": "code",
+      "norm_label": "verifyemailview.tsx",
+      "source_file": "components/auth/VerifyEmailView.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "components_auth_verifyemailview_cardsx",
+      "label": "cardSx",
+      "_origin": "ast",
+      "community": 50,
+      "community_name": "VerifyEmailView.tsx",
+      "file_type": "code",
+      "norm_label": "cardsx",
+      "source_file": "components/auth/VerifyEmailView.tsx",
+      "source_location": "L23"
+    },
+    {
       "id": "components_website_authshell",
       "label": "AuthShell.tsx",
       "_origin": "ast",
       "community": 50,
-      "community_name": "AuthShell.tsx",
+      "community_name": "VerifyEmailView.tsx",
       "file_type": "code",
       "norm_label": "authshell.tsx",
       "source_file": "components/website/AuthShell.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "hooks_auth_use_email_verification",
+      "label": "use-email-verification.ts",
+      "_origin": "ast",
+      "community": 50,
+      "community_name": "VerifyEmailView.tsx",
+      "file_type": "code",
+      "norm_label": "use-email-verification.ts",
+      "source_file": "hooks/auth/use-email-verification.ts",
       "source_location": "L1"
     },
     {
@@ -9966,22 +10078,11 @@
       "source_location": "L454"
     },
     {
-      "id": "app_dashboard_dashboard_integrations_page",
-      "label": "integrations/page.tsx",
-      "_origin": "ast",
-      "community": 53,
-      "community_name": "useActiveProject",
-      "file_type": "code",
-      "norm_label": "integrations/page.tsx",
-      "source_file": "app/(dashboard)/dashboard/integrations/page.tsx",
-      "source_location": "L1"
-    },
-    {
       "id": "components_dashboard_dashboardsidebar",
       "label": "DashboardSidebar.tsx",
       "_origin": "ast",
       "community": 53,
-      "community_name": "useActiveProject",
+      "community_name": "use-active-project.ts",
       "file_type": "code",
       "norm_label": "dashboardsidebar.tsx",
       "source_file": "components/dashboard/DashboardSidebar.tsx",
@@ -9992,44 +10093,88 @@
       "label": "navigation",
       "_origin": "ast",
       "community": 53,
-      "community_name": "useActiveProject",
+      "community_name": "use-active-project.ts",
       "file_type": "code",
       "norm_label": "navigation",
       "source_file": "components/dashboard/DashboardSidebar.tsx",
       "source_location": "L9"
     },
     {
-      "id": "components_dashboard_integrationdocumentation",
-      "label": "IntegrationDocumentation.tsx",
-      "_origin": "ast",
-      "community": 53,
-      "community_name": "useActiveProject",
-      "file_type": "code",
-      "norm_label": "integrationdocumentation.tsx",
-      "source_file": "components/dashboard/IntegrationDocumentation.tsx",
-      "source_location": "L1"
-    },
-    {
       "id": "hooks_projects_use_active_project",
       "label": "use-active-project.ts",
       "_origin": "ast",
       "community": 53,
-      "community_name": "useActiveProject",
+      "community_name": "use-active-project.ts",
       "file_type": "code",
       "norm_label": "use-active-project.ts",
       "source_file": "hooks/projects/use-active-project.ts",
       "source_location": "L1"
     },
     {
+      "id": "lib_projects",
+      "label": "projects.ts",
+      "_origin": "ast",
+      "community": 53,
+      "community_name": "use-active-project.ts",
+      "file_type": "code",
+      "norm_label": "projects.ts",
+      "source_file": "lib/projects.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "lib_projects_projects",
+      "label": "projects",
+      "_origin": "ast",
+      "community": 53,
+      "community_name": "use-active-project.ts",
+      "file_type": "code",
+      "norm_label": "projects",
+      "source_file": "lib/projects.ts",
+      "source_location": "L24"
+    },
+    {
       "id": "lib_store",
       "label": "store.ts",
       "_origin": "ast",
       "community": 53,
-      "community_name": "useActiveProject",
+      "community_name": "use-active-project.ts",
       "file_type": "code",
       "norm_label": "store.ts",
       "source_file": "lib/store.ts",
       "source_location": "L1"
+    },
+    {
+      "id": "lib_uislice",
+      "label": "uiSlice.ts",
+      "_origin": "ast",
+      "community": 53,
+      "community_name": "use-active-project.ts",
+      "file_type": "code",
+      "norm_label": "uislice.ts",
+      "source_file": "lib/uiSlice.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "lib_uislice_uireducer",
+      "label": "uiReducer",
+      "_origin": "ast",
+      "community": 53,
+      "community_name": "use-active-project.ts",
+      "file_type": "code",
+      "norm_label": "uireducer",
+      "source_file": "lib/uiSlice.ts",
+      "source_location": "L14"
+    },
+    {
+      "id": "lib_uislice_uislice",
+      "label": "uiSlice",
+      "_origin": "ast",
+      "community": 53,
+      "community_name": "use-active-project.ts",
+      "file_type": "code",
+      "norm_label": "uislice",
+      "source_file": "lib/uiSlice.ts",
+      "source_location": "L12"
     },
     {
       "id": "tsconfig",
@@ -12245,7 +12390,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "components/dashboard/EmailWorkspace.tsx",
-      "source_location": "L2134",
+      "source_location": "L2135",
       "weight": 1.0
     },
     {
@@ -12966,6 +13111,54 @@
       "context": "call",
       "source_file": "components/QueryProvider.tsx",
       "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "components_website_siteaccount_siteaccount",
+      "target": "hooks_auth_use_current_user_usecurrentuser",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "components/website/SiteAccount.tsx",
+      "source_location": "L19",
+      "weight": 1.0
+    },
+    {
+      "source": "components_website_siteaccount_siteaccount",
+      "target": "hooks_auth_use_logout_uselogout",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "components/website/SiteAccount.tsx",
+      "source_location": "L20",
+      "weight": 1.0
+    },
+    {
+      "source": "components_website_siteaccount_siteaccountdrawer",
+      "target": "hooks_auth_use_logout_uselogout",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "components/website/SiteAccount.tsx",
+      "source_location": "L100",
+      "weight": 1.0
+    },
+    {
+      "source": "components_website_siteaccount_siteaccountdrawer",
+      "target": "hooks_auth_use_current_user_usecurrentuser",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "components/website/SiteAccount.tsx",
+      "source_location": "L99",
       "weight": 1.0
     },
     {
@@ -13892,6 +14085,18 @@
       "context": "import",
       "source_file": "tsconfig.json",
       "source_location": "L20",
+      "weight": 1.0
+    },
+    {
+      "source": "vercel_regions",
+      "target": "ref_hnd1",
+      "relation": "extends",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "vercel.json",
+      "source_location": "L6",
       "weight": 1.0
     },
     {
@@ -18392,6 +18597,54 @@
       "context": "import",
       "source_file": "components/website/PricingExperience.tsx",
       "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "components_website_siteaccount",
+      "target": "hooks_auth_use_current_user_usecurrentuser",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "components/website/SiteAccount.tsx",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "components_website_siteaccount",
+      "target": "hooks_auth_use_logout_uselogout",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "components/website/SiteAccount.tsx",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "components_website_siteshell",
+      "target": "components_website_siteaccount_siteaccount",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "components/website/SiteShell.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "components_website_siteshell",
+      "target": "components_website_siteaccount_siteaccountdrawer",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "components/website/SiteShell.tsx",
+      "source_location": "L7",
       "weight": 1.0
     },
     {
@@ -23351,6 +23604,42 @@
       "weight": 1.0
     },
     {
+      "source": "components_website_siteaccount",
+      "target": "hooks_auth_use_current_user",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "components/website/SiteAccount.tsx",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "components_website_siteaccount",
+      "target": "hooks_auth_use_logout",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "components/website/SiteAccount.tsx",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "components_website_siteshell",
+      "target": "components_website_siteaccount",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "components/website/SiteShell.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
       "source": "hooks_auth_use_change_password",
       "target": "lib_auth_api",
       "relation": "imports_from",
@@ -26730,7 +27019,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "components/dashboard/EmailWorkspace.tsx",
-      "source_location": "L2509",
+      "source_location": "L2510",
       "weight": 1.0
     },
     {
@@ -26741,7 +27030,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "components/dashboard/EmailWorkspace.tsx",
-      "source_location": "L2581",
+      "source_location": "L2582",
       "weight": 1.0
     },
     {
@@ -26752,7 +27041,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "components/dashboard/EmailWorkspace.tsx",
-      "source_location": "L2637",
+      "source_location": "L2638",
       "weight": 1.0
     },
     {
@@ -28571,6 +28860,39 @@
       "weight": 1.0
     },
     {
+      "source": "components_website_siteaccount",
+      "target": "components_website_siteaccount_siteaccount",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "components/website/SiteAccount.tsx",
+      "source_location": "L18",
+      "weight": 1.0
+    },
+    {
+      "source": "components_website_siteaccount",
+      "target": "components_website_siteaccount_siteaccountdrawer",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "components/website/SiteAccount.tsx",
+      "source_location": "L98",
+      "weight": 1.0
+    },
+    {
+      "source": "components_website_siteshell",
+      "target": "components_website_siteshell_productgroups",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "components/website/SiteShell.tsx",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
       "source": "components_website_siteshell",
       "target": "components_website_siteshell_resourcegroups",
       "relation": "contains",
@@ -28578,7 +28900,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "components/website/SiteShell.tsx",
-      "source_location": "L13",
+      "source_location": "L14",
       "weight": 1.0
     },
     {
@@ -28589,7 +28911,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "components/website/SiteShell.tsx",
-      "source_location": "L17",
+      "source_location": "L18",
       "weight": 1.0
     },
     {
@@ -28600,7 +28922,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "components/website/SiteShell.tsx",
-      "source_location": "L18",
+      "source_location": "L19",
       "weight": 1.0
     },
     {
@@ -28611,7 +28933,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "components/website/SiteShell.tsx",
-      "source_location": "L19",
+      "source_location": "L20",
       "weight": 1.0
     },
     {
@@ -28622,7 +28944,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "components/website/SiteShell.tsx",
-      "source_location": "L20",
+      "source_location": "L21",
       "weight": 1.0
     },
     {
@@ -28633,7 +28955,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "components/website/SiteShell.tsx",
-      "source_location": "L21",
+      "source_location": "L22",
       "weight": 1.0
     },
     {
@@ -28644,7 +28966,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "components/website/SiteShell.tsx",
-      "source_location": "L22",
+      "source_location": "L23",
       "weight": 1.0
     },
     {
@@ -28655,23 +28977,12 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "components/website/SiteShell.tsx",
-      "source_location": "L23",
+      "source_location": "L24",
       "weight": 1.0
     },
     {
       "source": "components_website_siteshell",
       "target": "components_website_siteshell_links",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "components/website/SiteShell.tsx",
-      "source_location": "L8",
-      "weight": 1.0
-    },
-    {
-      "source": "components_website_siteshell",
-      "target": "components_website_siteshell_productgroups",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -31882,6 +32193,94 @@
       "weight": 1.0
     },
     {
+      "source": "vercel",
+      "target": "vercel_schema",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "vercel.json",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "vercel",
+      "target": "vercel_framework",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "vercel.json",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "vercel",
+      "target": "vercel_installcommand",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "vercel.json",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "vercel",
+      "target": "vercel_buildcommand",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "vercel.json",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "vercel",
+      "target": "vercel_regions",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "vercel.json",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "vercel",
+      "target": "vercel_functions",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "vercel.json",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "vercel_functions",
+      "target": "vercel_functions_app_api_route_ts",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "vercel.json",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "vercel_functions_app_api_route_ts",
+      "target": "vercel_app_api_route_ts_maxduration",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "vercel.json",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
       "source": "components_auth_googlebutton",
       "target": "lib_auth_firebase",
       "relation": "dynamic_import",
@@ -32008,5 +32407,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "4ce16cbbc94987972459e58695986ab1b7ad00bc"
+  "built_at_commit": "0b26b9f0393b2eb2843f59ed0b3996d6f54dd8d6"
 }
