@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Box, Button, Dialog, IconButton, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
+import { Box, Button, Dialog, Grow, IconButton, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
 import CloseRounded from "@mui/icons-material/CloseRounded";
 import LaptopMacRounded from "@mui/icons-material/LaptopMacRounded";
 import PhoneIphoneRounded from "@mui/icons-material/PhoneIphoneRounded";
@@ -29,8 +29,11 @@ export default function EmailPreviewDialog({
   const [sending, setSending] = useState(false);
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
+  // Closing plays the exit animation first; the parent unmounts the dialog once it has finished.
+  const [open, setOpen] = useState(true);
+  const close = () => setOpen(false);
   const sendTest = async () => {
-    if (!projectId || !subject) { onNotice("Test email prepared locally"); onClose(); return; }
+    if (!projectId || !subject) { onNotice("Test email prepared locally"); close(); return; }
     const recipient = to.trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) { setResult({ ok: false, message: "Enter a valid email address." }); return; }
     setSending(true);
@@ -45,10 +48,14 @@ export default function EmailPreviewDialog({
     }
   };
   return (
-    // Clicking outside or pressing Escape closes it (the Dialog's own behaviour).
+    // Escape and the close button close it; a click outside does not, so a stray click cannot lose the preview.
     <Dialog
-      open
-      onClose={onClose}
+      open={open}
+      onClose={(_, reason) => { if (reason !== "backdropClick") close(); }}
+      TransitionComponent={Grow}
+      transitionDuration={{ enter: 320, exit: 200 }}
+      TransitionProps={{ onExited: onClose, easing: { enter: 'cubic-bezier(.2,.9,.3,1.15)', exit: 'cubic-bezier(.4,0,1,1)' } }}
+      slotProps={{ backdrop: { sx: { bgcolor: 'rgba(12,14,22,.6)', backdropFilter: 'blur(6px)' } } }}
       maxWidth="md"
       fullWidth
       aria-labelledby="email-preview-title"
@@ -71,7 +78,7 @@ export default function EmailPreviewDialog({
           <ToggleButton value="desktop" aria-label="Desktop"><LaptopMacRounded fontSize="small" /></ToggleButton>
           <ToggleButton value="mobile" aria-label="Mobile"><PhoneIphoneRounded fontSize="small" /></ToggleButton>
         </ToggleButtonGroup>
-        <IconButton onClick={onClose} aria-label="Close preview" size="small" sx={{ color: '#64748b' }}><CloseRounded /></IconButton>
+        <IconButton onClick={close} aria-label="Close preview" size="small" sx={{ color: '#64748b' }}><CloseRounded /></IconButton>
       </Stack>
       <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto', p: { xs: 1.5, sm: 3 }, bgcolor: '#f3f5f9' }}>
         <Box
