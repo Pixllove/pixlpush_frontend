@@ -1,6 +1,6 @@
 "use client";
 
-import CloseEmailEditor from "./CloseEmailEditor";
+import CloseEmailEditor, { EDITOR_DIRTY_KEY } from "./CloseEmailEditor";
 import Image from "next/image";
 import EmailTranslationPanel from "./EmailTranslationPanel";
 import EmailLanguageSettings from "./EmailLanguageSettings";
@@ -186,7 +186,7 @@ const readEditorSession = (): EditorSession | null => {
 const writeEditorSession = (session: EditorSession | null) => {
   try {
     if (session) sessionStorage.setItem(EDITOR_SESSION_KEY, JSON.stringify(session));
-    else sessionStorage.removeItem(EDITOR_SESSION_KEY);
+    else { sessionStorage.removeItem(EDITOR_SESSION_KEY); sessionStorage.removeItem(EDITOR_DIRTY_KEY); }
   } catch { /* storage full or unavailable: the editor still works, it just will not survive a reload */ }
   // The page paints a plain backdrop while an editor is being restored (see the script in the email page).
   if (!session) document.documentElement.removeAttribute("data-email-editor");
@@ -1429,7 +1429,9 @@ function EditorToolbar({
   onRedo,
   canUndo,
   canRedo,
+  snapshot,
 }: {
+  snapshot?: string;
   onUndo?: () => void;
   onRedo?: () => void;
   canUndo?: boolean;
@@ -1520,7 +1522,7 @@ function EditorToolbar({
         <MenuItem onClick={() => { (onSaveTemplate ?? (() => onNotice("Template saved locally")))(); setSaveAnchor(null); }}>Save as template</MenuItem>
         <MenuItem onClick={() => { onPrepare(); setSaveAnchor(null); }}>Prepare to send campaign</MenuItem>
       </Menu>
-      <CloseEmailEditor onDiscard={onClose} onSaveDraft={onSaveDraft || onSave} />
+      <CloseEmailEditor onDiscard={onClose} onSaveDraft={onSaveDraft || onSave} snapshot={snapshot} />
       </Stack>
     </Box>
   );
@@ -2274,6 +2276,7 @@ function DragEditor({
         onRedo={redo}
         canUndo={history.current.past.length > 0}
         canRedo={history.current.future.length > 0}
+        snapshot={JSON.stringify([name, subject, blocks, style, translations])}
       />
       <Box className={`drag-editor-body panel-${panel} ${libraryOpen ? "library-open" : "library-closed"}`}>
         <Box className="editor-rail">

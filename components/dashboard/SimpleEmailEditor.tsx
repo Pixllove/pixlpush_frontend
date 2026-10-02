@@ -818,7 +818,7 @@ export default function SimpleEmailEditor({
             <MenuItem onClick={() => { void saveAs("templates"); setSaveAnchor(null); }}>Save as template</MenuItem>
             <MenuItem onClick={() => { setReviewOpen(true); setSaveAnchor(null); }}>Prepare to send campaign</MenuItem>
           </Menu>
-          <CloseEmailEditor onDiscard={onClose} onSaveDraft={() => { void saveAs("drafts"); }} />
+          <CloseEmailEditor onDiscard={onClose} onSaveDraft={() => { void saveAs("drafts"); }} snapshot={JSON.stringify([name, subject, content, translations])} />
         </Stack>
       </Box>
       <Box className="admin-simple-layout">
