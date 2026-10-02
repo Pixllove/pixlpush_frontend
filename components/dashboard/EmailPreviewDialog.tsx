@@ -8,6 +8,14 @@ import PhoneIphoneRounded from "@mui/icons-material/PhoneIphoneRounded";
 import SendRounded from "@mui/icons-material/SendRounded";
 import { emailApi } from "@/lib/projects/api";
 
+// A narrow preview is a narrow box, not a narrow screen, so nothing in the email knows to shrink. These rules
+// make every fixed-width part of it fit the box instead of running out of it.
+const narrow = {
+  '& *': { maxWidth: '100% !important', minWidth: '0 !important', boxSizing: 'border-box' },
+  '& img': { height: 'auto !important' },
+  '& table': { tableLayout: 'auto' },
+};
+
 /** The "Preview and test" dialog of both email editors: the email as a recipient sees it, and a real test send. */
 export default function EmailPreviewDialog({
   title,
@@ -84,7 +92,7 @@ export default function EmailPreviewDialog({
         <Box
           // the class hides editor-only controls (the footer's delete button) inside the email
           className="recipient-preview"
-          sx={{ width: '100%', maxWidth: device === 'mobile' ? 390 : '100%', m: '0 auto !important', p: { xs: '16px !important', sm: '26px !important' }, minHeight: 200, overflowX: 'auto', bgcolor: '#fff', borderRadius: '12px', border: '1px solid #e6eaf1', boxShadow: '0 8px 24px rgba(15,23,42,.06)', transition: 'max-width .2s ease', '& img': { maxWidth: '100%' } }}
+          sx={{ width: '100%', maxWidth: device === 'mobile' ? 390 : '100%', m: '0 auto !important', p: device === 'mobile' ? '12px !important' : { xs: '12px !important', sm: '26px !important' }, minHeight: 200, overflowWrap: 'anywhere', ...(device === 'mobile' ? narrow : { '@media (max-width:600px)': narrow }), overflowX: 'auto', bgcolor: '#fff', borderRadius: '12px', border: '1px solid #e6eaf1', boxShadow: '0 8px 24px rgba(15,23,42,.06)', transition: 'max-width .2s ease', '& img': { maxWidth: '100%' } }}
           dangerouslySetInnerHTML={{ __html: html }}
         />
       </Box>
