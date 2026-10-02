@@ -509,33 +509,20 @@ export default function SimpleEmailEditor({
     }
   };
   const save = () => saveAs(kind);
+  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
   const sendTest = async () => {
     const to = testRecipient.trim();
-    if (!to || saving) {
-      onNotice("Enter a recipient email address first.");
-      return;
-    }
+    if (saving) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) { setTestResult({ ok: false, message: "Enter a valid email address." }); return; }
     setSaving(true);
-    let temporaryTemplateId: string | null = null;
+    setTestResult(null);
     try {
-      const temporary = await emailApi.templates.create(projectId, {
-        name: `${name} test`,
-        subject,
-        html: content,
-        editor: "simple",
-      });
-      temporaryTemplateId = temporary.id;
-      const result = await emailApi.templates.test(projectId, temporary.id, to);
-      onNotice(result.failed ? result.error || "Test email failed." : `Test email sent to ${to}.`);
-      setPreview(false);
+      // what is on screen is sent as it is; nothing has to be saved first
+      const sent = await emailApi.templates.sendTest(projectId, { to, subject: subject.trim() || name, html: content });
+      setTestResult({ ok: true, message: `Test email sent to ${sent.to}.` });
     } catch (error) {
-      onNotice(error && typeof error === "object" && "message" in error
-        ? String((error as { message?: unknown }).message)
-        : "Could not send the test email.");
+      setTestResult({ ok: false, message: error && typeof error === "object" && "message" in error ? String((error as { message?: unknown }).message) : "Could not send the test email." });
     } finally {
-      if (temporaryTemplateId) {
-        await emailApi.templates.delete(projectId, temporaryTemplateId).catch(() => undefined);
-      }
       setSaving(false);
     }
   };
@@ -1522,18 +1509,26 @@ export default function SimpleEmailEditor({
               }}
             />
           </DialogContent>
-          <DialogActions>
+          <DialogActions sx={{ px: 3, pb: 2.5, gap: 1, flexWrap: 'wrap' }}>
+            {testResult && <Typography role="status" sx={{ flex: 1, fontSize: 12, fontWeight: 700, color: testResult.ok ? '#0d7a48' : '#c0352b' }}>{testResult.message}</Typography>}
             <TextField
               size="small"
+              type="email"
               placeholder="test@example.com"
+              aria-label="Send test to"
               value={testRecipient}
               onChange={(event) => setTestRecipient(event.target.value)}
+              onKeyDown={(event) => { if (event.key === "Enter") void sendTest(); }}
+              disabled={saving}
+              sx={{ flex: '1 1 220px', maxWidth: 320, '& .MuiOutlinedInput-root': { height: 40, bgcolor: '#fff' } }}
             />
             <Button
               variant="contained"
-              startIcon={<SendRounded />}
+              color="success"
               onClick={() => { void sendTest(); }}
-              disabled={saving || !testRecipient.trim()}
+              startIcon={<SendRounded />}
+              disabled={saving}
+              sx={{ height: 40, minHeight: 40, px: 2.25, m: 0, fontSize: 13, fontWeight: 800 }}
             >
               {saving ? "Sending…" : "Send test"}
             </Button>

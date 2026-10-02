@@ -1163,7 +1163,7 @@ a { color: inherit; text-decoration: none; }
 .email-fullscreen.drag-editor .email-preview-modal .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline { border-color: var(--ed-accent-deep) !important; }
 .email-fullscreen.drag-editor .email-preview-modal .MuiInputBase-input { color: #11131a !important; -webkit-text-fill-color: #11131a; }
 .email-fullscreen.drag-editor .email-preview-modal .MuiInputBase-input::placeholder { color: #7a869a; -webkit-text-fill-color: #7a869a; }
-.email-fullscreen.drag-editor .email-preview-modal .MuiButton-root { min-height: 40px; padding-inline: 18px; font-size: 13px; font-weight: 800; }
+.email-fullscreen.drag-editor .email-preview-modal .MuiButton-root { height: 40px; min-height: 40px; padding-block: 0; padding-inline: 18px; font-size: 13px; font-weight: 800; }
 .email-fullscreen.drag-editor .email-preview-modal .MuiButton-root.Mui-disabled { color: #7a869a !important; background: #e8ecf3 !important; }
 .email-fullscreen.drag-editor .email-preview-modal .preview-test-result { flex: 1; font-size: 12px; font-weight: 700; }
 .email-fullscreen.drag-editor .email-preview-modal .preview-test-result.ok { color: #0d7a48; }
