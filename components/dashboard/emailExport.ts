@@ -38,6 +38,11 @@ const toBlob = (canvas: HTMLCanvasElement, type: string) => new Promise<Blob>((r
   canvas.toBlob(blob => (blob ? resolve(blob) : reject(new Error("canvas is empty"))), type, 0.9));
 
 const inFlight = new Map<string, Promise<string>>();
+// Generated images the saved email already points at, by file key. They are on the server, so a browser
+// that has no memory of them (another device, cleared storage) still does not upload them again.
+let saved = new Map<string, string>();
+const savedImages = (html: string) => new Map(Array.from(
+  html.matchAll(/https?:\/\/[^"'\s)]+\/generated\/(g[a-z0-9]+)\.[a-z]+(?:\?v=[a-z0-9]+)?/g), match => [match[1], match[0]] as [string, string]));
 /**
  * @param content  everything the picture depends on; unchanged content is never uploaded twice
  * @param file     what decides the file it is stored as. For an icon that is the content itself. For a cropped
@@ -47,11 +52,18 @@ function generated(content: string, file: string, name: string, upload: UploadIm
   const cacheKey = `pixlpush-email-asset:v3:${hash(content)}`;
   const known = remembered(cacheKey);
   if (known) return Promise.resolve(known);
+  const fileKey = `g${hash(file)}`;
+  const onServer = saved.get(fileKey);
+  // an icon's file is its content; a cropped picture's file is reused, so its version must match as well
+  if (onServer && (file === content || onServer.endsWith(`?v=${hash(content)}`))) {
+    remember(cacheKey, onServer);
+    return Promise.resolve(onServer);
+  }
   // the same icon appears several times in one email: draw and upload it once
   let pending = inFlight.get(cacheKey);
   if (!pending) {
     pending = (async () => {
-      const stored = await upload(await draw(), name, `g${hash(file)}`);
+      const stored = await upload(await draw(), name, fileKey);
       // the file name is reused when its content changes, so the address carries a version for mail clients' caches
       const url = file === content ? stored : `${stored}?v=${hash(content)}`;
       remember(cacheKey, url);
@@ -220,8 +232,10 @@ function gridColumns(template: string): number[] {
 /**
  * @param html   the sections, with their colours and sizes already resolved to real values
  * @param width  the email's content width, so pictures are measured at the size they are shown
+ * @param savedHtml  the email as it was last saved: generated images it already uses are not uploaded again
  */
-export async function compileEmailHtml(html: string, width: number, upload: UploadImage): Promise<string> {
+export async function compileEmailHtml(html: string, width: number, upload: UploadImage, savedHtml = ""): Promise<string> {
+  saved = new Map([...saved, ...savedImages(savedHtml)]);
   // Attached but off-screen: sizes and colours are only known for elements in the document.
   const stage = document.createElement("div");
   stage.setAttribute("style", `position:fixed;left:-10000px;top:0;width:${width}px;visibility:hidden;pointer-events:none;`);

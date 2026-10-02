@@ -2211,7 +2211,7 @@ function DragEditor({
   const emailHtml = wrapEmail(documentHtml);
   // What is saved, tested and sent: tables instead of flexbox, hosted images instead of inline SVG, crops baked in.
   const compileEmail = async () => wrapEmail(await compileEmailHtml(documentHtml, style.width, (blob, fileName, key) =>
-    emailApi.templates.uploadAsset(projectId, new File([blob], fileName, { type: blob.type }), "image", key).then(asset => asset.url)));
+    emailApi.templates.uploadAsset(projectId, new File([blob], fileName, { type: blob.type }), "image", key).then(asset => asset.url), item?.content));
   const [previewHtml, setPreviewHtml] = useState("");
   const openPreview = async () => {
     setPreviewHtml(emailHtml); // show at once, then swap in exactly what a test would send
