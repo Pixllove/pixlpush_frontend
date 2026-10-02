@@ -518,9 +518,7 @@ export default function EmailWorkspace() {
       setEditor(session.editor);
       setCreationLanguage(session.language);
       // the email as it was last saved; a brand-new email has no item yet and reopens blank
-      setActive(session.item ? ({
-        id: `email-${Date.now()}`, name: "", subject: "", description: "", updated: "", ...session.item, editor: session.editor, kind: session.kind,
-      } as EmailItem) : null);
+      setActive(session.item ? { ...session.item, editor: session.editor, kind: session.kind } : null);
       setView("editor");
     }
     setRestored(true);
