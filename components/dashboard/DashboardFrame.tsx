@@ -204,67 +204,35 @@ export default function DashboardFrame({
             </Stack>
           )}
           {needsProject ? (
-            <Box
-              role="status"
-              sx={{
-                position: "relative",
-                overflow: "hidden",
-                display: "grid",
-                justifyItems: "center",
-                textAlign: "center",
-                px: { xs: 2.5, sm: 6 },
-                py: { xs: 6, sm: 9 },
-                borderRadius: "20px",
-                border: "1px solid #ece6f5",
-                bgcolor: "#fff",
-                backgroundImage:
-                  "radial-gradient(520px 220px at 50% 0%, rgba(113,50,211,.10), transparent 70%), radial-gradient(360px 180px at 85% 100%, rgba(238,101,61,.08), transparent 70%)",
-                boxShadow: "0 18px 50px rgba(44,16,58,.06)",
-              }}
-            >
-              <Box
-                sx={{
-                  width: 72,
-                  height: 72,
-                  display: "grid",
-                  placeItems: "center",
-                  borderRadius: "22px",
-                  color: "#fff",
-                  background: "linear-gradient(135deg, #7132d3 0%, #9b3dd2 55%, #ee653d 100%)",
-                  boxShadow: "0 14px 30px rgba(113,50,211,.28)",
-                }}
-              >
-                <RocketLaunchRounded sx={{ fontSize: 34 }} />
-              </Box>
-              <Typography sx={{ mt: 3, fontSize: { xs: 22, sm: 28 }, fontWeight: 800, color: "#1d1230", letterSpacing: "-.01em" }}>
-                Create a project to use {active}
-              </Typography>
-              <Typography color="text.secondary" sx={{ mt: 1, maxWidth: 520, fontSize: 15, lineHeight: 1.7 }}>
+            <Box role="status" className="project-empty">
+              <span className="project-empty-badge">No project yet</span>
+              <div className="project-empty-icon">
+                <RocketLaunchRounded />
+              </div>
+              <h2 className="project-empty-title">
+                Create a project to start using <span>{active}</span>
+              </h2>
+              <p className="project-empty-text">
                 Users, emails, push notifications and journeys all live inside a project. Create your first one
                 and this page is ready to use.
-              </Typography>
-              <Button
-                variant="contained"
-                startIcon={<AddRounded />}
-                onClick={() => setCreateOpen(true)}
-                sx={{ mt: 3.5, minHeight: 46, px: 3, borderRadius: "999px", textTransform: "none", fontSize: 15, fontWeight: 800 }}
-              >
+              </p>
+              <Button className="project-empty-cta" startIcon={<AddRounded />} onClick={() => setCreateOpen(true)}>
                 Create project
               </Button>
-              <Stack
-                direction={{ xs: "column", sm: "row" }}
-                gap={{ xs: 1, sm: 3 }}
-                sx={{ mt: 4, color: "#6b5f80", fontSize: 13, fontWeight: 600 }}
-              >
-                {["Name your project", "Connect your app", "Start engaging users"].map((step, index) => (
-                  <Stack key={step} direction="row" alignItems="center" gap={1}>
-                    <Box sx={{ width: 22, height: 22, display: "grid", placeItems: "center", borderRadius: "50%", fontSize: 11, fontWeight: 800, color: "#7132d3", bgcolor: "#f0e8ff" }}>
-                      {index + 1}
-                    </Box>
-                    {step}
-                  </Stack>
+              <div className="project-empty-note">Takes less than a minute</div>
+              <div className="project-empty-steps">
+                {[
+                  ["Name your project", "One project per app or brand."],
+                  ["Connect your app", "Add the SDK or import your users."],
+                  ["Start engaging", "Send emails, push and journeys."],
+                ].map(([step, detail], index) => (
+                  <div className="project-empty-step" key={step}>
+                    <b>{index + 1}</b>
+                    <strong>{step}</strong>
+                    <span>{detail}</span>
+                  </div>
                 ))}
-              </Stack>
+              </div>
             </Box>
           ) : (
             children
