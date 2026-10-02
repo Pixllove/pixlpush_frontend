@@ -42,7 +42,7 @@ const inFlight = new Map<string, Promise<string>>();
 // that has no memory of them (another device, cleared storage) still does not upload them again.
 let saved = new Map<string, string>();
 const savedImages = (html: string) => new Map(Array.from(
-  html.matchAll(/https?:\/\/[^"'\s)]+\/generated\/(g[a-z0-9]+)\.[a-z]+(?:\?v=[a-z0-9]+)?/g), match => [match[1], match[0]] as [string, string]));
+  html.matchAll(/https?:\/\/[^"'\s)]+\/(?:images|generated)\/(g[a-z0-9]+)\.[a-z]+(?:\?v=[a-z0-9]+)?/g), match => [match[1], match[0]] as [string, string]));
 /**
  * @param content  everything the picture depends on; unchanged content is never uploaded twice
  * @param file     what decides the file it is stored as. For an icon that is the content itself. For a cropped
