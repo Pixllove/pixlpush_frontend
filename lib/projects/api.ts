@@ -125,6 +125,8 @@ export interface EmailTemplate {
   text?: string | null;
   translations?: Record<string, { subject: string; html: string }> | null;
   editor?: string | null;
+  /** Drag & drop builder state; the editor reopens from this, not from the HTML. */
+  design?: Record<string, unknown> | null;
   category?: string;
   status?: string;
   createdAt: string;
@@ -156,6 +158,7 @@ export interface EmailCampaign {
     html?: string | null;
     text?: string | null;
     editor?: string | null;
+    design?: Record<string, unknown> | null;
     translations?: Record<string, { subject: string; html: string }> | null;
   };
   audience?: PushAudience;
@@ -293,13 +296,39 @@ export const emailApi = {
         html: string;
         text?: string | null;
         editor?: "simple" | "drag_drop";
+        design?: Record<string, unknown> | null;
         translations?: Record<string, { subject: string; html: string }>;
       },
     ) => authRequest<EmailTemplate>(at(projectId, "/email-templates"), input, BASE),
+    /** Uploads a block image or logo as multipart/form-data (field "file"). Returns its public URL. */
+    uploadAsset: async (projectId: string, file: File, kind: "image" | "logo") => {
+      const form = new FormData();
+      form.append("file", file);
+      let response: Response;
+      try {
+        // No Content-Type header: the browser adds the multipart boundary itself.
+        response = await fetch(`${BASE}${at(projectId, `/email-templates/assets?kind=${kind}`)}`, {
+          method: "POST",
+          body: form,
+          credentials: "same-origin",
+        });
+      } catch {
+        throw { status: 0, code: "NETWORK_ERROR", message: "Cannot reach the server. Check your connection." };
+      }
+      const payload = await response.json().catch(() => undefined);
+      if (!response.ok) {
+        throw {
+          status: response.status,
+          code: payload?.error?.code ?? "UPLOAD_FAILED",
+          message: payload?.error?.message ?? (response.status === 413 ? "The image is too large. Use one under 5 MB." : "The image could not be uploaded."),
+        };
+      }
+      return payload.data as { url: string; path: string; contentType: string; size: number };
+    },
     update: (
       projectId: string,
       templateId: string,
-      input: Partial<Pick<EmailTemplate, "name" | "subject" | "previewText" | "html" | "text" | "editor" | "translations">>,
+      input: Partial<Pick<EmailTemplate, "name" | "subject" | "previewText" | "html" | "text" | "editor" | "design" | "translations">>,
     ) =>
       authRequest<EmailTemplate>(
         at(projectId, `/email-templates/${encodeURIComponent(templateId)}`),
@@ -358,7 +387,7 @@ export const emailApi = {
       ),
     create: (projectId: string, input: {
       name: string;
-      content?: { subject: string; html: string; translations?: Record<string, { subject: string; html: string }> };
+      content?: { subject: string; html: string; editor?: "simple" | "drag_drop"; design?: Record<string, unknown> | null; translations?: Record<string, { subject: string; html: string }> };
       templateId?: string;
     }) =>
       authRequest<EmailCampaign>(at(projectId, "/email-campaigns"), input, BASE),
@@ -369,7 +398,7 @@ export const emailApi = {
         name?: string;
         templateId?: string;
         audience?: PushAudience;
-        content?: { subject: string; html: string; translations?: Record<string, { subject: string; html: string }> };
+        content?: { subject: string; html: string; editor?: "simple" | "drag_drop"; design?: Record<string, unknown> | null; translations?: Record<string, { subject: string; html: string }> };
       },
     ) =>
       authRequest<EmailCampaign>(

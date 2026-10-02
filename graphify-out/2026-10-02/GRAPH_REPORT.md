@@ -59,7 +59,7 @@
 - SignupForm.tsx
 - EmailLanguageSettings.tsx
 - emailApi
-- isPermanentAuthError
+- AppProviders.tsx
 - AccountProfile.tsx
 - create/page.tsx
 - LifecycleSegmentCreateDialog.tsx
@@ -166,8 +166,8 @@ Cohesion: 0.06
 Nodes (65): AddDomainDialog(), domainFromEmail(), email, Props, consumeCallbackParams(), PendingConnection, redirectToProvider(), rememberConnection() (+57 more)
 
 ### Community 28 - "useActiveProject"
-Cohesion: 0.29
-Nodes (10): CreateProjectDialog(), DangerZonePanel(), ProjectDetailsPanel(), useActiveProject(), useCreateProject(), useProject(), useProjectStatus(), useUpdateProject() (+2 more)
+Cohesion: 0.28
+Nodes (11): DangerZonePanel(), ProjectDetailsPanel(), QueryProvider(), useActiveProject(), useProject(), useProjects(), useProjectStatus(), useUpdateProject() (+3 more)
 
 ### Community 29 - "AudienceGroupWorkspace.tsx"
 Cohesion: 0.13
@@ -178,8 +178,8 @@ Cohesion: 0.18
 Nodes (10): Field, fields, headerLanguages, sources, UserImportDialog(), userImportApi, CustomPropertyDef, ImportMappingInput (+2 more)
 
 ### Community 31 - "DashboardFrame.tsx"
-Cohesion: 0.13
-Nodes (8): DashboardFrame(), DashboardSidebar(), navigation, initialNotifications, NotificationMenu(), ProductNotification, ProjectSettingsCenter(), planLabel()
+Cohesion: 0.11
+Nodes (10): CreateProjectDialog(), DashboardFrame(), DashboardSidebar(), navigation, initialNotifications, NotificationMenu(), ProductNotification, ProjectSettingsCenter() (+2 more)
 
 ### Community 32 - "UserDetailsWorkspace.tsx"
 Cohesion: 0.16
@@ -241,9 +241,9 @@ Nodes (5): EMAIL_LANGUAGE_NAMES, EmailLanguageSettings(), languageName(), Choice
 Cohesion: 0.50
 Nodes (3): EMAIL_TRANSLATION_LANGUAGES, EmailTranslationPanel(), emailApi
 
-### Community 51 - "isPermanentAuthError"
-Cohesion: 0.23
-Nodes (7): metadata, AppProviders(), QueryProvider(), useProjects(), isPermanentAuthError(), store, theme
+### Community 51 - "AppProviders.tsx"
+Cohesion: 0.32
+Nodes (4): metadata, AppProviders(), store, theme
 
 ### Community 52 - "AccountProfile.tsx"
 Cohesion: 0.40
@@ -257,9 +257,9 @@ Nodes (4): AccountProfile(), display(), billingApi, teamApi
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `useActiveProject()` connect `useActiveProject` to `UserDetailsWorkspace.tsx`, `LifecycleSegmentWorkspace.tsx`, `use-active-project.ts`, `ProjectSettingsCenter.tsx`, `IntegrationDocumentation.tsx`, `TeamAccessPanel.tsx`, `projectContext`, `isPermanentAuthError`, `AccountProfile.tsx`, `DashboardSections.tsx`, `EmailWorkspace.tsx`, `PushComposer.tsx`, `SendingDomainsPanel.tsx`, `AudienceGroupWorkspace.tsx`, `UserImportDialog.tsx`, `DashboardFrame.tsx`?**
+- **Why does `useActiveProject()` connect `useActiveProject` to `UserDetailsWorkspace.tsx`, `LifecycleSegmentWorkspace.tsx`, `use-active-project.ts`, `ProjectSettingsCenter.tsx`, `IntegrationDocumentation.tsx`, `TeamAccessPanel.tsx`, `projectContext`, `AccountProfile.tsx`, `DashboardSections.tsx`, `EmailWorkspace.tsx`, `PushComposer.tsx`, `SendingDomainsPanel.tsx`, `AudienceGroupWorkspace.tsx`, `UserImportDialog.tsx`, `DashboardFrame.tsx`?**
   _High betweenness centrality (0.061) - this node is a cross-community bridge._
-- **Why does `ApiError` connect `auth.ts` to `ProjectSettingsCenter.tsx`, `LoginForm.tsx`, `TeamAccessPanel.tsx`, `AuditLogsPanel.tsx`, `VerifyEmailView.tsx`, `InvitationAccept.tsx`, `SendingDomainsPanel.tsx`, `useActiveProject`, `UserImportDialog.tsx`?**
+- **Why does `ApiError` connect `auth.ts` to `ProjectSettingsCenter.tsx`, `LoginForm.tsx`, `TeamAccessPanel.tsx`, `AuditLogsPanel.tsx`, `VerifyEmailView.tsx`, `InvitationAccept.tsx`, `SendingDomainsPanel.tsx`, `useActiveProject`, `UserImportDialog.tsx`, `DashboardFrame.tsx`?**
   _High betweenness centrality (0.026) - this node is a cross-community bridge._
 - **Why does `authRequest()` connect `SendingDomainsPanel.tsx` to `auth.ts`, `projects/api.ts`?**
   _High betweenness centrality (0.024) - this node is a cross-community bridge._

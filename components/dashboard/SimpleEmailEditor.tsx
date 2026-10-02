@@ -849,7 +849,7 @@ export default function SimpleEmailEditor({
             />
           ) : (
             <>
-              <Typography className="admin-side-title">Settings</Typography>
+              <Typography component="h3" className="admin-side-title">Settings</Typography>
               <Typography className="admin-side-copy">
                 Choose how new campaigns should start in the editor.
               </Typography>

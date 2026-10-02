@@ -1,8 +1,9 @@
 // Design markup ported from Dashboard-Frontend EmailCampaign.tsx.
-import { CSSProperties, ReactNode, isValidElement, cloneElement, ReactElement } from 'react';
-import { ImageOutlined, DescriptionOutlined, PeopleOutline, AutoAwesomeOutlined, Apple } from '@mui/icons-material';
+import { CSSProperties, ReactNode, isValidElement, cloneElement, createElement, ReactElement } from 'react';
+import { createSvgIcon } from '@mui/material/utils';
+import { ImageOutlined, DescriptionOutlined, PeopleOutline, AutoAwesomeOutlined, Apple, Facebook, Instagram, X, LinkedIn, YouTube, WhatsApp, Telegram, Pinterest } from '@mui/icons-material';
 export type DesignItem = {type: string; label: string; description?: string};
-const icon = (Icon: typeof ImageOutlined) => function DesignIcon({size=16, className}: {size?: number; className?: string}) {return <Icon className={className} style={{width:size,height:size}}/>};
+const icon = (Icon: typeof ImageOutlined) => function DesignIcon({size=16, className}: {size?: number; className?: string}) {return <Icon className={className} style={{width:size,height:size,fill:'currentColor',display:'inline-block',flexShrink:0}}/>};
 const DesignImage=icon(ImageOutlined), FileText=icon(DescriptionOutlined), Users=icon(PeopleOutline), Sparkles=icon(AutoAwesomeOutlined), FaApple=icon(Apple);
 export const DashboardBlockDesign = (item: DesignItem) => {
     const { type, label } = item;
@@ -547,7 +548,9 @@ function utilityStyle(classes: string, scale: number): CSSProperties {
    border:{borderWidth:1,borderStyle:'solid'},'border-dashed':{borderStyle:'dashed'},
    'border-l-3':{borderLeftWidth:3,borderLeftStyle:'solid'},'h-px':{height:1},
    'leading-none':{lineHeight:1},'leading-tight':{lineHeight:1.25},'leading-snug':{lineHeight:1.375},
-   'opacity-80':{opacity:.8},'text-sm':{fontSize:px(14)},'w-3/4':{width:'75%'},
+   'opacity-80':{opacity:.8},'w-3/4':{width:'75%'},'shrink-0':{flexShrink:0},
+   // Full-size sections size text through the inspector's scale variables; thumbnails use plain px.
+   'text-sm':{fontSize:scale>1?'calc(32px * var(--section-heading-scale, 1))':14},
    'shadow-sm':{},'last:mb-0':{},'rounded-b':{borderRadius:px(4)}
   };
   if(simple[c]){Object.assign(out,simple[c]);continue;}
@@ -557,7 +560,10 @@ function utilityStyle(classes: string, scale: number): CSSProperties {
   if(grid){out.gridTemplateColumns=`repeat(${grid[1]}, minmax(0, 1fr))`;continue;}
   if(c.startsWith('grid-cols-[')){out.gridTemplateColumns=c.slice(11,-1).replaceAll('_',' ');continue;}
   const font=c.match(/^text-\[(\d+)px\]$/);
-  if(font){out.fontSize=px(Number(font[1]));continue;}
+  // Body copy never drops below 14px in the real email; only micro labels (store badges) stay smaller.
+  if(font){const n=Number(font[1]);out.fontSize=scale>1?`calc(${n>=6?Math.max(14,px(n)):px(n)}px * var(--section-text-scale, 1))`:px(n);continue;}
+  const stack=c.match(/^space-y-(\d)$/);
+  if(stack){Object.assign(out,{display:'flex',flexDirection:'column',gap:px(Number(stack[1])*4)});continue;}
   const space=c.match(/^(p|px|py|pl|m|mt|mb|my|gap|h|w)-(\d+(?:\.\d+)?)$/);
   if(space){
    const keys:Record<string,string[]>={p:['padding'],px:['paddingLeft','paddingRight'],py:['paddingTop','paddingBottom'],pl:['paddingLeft'],m:['margin'],mt:['marginTop'],mb:['marginBottom'],my:['marginTop','marginBottom'],gap:['gap'],h:['height'],w:['width']};
@@ -567,19 +573,61 @@ function utilityStyle(classes: string, scale: number): CSSProperties {
  }
  return out as CSSProperties;
 }
+// MUI ships no TikTok glyph, so it is drawn here.
+const TikTok = createSvgIcon(<path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z" />, 'TikTok');
+export const socialNetworks: Record<string,{label:string;url:string;Icon:typeof ImageOutlined}> = {
+ facebook:{label:'Facebook',url:'https://facebook.com/',Icon:Facebook}, instagram:{label:'Instagram',url:'https://instagram.com/',Icon:Instagram},
+ tiktok:{label:'TikTok',url:'https://tiktok.com/',Icon:TikTok}, linkedin:{label:'LinkedIn',url:'https://linkedin.com/',Icon:LinkedIn},
+ youtube:{label:'YouTube',url:'https://youtube.com/',Icon:YouTube}, x:{label:'X (Twitter)',url:'https://x.com/',Icon:X},
+ whatsapp:{label:'WhatsApp',url:'https://wa.me/',Icon:WhatsApp},
+ telegram:{label:'Telegram',url:'https://t.me/',Icon:Telegram}, pinterest:{label:'Pinterest',url:'https://pinterest.com/',Icon:Pinterest},
+};
+// ponytail: inline SVG icons — Gmail strips <svg>, swap for hosted PNGs when a public asset URL exists.
+export function SocialLink({network,url,size=24}:{network:string;url?:string;size?:number}) {
+ const item=socialNetworks[network] || socialNetworks.facebook;
+ return <a data-social={network} href={url || item.url} title={item.label} contentEditable={false} style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:size,height:size,borderRadius:999,flexShrink:0,color:'#fff',backgroundColor:'var(--section-heading, #1c2434)',textDecoration:'none'}}><item.Icon style={{width:size*.58,height:size*.58,fill:'currentColor'}}/></a>;
+}
+const isDot=(n:ReactNode)=>isValidElement(n) && !(n.props as {children?:ReactNode}).children && /rounded-full/.test((n.props as {className?:string}).className||'') && /bg-black/.test((n.props as {className?:string}).className||'');
 function inlineDesign(node: ReactNode, scale: number): ReactNode {
  if(!isValidElement(node))return node;
  const el=node as ReactElement<{className?:string;style?:CSSProperties;children?:ReactNode}>;
+ // SVG children must stay SVG elements: wrapping <path> in <span> made the icon render blank.
+ if(el.type==='svg')return cloneElement(el as ReactElement<{className?:string;width?:number;height?:number;style?:CSSProperties}>,{className:undefined,width:13*scale,height:13*scale,style:{flexShrink:0}});
  const classes=el.props.className || '';
- if(scale>1 && !el.props.children && /bg-success\b/.test(classes) && !classes.includes('rounded-full')) {
-   return <span style={{...utilityStyle(classes,scale),display:'inline-block',height:'auto',width:'auto',minWidth:96,padding:'10px 20px',color:'#fff',fontSize:14}}>Button</span>;
+ // .map() inside JSX nests an array among the children; flatten it so those rows get inlined too.
+ const rawKids=el.props.children;
+ const kids=Array.isArray(rawKids)?rawKids.flat(Infinity as 1).filter(kid=>kid!==null&&kid!==undefined&&kid!==false):rawKids;
+ const style={...utilityStyle(classes,scale),...el.props.style};
+ // A row of placeholder dots becomes real, editable social links.
+ if(Array.isArray(kids) && kids.length>0 && kids.every(isDot)) {
+   return cloneElement(el,{style,className:undefined,'data-socials':''} as object,['facebook','instagram','x'].map(network=><SocialLink key={network} network={network} size={12*scale}/>));
  }
- if(scale>1 && !el.props.children && /bg-slate-(200|300)/.test(classes)) {
-   return <p style={{margin:'8px 0',color:'var(--section-text, #64748b)',fontSize:14,lineHeight:1.6}}>Share your story and help your readers discover what comes next.</p>;
+ // Anything clickable is an <a data-link> so the inspector can list it and set its URL.
+ const link=(extra:CSSProperties,children:ReactNode)=>createElement('a',{'data-link':'',href:'#',style:{color:'inherit',textDecoration:'none',display:el.type==='div'?'block':'inline-block',...style,...extra}},children);
+ const filled=/bg-(success|black)\b/.test(classes) && !classes.includes('rounded-full');
+ if(scale>1 && !kids && filled) {
+   return link({display:'inline-block',height:'auto',width:'auto',minWidth:96,padding:'10px 20px',color:'#fff',fontSize:'calc(14px * var(--section-text-scale, 1))'},'Button');
  }
- return cloneElement(el,{style:{...utilityStyle(el.props.className||'',scale),...el.props.style},className:undefined},
-   Array.isArray(el.props.children)?el.props.children.map((n,i)=><span key={i} style={{display:'contents'}}>{inlineDesign(n,scale)}</span>):inlineDesign(el.props.children,scale));
+ if(scale>1 && !kids && /bg-slate-(200|300)/.test(classes)) {
+   return <p style={{margin:'8px 0',color:'var(--section-text, #64748b)',fontSize:'calc(16px * var(--section-text-scale, 1))',lineHeight:'var(--section-line-height, 1.6)'}}>Share your story and help your readers discover what comes next.</p>;
+ }
+ const isNavItem=(n:ReactNode)=>isValidElement(n) && n.type==='span' && !(n.props as {className?:string}).className && typeof (n.props as {children?:ReactNode}).children==='string';
+ const inner=Array.isArray(kids)
+   ? kids.map((n,i)=><span key={i} style={{display:'contents'}}>{kids.length>1 && kids.every(isNavItem) ? <a data-link="" href="#" style={{color:'inherit',textDecoration:'none'}}>{(n as ReactElement<{children:string}>).props.children}</a> : inlineDesign(n,scale)}</span>)
+   : inlineDesign(kids,scale);
+ if((filled && kids) || classes.split(/\s+/).includes('underline')) return link({},inner);
+ // Logo placeholders are tagged so an uploaded logo replaces them in place instead of being stacked on top.
+ const isLogo=/\bfont-bold\b/.test(classes) && /\btext-slate-500\b/.test(classes);
+ return cloneElement(el,{style,className:undefined,...(isLogo?{'data-logo':''}:{})} as object,inner);
+}
+// Which typography controls make sense for a section's HTML: no heading -> no heading size, no text -> no text controls.
+export function sectionTextFeatures(root: HTMLElement) {
+ const html=root.innerHTML;
+ const heading=html.includes('--section-heading-scale')
+   // sections saved before the scale variables: any bold text was treated as a heading
+   || (!html.includes('-scale') && Boolean(root.querySelector('h1,h2,h3,strong,[style*="font-weight:700"],[style*="font-weight: 700"]')));
+ return {heading, text:Boolean((root.textContent||'').trim())};
 }
 export function BlockDesign({item, miniature=false}:{item:DesignItem;miniature?:boolean}) {
- return <div style={{fontFamily:'Arial, sans-serif',fontSize:miniature?8:16,lineHeight:1.6,overflowWrap:'anywhere'}}>{inlineDesign(DashboardBlockDesign(item),miniature?1:2)}</div>;
+ return <div style={{fontFamily:'Arial, sans-serif',fontSize:miniature?8:'calc(16px * var(--section-text-scale, 1))',lineHeight:miniature?1.6:'var(--section-line-height, 1.6)',overflowWrap:'anywhere'}}>{inlineDesign(DashboardBlockDesign(item),miniature?1:2)}</div>;
 }

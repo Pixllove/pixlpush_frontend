@@ -43,6 +43,18 @@ import {
   TextFieldsRounded,
   UndoRounded,
   CloseRounded,
+  DragIndicatorRounded,
+  AddPhotoAlternateRounded,
+  RestartAltRounded,
+  MenuRounded,
+  ViewAgendaRounded,
+  WidgetsRounded,
+  ArticleRounded,
+  ShoppingBagRounded,
+  CollectionsRounded,
+  RssFeedRounded,
+  ShareRounded,
+  VerticalAlignBottomRounded,
 } from "@mui/icons-material";
 import {
   Box,
@@ -76,7 +88,7 @@ import {
   DialogTitle,
 } from "@mui/material";
 import { renderToStaticMarkup } from "react-dom/server";
-import { BlockDesign } from "./BlockDesign";
+import { BlockDesign, SocialLink, sectionTextFeatures, socialNetworks } from "./BlockDesign";
 import { reorderByInsertionIndex } from "./dragEmailOrdering";
 import SimpleEmailEditor from "@/components/dashboard/SimpleEmailEditor";
 import DeleteConfirmDialog from "@/components/dashboard/DeleteConfirmDialog";
@@ -97,7 +109,7 @@ type BlockType =
   | "button"
   | "divider"
   | "footer";
-type Block = { id: number; type: BlockType; title: string; body: string; variant?: string; designHtml?: string; url?: string; imageSrc?: string; sectionStyle?: { primary: string; background: string; heading: string; text: string; padding: number; font: string; headingSize: number; textSize: number; lineHeight: number; imageWidth: number } };
+type Block = { id: number; type: BlockType; title: string; body: string; variant?: string; designHtml?: string; url?: string; imageSrc?: string; logoWidth?: number; logoAlt?: string; image?: Partial<typeof imageDefaults> & { height?: number; alt?: string }; sectionStyle?: { primary: string; background: string; heading: string; text: string; padding: number; font: string; headingSize: number; textSize: number; lineHeight: number; imageWidth: number } };
 type EmailItem = {
   id: string;
   name: string;
@@ -140,6 +152,31 @@ const dragCategories = [
   "Products", "Gallery", "Blog and RSS", "Social and sharing", "Footer",
 ] as const;
 type DragCategory = (typeof dragCategories)[number];
+/** The saved builder state of a drag & drop email, as the editor's own types. */
+const designOf = (design?: Record<string, unknown> | null) => ({
+  ...(Array.isArray(design?.blocks) ? { blocks: design.blocks as Block[] } : {}),
+  ...(design?.style && typeof design.style === "object" ? { style: design.style as EmailItem["style"] } : {}),
+});
+const logoSizes = { sm: 80, md: 120, lg: 160, xl: 220 };
+// Editor-only controls drawn on top of a framed image (never part of the exported email).
+const imageTools = [
+  ["replace", "Replace image", AddPhotoAlternateRounded],
+  ["zoom-out", "Zoom out", ZoomOutRounded],
+  ["zoom-in", "Zoom in", ZoomInRounded],
+  ["reset", "Centre and reset zoom", RestartAltRounded],
+  ["remove", "Delete image", DeleteOutlineRounded],
+] as const;
+let imageToolsHtml = "";
+const imageOverlayHtml = (size: string) => {
+  imageToolsHtml ||= imageTools.map(([action, title, Icon]) => `<span role="button" data-image-action="${action}" title="${title}" aria-label="${title}">${renderToStaticMarkup(<Icon style={{ width: 16, height: 16, fill: "currentColor" }} />)}</span>`).join("");
+  return `<span data-image-tools="" contenteditable="false">${imageToolsHtml}</span><span data-image-size="" contenteditable="false">${size}</span>${["w","e","s","sw","se"].map(side=>`<span data-image-handle="${side}" contenteditable="false"></span>`).join("")}`;
+};
+const imageDefaults = { fit: "cover" as "cover" | "contain", x: 50, y: 50, zoom: 1, radius: 8 };
+const dragCategoryIcons: Record<DragCategory, typeof GridViewRounded> = {
+  Navigation: MenuRounded, Hero: ImageRounded, Sections: ViewAgendaRounded, Elements: WidgetsRounded,
+  Content: ArticleRounded, Special: AutoAwesomeRounded, Products: ShoppingBagRounded, Gallery: CollectionsRounded,
+  "Blog and RSS": RssFeedRounded, "Social and sharing": ShareRounded, Footer: VerticalAlignBottomRounded,
+};
 const dragLibrary: Record<DragCategory, LibraryItem[]> = {
   Navigation: [
       {
@@ -483,7 +520,7 @@ export default function EmailWorkspace() {
       name: item.name,
       subject: item.template?.subject ?? "",
       description: item.template?.previewText ?? "",
-      editor: "simple" as const,
+      editor: item.template?.editor === "drag_drop" ? "drag" as const : "simple" as const,
       kind: "send" as const,
       updated: formatUpdated(item.updatedAt),
     })),
@@ -492,7 +529,7 @@ export default function EmailWorkspace() {
       name: item.name,
       subject: item.template?.subject ?? "",
       description: item.template?.previewText ?? "",
-      editor: "simple" as const,
+      editor: item.template?.editor === "drag_drop" ? "drag" as const : "simple" as const,
       kind: "drafts" as const,
       updated: formatUpdated(item.updatedAt),
     })),
@@ -547,6 +584,7 @@ export default function EmailWorkspace() {
           description: detail.previewText ?? current.description,
           content: detail.html ?? detail.text ?? current.content,
           translations: detail.translations ?? current.translations,
+          ...designOf(detail.design),
         });
       } else {
         const detail = await emailApi.campaigns.get(activeProject.id, item.id);
@@ -558,6 +596,7 @@ export default function EmailWorkspace() {
           description: detail.template?.previewText ?? current.description,
           content: detail.template?.html ?? detail.template?.text ?? current.content,
           translations: detail.template?.translations ?? current.translations,
+          ...designOf(detail.template?.design),
         });
       }
     } catch (cause) {
@@ -694,6 +733,8 @@ export default function EmailWorkspace() {
           />
         ) : (
           <DragEditor
+            // remount once the saved design has loaded: the editor reads it only on mount
+            key={`${active?.id ?? "new"}:${active?.blocks ? "loaded" : "blank"}`}
             item={active}
             kind={kind}
             projectId={activeProject?.id || ""}
@@ -1298,16 +1339,26 @@ function EditorToolbar({
   onClose,
   onSave,
   onSaveDraft,
+  onSaveTemplate,
   onPreview,
   onPrepare,
   onNotice,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
 }: {
+  onUndo?: () => void;
+  onRedo?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
   name: string;
   setName: (value: string) => void;
   language?: string;
   onClose: () => void;
   onSave: () => void;
   onSaveDraft?: () => void;
+  onSaveTemplate?: () => void;
   onPreview: () => void;
   onPrepare: () => void;
   onNotice: (message: string) => void;
@@ -1339,13 +1390,19 @@ function EditorToolbar({
       <Stack direction="row" alignItems="center" gap={1} sx={{ ml: "auto" }}>
       <IconButton
         sx={{ color: "#aaa" }}
-        onClick={() => onNotice("Nothing to undo yet")}
+        aria-label="Undo"
+        title="Undo (Ctrl/Cmd+Z)"
+        disabled={canUndo === false}
+        onClick={onUndo ?? (() => onNotice("Nothing to undo yet"))}
       >
         <UndoRounded />
       </IconButton>
       <IconButton
         sx={{ color: "#aaa" }}
-        onClick={() => onNotice("Nothing to redo yet")}
+        aria-label="Redo"
+        title="Redo (Ctrl/Cmd+Shift+Z)"
+        disabled={canRedo === false}
+        onClick={onRedo ?? (() => onNotice("Nothing to redo yet"))}
       >
         <RedoRounded />
       </IconButton>
@@ -1378,7 +1435,7 @@ function EditorToolbar({
         onClose={() => setSaveAnchor(null)}
       >
         <MenuItem onClick={() => { (onSaveDraft || onSave)(); setSaveAnchor(null); }}>Save as draft</MenuItem>
-        <MenuItem onClick={() => { onNotice("Template saved locally"); setSaveAnchor(null); }}>Save as template</MenuItem>
+        <MenuItem onClick={() => { (onSaveTemplate ?? (() => onNotice("Template saved locally")))(); setSaveAnchor(null); }}>Save as template</MenuItem>
         <MenuItem onClick={() => { onPrepare(); setSaveAnchor(null); }}>Prepare to send campaign</MenuItem>
       </Menu>
       <CloseEmailEditor onDiscard={onClose} onSaveDraft={onSaveDraft || onSave} />
@@ -1752,6 +1809,10 @@ function DragEditor({
       { id: 4, ...blockDefaults.footer },
     ],
   );
+  const [subject, setSubject] = useState(item?.subject || "");
+  const [translations, setTranslations] = useState<Record<string, { subject: string; html: string }>>(item?.translations || {});
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [selected, setSelected] = useState<number | null>(null);
   const [canvasZoom, setCanvasZoom] = useState(100);
   const [panel, setPanel] = useState<"blocks" | "ai" | "settings">("blocks");
@@ -1761,6 +1822,49 @@ function DragEditor({
   const [style, setStyle] = useState(
     item?.style || { primary: "#7132d3", background: "#eef2f8", width: 640 },
   );
+  // Undo/redo: every change to the blocks or the template style is a snapshot. Changes that arrive within
+  // half a second of each other (a slider or mouse drag) collapse into one step.
+  const history = useRef({ past: [] as { blocks: Block[]; style: typeof style }[], future: [] as { blocks: Block[]; style: typeof style }[], last: { blocks, style }, restoring: false, changedAt: 0 });
+  const [, refreshHistory] = useState(0);
+  useEffect(() => {
+    const h = history.current;
+    if (h.last.blocks === blocks && h.last.style === style) return;
+    if (h.restoring) { h.restoring = false; h.last = { blocks, style }; return; }
+    const now = Date.now();
+    if (now - h.changedAt > 500) { h.past.push(h.last); if (h.past.length > 100) h.past.shift(); }
+    h.changedAt = now;
+    h.future = [];
+    h.last = { blocks, style };
+    refreshHistory(count => count + 1);
+  }, [blocks, style]);
+  const travel = (from: "past" | "future") => {
+    const h = history.current;
+    const snapshot = h[from].pop();
+    if (!snapshot) return;
+    h[from === "past" ? "future" : "past"].push(h.last);
+    h.restoring = true;
+    h.changedAt = 0;
+    setBlocks(snapshot.blocks);
+    setStyle(snapshot.style);
+    setSelected(current => current !== null && current < snapshot.blocks.length ? current : null);
+    refreshHistory(count => count + 1);
+  };
+  const undo = () => travel("past");
+  const redo = () => travel("future");
+  const shortcuts = useRef({ undo, redo });
+  shortcuts.current = { undo, redo };
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      // leave typing fields and the editable email text to the browser's own undo
+      if (!(event.metaKey || event.ctrlKey) || target?.closest("input, textarea, [contenteditable='true']")) return;
+      const key = event.key.toLowerCase();
+      if (key === "z" && !event.shiftKey) { event.preventDefault(); shortcuts.current.undo(); }
+      else if (key === "y" || (key === "z" && event.shiftKey)) { event.preventDefault(); shortcuts.current.redo(); }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
   const [dropIndex, setDropIndex] = useState<number | null>(null);
   const [inspectorTab, setInspectorTab] = useState(1);
   const [dragging, setDragging] = useState<number | null>(null);
@@ -1772,6 +1876,7 @@ function DragEditor({
   const dragActive = useRef(false);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const resizeStart = useRef<{ x: number; width: number } | null>(null);
+  const logoDragged = useRef(false);
   useEffect(() => () => { if (libraryCloseTimer.current) window.clearTimeout(libraryCloseTimer.current); }, []);
   const openLibrary = (category: DragCategory) => {
     if (libraryCloseTimer.current) window.clearTimeout(libraryCloseTimer.current);
@@ -1785,53 +1890,148 @@ function DragEditor({
   };
   const id = item?.id || `email-${Date.now()}`;
   const defaultSectionStyle = {primary: style.primary, background: "#ffffff", heading: "#1c2434", text: "#64748b", padding: 0, font: "Arial, sans-serif", headingSize: 32, textSize: 16, lineHeight: 1.6, imageWidth: 100};
-  const blockHtml = (block: Block) => {
+  // `handles` adds the editor-only resize handles to a framed image; exported HTML never asks for them.
+  const blockHtml = (block: Block, handles = false) => {
     const applyImageToSlot = (html: string) => {
       if (!block.imageSrc) return html;
       const safeSrc = block.imageSrc.replace(/['"<>]/g, "");
-      const slot = /(<div[^>]*background-color:#f7f8fb[^>]*>)[\s\S]*?(<\/div>)/i;
-      const image = `<img src="${safeSrc}" alt="" style="display:block;width:100%;height:100%;min-height:120px;object-fit:cover;border-radius:8px;" />`;
-      if (slot.test(html)) return html.replace(slot, `$1${image}$2`);
-      return `<img src="${safeSrc}" alt="" style="display:block;width:100%;max-height:260px;object-fit:cover;margin-bottom:16px;border-radius:8px;" />${html}`;
+      // Logo blocks: the uploaded image takes the placeholder's place at a fixed pixel width (email clients need an explicit width).
+      if (html.includes("data-logo") && typeof window !== "undefined") {
+        const root = new DOMParser().parseFromString(html, "text/html").body;
+        const logo = document.createElement("img");
+        const width = block.logoWidth ?? logoSizes.md;
+        logo.setAttribute("data-logo", "");
+        logo.setAttribute("src", safeSrc);
+        logo.setAttribute("alt", block.logoAlt ?? "Logo");
+        logo.setAttribute("width", String(width));
+        logo.setAttribute("draggable", "false");
+        logo.setAttribute("style", `--logo-width:${width}px;display:inline-block;width:${width}px;max-width:100%;height:auto;border:0;vertical-align:middle;align-self:center;`);
+        root.querySelector("[data-logo]")?.replaceWith(logo);
+        return root.innerHTML;
+      }
+      // Image slots: the picture is framed inside the placeholder box; fit, height, zoom and position crop it without touching the file.
+      // ponytail: CSS framing (object-fit/transform) — Outlook ignores it; bake the crop to a real image with a canvas when images are uploaded to the server.
+      if (typeof window === "undefined") return html;
+      const root = new DOMParser().parseFromString(html, "text/html").body;
+      const slot = (root.querySelector("[data-image-slot]") || Array.from(root.querySelectorAll('div[style*="#f7f8fb"]')).find((el) => el.querySelector('[data-testid="ImageOutlinedIcon"], img'))) as HTMLElement | undefined;
+      const safeAlt = (block.image?.alt ?? "").replace(/["<>]/g, "");
+      if (!slot) return `<img src="${safeSrc}" alt="${safeAlt}" style="display:block;width:100%;max-height:260px;object-fit:cover;margin-bottom:16px;border-radius:8px;" />${html}`;
+      const base = slot.getAttribute("data-base-style") ?? slot.getAttribute("style") ?? "";
+      const frame = { ...imageDefaults, ...block.image };
+      const width = block.sectionStyle?.imageWidth ?? 100;
+      slot.setAttribute("data-image-slot", "");
+      slot.setAttribute("data-base-style", base);
+      slot.setAttribute("style", `${base};position:relative;overflow:hidden;padding:0;width:${width}%;margin-left:auto;margin-right:auto;border-radius:${frame.radius}px;${block.image?.height ? `height:${block.image.height}px;` : ""}`);
+      slot.innerHTML = `<img data-slot-image="" draggable="false" src="${safeSrc}" alt="${safeAlt}" style="display:block;width:100%;height:100%;object-fit:${frame.fit};object-position:${frame.x}% ${frame.y}%;transform:scale(${frame.zoom});transform-origin:${frame.x}% ${frame.y}%;" />${handles ? imageOverlayHtml(`${Math.round(width)}%${block.image?.height ? ` × ${block.image.height}px` : ""} · ${frame.fit === "cover" ? `crop ${Math.round(frame.zoom * 100)}%` : "whole image"}`) : ""}`;
+      return root.innerHTML;
     };
-    if(block.designHtml) {
-      const safeUrl = (block.url || "").replace(/["<>]/g, "");
-      const withLink = safeUrl ? block.designHtml.replace(">Button</", ` href="${safeUrl}" target="_blank">Button</`) : block.designHtml;
-      return applyImageToSlot(withLink);
-    }
+    if(block.designHtml) return applyImageToSlot(block.designHtml);
     const html=renderToStaticMarkup(<BlockDesign item={{type:block.type,label:block.variant || ({navigation:"Logo + Navigation",hero:"Standard hero",text:"Text",footer:"Footer"} as Record<string,string>)[block.type] || block.title}} />);
-    if(block.variant) {
-      const safeUrl = (block.url || "").replace(/["<>]/g, "");
-      const withLink = safeUrl ? html.replace(">Button</", ` href="${safeUrl}" target="_blank">Button</`) : html;
-      return applyImageToSlot(withLink);
-    }
+    if(block.variant) return applyImageToSlot(html);
     const escape=(text:string)=>text.replace(/[&<>"']/g, char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]!));
     return html.replace('Introduce your concept',escape(block.title)).replace('Use this space to introduce subscribers to the topic of this newsletter.',escape(block.body)).replace('Share your story and help your readers discover what comes next.',escape(block.body || block.title));
   };
-  const sectionVars = (block: Block) => {const v={...defaultSectionStyle,...block.sectionStyle};return {"--section-primary":v.primary,"--section-background":v.background,"--section-heading":v.heading,"--section-text":v.text,"--section-font":v.font,"--section-heading-size":`${v.headingSize}px`,"--section-text-size":`${v.textSize}px`,"--section-line-height":v.lineHeight,"--section-image-width":`${v.imageWidth}%`,padding:v.padding,fontFamily:v.font,backgroundColor:v.background} as React.CSSProperties;};
-  const documentHtml = blocks.map(block => renderToStaticMarkup(<div style={sectionVars(block)} dangerouslySetInnerHTML={{__html:blockHtml(block)}}/>)).join("");
-  const selectedBlock = selected === null ? null : blocks[selected];
+  const sectionVars = (block: Block) => {const v={...defaultSectionStyle,...block.sectionStyle};return {"--section-primary":v.primary,"--section-background":v.background,"--section-heading":v.heading,"--section-text":v.text,"--section-font":v.font,"--section-heading-size":`${v.headingSize}px`,"--section-heading-scale":v.headingSize/32,"--section-text-scale":v.textSize/16,"--section-text-size":`${v.textSize}px`,"--section-line-height":v.lineHeight,"--section-image-width":`${v.imageWidth}%`,padding:v.padding,fontFamily:v.font,backgroundColor:v.background} as React.CSSProperties;};
+  // Email clients (Gmail, Outlook) drop var()/calc(), so the exported HTML gets the section's real values baked in.
+  const resolveSectionVars = (html: string, block: Block) => {
+    const v = {...defaultSectionStyle,...block.sectionStyle};
+    const values: Record<string,string> = {primary:v.primary,background:v.background,heading:v.heading,text:v.text,font:v.font,"heading-size":`${v.headingSize}px`,"text-size":`${v.textSize}px`,"line-height":String(v.lineHeight),"image-width":`${v.imageWidth}%`};
+    const scales = {heading:v.headingSize/32,text:v.textSize/16};
+    return html
+      .replace(/calc\(\s*([\d.]+)px\s*\*\s*var\(--section-(heading|text)-scale(?:,\s*1)?\)\s*\)/g, (_, size: string, kind: "heading"|"text") => `${Math.round(Number(size)*scales[kind]*10)/10}px`)
+      .replace(/var\(--section-([a-z-]+)(?:,[^()]*)?\)/g, (match, key: string) => values[key] ?? match);
+  };
+  const documentHtml = blocks.map(block => renderToStaticMarkup(<div style={sectionVars(block)} dangerouslySetInnerHTML={{__html:resolveSectionVars(blockHtml(block), block)}}/>)).join("");
+  const selectedBlock = selected === null ? null : blocks[selected] ?? null;
   const changeSelected = (patch: Partial<Block>) => selected !== null && setBlocks(current=>current.map((block,index)=>index===selected?{...block,...patch}:block));
   const removeSelectedImage = (index: number) => {
     setBlocks(current => current.map((block, blockIndex) => blockIndex === index
-      ? { ...block, imageSrc: undefined, designHtml: undefined, sectionStyle: { ...defaultSectionStyle, ...block.sectionStyle, imageWidth: 100 } }
+      ? { ...block, imageSrc: undefined, image: undefined, designHtml: undefined, sectionStyle: { ...defaultSectionStyle, ...block.sectionStyle, imageWidth: 100 } }
       : block
     ));
   };
+  // Links, buttons and social icons live inside the section's HTML; the inspector reads and rewrites them there.
+  const selectedDom = selectedBlock && typeof window !== "undefined" ? new DOMParser().parseFromString(blockHtml(selectedBlock), "text/html").body : null;
+  const selectedLinks = selectedDom ? Array.from(selectedDom.querySelectorAll("[data-link]")).map((el) => ({ label: (el.textContent || "").replace(/([a-z])([A-Z])/g, "$1 $2").replace(/\s+/g, " ").trim() || "Link", href: el.getAttribute("href") || "" })) : [];
+  const selectedSocials = selectedDom ? Array.from(selectedDom.querySelectorAll("[data-social]")).map((el) => ({ network: el.getAttribute("data-social") || "facebook", href: el.getAttribute("href") || "" })) : [];
+  const selectedHasSocials = Boolean(selectedDom?.querySelector("[data-socials]"));
+  const selectedText = selectedDom ? sectionTextFeatures(selectedDom) : { heading: false, text: false };
+  const selectedHasLogo = Boolean(selectedDom?.querySelector("[data-logo]"));
+  const selectedHasImage = !selectedHasLogo && Boolean(selectedBlock?.imageSrc || selectedDom?.querySelector('[data-testid="ImageOutlinedIcon"]'));
+  const safeHref = (value: string) => { const url = value.trim(); return !url || /^(javascript|data|vbscript):/i.test(url) ? "#" : url; };
+  const editSelectedHtml = (mutate: (root: HTMLElement) => void) => {
+    if (!selectedBlock) return;
+    const root = new DOMParser().parseFromString(blockHtml(selectedBlock), "text/html").body;
+    mutate(root);
+    changeSelected({ designHtml: root.innerHTML });
+  };
+  const socialHtml = (network: string, url?: string) => renderToStaticMarkup(<SocialLink network={network} url={url} />);
   const changeSectionStyle = (patch: Partial<NonNullable<Block["sectionStyle"]>>) => selected !== null && setBlocks(current=>current.map((block,index)=>index===selected?{...block,sectionStyle:{...defaultSectionStyle,...block.sectionStyle,...patch}}:block));
   const openImagePicker = (index: number) => {
     setSelected(index);
     window.setTimeout(() => imageInputRef.current?.click(), 0);
   };
-  const startImageResize = (event: React.PointerEvent, index: number) => {
-    event.preventDefault();
-    event.stopPropagation();
-    const currentWidth = blocks[index].sectionStyle?.imageWidth ?? defaultSectionStyle.imageWidth;
-    resizeStart.current = { x: event.clientX, width: currentWidth };
+  // Drag the logo itself to resize it; a plain click still opens the file picker.
+  const startLogoResize = (event: React.PointerEvent, index: number) => {
+    const image = (event.target as HTMLElement).closest("img[data-logo]");
+    if (!image) return;
+    const rect = image.getBoundingClientRect();
+    const blockRect = event.currentTarget.getBoundingClientRect();
+    const centred = Math.abs((rect.left + rect.width / 2) - (blockRect.left + blockRect.width / 2)) < 6;
+    const direction = event.clientX < rect.left + rect.width / 2 ? -1 : 1;
+    const startX = event.clientX;
+    const startWidth = blocks[index].logoWidth ?? logoSizes.md;
+    resizeStart.current = { x: startX, width: startWidth };
     const onMove = (moveEvent: PointerEvent) => {
-      if (!resizeStart.current) return;
-      const nextWidth = Math.max(35, Math.min(100, resizeStart.current.width + (moveEvent.clientX - resizeStart.current.x) / (4 * canvasZoom / 100)));
-      setBlocks(current => current.map((block, blockIndex) => blockIndex === index ? { ...block, sectionStyle: { ...defaultSectionStyle, ...block.sectionStyle, imageWidth: nextWidth } } : block));
+      const delta = moveEvent.clientX - startX;
+      if (Math.abs(delta) < 3) return;
+      logoDragged.current = true;
+      const next = Math.round(Math.max(40, Math.min(400, startWidth + direction * delta * (centred ? 2 : 1) / (canvasZoom / 100))));
+      setBlocks(current => current.map((block, blockIndex) => blockIndex === index ? { ...block, logoWidth: next } : block));
+    };
+    const onUp = () => { resizeStart.current = null; document.removeEventListener("pointermove", onMove); document.removeEventListener("pointerup", onUp); };
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+  };
+  const changeSelectedImage = (patch: NonNullable<Block["image"]>) => selected !== null && setBlocks(current=>current.map((block,index)=>index===selected?{...block,image:{...block.image,...patch}}:block));
+  const runImageAction = (index: number, action: string) => {
+    if (action === "replace") return openImagePicker(index);
+    if (action === "remove") return removeSelectedImage(index);
+    setSelected(index);
+    setBlocks(current => current.map((block, blockIndex) => {
+      if (blockIndex !== index) return block;
+      const frame = { ...imageDefaults, ...block.image };
+      const patch = action === "reset" ? { x: 50, y: 50, zoom: 1 }
+        : { fit: "cover" as const, zoom: Math.round(Math.max(1, Math.min(3, frame.zoom + (action === "zoom-in" ? 0.1 : -0.1))) * 100) / 100 };
+      return { ...block, image: { ...block.image, ...patch } };
+    }));
+  };
+  // Drag the picture to choose which part shows; drag the grip at its bottom edge to change the frame height.
+  const startImageEdit = (event: React.PointerEvent, index: number) => {
+    const target = event.target as HTMLElement;
+    const slot = target.closest<HTMLElement>("[data-image-slot]");
+    if (!slot || target.closest("[data-image-tools]")) return;
+    const handle = target.closest("[data-image-handle]")?.getAttribute("data-image-handle") || "";
+    const rect = slot.getBoundingClientRect();
+    const parentWidth = slot.parentElement?.getBoundingClientRect().width || rect.width;
+    const scale = canvasZoom / 100;
+    const frame = { ...imageDefaults, ...blocks[index].image };
+    const start = { x: event.clientX, y: event.clientY, height: slot.offsetHeight, width: blocks[index].sectionStyle?.imageWidth ?? 100 };
+    resizeStart.current = { x: start.x, width: 0 };
+    const clamp = (value: number, min: number, max: number) => Math.round(Math.max(min, Math.min(max, value)));
+    const onMove = (moveEvent: PointerEvent) => {
+      const dx = moveEvent.clientX - start.x, dy = moveEvent.clientY - start.y;
+      if (Math.abs(dx) < 3 && Math.abs(dy) < 3) return;
+      logoDragged.current = true;
+      setBlocks(current => current.map((block, blockIndex) => {
+        if (blockIndex !== index) return block;
+        // no handle: pan the picture inside its frame
+        if (!handle) return { ...block, image: { ...block.image, x: clamp(frame.x - dx / rect.width * 100, 0, 100), y: clamp(frame.y - dy / rect.height * 100, 0, 100) } };
+        // the frame is centred, so a side handle moves both edges: twice the pointer travel
+        const width = handle === "s" ? start.width : clamp(start.width + (handle.includes("w") ? -1 : 1) * dx * 2 / parentWidth * 100, 20, 100);
+        const height = handle === "e" || handle === "w" ? block.image?.height : clamp(start.height + dy / scale, 60, 600);
+        return { ...block, image: { ...block.image, height }, sectionStyle: { ...defaultSectionStyle, ...block.sectionStyle, imageWidth: width } };
+      }));
     };
     const onUp = () => { resizeStart.current = null; document.removeEventListener("pointermove", onMove); document.removeEventListener("pointerup", onUp); };
     document.addEventListener("pointermove", onMove);
@@ -1859,30 +2059,56 @@ function DragEditor({
     });
     setSelected(next);
   };
-  const saveAs = (destination: "drafts" | "templates") =>
-    onSave(
-      {
-        id,
-        name,
-        subject:
-          blocks.find((b) => b.type === "hero" || b.type === "heading")
-            ?.title || "",
-        description: "Visual email layout.",
-        editor: "drag",
-        kind: destination,
-        updated: "Updated just now",
-        blocks,
-        style,
-      },
-      destination === "templates" ? "Template saved" : "Draft saved",
-    );
+  const errorMessage = (error: unknown, fallback: string) => error && typeof error === "object" && "message" in error ? String((error as { message?: unknown }).message) : fallback;
+  // The file goes to the server first; the block only ever stores the returned public URL, so it survives a reload and works in the sent email.
+  const uploadImage = async (file: File | undefined, imageKind: "image" | "logo") => {
+    if (!file || selected === null) return;
+    const blockId = blocks[selected].id;
+    if (file.size > 5 * 1024 * 1024) { onNotice("The image is too large. Use one under 5 MB."); return; }
+    setUploading(true);
+    try {
+      const asset = await emailApi.templates.uploadAsset(projectId, file, imageKind);
+      setBlocks(current => current.map(block => block.id === blockId ? { ...block, imageSrc: asset.url } : block));
+    } catch (error) {
+      onNotice(errorMessage(error, "The image could not be uploaded."));
+    } finally {
+      setUploading(false);
+    }
+  };
+  // What is delivered: the sections inside a centred container on the template's body background.
+  const emailHtml = `<div style="margin:0;padding:24px 0;background-color:${style.background};"><div style="max-width:${style.width}px;margin:0 auto;background-color:#ffffff;">${documentHtml}</div></div>`;
+  const emailSubject = subject.trim() || name.trim() || "Untitled email";
+  const saveAs = async (destination: "drafts" | "templates") => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      // `design` is everything needed to reopen the builder exactly as it was; `html` is what gets sent.
+      const content = { subject: emailSubject, html: emailHtml, editor: "drag_drop" as const, design: { version: 1, blocks, style }, translations };
+      const isExisting = Boolean(item?.id && !item.id.startsWith("email-"));
+      const saved = destination === "templates"
+        ? isExisting && item?.kind === "templates"
+          ? await emailApi.templates.update(projectId, item.id, { name, ...content })
+          : await emailApi.templates.create(projectId, { name, ...content })
+        : isExisting && item?.kind === "drafts"
+          ? await emailApi.campaigns.update(projectId, item.id, { name, content })
+          : await emailApi.campaigns.create(projectId, { name, content });
+      onSave(
+        { id: saved.id, name, subject: emailSubject, description: "Visual email layout.", editor: "drag", kind: destination, updated: "Updated just now", content: emailHtml, translations, blocks, style },
+        destination === "templates" ? "Template saved" : "Draft saved",
+      );
+    } catch (error) {
+      onNotice(errorMessage(error, "Could not save this email."));
+    } finally {
+      setSaving(false);
+    }
+  };
   const save = () => saveAs(kind);
   if (review)
     return (
       <CampaignReview
         name={name}
-        subject={blocks.find((b) => b.type === "hero" || b.type === "heading")?.title || ""}
-        html={documentHtml}
+        subject={emailSubject}
+        html={emailHtml}
         editor="Drag & drop editor"
         onBack={() => setReview(false)}
         onSaveLater={save}
@@ -1890,7 +2116,7 @@ function DragEditor({
       />
     );
   return (
-    <Box className={`email-fullscreen ${libraryOpen ? "drag-library-visible" : "drag-library-hidden"}`}>
+    <Box className={`email-fullscreen drag-editor ${libraryOpen ? "drag-library-visible" : "drag-library-hidden"}`}>
       <EditorToolbar
         name={name}
         setName={setName}
@@ -1898,11 +2124,16 @@ function DragEditor({
         onClose={onClose}
         onSave={save}
         onSaveDraft={() => saveAs("drafts")}
+        onSaveTemplate={() => saveAs("templates")}
         onPreview={() => setPreview(true)}
         onPrepare={() => setReview(true)}
         onNotice={onNotice}
+        onUndo={undo}
+        onRedo={redo}
+        canUndo={history.current.past.length > 0}
+        canRedo={history.current.future.length > 0}
       />
-      <Box className={`drag-editor-body ${libraryOpen ? "library-open" : "library-closed"}`}>
+      <Box className={`drag-editor-body panel-${panel} ${libraryOpen ? "library-open" : "library-closed"}`}>
         <Box className="editor-rail">
           <IconButton
             className={panel === "blocks" ? "active" : ""}
@@ -1935,7 +2166,7 @@ function DragEditor({
                 size="small"
                 placeholder="Search blocks"
                 value={blockSearch}
-                onChange={(event) => setBlockSearch(event.target.value)}
+                onChange={(event) => { setBlockSearch(event.target.value); if (event.target.value) openLibrary(activeCategory); }}
                 sx={{ mt: 2 }}
                 InputProps={{
                   startAdornment: (
@@ -1948,43 +2179,51 @@ function DragEditor({
               <Box className="drag-category-list">
                 {dragCategories.map((category) => (
                   <Button key={category} className={`drag-category ${activeCategory === category && libraryOpen ? "active" : ""}`} onMouseEnter={() => openLibrary(category)} onClick={() => openLibrary(category)}>
-                    <span className="drag-category-icon"><GridViewRounded fontSize="small" /></span><span>{category}</span><ArrowForwardRounded fontSize="small" />
+                    <span className="drag-category-icon">{(() => { const Icon = dragCategoryIcons[category]; return <Icon fontSize="small" />; })()}</span><span>{category}</span><ArrowForwardRounded fontSize="small" />
                   </Button>
                 ))}
               </Box>
             </>
           ) : panel === "ai" ? (
-            <EmailTranslationPanel mode="drag" onNotice={onNotice} />
+            <EmailTranslationPanel mode="drag" onNotice={onNotice} projectId={projectId} subject={emailSubject} html={emailHtml} sourceLanguage={language} initialTranslations={translations} onTranslationsChange={setTranslations} />
           ) : (
             <>
-              <Typography variant="h3">Builder settings</Typography>
-              <Typography color="text.secondary" fontSize={12} sx={{ mt: 1 }}>
-                Configure the visual editor workspace.
+              <Typography component="h3" className="admin-side-title">Settings</Typography>
+              <Typography className="admin-side-copy">
+                Choose how new campaigns should start in the editor.
               </Typography>
-              <Box className="admin-side-card" sx={{ mt: 2 }}>
+              <Box className="admin-side-card">
                 <EmailLanguageSettings projectId={projectId} currentLanguage={language} dark onNotice={onNotice} />
               </Box>
             </>
           )}
         </Box>
-        {panel === "blocks" && libraryOpen && (
-          <Box className="library-panel" onMouseEnter={() => { if (libraryCloseTimer.current) window.clearTimeout(libraryCloseTimer.current); }} onMouseLeave={scheduleLibraryClose}>
-            <Typography className="drag-panel-kicker">{activeCategory.toUpperCase()}</Typography>
+        {panel === "blocks" && libraryOpen && (() => {
+          // Searching looks across every category; otherwise show the hovered one.
+          const entries = (blockSearch ? Object.values(dragLibrary).flat() : dragLibrary[activeCategory]).filter((entry) => `${entry.label} ${entry.description}`.toLowerCase().includes(blockSearch.toLowerCase()));
+          return (
+          <Box className={`library-panel ${draggingLibrary ? "is-dragging" : ""}`} onMouseEnter={() => { if (libraryCloseTimer.current) window.clearTimeout(libraryCloseTimer.current); }} onMouseLeave={scheduleLibraryClose}>
+            <Typography className="drag-panel-kicker">{blockSearch ? "SEARCH RESULTS" : activeCategory.toUpperCase()}</Typography>
             <Typography color="text.secondary" fontSize={12} sx={{ mt: 1 }}>Drag a design into the email or click Add.</Typography>
             <Stack gap={1.5} sx={{ mt: 2 }}>
-              {dragLibrary[activeCategory].filter((entry) => `${entry.label} ${entry.description}`.toLowerCase().includes(blockSearch.toLowerCase())).map((entry) => (
-                <Paper key={`${entry.type}-${entry.label}`} className="library-card" draggable onDragStart={(event) => { dragActive.current=true; if(libraryCloseTimer.current) window.clearTimeout(libraryCloseTimer.current); event.dataTransfer.setData("text/plain", entry.label); event.dataTransfer.effectAllowed="copy"; setDraggingLibrary(entry); }} onDragEnd={() => {dragActive.current=false;setDraggingLibrary(null);setDropIndex(null);setLibraryOpen(false);}}>
-                  <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1}>
-                    <Typography fontWeight={900} fontSize={13}>{entry.label}</Typography>
-                    <Button size="small" variant="contained" onClick={() => addLibraryItem(entry)}>Add</Button>
-                  </Stack>
+              {entries.length === 0 && <Box className="library-empty">No blocks match “{blockSearch}”.</Box>}
+              {entries.map((entry, entryIndex) => (
+                <Paper key={`${entry.type}-${entry.label}-${entryIndex}`} className="library-card" draggable onDragStart={(event) => { dragActive.current=true; if(libraryCloseTimer.current) window.clearTimeout(libraryCloseTimer.current); event.dataTransfer.setData("text/plain", entry.label); event.dataTransfer.effectAllowed="copy"; setDraggingLibrary(entry); }} onDragEnd={() => {dragActive.current=false;setDraggingLibrary(null);setDropIndex(null);setLibraryOpen(false);}}>
                   <Box className="dashboard-design-thumbnail"><BlockDesign item={entry} miniature /></Box>
-                  <Typography color="text.secondary" fontSize={10} sx={{ mt: 1 }}>{entry.description}</Typography>
+                  <Box className="library-card-meta">
+                    <DragIndicatorRounded />
+                    <div>
+                      <Typography className="library-card-title">{entry.label}</Typography>
+                      <Typography className="library-card-desc">{entry.description}</Typography>
+                    </div>
+                    <Button size="small" startIcon={<AddRounded />} onClick={() => addLibraryItem(entry)}>Add</Button>
+                  </Box>
                 </Paper>
               ))}
             </Stack>
           </Box>
-        )}
+          );
+        })()}
         <Box className="drag-canvas" onClick={(event) => { if (!(event.target as HTMLElement).closest(".email-block")) setSelected(null); }}>
           <Stack
             direction="row"
@@ -2029,16 +2268,19 @@ function DragEditor({
               <Box
                 key={block.id}
                 draggable
-                onDragStart={(event) => {dragActive.current=true;event.dataTransfer.setData("text/plain", String(block.id));event.dataTransfer.effectAllowed="move";setDragging(index);}}
+                onDragStart={(event) => {if(resizeStart.current){event.preventDefault();return;}dragActive.current=true;event.dataTransfer.setData("text/plain", String(block.id));event.dataTransfer.effectAllowed="move";setDragging(index);}}
                 onDragEnd={() => {dragActive.current=false;setDragging(null);setDropIndex(null);}}
                 onDragOver={(event) => {event.preventDefault();event.stopPropagation();const rect=event.currentTarget.getBoundingClientRect();setDropIndex(index+(event.clientY>rect.top+rect.height/2?1:0));}}
                 onDrop={(event) => {event.preventDefault();event.stopPropagation();finishDrop(dropIndex ?? index);}}
-                className={`email-block ${selected === index ? "selected" : ""}`}
+                className={`email-block ${selected === index ? "selected" : ""} ${dragging === index ? "dragging" : ""}`}
+                data-label={block.variant || block.type}
                 onClick={() => {setSelected(index);setInspectorTab(1);}}
               >
                 <Stack direction="row" className="block-controls">
                   <IconButton
                     size="small"
+                    aria-label="Move section up"
+                    title="Move section up"
                     onClick={(e) => {
                       e.stopPropagation();
                       move(-1);
@@ -2048,6 +2290,8 @@ function DragEditor({
                   </IconButton>
                   <IconButton
                     size="small"
+                    aria-label="Move section down"
+                    title="Move section down"
                     onClick={(e) => {
                       e.stopPropagation();
                       move(1);
@@ -2057,6 +2301,8 @@ function DragEditor({
                   </IconButton>
                   <IconButton
                     size="small"
+                    aria-label="Duplicate section"
+                    title="Duplicate section"
                     onClick={(e) => {
                       e.stopPropagation();
                       setBlocks((current) => [
@@ -2069,32 +2315,24 @@ function DragEditor({
                   </IconButton>
                   <IconButton
                     size="small"
+                    aria-label="Delete section"
+                    title="Delete section"
                     onClick={(e) => {
                       e.stopPropagation();
                       setBlocks((current) =>
                         current.filter((_, blockIndex) => blockIndex !== index),
                       );
+                      setSelected(null);
                     }}
                   >
                     <DeleteOutlineRounded />
                   </IconButton>
                 </Stack>
-                <div className="section-design-content" style={sectionVars(block)} contentEditable suppressContentEditableWarning onClick={(event) => { const target = event.target as HTMLElement; if (target.closest("img") || target.closest(".image-placeholder") || target.closest('div[style*="background-color:#f7f8fb"]')) { event.preventDefault(); event.stopPropagation(); openImagePicker(index); } }} onBlur={event=>{const html=event.currentTarget.innerHTML;setBlocks(current=>current.map(value=>value.id===block.id?{...value,designHtml:html}:value));}} dangerouslySetInnerHTML={{__html:blockHtml(block)}} />
-            {block.imageSrc && selected === index && <Box
-              className="section-image-edit-frame"
-              onClick={(event) => {
-                const target = event.target as HTMLElement;
-                if (target.closest(".image-resize-handle, .image-remove-button")) return;
-                event.stopPropagation();
-                openImagePicker(index);
-              }}
-            >
-                  <IconButton className="image-remove-button" size="small" aria-label="Remove image" onClick={(event) => { event.preventDefault(); event.stopPropagation(); removeSelectedImage(index); }}><CloseRounded /></IconButton>
-                  {(["top-left", "top-right", "bottom-left", "bottom-right"] as const).map((corner) => <Box key={corner} className={`image-resize-handle ${corner}`} onPointerDown={(event) => startImageResize(event, index)} />)}
-                </Box>}
+                <div className={`section-design-content ${blockHtml(block).includes("-scale") ? "scaled" : ""}`} style={sectionVars(block)} contentEditable suppressContentEditableWarning onPointerDown={(event) => { startLogoResize(event, index); startImageEdit(event, index); }} onClick={(event) => { const target = event.target as HTMLElement; const imageAction = target.closest("[data-image-action]")?.getAttribute("data-image-action"); if (imageAction) { event.preventDefault(); runImageAction(index, imageAction); return; } if (logoDragged.current) { logoDragged.current = false; event.preventDefault(); return; } if (target.closest(".image-placeholder") || target.closest('div[style*="background-color:#f7f8fb"]')?.querySelector('[data-testid="ImageOutlinedIcon"]')) { event.preventDefault(); event.stopPropagation(); openImagePicker(index); } }} onBlur={event=>{const html=event.currentTarget.innerHTML;setBlocks(current=>current.map(value=>value.id===block.id?{...value,designHtml:html}:value));}} dangerouslySetInnerHTML={{__html:blockHtml(block, true)}} />
               </Box>
               </Box>
             ))}
+            {blocks.length === 0 && dropIndex === null && <Box className="canvas-empty"><strong>Your email is empty</strong>Pick a category on the left, then drag a block here or click Add.</Box>}
             {dropIndex===blocks.length && <Box className="design-drop-indicator">Drop section here</Box>}
           </Paper>
         </Box>
@@ -2106,6 +2344,7 @@ function DragEditor({
               <Typography variant="h3" sx={{mt:2}}>Brand system</Typography>
               <Typography color="text.secondary" fontSize={12} sx={{mt:1}}>Set default colors, typography, and layout for this whole email.</Typography>
             </Paper>
+            <TextField fullWidth size="small" label="Subject line" placeholder="What recipients see in their inbox" value={subject} onChange={event=>setSubject(event.target.value)} inputProps={{maxLength:998}} InputLabelProps={{shrink:true}} sx={{mt:3}} />
             <Typography fontWeight={900} sx={{mt:3}}>Layout</Typography>
             <ToggleButtonGroup exclusive size="small" value={style.width} onChange={(_,value)=>value&&setStyle(current=>({...current,width:value}))} sx={{mt:1}}>
               <ToggleButton value={640}>Default</ToggleButton><ToggleButton value={760}>Wide</ToggleButton>
@@ -2115,11 +2354,70 @@ function DragEditor({
           </> : <>
             <Typography className="drag-panel-kicker">INSPECTOR</Typography>
             <Typography variant="h3" sx={{mt:1}}>{selectedBlock.variant || selectedBlock.type}</Typography>
-            <Typography color="text.secondary" fontSize={12} sx={{mt:1}}>Adjust spacing, links, images, and visual style for this section.</Typography>
-            {(selectedBlock.type === "hero" || selectedBlock.type === "button") && <TextField fullWidth label="Button URL" value={selectedBlock.url || "https://example.com"} onChange={event=>changeSelected({url:event.target.value})} sx={{mt:3}} />}
-            {selectedBlock && <Paper className="inspector-upload-card" sx={{mt:2,p:1.5}}><Typography fontWeight={800} fontSize={12}>Image</Typography><Button component="label" variant="contained" color="success" size="small" sx={{mt:1}}>Choose file<input ref={imageInputRef} hidden type="file" accept="image/*" onChange={event=>{const file=event.target.files?.[0];if(file)changeSelected({imageSrc:URL.createObjectURL(file)});event.currentTarget.value=""}} /></Button><Typography component="span" fontSize={11} sx={{ml:1}}>{selectedBlock.imageSrc ? "Image selected" : "No file chosen"}</Typography></Paper>}
+            <Typography color="text.secondary" fontSize={12} sx={{mt:1}}>Click any text in the email to edit it. Links, social icons and style are set here.</Typography>
+            {selectedLinks.length > 0 && <Paper className="inspector-upload-card" sx={{mt:2}}>
+              <Typography fontWeight={800} fontSize={12}>Links and buttons</Typography>
+              {selectedLinks.map((link, linkIndex) => <Box className="inspector-link-row" key={linkIndex}>
+                <TextField size="small" fullWidth label={link.label} placeholder="https://" value={link.href === "#" ? "" : link.href} onChange={event=>editSelectedHtml(root=>root.querySelectorAll("[data-link]")[linkIndex]?.setAttribute("href", safeHref(event.target.value)))} InputLabelProps={{shrink:true}} />
+                <IconButton size="small" aria-label={`Remove ${link.label}`} title="Remove" onClick={()=>editSelectedHtml(root=>root.querySelectorAll("[data-link]")[linkIndex]?.remove())}><DeleteOutlineRounded /></IconButton>
+              </Box>)}
+            </Paper>}
+            {selectedHasSocials && <Paper className="inspector-upload-card" sx={{mt:2}}>
+              <Typography fontWeight={800} fontSize={12}>Social links</Typography>
+              {selectedSocials.map((social, socialIndex) => <Box className="inspector-link-row inspector-social-row" key={socialIndex}>
+                <TextField select size="small" aria-label="Network" value={socialNetworks[social.network] ? social.network : "facebook"} onChange={event=>editSelectedHtml(root=>{const el=root.querySelectorAll("[data-social]")[socialIndex]; if(!el) return; const wasDefault=social.href===socialNetworks[social.network]?.url; el.outerHTML=socialHtml(event.target.value, wasDefault ? undefined : social.href);})}>
+                  {Object.entries(socialNetworks).map(([key, item]) => <MenuItem key={key} value={key}>{item.label}</MenuItem>)}
+                </TextField>
+                <TextField size="small" fullWidth placeholder="https://" aria-label="Profile URL" value={social.href} onChange={event=>editSelectedHtml(root=>root.querySelectorAll("[data-social]")[socialIndex]?.setAttribute("href", safeHref(event.target.value)))} />
+                <IconButton size="small" aria-label={`Remove ${socialNetworks[social.network]?.label || "social"} link`} title="Remove" onClick={()=>editSelectedHtml(root=>root.querySelectorAll("[data-social]")[socialIndex]?.remove())}><DeleteOutlineRounded /></IconButton>
+              </Box>)}
+              <Button size="small" variant="outlined" startIcon={<AddRounded />} sx={{mt:1.5}} disabled={selectedSocials.length >= Object.keys(socialNetworks).length} onClick={()=>editSelectedHtml(root=>{const used=selectedSocials.map(item=>item.network); const next=Object.keys(socialNetworks).find(key=>!used.includes(key)) || "facebook"; root.querySelector("[data-socials]")?.insertAdjacentHTML("beforeend", socialHtml(next));})}>Add social link</Button>
+            </Paper>}
+            {selectedHasLogo && <Paper className="inspector-upload-card" sx={{mt:2}}>
+              <Typography fontWeight={800} fontSize={12}>Logo</Typography>
+              <Stack direction="row" gap={1} sx={{mt:1}}>
+                <Button component="label" variant="contained" color="success" size="small" disabled={uploading}>{uploading ? "Uploading…" : selectedBlock.imageSrc ? "Replace" : "Upload logo"}<input ref={imageInputRef} hidden type="file" accept="image/*" onChange={event=>{void uploadImage(event.target.files?.[0],"logo");event.currentTarget.value=""}} /></Button>
+                {selectedBlock.imageSrc && selected !== null && <Button variant="outlined" size="small" onClick={()=>removeSelectedImage(selected)}>Remove</Button>}
+              </Stack>
+              {selectedBlock.imageSrc ? <>
+                <Stack direction="row" justifyContent="space-between" sx={{mt:2}}><Typography fontSize={12}>Size</Typography><Typography fontSize={12} fontWeight={800}>{selectedBlock.logoWidth ?? logoSizes.md}px wide</Typography></Stack>
+                <ToggleButtonGroup exclusive fullWidth size="small" value={selectedBlock.logoWidth ?? logoSizes.md} onChange={(_,value)=>value&&changeSelected({logoWidth:value})} sx={{mt:1}}>
+                  {Object.entries(logoSizes).map(([name,width])=><ToggleButton key={name} value={width} title={`${width}px`}>{name.toUpperCase()}</ToggleButton>)}
+                </ToggleButtonGroup>
+                <Box className="inspector-slider-row" sx={{pt:"6px !important",borderBottom:"0 !important"}}><input type="range" aria-label="Logo width" min={40} max={400} step={2} value={selectedBlock.logoWidth ?? logoSizes.md} onChange={event=>changeSelected({logoWidth:Number(event.target.value)})} /></Box>
+                <TextField size="small" fullWidth label="Logo name (alt text)" placeholder="Your brand name" value={selectedBlock.logoAlt ?? ""} onChange={event=>changeSelected({logoAlt:event.target.value})} InputLabelProps={{shrink:true}} sx={{mt:1}} />
+                <Typography className="inspector-hint">Drag the logo in the email to resize it. Readers see the logo name when images are blocked. Best results: a transparent PNG at least twice the displayed width.</Typography>
+              </> : <Typography className="inspector-hint">No image yet, so the text logo is shown. Click it in the email to type your brand name, or upload a logo to replace it.</Typography>}
+            </Paper>}
+            {selectedHasImage && <Paper className="inspector-upload-card" sx={{mt:2}}>
+              <Typography fontWeight={800} fontSize={12}>Image</Typography>
+              <Stack direction="row" gap={1} sx={{mt:1}}>
+                <Button component="label" variant="contained" color="success" size="small" disabled={uploading}>{uploading ? "Uploading…" : selectedBlock.imageSrc ? "Replace" : "Upload image"}<input ref={imageInputRef} hidden type="file" accept="image/*" onChange={event=>{void uploadImage(event.target.files?.[0],"image");event.currentTarget.value=""}} /></Button>
+                {selectedBlock.imageSrc && selected !== null && <Button variant="outlined" size="small" onClick={()=>removeSelectedImage(selected)}>Remove</Button>}
+              </Stack>
+              {selectedBlock.imageSrc ? (() => {
+                const frame = { ...imageDefaults, ...selectedBlock.image };
+                const height = selectedBlock.image?.height ?? (parseFloat(selectedDom?.querySelector<HTMLElement>("[data-image-slot]")?.style.height || "") || 200);
+                const sliders = [
+                  { label: "Height", value: height, unit: "px", min: 60, max: 600, step: 2, set: (value: number) => changeSelectedImage({ height: value }) },
+                  { label: "Width", value: Math.round(selectedBlock.sectionStyle?.imageWidth ?? 100), unit: "%", min: 20, max: 100, step: 1, set: (value: number) => changeSectionStyle({ imageWidth: value }) },
+                  ...(frame.fit === "cover" ? [{ label: "Zoom", value: Math.round(frame.zoom * 100), unit: "%", min: 100, max: 300, step: 5, set: (value: number) => changeSelectedImage({ zoom: value / 100 }) }] : []),
+                  { label: "Corner radius", value: frame.radius, unit: "px", min: 0, max: 40, step: 1, set: (value: number) => changeSelectedImage({ radius: value }) },
+                ];
+                return <>
+                  <ToggleButtonGroup exclusive fullWidth size="small" value={frame.fit} onChange={(_,value)=>value&&changeSelectedImage(value === "contain" ? { fit: value, zoom: 1 } : { fit: value })} sx={{mt:2}}>
+                    <ToggleButton value="cover" title="Fill the frame and crop the overflow">Fill and crop</ToggleButton>
+                    <ToggleButton value="contain" title="Show the whole image inside the frame">Fit whole image</ToggleButton>
+                  </ToggleButtonGroup>
+                  {sliders.map(slider => <Box className="inspector-slider-row" key={slider.label}><Stack direction="row" justifyContent="space-between"><Typography fontSize={12}>{slider.label}</Typography><Typography fontSize={12} fontWeight={800}>{slider.value}{slider.unit}</Typography></Stack><input type="range" aria-label={`Image ${slider.label.toLowerCase()}`} min={slider.min} max={slider.max} step={slider.step} value={slider.value} onChange={event=>slider.set(Number(event.target.value))} /></Box>)}
+                  <Button variant="outlined" size="small" sx={{mt:1.5}} onClick={()=>changeSelectedImage({ x: 50, y: 50, zoom: 1 })}>Centre and reset zoom</Button>
+                  <TextField size="small" fullWidth label="Image description (alt text)" placeholder="Describe the image" value={selectedBlock.image?.alt ?? ""} onChange={event=>changeSelectedImage({alt:event.target.value})} InputLabelProps={{shrink:true}} sx={{mt:2}} />
+                  <Typography className="inspector-hint">Use the toolbar on the image to replace, zoom or delete it. Drag the white handles to resize: sides change the width, the bottom changes the height, corners change both. Drag the image itself to choose which part shows; if it does not move, zoom in first.</Typography>
+                </>;
+              })() : <Typography className="inspector-hint">Click the grey placeholder in the email or upload an image here.</Typography>}
+            </Paper>}
             <TextField select fullWidth label="Font" value={selectedBlock.sectionStyle?.font || "Arial, sans-serif"} onChange={event=>changeSectionStyle({font:event.target.value})} sx={{mt:2}}><MenuItem value="Arial, sans-serif">Arial</MenuItem><MenuItem value="Inter, sans-serif">Inter</MenuItem><MenuItem value="Georgia, serif">Georgia</MenuItem><MenuItem value="Verdana, sans-serif">Verdana</MenuItem></TextField>
-            {([['headingSize','Heading size',18,64,1],['textSize','Text size',10,28,1],['lineHeight','Line height',1,2.2,.1],['padding','Section spacing',0,64,1]] as const).map(([key,label,min,max,step])=><Box className="inspector-slider-row" key={key}><Stack direction="row" justifyContent="space-between"><Typography fontSize={12}>{label}</Typography><Typography fontSize={12} fontWeight={800}>{selectedBlock.sectionStyle?.[key] ?? defaultSectionStyle[key]}{key === 'lineHeight' ? '' : 'px'}</Typography></Stack><input type="range" min={min} max={max} step={step} value={selectedBlock.sectionStyle?.[key] ?? defaultSectionStyle[key]} onChange={event=>changeSectionStyle({[key]:Number(event.target.value)})} /></Box>)}
+            {([['headingSize','Heading size',18,64,1],['textSize','Text size',10,28,1],['lineHeight','Line height',1,2.2,.1],['padding','Section spacing',0,64,1]] as const).filter(([key])=>key==='headingSize'?selectedText.heading:key==='padding'||selectedText.text).map(([key,label,min,max,step])=><Box className="inspector-slider-row" key={key}><Stack direction="row" justifyContent="space-between"><Typography fontSize={12}>{label}</Typography><Typography fontSize={12} fontWeight={800}>{selectedBlock.sectionStyle?.[key] ?? defaultSectionStyle[key]}{key === 'lineHeight' ? '' : 'px'}</Typography></Stack><input type="range" min={min} max={max} step={step} value={selectedBlock.sectionStyle?.[key] ?? defaultSectionStyle[key]} onChange={event=>changeSectionStyle({[key]:Number(event.target.value)})} /></Box>)}
             {([['primary','Primary color'],['heading','Heading color'],['text','Text color'],['background','Section background']] as const).map(([key,label])=><TextField key={key} fullWidth type="color" label={label} value={{...defaultSectionStyle,...selectedBlock.sectionStyle}[key]} onChange={event=>changeSectionStyle({[key]:event.target.value})} sx={{mt:1.5}} />)}
             <Button variant="outlined" onClick={()=>changeSectionStyle(defaultSectionStyle)} sx={{mt:2}}>Reset section style</Button>
           </>}
@@ -2128,7 +2426,7 @@ function DragEditor({
       {preview && (
         <PreviewModal
           title={name}
-          html={documentHtml}
+          html={emailHtml}
           onClose={() => setPreview(false)}
           onNotice={onNotice}
         />

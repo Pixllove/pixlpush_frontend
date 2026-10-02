@@ -484,14 +484,15 @@ a { color: inherit; text-decoration: none; }
 .inspector-upload-card { color: #fff; border: 1px solid rgba(255,255,255,.12) !important; background: rgba(255,255,255,.045) !important; }
 .inspector-slider-row { padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,.1); color: #fff; }
 .inspector-slider-row input[type='range'] { width: 100%; margin-top: 10px; accent-color: #4d55e9; }
-.section-design-content h1, .section-design-content h2, .section-design-content h3, .section-design-content strong {
+/* Legacy: only for sections saved before the --section-*-scale variables existed. */
+.section-design-content:not(.scaled) h1, .section-design-content:not(.scaled) h2, .section-design-content:not(.scaled) h3, .section-design-content:not(.scaled) strong {
   color: var(--section-heading, #1c2434) !important;
   font-size: var(--section-heading-size, 32px) !important;
   font-family: var(--section-font, Arial, sans-serif) !important;
 }
-.section-design-content p, .section-design-content div, .section-design-content span { line-height: var(--section-line-height, 1.6) !important; }
-.section-design-content p { color: var(--section-text, #64748b) !important; font-size: var(--section-text-size, 16px) !important; }
-.section-design-content [style*="font-weight:700"], .section-design-content [style*="font-weight: 700"] {
+.section-design-content:not(.scaled) p, .section-design-content:not(.scaled) div, .section-design-content:not(.scaled) span { line-height: var(--section-line-height, 1.6) !important; }
+.section-design-content:not(.scaled) p { color: var(--section-text, #64748b) !important; font-size: var(--section-text-size, 16px) !important; }
+.section-design-content:not(.scaled) [style*="font-weight:700"], .section-design-content:not(.scaled) [style*="font-weight: 700"] {
   color: var(--section-heading, #1c2434) !important;
   font-size: var(--section-heading-size, 32px) !important;
 }
@@ -882,3 +883,270 @@ a { color: inherit; text-decoration: none; }
 .ios-notif { background:rgba(255,255,255,.62); backdrop-filter:blur(30px) saturate(180%); -webkit-backdrop-filter:blur(30px) saturate(180%); color:#000; box-shadow:inset 0 .5px 0 rgba(255,255,255,.9),0 10px 30px rgba(20,40,110,.14); }
 .ios-notif-head span { color:rgba(60,60,67,.6); }
 .ios-notif-body p { color:rgba(0,0,0,.85); }
+
+/* ==========================================================================
+   Drag & drop email editor — design system (scoped to .email-fullscreen.drag-editor)
+   Same charcoal chrome, green accent and light stage as the simple editor.
+   Everything above this block for these classes is legacy; this wins by scope.
+   ========================================================================== */
+.email-fullscreen.drag-editor {
+  --ed-bg: #25262b; --ed-panel: #292a2e; --ed-raise: #303135; --ed-hover: #36373d;
+  --ed-line: #3a3b40; --ed-line-2: #55575e;
+  --ed-text: #fff; --ed-dim: #c3c5cb; --ed-off: #7d8088;
+  --ed-accent: #2ccb7f; --ed-accent-deep: #15965e; --ed-accent-solid: #1d9854; --ed-on-accent: #fff; --ed-danger: #ff6b6b;
+  --ed-stage: #f7f8fb; --ed-stage-line: #e3e6ef; --ed-stage-text: #55627a;
+  --ed-rail: 68px; --ed-side: 232px; --ed-insp: 320px;
+  --ed-font: Arial, Helvetica, sans-serif;
+  display: flex; flex-direction: column; overflow: hidden; color: var(--ed-text); background: var(--ed-stage); font-family: var(--ed-font);
+}
+.email-fullscreen.drag-editor * { scrollbar-width: thin; scrollbar-color: var(--ed-line-2) transparent; }
+.email-fullscreen.drag-editor .MuiTypography-root,
+.email-fullscreen.drag-editor .MuiButtonBase-root,
+.email-fullscreen.drag-editor .MuiInputBase-root,
+.email-fullscreen.drag-editor .MuiInputLabel-root { font-family: var(--ed-font); letter-spacing: 0; }
+.email-fullscreen.drag-editor .MuiButtonBase-root:focus-visible { outline: 2px solid var(--ed-accent); outline-offset: 2px; }
+
+/* Shared controls: inputs, selects, buttons, toggles */
+.email-fullscreen.drag-editor .MuiOutlinedInput-root { border-radius: 6px; color: var(--ed-text) !important; background: var(--ed-raise) !important; font-size: 13px; }
+.email-fullscreen.drag-editor .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline { border-color: var(--ed-line) !important; transition: border-color .12s; }
+.email-fullscreen.drag-editor .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline { border-color: var(--ed-line-2) !important; }
+.email-fullscreen.drag-editor .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline { border-color: var(--ed-accent) !important; border-width: 1px; }
+.email-fullscreen.drag-editor .MuiInputBase-input { color: var(--ed-text) !important; -webkit-text-fill-color: var(--ed-text); }
+.email-fullscreen.drag-editor .MuiInputBase-input::placeholder { color: var(--ed-dim); opacity: 1; -webkit-text-fill-color: var(--ed-dim); }
+.email-fullscreen.drag-editor .MuiInputLabel-root { color: var(--ed-dim) !important; font-size: 13px; }
+.email-fullscreen.drag-editor .MuiInputLabel-root.Mui-focused { color: var(--ed-accent) !important; }
+.email-fullscreen.drag-editor .MuiSelect-icon,
+.email-fullscreen.drag-editor .MuiInputAdornment-root { color: var(--ed-dim) !important; }
+.email-fullscreen.drag-editor .MuiInputBase-input[type='color'] { height: 22px; padding: 12px; cursor: pointer; }
+.email-fullscreen.drag-editor .MuiButton-root { border-radius: 6px; font-size: 12px; font-weight: 600; text-transform: none; box-shadow: none; }
+.email-fullscreen.drag-editor .MuiButton-containedSuccess { color: var(--ed-on-accent) !important; background: var(--ed-accent-solid) !important; }
+.email-fullscreen.drag-editor .MuiButton-containedSuccess:hover { background: #178047 !important; }
+.email-fullscreen.drag-editor .MuiButton-outlined,
+.email-fullscreen.drag-editor .MuiButton-colorInherit { color: var(--ed-text) !important; border: 1px solid var(--ed-line-2) !important; background: transparent; }
+.email-fullscreen.drag-editor .MuiButton-outlined:hover,
+.email-fullscreen.drag-editor .MuiButton-colorInherit:hover { border-color: var(--ed-dim) !important; background: var(--ed-hover); }
+.email-fullscreen.drag-editor .MuiButton-root.Mui-disabled { color: var(--ed-off) !important; background: var(--ed-hover) !important; }
+.email-fullscreen.drag-editor .MuiToggleButton-root { padding: 5px 12px; color: var(--ed-dim); border-color: var(--ed-line); background: var(--ed-panel); font-size: 12px; font-weight: 600; text-transform: none; }
+.email-fullscreen.drag-editor .MuiToggleButton-root:hover { color: var(--ed-text); background: var(--ed-hover); }
+.email-fullscreen.drag-editor .MuiToggleButton-root.Mui-selected { color: var(--ed-text); background: var(--ed-hover); box-shadow: inset 0 -2px 0 var(--ed-accent); }
+.email-fullscreen.drag-editor .drag-panel-kicker { color: var(--ed-accent) !important; font-size: 10px !important; font-weight: 600 !important; letter-spacing: .14em; }
+
+/* Top bar */
+.email-fullscreen.drag-editor .compact-email-header.email-editor-toolbar { min-height: 56px; padding: 8px 14px; background: var(--ed-bg); border-bottom: 1px solid var(--ed-line); }
+.email-fullscreen.drag-editor .compact-email-header .MuiOutlinedInput-root { height: 34px; font-size: 13px; }
+.email-fullscreen.drag-editor .compact-email-header .MuiIconButton-root { border-radius: 6px; color: var(--ed-dim); }
+.email-fullscreen.drag-editor .compact-email-header .MuiIconButton-root:hover { color: var(--ed-text); background: var(--ed-hover); }
+
+/* Layout: fixed-height workspace, each column scrolls on its own; library is a flyout over the canvas */
+.email-fullscreen.drag-editor .drag-editor-body,
+.email-fullscreen.drag-editor .drag-editor-body.library-open,
+.email-fullscreen.drag-editor .drag-editor-body.library-closed { position: relative; flex: 1; min-height: 0; grid-template-columns: var(--ed-rail) var(--ed-side) minmax(0, 1fr) var(--ed-insp) !important; }
+.email-fullscreen.drag-editor .drag-editor-body > .drag-canvas { grid-column: 3; grid-row: 1; }
+.email-fullscreen.drag-editor .drag-editor-body > .inspector-panel { grid-column: 4; grid-row: 1; }
+.email-fullscreen.drag-editor .drag-editor-body > .library-panel { display: block; position: absolute; z-index: 25; inset: 0 auto 0 0; grid-column: 3; grid-row: 1; width: 320px; max-width: 100%; max-height: none; padding: 20px 14px; background: var(--ed-panel); border-left: 1px solid var(--ed-line); border-right: 1px solid var(--ed-line); box-shadow: 24px 0 48px -24px rgba(20,22,30,.45); transition: opacity .15s .05s; }
+.email-fullscreen.drag-editor .drag-editor-body > .library-panel.is-dragging { opacity: 0; pointer-events: none; }
+
+/* Rail */
+.email-fullscreen.drag-editor .editor-rail { width: auto; min-height: 0; gap: 14px; padding-top: 18px; background: var(--ed-bg); border-right: 1px solid var(--ed-line); }
+.email-fullscreen.drag-editor .editor-rail .MuiIconButton-root { width: 44px; height: 44px; border-radius: 8px; color: var(--ed-dim); }
+.email-fullscreen.drag-editor .editor-rail .MuiIconButton-root .MuiSvgIcon-root { font-size: 20px; }
+.email-fullscreen.drag-editor .editor-rail .MuiIconButton-root:hover { color: #fff; background: var(--ed-hover); }
+.email-fullscreen.drag-editor .editor-rail .MuiIconButton-root.active { color: #fff; background: var(--ed-accent-deep); }
+
+/* Side panels */
+.email-fullscreen.drag-editor .blocks-panel,
+.email-fullscreen.drag-editor .inspector-panel { padding: 20px 14px; background: var(--ed-panel); }
+.email-fullscreen.drag-editor .blocks-panel { border-right: 1px solid var(--ed-line); }
+.email-fullscreen.drag-editor .inspector-panel { border-left: 1px solid var(--ed-line); }
+.email-fullscreen.drag-editor .blocks-panel .MuiTypography-root,
+.email-fullscreen.drag-editor .library-panel .MuiTypography-root,
+.email-fullscreen.drag-editor .inspector-panel .MuiTypography-root { color: var(--ed-text); }
+.email-fullscreen.drag-editor .blocks-panel h3,
+.email-fullscreen.drag-editor .inspector-panel h3 { font-size: 20px; font-weight: 900; letter-spacing: -.03em; }
+.email-fullscreen.drag-editor .inspector-panel h3::first-letter { text-transform: uppercase; }
+.email-fullscreen.drag-editor .blocks-panel > h3 + .MuiTypography-root,
+.email-fullscreen.drag-editor .library-panel > .drag-panel-kicker + .MuiTypography-root,
+.email-fullscreen.drag-editor .inspector-panel > h3 + .MuiTypography-root,
+.email-fullscreen.drag-editor .inspector-brand-card h3 + .MuiTypography-root,
+.email-fullscreen.drag-editor .admin-side-copy { color: var(--ed-dim); line-height: 1.55; }
+.email-fullscreen.drag-editor .blocks-panel > .MuiTextField-root { width: 100%; }
+.email-fullscreen.drag-editor .blocks-panel > .MuiTextField-root .MuiOutlinedInput-root { height: 36px; border-radius: 6px; }
+
+/* Category list */
+.email-fullscreen.drag-editor .drag-category-list { gap: 2px; margin-top: 14px; }
+.email-fullscreen.drag-editor .drag-category { min-height: 40px !important; padding: 5px 8px !important; border-radius: 8px !important; color: var(--ed-dim) !important; font-size: 13px !important; font-weight: 500 !important; transition: background .12s, color .12s; }
+.email-fullscreen.drag-editor .drag-category:hover { color: var(--ed-text) !important; background: var(--ed-hover) !important; }
+.email-fullscreen.drag-editor .drag-category.active { color: var(--ed-text) !important; background: rgba(44,203,127,.1) !important; box-shadow: inset 0 0 0 1px rgba(44,203,127,.35); }
+.email-fullscreen.drag-editor .drag-category-icon { width: 28px; height: 28px; border: 1px solid var(--ed-line); border-radius: 6px; color: var(--ed-dim); background: var(--ed-raise); }
+.email-fullscreen.drag-editor .drag-category-icon .MuiSvgIcon-root { font-size: 16px; }
+.email-fullscreen.drag-editor .drag-category.active .drag-category-icon { color: var(--ed-accent); border-color: rgba(44,203,127,.35); background: transparent; }
+.email-fullscreen.drag-editor .drag-category > .MuiSvgIcon-root:last-child { font-size: 16px; opacity: .45; transition: transform .12s, opacity .12s; }
+.email-fullscreen.drag-editor .drag-category:hover > .MuiSvgIcon-root:last-child,
+.email-fullscreen.drag-editor .drag-category.active > .MuiSvgIcon-root:last-child { opacity: 1; transform: translateX(2px); }
+
+/* Library cards */
+.email-fullscreen.drag-editor .library-card { overflow: hidden; padding: 0 !important; border: 1px solid rgba(255,255,255,.12) !important; border-radius: 10px !important; background: var(--ed-raise) !important; cursor: grab; transition: border-color .12s, box-shadow .12s; }
+.email-fullscreen.drag-editor .library-card:hover { border-color: var(--ed-accent) !important; box-shadow: 0 0 0 3px rgba(44,203,127,.16) !important; transform: none; }
+.email-fullscreen.drag-editor .library-card:active { cursor: grabbing; }
+.email-fullscreen.drag-editor .library-card .dashboard-design-thumbnail { margin: 8px 8px 0; border-radius: 6px; }
+.email-fullscreen.drag-editor .library-card-meta { display: flex; align-items: center; gap: 8px; padding: 10px 10px 10px 4px; }
+.email-fullscreen.drag-editor .library-card-meta > .MuiSvgIcon-root { flex: none; font-size: 18px; color: var(--ed-off); }
+.email-fullscreen.drag-editor .library-card:hover .library-card-meta > .MuiSvgIcon-root { color: var(--ed-text); }
+.email-fullscreen.drag-editor .library-card-meta > div { flex: 1; min-width: 0; }
+.email-fullscreen.drag-editor .library-card-title { font-size: 13px; font-weight: 800; line-height: 1.3; }
+.email-fullscreen.drag-editor .library-card-desc { margin-top: 2px; color: var(--ed-dim) !important; font-size: 11px; line-height: 1.4; }
+.email-fullscreen.drag-editor .library-card .MuiButton-root { flex: none; min-width: 0; padding: 4px 10px 4px 6px; color: #fff; border: 1px solid var(--ed-line-2); background: transparent; font-size: 11px; font-weight: 800; }
+.email-fullscreen.drag-editor .library-card .MuiButton-startIcon { margin: 0 2px 0 0; }
+.email-fullscreen.drag-editor .library-card .MuiButton-startIcon .MuiSvgIcon-root { font-size: 15px; }
+.email-fullscreen.drag-editor .library-card:hover .MuiButton-root { border-color: var(--ed-accent-solid); background: var(--ed-accent-solid); }
+.email-fullscreen.drag-editor .library-card .MuiButton-root:hover { border-color: #178047; background: #178047; }
+.email-fullscreen.drag-editor .library-empty { padding: 28px 12px; border: 1px dashed var(--ed-line-2); border-radius: 8px; color: var(--ed-dim); font-size: 12px; text-align: center; }
+
+/* Canvas */
+.email-fullscreen.drag-editor .drag-canvas { padding: 20px 32px 80px !important; background: var(--ed-stage) !important; }
+.email-fullscreen.drag-editor .drag-canvas .MuiTypography-overline { color: var(--ed-stage-text); font-size: 10px; font-weight: 900; letter-spacing: .16em; }
+.email-fullscreen.drag-editor .canvas-zoom-controls { border: 1px solid var(--ed-stage-line); border-radius: 6px; background: #fff; box-shadow: 0 1px 3px rgb(15 23 42 / 5%); }
+.email-fullscreen.drag-editor .canvas-zoom-controls .MuiIconButton-root { border-radius: 5px; color: #475569; }
+.email-fullscreen.drag-editor .canvas-zoom-controls .MuiIconButton-root:hover { color: #11131a; background: #eef1f6; }
+.email-fullscreen.drag-editor .canvas-zoom-controls .MuiIconButton-root.Mui-disabled { color: #b6bfcc; }
+.email-fullscreen.drag-editor .canvas-zoom-controls .MuiButton-root { border: 0 !important; border-inline: 1px solid var(--ed-stage-line) !important; border-radius: 0; color: #1f2937 !important; font-variant-numeric: tabular-nums; }
+.email-fullscreen.drag-editor .canvas-zoom-controls .MuiButton-root:hover { background: #eef1f6; }
+.email-fullscreen.drag-editor .drag-canvas .MuiToggleButton-root { color: #475569; border-color: var(--ed-stage-line); background: #fff; }
+.email-fullscreen.drag-editor .drag-canvas .MuiToggleButton-root:hover { color: #11131a; background: #eef1f6; }
+.email-fullscreen.drag-editor .drag-canvas .MuiToggleButton-root.Mui-selected { color: #11131a; background: #eef1f6; box-shadow: inset 0 -2px 0 var(--ed-accent-deep); }
+.email-fullscreen.drag-editor .drag-canvas .email-render-canvas { min-height: 480px; margin: 40px auto 0; padding: 0; border: 1px solid var(--ed-stage-line); border-radius: 2px; box-shadow: 0 18px 40px rgba(37,39,48,.08); transition: width .2s; }
+.email-fullscreen.drag-editor .drag-canvas .email-block { margin: 0; border: 0; border-radius: 0; outline: 1px dashed transparent; outline-offset: -1px; box-shadow: none; transition: outline-color .12s, opacity .12s; }
+.email-fullscreen.drag-editor .drag-canvas .email-block:hover { outline-color: var(--ed-accent-deep); }
+.email-fullscreen.drag-editor .drag-canvas .email-block.selected { z-index: 3; outline: 2px solid var(--ed-accent-deep); outline-offset: 0; }
+.email-fullscreen.drag-editor .drag-canvas .email-block.dragging { opacity: .35; }
+.email-fullscreen.drag-editor .drag-canvas .email-block.selected::before { content: attr(data-label); position: absolute; top: -22px; left: -2px; height: 20px; padding: 0 8px; border-radius: 4px 4px 0 0; color: var(--ed-on-accent); background: var(--ed-accent-deep); font: 600 10px/20px var(--ed-font); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; pointer-events: none; }
+.email-fullscreen.drag-editor .section-design-content:focus { box-shadow: none; }
+.email-fullscreen.drag-editor .email-block:not(.selected) .block-controls { display: none; }
+.email-fullscreen.drag-editor .block-controls { top: -34px; right: -2px; gap: 1px; padding: 2px; border: 1px solid var(--ed-line-2); border-radius: 6px; background: var(--ed-bg); box-shadow: 0 8px 20px rgba(20,22,30,.22); }
+.email-fullscreen.drag-editor .block-controls .MuiIconButton-root { width: 26px; height: 26px; border-radius: 4px; color: #d5d8de; }
+.email-fullscreen.drag-editor .block-controls .MuiSvgIcon-root { font-size: 16px; }
+.email-fullscreen.drag-editor .block-controls .MuiIconButton-root:hover { color: #fff; background: var(--ed-hover); }
+.email-fullscreen.drag-editor .block-controls .MuiIconButton-root:last-child:hover { color: var(--ed-danger); }
+.email-fullscreen.drag-editor .design-drop-indicator { height: 32px; margin: 0; border: 1px dashed var(--ed-accent-deep); border-radius: 0; color: #0a6b40; background: #e3f8ee; box-shadow: none; font: 600 11px/1 var(--ed-font); letter-spacing: .08em; text-transform: uppercase; }
+.email-fullscreen.drag-editor .canvas-empty { margin: 24px; padding: 88px 24px; border: 1px dashed #c3cad4; border-radius: 8px; color: #55606e; font: 400 13px/1.6 var(--ed-font); text-align: center; pointer-events: none; }
+.email-fullscreen.drag-editor .canvas-empty strong { display: block; margin-bottom: 4px; color: #11161d; font-size: 15px; font-weight: 600; }
+.email-fullscreen.drag-editor .image-resize-handle { border-color: #fff; background: var(--ed-accent-deep); }
+
+/* Inspector */
+.email-fullscreen.drag-editor .inspector-panel .MuiTabs-root { min-height: 36px; border-bottom: 1px solid var(--ed-line); }
+.email-fullscreen.drag-editor .inspector-panel .MuiTab-root { min-height: 36px; padding: 8px 12px; color: var(--ed-dim); font-size: 13px; font-weight: 600; text-transform: none; }
+.email-fullscreen.drag-editor .inspector-panel .MuiTab-root.Mui-selected { color: var(--ed-text); }
+.email-fullscreen.drag-editor .inspector-panel .MuiTab-root.Mui-disabled { color: var(--ed-off); }
+.email-fullscreen.drag-editor .inspector-panel .MuiTabs-indicator { background: var(--ed-accent); }
+.email-fullscreen.drag-editor .inspector-brand-card,
+.email-fullscreen.drag-editor .inspector-upload-card { padding: 14px !important; border: 1px solid var(--ed-line) !important; border-radius: 8px !important; background: var(--ed-raise) !important; box-shadow: none !important; }
+.email-fullscreen.drag-editor .inspector-brand-card h3 { margin-top: 6px; }
+.email-fullscreen.drag-editor .inspector-slider-row { padding: 12px 0; border-bottom: 1px solid var(--ed-line); }
+.email-fullscreen.drag-editor .inspector-slider-row .MuiTypography-root:first-child { color: var(--ed-dim); }
+.email-fullscreen.drag-editor .inspector-slider-row .MuiTypography-root:last-child { font-variant-numeric: tabular-nums; }
+.email-fullscreen.drag-editor .inspector-slider-row input[type='range'] { accent-color: var(--ed-accent); cursor: pointer; }
+
+/* AI translation / settings column: as wide as the simple editor's (360px) */
+.email-fullscreen.drag-editor .drag-editor-body.panel-ai,
+.email-fullscreen.drag-editor .drag-editor-body.panel-settings { --ed-side: 360px; }
+.email-fullscreen.drag-editor .drag-editor-body.panel-ai > .blocks-panel,
+.email-fullscreen.drag-editor .drag-editor-body.panel-settings > .blocks-panel { padding: 28px 20px 34px; }
+
+/* Responsive */
+@media (max-width: 1400px) { .email-fullscreen.drag-editor { --ed-rail: 56px; --ed-side: 208px; --ed-insp: 296px; } }
+@media (max-width: 1400px) { .email-fullscreen.drag-editor .drag-editor-body.panel-ai, .email-fullscreen.drag-editor .drag-editor-body.panel-settings { --ed-side: 320px; } }
+@media (max-width: 1050px) { .email-fullscreen.drag-editor { --ed-side: 196px; --ed-insp: 272px; } .email-fullscreen.drag-editor .drag-editor-body.panel-ai, .email-fullscreen.drag-editor .drag-editor-body.panel-settings { --ed-side: 280px; } .email-fullscreen.drag-editor .drag-canvas { padding-inline: 16px !important; } }
+@media (max-width: 900px) {
+  .email-fullscreen.drag-editor .drag-editor-body,
+  .email-fullscreen.drag-editor .drag-editor-body.library-open,
+  .email-fullscreen.drag-editor .drag-editor-body.library-closed { grid-template-columns: var(--ed-rail) var(--ed-side) minmax(0, 1fr) !important; }
+}
+@media (max-width: 760px) {
+  .email-fullscreen.drag-editor { overflow: auto; }
+  .email-fullscreen.drag-editor .drag-editor-body { flex: none; }
+  .email-fullscreen.drag-editor .editor-rail { flex: none; flex-direction: row; width: 100%; height: 52px; padding: 6px 12px; border-right: 0; border-bottom: 1px solid var(--ed-line); }
+  .email-fullscreen.drag-editor .blocks-panel { border-right: 0; border-bottom: 1px solid var(--ed-line); }
+  .email-fullscreen.drag-editor .drag-editor-body > .library-panel { position: static; width: 100%; max-height: 340px; border-inline: 0; border-bottom: 1px solid var(--ed-line); box-shadow: none; }
+  .email-fullscreen.drag-editor .drag-editor-body > .inspector-panel { display: block; border-left: 0; border-top: 1px solid var(--ed-line); }
+}
+@media (prefers-reduced-motion: reduce) { .email-fullscreen.drag-editor * { transition: none !important; } }
+
+/* AI translation panel — one design for the simple and drag & drop editors */
+.email-translation-panel { color: #fff; font-family: Arial, Helvetica, sans-serif; }
+.email-translation-panel .ai-translation-icon { flex: none; border-radius: 8px; }
+.email-translation-panel .admin-side-title { margin: 0; line-height: 1.2; }
+.email-translation-panel .admin-side-copy { font-size: 13px; color: rgba(255,255,255,.72) !important; -webkit-text-fill-color: currentColor !important; }
+.email-translation-panel .admin-side-card { margin-top: 20px; padding: 14px !important; }
+.email-translation-panel .admin-side-card .admin-side-copy { margin-top: 6px; font-size: 12px; }
+.email-translation-panel .translation-field-label { color: #fff; font-size: 12px; font-weight: 800; }
+.email-translation-panel .MuiOutlinedInput-root { height: 40px; border-radius: 6px; color: #fff !important; background: #303135 !important; font-size: 14px; }
+.email-translation-panel .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline { border-color: rgba(255,255,255,.22) !important; border-width: 1px; }
+.email-translation-panel .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline { border-color: rgba(255,255,255,.45) !important; }
+.email-translation-panel .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline { border-color: #2ccb7f !important; }
+.email-translation-panel .MuiSelect-select { color: #fff !important; -webkit-text-fill-color: #fff !important; }
+.email-translation-panel .MuiSelect-icon { color: #fff !important; }
+.email-translation-panel .admin-side-section { margin: 24px 0 10px; font-size: 16px !important; }
+.email-translation-panel .translation-language-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 7px; }
+.email-translation-panel .admin-language-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 38px; margin: 0; padding: 8px 10px; border: 1px solid transparent; border-radius: 6px; color: #fff; background: #36373d; font-size: 13px; cursor: pointer; transition: background .12s, border-color .12s; }
+.email-translation-panel .admin-language-row:hover { background: #404248; }
+.email-translation-panel .admin-language-row:has(input:checked) { border-color: #2ccb7f; background: rgba(44,203,127,.14); }
+.email-translation-panel .admin-language-row:has(input:focus-visible) { outline: 2px solid #2ccb7f; outline-offset: 2px; }
+.email-translation-panel .admin-language-row input { flex: none; width: 16px; height: 16px; margin: 0; accent-color: #28b96b; cursor: pointer; }
+.email-translation-panel > .MuiButton-root { min-height: 40px; margin-top: 16px; border-radius: 6px; color: #fff !important; background: #1d9854 !important; font-size: 13px; font-weight: 800; text-transform: none; box-shadow: none; }
+.email-translation-panel > .MuiButton-root:hover { background: #178047 !important; }
+.email-translation-panel > .MuiButton-root.Mui-disabled { color: rgba(255,255,255,.6) !important; background: #36373d !important; }
+
+/* Editor settings panel — one design for the simple and drag & drop editors */
+.admin-translation-panel > .admin-side-title, .blocks-panel > .admin-side-title { margin: 0; line-height: 1.2; font-family: Arial, Helvetica, sans-serif; }
+.admin-translation-panel > .admin-side-copy, .blocks-panel > .admin-side-copy { font-size: 13px !important; line-height: 1.55 !important; color: rgba(255,255,255,.72) !important; -webkit-text-fill-color: currentColor !important; }
+.admin-translation-panel > .admin-side-card, .blocks-panel > .admin-side-card { margin-top: 20px !important; padding: 14px !important; }
+.email-language-settings { gap: 12px !important; }
+.email-language-settings > .MuiStack-root:first-child { gap: 12px; align-items: center; }
+.email-language-settings > .MuiStack-root:first-child .MuiTypography-root:first-child { font-size: 14px !important; line-height: 1.3; }
+.email-language-settings .MuiTypography-root { font-size: 12px !important; line-height: 1.5 !important; }
+.email-language-settings .MuiSwitch-root { flex: none; margin-right: -8px; }
+.email-language-settings .email-language-saved-row { align-items: center; padding: 10px 0; border-block: 1px solid rgba(255,255,255,.12); }
+.email-language-settings .email-language-saved-row .MuiTypography-root:last-child { font-size: 13px !important; }
+
+/* Inspector: link / social rows */
+.email-fullscreen.drag-editor .inspector-link-row { display: flex; align-items: center; gap: 6px; margin-top: 14px; }
+.email-fullscreen.drag-editor .inspector-link-row .MuiOutlinedInput-root { background: var(--ed-panel) !important; }
+.email-fullscreen.drag-editor .inspector-link-row .MuiInputLabel-root { max-width: calc(133% - 24px); }
+.email-fullscreen.drag-editor .inspector-social-row { margin-top: 10px; }
+.email-fullscreen.drag-editor .inspector-social-row > .MuiTextField-root:first-child { flex: 0 0 112px; }
+.email-fullscreen.drag-editor .inspector-link-row .MuiIconButton-root { flex: none; border-radius: 6px; color: var(--ed-dim); }
+.email-fullscreen.drag-editor .inspector-link-row .MuiIconButton-root:hover { color: var(--ed-danger); background: var(--ed-hover); }
+.email-fullscreen.drag-editor .inspector-link-row .MuiIconButton-root .MuiSvgIcon-root { font-size: 18px; }
+.email-fullscreen.drag-editor .section-design-content a { cursor: text; }
+.email-fullscreen.drag-editor .section-design-content a[data-social] { cursor: default; }
+
+/* Logo image inside a section: fixed pixel width, resizable by dragging */
+.email-fullscreen.drag-editor .section-design-content img[data-logo] { width: var(--logo-width, 120px) !important; max-width: 100% !important; height: auto !important; margin-inline: 0 !important; border-radius: 0; cursor: ew-resize; }
+.email-fullscreen.drag-editor .email-block.selected img[data-logo],
+.email-fullscreen.drag-editor .section-design-content img[data-logo]:hover { outline: 1px dashed var(--ed-accent-deep); outline-offset: 4px; }
+.email-fullscreen.drag-editor .inspector-hint { margin-top: 10px; color: var(--ed-dim) !important; font-size: 11px; line-height: 1.5; }
+
+/* Framed section image: pan with the mouse, grip on the bottom edge resizes the frame */
+.email-fullscreen.drag-editor .section-design-content img[data-slot-image] { width: 100% !important; max-width: none !important; margin: 0 !important; cursor: grab; user-select: none; }
+.email-fullscreen.drag-editor .section-design-content img[data-slot-image]:active { cursor: grabbing; }
+.email-fullscreen.drag-editor .email-block.selected [data-image-slot] { outline: 1px dashed var(--ed-accent-deep); outline-offset: 2px; }
+.email-fullscreen.drag-editor [data-image-handle] { display: none; position: absolute; z-index: 2; border-radius: 3px; background: #fff; box-shadow: 0 0 0 1.5px var(--ed-accent-deep), 0 1px 5px rgba(0,0,0,.4); }
+.email-fullscreen.drag-editor .email-block.selected [data-image-handle] { display: block; }
+.email-fullscreen.drag-editor [data-image-handle="w"], .email-fullscreen.drag-editor [data-image-handle="e"] { top: 50%; width: 7px; height: 40px; margin-top: -20px; cursor: ew-resize; }
+.email-fullscreen.drag-editor [data-image-handle="w"] { left: 5px; }
+.email-fullscreen.drag-editor [data-image-handle="e"] { right: 5px; }
+.email-fullscreen.drag-editor [data-image-handle="s"] { left: 50%; bottom: 5px; width: 40px; height: 7px; margin-left: -20px; cursor: ns-resize; }
+.email-fullscreen.drag-editor [data-image-handle="sw"], .email-fullscreen.drag-editor [data-image-handle="se"] { bottom: 5px; width: 13px; height: 13px; }
+.email-fullscreen.drag-editor [data-image-handle="sw"] { left: 5px; cursor: nesw-resize; }
+.email-fullscreen.drag-editor [data-image-handle="se"] { right: 5px; cursor: nwse-resize; }
+
+/* On-image toolbar and size badge (editor only) */
+.email-fullscreen.drag-editor [data-image-tools], .email-fullscreen.drag-editor [data-image-size] { display: none; position: absolute; z-index: 3; color: #fff; background: rgba(24,25,30,.92); box-shadow: 0 6px 18px rgba(0,0,0,.35); font-family: var(--ed-font); user-select: none; }
+.email-fullscreen.drag-editor [data-image-tools] { top: 8px; right: 8px; max-width: calc(100% - 16px); flex-wrap: wrap; gap: 2px; padding: 3px; border-radius: 8px; }
+.email-fullscreen.drag-editor .email-block.selected [data-image-tools] { display: flex; }
+.email-fullscreen.drag-editor [data-image-action] { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 6px; color: #e6e8ec; cursor: pointer; transition: background .12s, color .12s; }
+.email-fullscreen.drag-editor [data-image-action] svg { pointer-events: none; }
+.email-fullscreen.drag-editor [data-image-action]:hover { color: #fff; background: rgba(255,255,255,.16); }
+.email-fullscreen.drag-editor [data-image-action="remove"]:hover { color: #fff; background: #d6453f; }
+.email-fullscreen.drag-editor [data-image-size] { left: 8px; bottom: 26px; padding: 0 8px; border-radius: 6px; font-size: 11px !important; font-weight: 700; line-height: 22px !important; font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none; }
+.email-fullscreen.drag-editor .email-block.selected [data-image-slot]:hover [data-image-size] { display: block; }

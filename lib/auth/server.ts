@@ -87,7 +87,14 @@ export async function callBackend<T>(
     response = await fetch(`${API_URL}${path}`, {
       method: init.method ?? 'GET',
       headers,
-      body: init.body === undefined ? undefined : init.contentType ? String(init.body) : JSON.stringify(init.body),
+      body:
+        init.body === undefined
+          ? undefined
+          : init.body instanceof ArrayBuffer
+            ? init.body // multipart image upload, forwarded byte for byte
+            : init.contentType
+              ? String(init.body)
+              : JSON.stringify(init.body),
       cache: 'no-store',
     });
   } catch {

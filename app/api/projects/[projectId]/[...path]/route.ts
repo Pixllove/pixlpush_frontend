@@ -51,8 +51,11 @@ async function proxy(request: Request, { params }: Params) {
   const body =
     request.method === "GET"
       ? undefined
-      : csvType
-        ? await request.text()
+      : type.startsWith("multipart/form-data")
+        ? // An editor image upload: forwarded byte for byte, boundary and all.
+          await request.arrayBuffer()
+        : csvType
+          ? await request.text()
         : await request.json().catch(() => ({}));
 
   const result = await callBackendWithRefresh(`/projects/${path}${query}`, {
