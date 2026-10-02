@@ -20,6 +20,8 @@ import { Toast } from './AuthFeedback';
 import SubmitButton from './SubmitButton';
 import type { ApiError } from '@/types/auth';
 
+const VERIFIED_KEY = 'pixlpush:email-verified';
+
 const cardSx = {
   maxWidth: 620,
   mx: 'auto',
@@ -64,6 +66,19 @@ export default function VerifyEmailView() {
     if (token || !account?.emailVerified) return;
     router.replace('/dashboard');
   }, [token, account?.emailVerified, router]);
+
+  // The link usually opens in another tab while this "check your inbox" screen stays open. That tab leaves
+  // a note when the address is verified, and this one moves on to the login page as soon as it sees it.
+  useEffect(() => {
+    if (!token || !verifyEmail.isSuccess) return;
+    try { localStorage.setItem(VERIFIED_KEY, String(Date.now())); } catch { /* private mode: the other tab keeps its button */ }
+  }, [token, verifyEmail.isSuccess]);
+  useEffect(() => {
+    if (token) return;
+    const onVerified = (event: StorageEvent) => { if (event.key === VERIFIED_KEY && event.newValue) router.replace('/login'); };
+    window.addEventListener('storage', onVerified);
+    return () => window.removeEventListener('storage', onVerified);
+  }, [token, router]);
 
   const notify = (message: string, severity: 'success' | 'error' = 'success') => {
     setToastSeverity(severity);
