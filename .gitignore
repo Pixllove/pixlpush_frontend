@@ -28,3 +28,6 @@ pnpm-debug.log*
 .vercel/
 
 certificates
+
+# graphify knowledge graph (generated locally)
+graphify-out/
