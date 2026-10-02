@@ -306,9 +306,9 @@
     "semantic_hash": ""
   },
   "components/auth/GoogleButton.tsx": {
-    "mtime": 1790750869.9640381,
-    "seen": 1790762603.397655,
-    "ast_hash": "8fac3005be6f174a16ac18d7ff4a431d",
+    "mtime": 1790937460.7092478,
+    "seen": 1790937483.951553,
+    "ast_hash": "7de11f71fdfdad81401e530224c88af7",
     "semantic_hash": ""
   },
   "components/auth/LoginForm.tsx": {
@@ -522,9 +522,9 @@
     "semantic_hash": ""
   },
   "lib/auth/firebase.ts": {
-    "mtime": 1790665922.2048225,
-    "seen": 1790666127.785669,
-    "ast_hash": "e27cad1f742499ac42cc9eb12088e3a9",
+    "mtime": 1790937460.7089136,
+    "seen": 1790937483.951615,
+    "ast_hash": "5dd40180035df24ac305ab18d438460c",
     "semantic_hash": ""
   },
   "lib/auth/form.ts": {
@@ -1065,6 +1065,18 @@
     "mtime": 1790934313.823368,
     "seen": 1790934335.621999,
     "ast_hash": "c47bb34e6ee873f09ac589a8d2fc33db",
+    "semantic_hash": ""
+  },
+  "app/auth/google/page.tsx": {
+    "mtime": 1790937460.7095127,
+    "seen": 1790937483.9515462,
+    "ast_hash": "4756e36d3b0969f996182f536e936da5",
+    "semantic_hash": ""
+  },
+  "components/auth/GoogleCallback.tsx": {
+    "mtime": 1790937758.6141262,
+    "seen": 1790937781.7029388,
+    "ast_hash": "620a9d885e57bbec56f8b993140681ee",
     "semantic_hash": ""
   }
 }

@@ -1,11 +1,18 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Box, Button, CircularProgress, SvgIcon } from '@mui/material';
-import { useGoogleLogin } from '@/hooks/auth/use-login';
-import { postLoginPath } from '@/lib/auth/redirect';
+import { useEffect, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Button, SvgIcon } from '@mui/material';
 import type { ApiError } from '@/types/auth';
+
+/** A message a person can act on, for a failed Google sign-in. */
+export function googleErrorMessage(error: unknown): string {
+  // Firebase's own message for this one is opaque; name the actual fix.
+  if ((error as { code?: string }).code === 'auth/unauthorized-domain') {
+    return `Google sign-in is not enabled for ${window.location.hostname}. Add that hostname under Firebase > Authentication > Settings > Authorized domains.`;
+  }
+  return (error as ApiError).message ?? 'Google sign-in failed. Please try again.';
+}
 
 // The multicolour "G" from Google's brand guidelines; the MUI icon is monochrome.
 function GoogleIcon() {
@@ -19,8 +26,6 @@ function GoogleIcon() {
   );
 }
 
-const REDIRECT_FLAG = 'pixlpush:google-redirect';
-
 export default function GoogleButton({
   label = 'Continue with Google',
   onError,
@@ -31,79 +36,35 @@ export default function GoogleButton({
   /** Where to land after sign-in; defaults to the page's ?redirect=. */
   redirect?: string;
 }) {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const googleLogin = useGoogleLogin();
-  const [popupPending, setPopupPending] = useState(false);
+  const leaving = useRef(false);
 
-  const pending = popupPending || googleLogin.isPending;
-
-  const reportError = (error: unknown) => {
-    const code = (error as { code?: string }).code;
-    // Firebase's own message for this one is opaque; name the actual fix.
-    if (code === 'auth/unauthorized-domain') {
-      onError(
-        `Google sign-in is not enabled for ${window.location.hostname}. Add that hostname under Firebase > Authentication > Settings > Authorized domains.`,
-      );
-      return;
-    }
-    onError((error as ApiError).message ?? 'Google sign-in failed. Please try again.');
-  };
-
-  // Coming back from Google's account chooser: finish the sign-in here.
-  // The ref stops Strict Mode's double effect from logging in twice.
-  const handledRedirect = useRef(false);
+  // Sign-in was abandoned or failed on the callback page, which sent the user back here with the reason.
+  const reported = useRef(false);
   useEffect(() => {
-    if (handledRedirect.current) return;
-    handledRedirect.current = true;
-
-    // Only a page load that follows our own redirect has a result to collect;
-    // any other load (a plain reload) leaves the button idle.
-    if (sessionStorage.getItem(REDIRECT_FLAG) !== '1') return;
-    sessionStorage.removeItem(REDIRECT_FLAG);
-    setPopupPending(true);
-
-    (async () => {
-      const { getGoogleRedirectIdToken } = await import('@/lib/auth/firebase');
-
-      try {
-        const idToken = await getGoogleRedirectIdToken();
-        if (!idToken) {
-          onError('Google sign-in did not complete. Please try again.');
-          return;
-        }
-
-        const { account } = await googleLogin.mutateAsync(idToken);
-        // Verified addresses go to the app, unverified ones to the verify screen.
-        router.replace(postLoginPath(account, redirect ?? searchParams.get('redirect')));
-        router.refresh();
-      } catch (error) {
-        reportError(error);
-      } finally {
-        setPopupPending(false);
-      }
-    })();
+    const message = searchParams.get('googleError');
+    if (!message || reported.current) return;
+    reported.current = true;
+    onError(message);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleClick = async () => {
-    setPopupPending(true);
+    if (leaving.current) return;
+    leaving.current = true;
     try {
       const { startGoogleRedirect, isGoogleSignInConfigured } = await import('@/lib/auth/firebase');
-
       if (!isGoogleSignInConfigured) {
         onError('Google sign-in is not configured.');
-        setPopupPending(false);
         return;
       }
-
-      sessionStorage.setItem(REDIRECT_FLAG, '1');
-      // Navigates this tab away to Google; the spinner stays until it does.
-      await startGoogleRedirect();
+      // This tab goes to Google's account chooser. It comes back to the callback page, which finishes the
+      // sign-in and opens the app, so this page is not shown again.
+      await startGoogleRedirect(redirect ?? searchParams.get('redirect'), window.location.pathname + window.location.search);
     } catch (error) {
-      sessionStorage.removeItem(REDIRECT_FLAG);
-      reportError(error);
-      setPopupPending(false);
+      onError(googleErrorMessage(error));
+    } finally {
+      leaving.current = false;
     }
   };
 
@@ -113,36 +74,14 @@ export default function GoogleButton({
       variant="outlined"
       startIcon={<GoogleIcon />}
       onClick={handleClick}
-      disabled={pending}
       sx={{
         mt: 4,
         py: 1.4,
         borderColor: '#ddd5e5',
         color: '#241536',
-        // Disabled would otherwise grey the border and label out from under
-        // the spinner, which reads as the button changing shape.
-        '&.Mui-disabled': { borderColor: '#ddd5e5', color: '#241536' },
-        // Hidden, not unmounted: removing the icon takes its margin with it
-        // and shifts the label sideways.
-        '& .MuiButton-startIcon': { visibility: pending ? 'hidden' : 'visible' },
       }}
     >
-      {/**
-       * The label keeps its box while pending: swapping it for the spinner
-       * collapses the content width and snaps everything back to centre.
-       * It is hidden but still laid out, and the spinner sits on top of it.
-       */}
-      <Box component="span" sx={{ visibility: pending ? 'hidden' : 'visible' }}>
-        {label}
-      </Box>
-
-      {pending && (
-        <CircularProgress
-          size={22}
-          color="inherit"
-          sx={{ position: 'absolute', top: '50%', left: '50%', mt: '-11px', ml: '-11px' }}
-        />
-      )}
+      {label}
     </Button>
   );
 }
