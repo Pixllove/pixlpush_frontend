@@ -90,6 +90,7 @@ import {
 import { renderToStaticMarkup } from "react-dom/server";
 import { BlockDesign, SocialLink, sectionTextFeatures, socialNetworks } from "./BlockDesign";
 import { reorderByInsertionIndex } from "./dragEmailOrdering";
+import { compileEmailHtml } from "./emailExport";
 import SimpleEmailEditor from "@/components/dashboard/SimpleEmailEditor";
 import DeleteConfirmDialog from "@/components/dashboard/DeleteConfirmDialog";
 import { Toast } from "@/components/auth/AuthFeedback";
@@ -109,7 +110,7 @@ type BlockType =
   | "button"
   | "divider"
   | "footer";
-type Block = { id: number; type: BlockType; title: string; body: string; variant?: string; designHtml?: string; url?: string; imageSrc?: string; logoWidth?: number; logoAlt?: string; image?: Partial<typeof imageDefaults> & { height?: number; alt?: string }; sectionStyle?: { primary: string; background: string; heading: string; text: string; padding: number; font: string; headingSize: number; textSize: number; lineHeight: number; imageWidth: number } };
+type Block = { id: number; type: BlockType; title: string; body: string; variant?: string; designHtml?: string; url?: string; imageSrc?: string; logoWidth?: number; logoAlt?: string; image?: Partial<typeof imageDefaults> & { height?: number; alt?: string }; sectionStyle?: Partial<{ primary: string; background: string; heading: string; text: string; padding: number; font: string; headingSize: number; textSize: number; lineHeight: number; imageWidth: number }> };
 type EmailItem = {
   id: string;
   name: string;
@@ -157,6 +158,25 @@ const designOf = (design?: Record<string, unknown> | null) => ({
   ...(Array.isArray(design?.blocks) ? { blocks: design.blocks as Block[] } : {}),
   ...(design?.style && typeof design.style === "object" ? { style: design.style as EmailItem["style"] } : {}),
 });
+/**
+ * Pictures wider or taller than 2000px are scaled down in the browser before upload: no email shows
+ * them larger, and the server only converts images up to that size to WebP.
+ */
+async function shrinkForUpload(file: File): Promise<File> {
+  if (file.type === "image/gif") return file; // would lose its animation
+  const bitmap = await createImageBitmap(file).catch(() => null);
+  if (!bitmap) return file;
+  const scale = Math.min(1, 2000 / Math.max(bitmap.width, bitmap.height));
+  if (scale === 1) { bitmap.close(); return file; }
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  const type = file.type === "image/png" ? "image/png" : "image/jpeg"; // PNG keeps its transparency
+  const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, type, 0.92));
+  return blob ? new File([blob], file.name, { type }) : file;
+}
 const logoSizes = { sm: 80, md: 120, lg: 160, xl: 220 };
 // Editor-only controls drawn on top of a framed image (never part of the exported email).
 const imageTools = [
@@ -1813,6 +1833,20 @@ function DragEditor({
   const [translations, setTranslations] = useState<Record<string, { subject: string; html: string }>>(item?.translations || {});
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  // Uploaded images this session replaced or removed. Each is deleted on the server straight away;
+  // one the saved email still shows is kept by the server, so it is tried again after the next save.
+  const discardedAssets = useRef(new Set<string>());
+  // Files the server confirmed gone: undo must not bring a block back pointing at one of these.
+  const deletedAssets = useRef(new Set<string>());
+  const discardAsset = (url: string | undefined, usedElsewhere: boolean) => {
+    if (!url) return;
+    discardedAssets.current.add(url);
+    if (usedElsewhere) return; // a duplicated block still shows it
+    void emailApi.templates.deleteAsset(projectId, url)
+      .then(result => { if (result.deleted) { deletedAssets.current.add(url); discardedAssets.current.delete(url); } })
+      .catch(() => undefined); // only leaves an unused file behind
+  };
+  const usedByOtherBlock = (url: string | undefined, blockId: number) => blocks.some(block => block.id !== blockId && block.imageSrc === url);
   const [selected, setSelected] = useState<number | null>(null);
   const [canvasZoom, setCanvasZoom] = useState(100);
   const [panel, setPanel] = useState<"blocks" | "ai" | "settings">("blocks");
@@ -1844,6 +1878,8 @@ function DragEditor({
     h[from === "past" ? "future" : "past"].push(h.last);
     h.restoring = true;
     h.changedAt = 0;
+    // An image deleted on the server cannot come back with undo: the block returns to its placeholder.
+    snapshot.blocks = snapshot.blocks.map(block => block.imageSrc && deletedAssets.current.has(block.imageSrc) ? { ...block, imageSrc: undefined, image: undefined, designHtml: undefined } : block);
     setBlocks(snapshot.blocks);
     setStyle(snapshot.style);
     setSelected(current => current !== null && current < snapshot.blocks.length ? current : null);
@@ -1931,10 +1967,15 @@ function DragEditor({
     const escape=(text:string)=>text.replace(/[&<>"']/g, char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]!));
     return html.replace('Introduce your concept',escape(block.title)).replace('Use this space to introduce subscribers to the topic of this newsletter.',escape(block.body)).replace('Share your story and help your readers discover what comes next.',escape(block.body || block.title));
   };
-  const sectionVars = (block: Block) => {const v={...defaultSectionStyle,...block.sectionStyle};return {"--section-primary":v.primary,"--section-background":v.background,"--section-heading":v.heading,"--section-text":v.text,"--section-font":v.font,"--section-heading-size":`${v.headingSize}px`,"--section-heading-scale":v.headingSize/32,"--section-text-scale":v.textSize/16,"--section-text-size":`${v.textSize}px`,"--section-line-height":v.lineHeight,"--section-image-width":`${v.imageWidth}%`,padding:v.padding,fontFamily:v.font,backgroundColor:v.background} as React.CSSProperties;};
+  // What a section looks like until the user changes something. Only the user's own changes are stored on the
+  // block, so the template's primary colour keeps flowing into every section that has not overridden it.
+  const styleDefaults = (block: Block) => (block.designHtml ?? blockHtml(block)).includes('data-theme="dark"')
+    ? { ...defaultSectionStyle, background: "#241536", heading: "#ffffff", text: "#d9d5e3" }
+    : defaultSectionStyle;
+  const sectionVars = (block: Block) => {const v={...styleDefaults(block),...block.sectionStyle};return {"--section-primary":v.primary,"--section-background":v.background,"--section-heading":v.heading,"--section-text":v.text,"--section-font":v.font,"--section-heading-size":`${v.headingSize}px`,"--section-heading-scale":v.headingSize/32,"--section-text-scale":v.textSize/16,"--section-text-size":`${v.textSize}px`,"--section-line-height":v.lineHeight,"--section-image-width":`${v.imageWidth}%`,padding:v.padding,fontFamily:v.font,backgroundColor:v.background} as React.CSSProperties;};
   // Email clients (Gmail, Outlook) drop var()/calc(), so the exported HTML gets the section's real values baked in.
   const resolveSectionVars = (html: string, block: Block) => {
-    const v = {...defaultSectionStyle,...block.sectionStyle};
+    const v = {...styleDefaults(block),...block.sectionStyle};
     const values: Record<string,string> = {primary:v.primary,background:v.background,heading:v.heading,text:v.text,font:v.font,"heading-size":`${v.headingSize}px`,"text-size":`${v.textSize}px`,"line-height":String(v.lineHeight),"image-width":`${v.imageWidth}%`};
     const scales = {heading:v.headingSize/32,text:v.textSize/16};
     return html
@@ -1945,8 +1986,9 @@ function DragEditor({
   const selectedBlock = selected === null ? null : blocks[selected] ?? null;
   const changeSelected = (patch: Partial<Block>) => selected !== null && setBlocks(current=>current.map((block,index)=>index===selected?{...block,...patch}:block));
   const removeSelectedImage = (index: number) => {
+    if (blocks[index]) discardAsset(blocks[index].imageSrc, usedByOtherBlock(blocks[index].imageSrc, blocks[index].id));
     setBlocks(current => current.map((block, blockIndex) => blockIndex === index
-      ? { ...block, imageSrc: undefined, image: undefined, designHtml: undefined, sectionStyle: { ...defaultSectionStyle, ...block.sectionStyle, imageWidth: 100 } }
+      ? { ...block, imageSrc: undefined, image: undefined, designHtml: undefined, sectionStyle: { ...block.sectionStyle, imageWidth: 100 } }
       : block
     ));
   };
@@ -1966,7 +2008,7 @@ function DragEditor({
     changeSelected({ designHtml: root.innerHTML });
   };
   const socialHtml = (network: string, url?: string) => renderToStaticMarkup(<SocialLink network={network} url={url} />);
-  const changeSectionStyle = (patch: Partial<NonNullable<Block["sectionStyle"]>>) => selected !== null && setBlocks(current=>current.map((block,index)=>index===selected?{...block,sectionStyle:{...defaultSectionStyle,...block.sectionStyle,...patch}}:block));
+  const changeSectionStyle = (patch: Partial<NonNullable<Block["sectionStyle"]>>) => selected !== null && setBlocks(current=>current.map((block,index)=>index===selected?{...block,sectionStyle:{...block.sectionStyle,...patch}}:block));
   const openImagePicker = (index: number) => {
     setSelected(index);
     window.setTimeout(() => imageInputRef.current?.click(), 0);
@@ -2030,7 +2072,7 @@ function DragEditor({
         // the frame is centred, so a side handle moves both edges: twice the pointer travel
         const width = handle === "s" ? start.width : clamp(start.width + (handle.includes("w") ? -1 : 1) * dx * 2 / parentWidth * 100, 20, 100);
         const height = handle === "e" || handle === "w" ? block.image?.height : clamp(start.height + dy / scale, 60, 600);
-        return { ...block, image: { ...block.image, height }, sectionStyle: { ...defaultSectionStyle, ...block.sectionStyle, imageWidth: width } };
+        return { ...block, image: { ...block.image, height }, sectionStyle: { ...block.sectionStyle, imageWidth: width } };
       }));
     };
     const onUp = () => { resizeStart.current = null; document.removeEventListener("pointermove", onMove); document.removeEventListener("pointerup", onUp); };
@@ -2038,7 +2080,7 @@ function DragEditor({
     document.addEventListener("pointerup", onUp);
   };
   const addLibraryItem = (entry: LibraryItem, at = blocks.length) => {
-    const block: Block = {id:Date.now(), ...blockDefaults[entry.type],variant:entry.label,designHtml:renderToStaticMarkup(<BlockDesign item={entry}/>),sectionStyle:{...defaultSectionStyle}};
+    const block: Block = {id:Date.now(), ...blockDefaults[entry.type],variant:entry.label,designHtml:renderToStaticMarkup(<BlockDesign item={entry}/>)};
     setBlocks(current=>{const next=[...current];next.splice(at,0,block);return next;});
     setSelected(at);setInspectorTab(1);setDraggingLibrary(null);setDropIndex(null);setLibraryOpen(false);
   };
@@ -2061,13 +2103,15 @@ function DragEditor({
   };
   const errorMessage = (error: unknown, fallback: string) => error && typeof error === "object" && "message" in error ? String((error as { message?: unknown }).message) : fallback;
   // The file goes to the server first; the block only ever stores the returned public URL, so it survives a reload and works in the sent email.
-  const uploadImage = async (file: File | undefined, imageKind: "image" | "logo") => {
-    if (!file || selected === null) return;
+  const uploadImage = async (picked: File | undefined, imageKind: "image" | "logo") => {
+    if (!picked || selected === null) return;
     const blockId = blocks[selected].id;
-    if (file.size > 5 * 1024 * 1024) { onNotice("The image is too large. Use one under 5 MB."); return; }
     setUploading(true);
     try {
+      const file = await shrinkForUpload(picked);
+      if (file.size > 5 * 1024 * 1024) { onNotice("The image is too large. Use one under 5 MB."); return; }
       const asset = await emailApi.templates.uploadAsset(projectId, file, imageKind);
+      discardAsset(blocks.find(block => block.id === blockId)?.imageSrc, usedByOtherBlock(blocks.find(block => block.id === blockId)?.imageSrc, blockId));
       setBlocks(current => current.map(block => block.id === blockId ? { ...block, imageSrc: asset.url } : block));
     } catch (error) {
       onNotice(errorMessage(error, "The image could not be uploaded."));
@@ -2075,15 +2119,31 @@ function DragEditor({
       setUploading(false);
     }
   };
-  // What is delivered: the sections inside a centred container on the template's body background.
-  const emailHtml = `<div style="margin:0;padding:24px 0;background-color:${style.background};"><div style="max-width:${style.width}px;margin:0 auto;background-color:#ffffff;">${documentHtml}</div></div>`;
+  // The sections inside a centred container. The old default body colour (a light grey) is treated as "none":
+  // a coloured band around the email only appears when the user picks a body background themselves.
+  const bodyBackground = style.background.toLowerCase() === "#eef2f8" ? "#ffffff" : style.background;
+  const wrapEmail = (sections: string) => bodyBackground.toLowerCase() === "#ffffff"
+    ? `<div style="max-width:${style.width}px;margin:0 auto;background-color:#ffffff;">${sections}</div>`
+    : `<div style="margin:0;padding:24px 0;background-color:${bodyBackground};"><div style="max-width:${style.width}px;margin:0 auto;background-color:#ffffff;">${sections}</div></div>`;
+  // As the editor shows it. Good for the on-screen review; mail clients need the compiled version below.
+  const emailHtml = wrapEmail(documentHtml);
+  // What is saved, tested and sent: tables instead of flexbox, hosted images instead of inline SVG, crops baked in.
+  const compileEmail = async () => wrapEmail(await compileEmailHtml(documentHtml, style.width, (blob, fileName) =>
+    emailApi.templates.uploadAsset(projectId, new File([blob], fileName, { type: blob.type }), "image").then(asset => asset.url)));
+  const [previewHtml, setPreviewHtml] = useState("");
+  const openPreview = async () => {
+    setPreviewHtml(emailHtml); // show at once, then swap in exactly what a test would send
+    setPreview(true);
+    try { setPreviewHtml(await compileEmail()); } catch { /* the on-screen version stays */ }
+  };
   const emailSubject = subject.trim() || name.trim() || "Untitled email";
   const saveAs = async (destination: "drafts" | "templates") => {
     if (saving) return;
     setSaving(true);
     try {
       // `design` is everything needed to reopen the builder exactly as it was; `html` is what gets sent.
-      const content = { subject: emailSubject, html: emailHtml, editor: "drag_drop" as const, design: { version: 1, blocks, style }, translations };
+      const html = await compileEmail();
+      const content = { subject: emailSubject, html, editor: "drag_drop" as const, design: { version: 1, blocks, style }, translations };
       const isExisting = Boolean(item?.id && !item.id.startsWith("email-"));
       const saved = destination === "templates"
         ? isExisting && item?.kind === "templates"
@@ -2092,8 +2152,14 @@ function DragEditor({
         : isExisting && item?.kind === "drafts"
           ? await emailApi.campaigns.update(projectId, item.id, { name, content })
           : await emailApi.campaigns.create(projectId, { name, content });
+      // The save went through, so a discarded image the old version was still holding on to can go now.
+      // The server keeps a file another saved email still shows; a failed delete only leaves an unused file behind.
+      const stillUsed = new Set(blocks.map(block => block.imageSrc));
+      discardedAssets.current.forEach(url => { if (!stillUsed.has(url)) void emailApi.templates.deleteAsset(projectId, url).catch(() => undefined); });
+      deletedAssets.current.clear();
+      discardedAssets.current.clear();
       onSave(
-        { id: saved.id, name, subject: emailSubject, description: "Visual email layout.", editor: "drag", kind: destination, updated: "Updated just now", content: emailHtml, translations, blocks, style },
+        { id: saved.id, name, subject: emailSubject, description: "Visual email layout.", editor: "drag", kind: destination, updated: "Updated just now", content: html, translations, blocks, style },
         destination === "templates" ? "Template saved" : "Draft saved",
       );
     } catch (error) {
@@ -2125,7 +2191,7 @@ function DragEditor({
         onSave={save}
         onSaveDraft={() => saveAs("drafts")}
         onSaveTemplate={() => saveAs("templates")}
-        onPreview={() => setPreview(true)}
+        onPreview={() => void openPreview()}
         onPrepare={() => setReview(true)}
         onNotice={onNotice}
         onUndo={undo}
@@ -2185,7 +2251,7 @@ function DragEditor({
               </Box>
             </>
           ) : panel === "ai" ? (
-            <EmailTranslationPanel mode="drag" onNotice={onNotice} projectId={projectId} subject={emailSubject} html={emailHtml} sourceLanguage={language} initialTranslations={translations} onTranslationsChange={setTranslations} />
+            <EmailTranslationPanel mode="drag" onNotice={onNotice} projectId={projectId} subject={emailSubject} html={emailHtml} getHtml={compileEmail} sourceLanguage={language} initialTranslations={translations} onTranslationsChange={setTranslations} />
           ) : (
             <>
               <Typography component="h3" className="admin-side-title">Settings</Typography>
@@ -2319,6 +2385,7 @@ function DragEditor({
                     title="Delete section"
                     onClick={(e) => {
                       e.stopPropagation();
+                      discardAsset(block.imageSrc, usedByOtherBlock(block.imageSrc, block.id));
                       setBlocks((current) =>
                         current.filter((_, blockIndex) => blockIndex !== index),
                       );
@@ -2417,16 +2484,18 @@ function DragEditor({
               })() : <Typography className="inspector-hint">Click the grey placeholder in the email or upload an image here.</Typography>}
             </Paper>}
             <TextField select fullWidth label="Font" value={selectedBlock.sectionStyle?.font || "Arial, sans-serif"} onChange={event=>changeSectionStyle({font:event.target.value})} sx={{mt:2}}><MenuItem value="Arial, sans-serif">Arial</MenuItem><MenuItem value="Inter, sans-serif">Inter</MenuItem><MenuItem value="Georgia, serif">Georgia</MenuItem><MenuItem value="Verdana, sans-serif">Verdana</MenuItem></TextField>
-            {([['headingSize','Heading size',18,64,1],['textSize','Text size',10,28,1],['lineHeight','Line height',1,2.2,.1],['padding','Section spacing',0,64,1]] as const).filter(([key])=>key==='headingSize'?selectedText.heading:key==='padding'||selectedText.text).map(([key,label,min,max,step])=><Box className="inspector-slider-row" key={key}><Stack direction="row" justifyContent="space-between"><Typography fontSize={12}>{label}</Typography><Typography fontSize={12} fontWeight={800}>{selectedBlock.sectionStyle?.[key] ?? defaultSectionStyle[key]}{key === 'lineHeight' ? '' : 'px'}</Typography></Stack><input type="range" min={min} max={max} step={step} value={selectedBlock.sectionStyle?.[key] ?? defaultSectionStyle[key]} onChange={event=>changeSectionStyle({[key]:Number(event.target.value)})} /></Box>)}
-            {([['primary','Primary color'],['heading','Heading color'],['text','Text color'],['background','Section background']] as const).map(([key,label])=><TextField key={key} fullWidth type="color" label={label} value={{...defaultSectionStyle,...selectedBlock.sectionStyle}[key]} onChange={event=>changeSectionStyle({[key]:event.target.value})} sx={{mt:1.5}} />)}
-            <Button variant="outlined" onClick={()=>changeSectionStyle(defaultSectionStyle)} sx={{mt:2}}>Reset section style</Button>
+            {([['headingSize','Heading size',18,64,1],['textSize','Text size',10,28,1],['lineHeight','Line height',1,2.2,.1],['padding','Section spacing',0,64,1]] as const).filter(([key])=>key==='headingSize'?selectedText.heading:key==='padding'||selectedText.text).map(([key,label,min,max,step])=><Box className="inspector-slider-row" key={key}><Stack direction="row" justifyContent="space-between"><Typography fontSize={12}>{label}</Typography><Typography fontSize={12} fontWeight={800}>{selectedBlock.sectionStyle?.[key] ?? styleDefaults(selectedBlock)[key]}{key === 'lineHeight' ? '' : 'px'}</Typography></Stack><input type="range" min={min} max={max} step={step} value={selectedBlock.sectionStyle?.[key] ?? styleDefaults(selectedBlock)[key]} onChange={event=>changeSectionStyle({[key]:Number(event.target.value)})} /></Box>)}
+            {([['primary','Primary color'],['heading','Heading color'],['text','Text color'],['background','Section background']] as const).map(([key,label])=><TextField key={key} fullWidth type="color" label={label} value={{...styleDefaults(selectedBlock),...selectedBlock.sectionStyle}[key]} onChange={event=>changeSectionStyle({[key]:event.target.value})} sx={{mt:1.5}} />)}
+            <Button variant="outlined" onClick={()=>changeSelected({sectionStyle:undefined})} sx={{mt:2}}>Reset section style</Button>
           </>}
         </Box>
       </Box>
       {preview && (
         <PreviewModal
           title={name}
-          html={emailHtml}
+          html={previewHtml}
+          projectId={projectId}
+          subject={emailSubject}
           onClose={() => setPreview(false)}
           onNotice={onNotice}
         />
@@ -2437,14 +2506,37 @@ function DragEditor({
 function PreviewModal({
   title,
   html,
+  projectId,
+  subject,
   onClose,
   onNotice,
 }: {
   title: string;
   html: string;
+  /** With a project and subject the test is really sent; the legacy editor passes neither. */
+  projectId?: string;
+  subject?: string;
   onClose: () => void;
   onNotice: (message: string) => void;
 }) {
+  const [to, setTo] = useState("");
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const sendTest = async () => {
+    if (!projectId || !subject) { onNotice("Test email prepared locally"); onClose(); return; }
+    const recipient = to.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) { setResult({ ok: false, message: "Enter a valid email address." }); return; }
+    setSending(true);
+    setResult(null);
+    try {
+      const sent = await emailApi.templates.sendTest(projectId, { to: recipient, subject, html });
+      setResult({ ok: true, message: `Test email sent to ${sent.to}.` });
+    } catch (error) {
+      setResult({ ok: false, message: error && typeof error === "object" && "message" in error ? String((error as { message?: unknown }).message) : "Could not send the test email." });
+    } finally {
+      setSending(false);
+    }
+  };
   return (
     <Box className="email-modal-backdrop">
       <Paper className="email-preview-modal">
@@ -2454,7 +2546,7 @@ function PreviewModal({
           alignItems="center"
         >
           <Typography variant="h3">Preview and test</Typography>
-          <IconButton onClick={onClose}>
+          <IconButton onClick={onClose} aria-label="Close preview">
             <CloseRounded />
           </IconButton>
         </Stack>
@@ -2465,17 +2557,17 @@ function PreviewModal({
           className="recipient-preview"
           dangerouslySetInnerHTML={{ __html: html }}
         />
-        <Stack direction="row" gap={1} justifyContent="flex-end">
-          <TextField size="small" placeholder="test@example.com" />
+        <Stack component="form" direction={{ xs: "column", sm: "row" }} gap={1} justifyContent="flex-end" alignItems={{ sm: "center" }} className="preview-test-row" onSubmit={(event: React.FormEvent) => { event.preventDefault(); void sendTest(); }}>
+          {result && <Typography role="status" className={`preview-test-result ${result.ok ? "ok" : "error"}`}>{result.message}</Typography>}
+          <TextField size="small" type="email" placeholder="test@example.com" aria-label="Send test to" value={to} onChange={(event) => setTo(event.target.value)} disabled={sending} />
           <Button
+            type="submit"
             variant="contained"
+            color="success"
             startIcon={<SendRounded />}
-            onClick={() => {
-              onNotice("Test email prepared locally");
-              onClose();
-            }}
+            disabled={sending}
           >
-            Send test
+            {sending ? "Sending…" : "Send test"}
           </Button>
         </Stack>
       </Paper>

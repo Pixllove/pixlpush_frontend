@@ -546,9 +546,9 @@
     "semantic_hash": ""
   },
   "lib/auth/server.ts": {
-    "mtime": 1790927113.4008818,
-    "seen": 1790927237.0154188,
-    "ast_hash": "0548d44936a3ea864ff647fd014021c5",
+    "mtime": 1790927783.9861093,
+    "seen": 1790928101.024947,
+    "ast_hash": "9ddd236d0e0d6f2eb0697688a78f8383",
     "semantic_hash": ""
   },
   "lib/projects.ts": {
@@ -558,9 +558,9 @@
     "semantic_hash": ""
   },
   "lib/projects/api.ts": {
-    "mtime": 1790927113.4014912,
-    "seen": 1790927237.015421,
-    "ast_hash": "5bd758c4e0b3b23a0266c4452f19b866",
+    "mtime": 1790933164.2551613,
+    "seen": 1790933190.653686,
+    "ast_hash": "0d737e6f7ffbb25b1bcee3940ad97b5f",
     "semantic_hash": ""
   },
   "lib/store.ts": {
@@ -636,9 +636,9 @@
     "semantic_hash": ""
   },
   "components/dashboard/BlockDesign.tsx": {
-    "mtime": 1790925190.0868251,
-    "seen": 1790925339.0938828,
-    "ast_hash": "85c050e676c62b39d773a9c31f0e8d17",
+    "mtime": 1790933431.3172326,
+    "seen": 1790933769.530688,
+    "ast_hash": "3183f92ffc97815d304679fd38d67ba4",
     "semantic_hash": ""
   },
   "components/dashboard/CloseEmailEditor.tsx": {
@@ -648,9 +648,9 @@
     "semantic_hash": ""
   },
   "components/dashboard/EmailWorkspace.tsx": {
-    "mtime": 1790927113.4032404,
-    "seen": 1790927237.015373,
-    "ast_hash": "0e15987b29f7679a9eb8b97eca4e0a79",
+    "mtime": 1790934059.560872,
+    "seen": 1790934335.621942,
+    "ast_hash": "05897b6725494da56c13d769d88473d2",
     "semantic_hash": ""
   },
   "components/dashboard/JourneyWorkspace.tsx": {
@@ -744,9 +744,9 @@
     "semantic_hash": ""
   },
   "app/api/projects/[projectId]/[...path]/route.ts": {
-    "mtime": 1790927113.4003942,
-    "seen": 1790927237.0153239,
-    "ast_hash": "f8eb2399f5896a8fdcea9bccb0c31ce2",
+    "mtime": 1790927783.985507,
+    "seen": 1790928101.024881,
+    "ast_hash": "0451b470f86c6686e059abe8cb06de9a",
     "semantic_hash": ""
   },
   "components/dashboard/AudienceGroupCreateDialog.tsx": {
@@ -1026,9 +1026,9 @@
     "semantic_hash": ""
   },
   "components/dashboard/EmailTranslationPanel.tsx": {
-    "mtime": 1790922773.7002382,
-    "seen": 1790922794.756667,
-    "ast_hash": "16c4b47718b89d2eec1c34df39e4fb34",
+    "mtime": 1790934059.5614574,
+    "seen": 1790934335.621941,
+    "ast_hash": "94b91bdbc77c06746b6cd7e0dd7b6251",
     "semantic_hash": ""
   },
   "assets/ai.png": {
@@ -1050,9 +1050,21 @@
     "semantic_hash": ""
   },
   "tests/block-design.test.tsx": {
-    "mtime": 1790925320.000493,
-    "seen": 1790925339.093945,
-    "ast_hash": "3376d2523ec4f2a187ab0503cb20d364",
+    "mtime": 1790933621.0114796,
+    "seen": 1790933769.530748,
+    "ast_hash": "5f90617ec02278340412efc74eb06abf",
+    "semantic_hash": ""
+  },
+  "components/dashboard/emailExport.ts": {
+    "mtime": 1790934264.7628243,
+    "seen": 1790934335.621957,
+    "ast_hash": "e150badee33527e28a483e0d18612203",
+    "semantic_hash": ""
+  },
+  "tests/email-export.test.tsx": {
+    "mtime": 1790934313.823368,
+    "seen": 1790934335.621999,
+    "ast_hash": "c47bb34e6ee873f09ac589a8d2fc33db",
     "semantic_hash": ""
   }
 }

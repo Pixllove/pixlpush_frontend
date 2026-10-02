@@ -38,6 +38,7 @@ export default function EmailTranslationPanel({
   projectId,
   subject,
   html,
+  getHtml,
   sourceLanguage = "en",
   initialTranslations,
   onLanguageChange,
@@ -49,6 +50,8 @@ export default function EmailTranslationPanel({
   projectId?: string;
   subject?: string;
   html?: string;
+  /** Builds the HTML to translate when it has to be prepared first (the drag editor compiles its layout for mail clients). */
+  getHtml?: () => Promise<string>;
   sourceLanguage?: string;
   initialTranslations?: Record<string, { subject: string; html: string }>;
   onLanguageChange?: (language: string) => void;
@@ -109,10 +112,11 @@ export default function EmailTranslationPanel({
     }
     setLoading(true);
     try {
-      setSourceTranslation({ subject, html });
+      const sourceHtml = getHtml ? await getHtml() : html;
+      setSourceTranslation({ subject, html: sourceHtml });
       const result = await emailApi.translate(projectId, {
         subject,
-        html,
+        html: sourceHtml,
         sourceLanguage,
         languages: selectedLanguages,
       });
@@ -120,7 +124,7 @@ export default function EmailTranslationPanel({
         Object.entries(result.translations).map(([code, value]) => [code, { subject: value.subject, html: value.html }]),
       );
       const allTranslations = {
-        [sourceLanguage]: { subject, html },
+        [sourceLanguage]: { subject, html: sourceHtml },
         ...nextTranslations,
       };
       setTranslations((current) => ({ ...current, ...nextTranslations }));

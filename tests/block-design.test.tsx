@@ -20,3 +20,13 @@ test('inspector only offers heading and text size where the block has them', () 
   expect(features('footer', 'Footer + app download')).toEqual({ heading: false, text: true });
   expect(features('divider', 'Divider')).toEqual({ heading: false, text: false });
 });
+
+test('every colour in a block comes from a section variable, including the dark footer', () => {
+  const footer = renderToStaticMarkup(<BlockDesign item={{ type: 'footer', label: 'Footer' }} />);
+  expect(footer).toContain('data-theme="dark"');
+  expect(footer).toContain('background-color:var(--section-background, #241536)');
+  expect(footer).toContain('color:var(--section-heading, #ffffff)');
+  expect(footer).toContain('color:var(--section-text, #d9d5e3)');
+  // a light block must not be tagged dark, or it would start with white text on white
+  expect(renderToStaticMarkup(<BlockDesign item={{ type: 'hero', label: 'Standard hero' }} />)).not.toContain('data-theme');
+});

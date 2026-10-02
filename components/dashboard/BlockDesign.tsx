@@ -528,7 +528,7 @@ const palette: Record<string,string> = {
  body:'var(--section-text, #64748b)', primary:'var(--section-primary, #7132d3)',
  success:'var(--section-primary, #7132d3)', 'success/70':'var(--section-primary, #7132d3)',
  'gray-2':'#f7f8fb', 'slate-200':'#e2e8f0', 'slate-300':'#cbd5e1',
- 'slate-500':'var(--section-text, #64748b)', stroke:'#e2e8f0', main:'#241536', danger:'#e14b55'
+ 'slate-500':'var(--section-text, #64748b)', stroke:'#e2e8f0', main:'var(--section-background, #241536)', danger:'#e14b55'
 };
 function utilityStyle(classes: string, scale: number): CSSProperties {
  const out: Record<string,string|number> = {};
@@ -548,7 +548,8 @@ function utilityStyle(classes: string, scale: number): CSSProperties {
    border:{borderWidth:1,borderStyle:'solid'},'border-dashed':{borderStyle:'dashed'},
    'border-l-3':{borderLeftWidth:3,borderLeftStyle:'solid'},'h-px':{height:1},
    'leading-none':{lineHeight:1},'leading-tight':{lineHeight:1.25},'leading-snug':{lineHeight:1.375},
-   'opacity-80':{opacity:.8},'w-3/4':{width:'75%'},'shrink-0':{flexShrink:0},
+   // Secondary copy on the dark design: its own colour, so "Text color" can change it.
+   'opacity-80':{color:'var(--section-text, #d9d5e3)'},'w-3/4':{width:'75%'},'shrink-0':{flexShrink:0},
    // Full-size sections size text through the inspector's scale variables; thumbnails use plain px.
    'text-sm':{fontSize:scale>1?'calc(32px * var(--section-heading-scale, 1))':14},
    'shadow-sm':{},'last:mb-0':{},'rounded-b':{borderRadius:px(4)}
@@ -598,6 +599,9 @@ function inlineDesign(node: ReactNode, scale: number): ReactNode {
  const rawKids=el.props.children;
  const kids=Array.isArray(rawKids)?rawKids.flat(Infinity as 1).filter(kid=>kid!==null&&kid!==undefined&&kid!==false):rawKids;
  const style={...utilityStyle(classes,scale),...el.props.style};
+ // The dark design: its text follows "Heading color" instead of a fixed white, and it is tagged so the editor starts it from dark colours.
+ const dark=/\bbg-main\b/.test(classes);
+ if(dark) style.color='var(--section-heading, #ffffff)';
  // A row of placeholder dots becomes real, editable social links.
  if(Array.isArray(kids) && kids.length>0 && kids.every(isDot)) {
    return cloneElement(el,{style,className:undefined,'data-socials':''} as object,['facebook','instagram','x'].map(network=><SocialLink key={network} network={network} size={12*scale}/>));
@@ -618,7 +622,7 @@ function inlineDesign(node: ReactNode, scale: number): ReactNode {
  if((filled && kids) || classes.split(/\s+/).includes('underline')) return link({},inner);
  // Logo placeholders are tagged so an uploaded logo replaces them in place instead of being stacked on top.
  const isLogo=/\bfont-bold\b/.test(classes) && /\btext-slate-500\b/.test(classes);
- return cloneElement(el,{style,className:undefined,...(isLogo?{'data-logo':''}:{})} as object,inner);
+ return cloneElement(el,{style,className:undefined,...(isLogo?{'data-logo':''}:{}),...(dark?{'data-theme':'dark'}:{})} as object,inner);
 }
 // Which typography controls make sense for a section's HTML: no heading -> no heading size, no text -> no text controls.
 export function sectionTextFeatures(root: HTMLElement) {

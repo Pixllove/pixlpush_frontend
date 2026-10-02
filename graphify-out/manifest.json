@@ -558,9 +558,9 @@
     "semantic_hash": ""
   },
   "lib/projects/api.ts": {
-    "mtime": 1790927783.985085,
-    "seen": 1790928101.024949,
-    "ast_hash": "777c2b943bbf872c3c6c2a742bdf70e2",
+    "mtime": 1790933164.2551613,
+    "seen": 1790933190.653686,
+    "ast_hash": "0d737e6f7ffbb25b1bcee3940ad97b5f",
     "semantic_hash": ""
   },
   "lib/store.ts": {
@@ -636,9 +636,9 @@
     "semantic_hash": ""
   },
   "components/dashboard/BlockDesign.tsx": {
-    "mtime": 1790925190.0868251,
-    "seen": 1790925339.0938828,
-    "ast_hash": "85c050e676c62b39d773a9c31f0e8d17",
+    "mtime": 1790933431.3172326,
+    "seen": 1790933769.530688,
+    "ast_hash": "3183f92ffc97815d304679fd38d67ba4",
     "semantic_hash": ""
   },
   "components/dashboard/CloseEmailEditor.tsx": {
@@ -648,9 +648,9 @@
     "semantic_hash": ""
   },
   "components/dashboard/EmailWorkspace.tsx": {
-    "mtime": 1790927113.4032404,
-    "seen": 1790927237.015373,
-    "ast_hash": "0e15987b29f7679a9eb8b97eca4e0a79",
+    "mtime": 1790934059.560872,
+    "seen": 1790934335.621942,
+    "ast_hash": "05897b6725494da56c13d769d88473d2",
     "semantic_hash": ""
   },
   "components/dashboard/JourneyWorkspace.tsx": {
@@ -1026,9 +1026,9 @@
     "semantic_hash": ""
   },
   "components/dashboard/EmailTranslationPanel.tsx": {
-    "mtime": 1790922773.7002382,
-    "seen": 1790922794.756667,
-    "ast_hash": "16c4b47718b89d2eec1c34df39e4fb34",
+    "mtime": 1790934059.5614574,
+    "seen": 1790934335.621941,
+    "ast_hash": "94b91bdbc77c06746b6cd7e0dd7b6251",
     "semantic_hash": ""
   },
   "assets/ai.png": {
@@ -1050,9 +1050,21 @@
     "semantic_hash": ""
   },
   "tests/block-design.test.tsx": {
-    "mtime": 1790925320.000493,
-    "seen": 1790925339.093945,
-    "ast_hash": "3376d2523ec4f2a187ab0503cb20d364",
+    "mtime": 1790933621.0114796,
+    "seen": 1790933769.530748,
+    "ast_hash": "5f90617ec02278340412efc74eb06abf",
+    "semantic_hash": ""
+  },
+  "components/dashboard/emailExport.ts": {
+    "mtime": 1790934914.325255,
+    "seen": 1790934938.278579,
+    "ast_hash": "0cc5eae17bc244cced3dd91ad09426b8",
+    "semantic_hash": ""
+  },
+  "tests/email-export.test.tsx": {
+    "mtime": 1790934313.823368,
+    "seen": 1790934335.621999,
+    "ast_hash": "c47bb34e6ee873f09ac589a8d2fc33db",
     "semantic_hash": ""
   }
 }

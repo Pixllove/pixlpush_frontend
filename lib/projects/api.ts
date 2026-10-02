@@ -325,6 +325,21 @@ export const emailApi = {
       }
       return payload.data as { url: string; path: string; contentType: string; size: number };
     },
+    /** Sends the editor's current content as a test, saved or not. */
+    sendTest: (projectId: string, input: { to: string; subject: string; html: string }) =>
+      authRequest<{ sent: boolean; to: string; via: "project" | "platform" }>(
+        at(projectId, "/email-templates/test"),
+        input,
+        BASE,
+      ),
+    /** Removes an uploaded image no saved email uses any more; one still in use is kept (`deleted: false`). */
+    deleteAsset: (projectId: string, url: string) =>
+      authRequest<{ deleted: boolean; inUse: boolean }>(
+        at(projectId, "/email-templates/assets"),
+        { url },
+        BASE,
+        "DELETE",
+      ),
     update: (
       projectId: string,
       templateId: string,
