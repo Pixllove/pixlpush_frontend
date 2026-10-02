@@ -1,6 +1,6 @@
 "use client";
 
-import CloseEmailEditor, { EDITOR_DIRTY_KEY } from "./CloseEmailEditor";
+import CloseEmailEditor from "./CloseEmailEditor";
 import Image from "next/image";
 import EmailTranslationPanel from "./EmailTranslationPanel";
 import EmailLanguageSettings from "./EmailLanguageSettings";
@@ -186,7 +186,7 @@ const readEditorSession = (): EditorSession | null => {
 const writeEditorSession = (session: EditorSession | null) => {
   try {
     if (session) sessionStorage.setItem(EDITOR_SESSION_KEY, JSON.stringify(session));
-    else { sessionStorage.removeItem(EDITOR_SESSION_KEY); sessionStorage.removeItem(EDITOR_DIRTY_KEY); }
+    else sessionStorage.removeItem(EDITOR_SESSION_KEY);
   } catch { /* storage full or unavailable: the editor still works, it just will not survive a reload */ }
   // The page paints a plain backdrop while an editor is being restored (see the script in the email page).
   if (!session) document.documentElement.removeAttribute("data-email-editor");
@@ -517,9 +517,9 @@ export default function EmailWorkspace() {
       setKind(session.kind);
       setEditor(session.editor);
       setCreationLanguage(session.language);
-      // the unsaved work is laid over the item it was opened from; a brand-new email has no item yet
-      setActive(session.draft || session.item ? ({
-        id: `email-${Date.now()}`, name: "", subject: "", description: "", updated: "", ...session.item, ...session.draft, editor: session.editor, kind: session.kind,
+      // the email as it was last saved; a brand-new email has no item yet and reopens blank
+      setActive(session.item ? ({
+        id: `email-${Date.now()}`, name: "", subject: "", description: "", updated: "", ...session.item, editor: session.editor, kind: session.kind,
       } as EmailItem) : null);
       setView("editor");
     }
@@ -539,15 +539,14 @@ export default function EmailWorkspace() {
       setView("list");
       return;
     }
-    editorSession.current = { projectId: activeProject.id, editor, kind, language: creationLanguage, item: active, draft: editorSession.current?.draft };
+    editorSession.current = { projectId: activeProject.id, editor, kind, language: creationLanguage, item: active };
     writeEditorSession(editorSession.current);
   }, [restored, view, editor, kind, creationLanguage, active, activeProject?.id]);
   // The editors report their unsaved state here. It goes to storage only: putting it in React state would
   // re-render (and for the drag editor remount) the editor on every keystroke.
   const rememberDraft = (draft: Partial<EmailItem>) => {
-    if (!editorSession.current) return;
-    editorSession.current = { ...editorSession.current, draft };
-    writeEditorSession(editorSession.current);
+    // A reload discards unsaved changes: the editor reopens on what was last saved, so nothing is stored.
+    void draft;
   };
   const [notice, setNotice] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<EmailItem | null>(null);
