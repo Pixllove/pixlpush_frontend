@@ -24,3 +24,9 @@ test('rows become tables, columns become stacked blocks, and empty picture frame
   expect(hero).not.toContain('rgb(247, 248, 251)'); // the grey placeholder frame
   expect(hero).toContain('Introduce your concept');
 });
+
+test("an unlinked picture is linked to itself so Gmail shows no download button", async () => {
+  const html = await compileEmailHtml('<div><img src="https://cdn.test/hero.png" style="width:300px"><p>Hi</p></div>', 640, async () => "https://cdn.test/x.png");
+  expect(html).toContain('<a href="https://cdn.test/hero.png"');
+  expect(html).not.toContain("<style");
+});

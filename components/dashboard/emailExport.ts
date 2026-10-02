@@ -266,19 +266,19 @@ export async function compileEmailHtml(html: string, width: number, upload: Uplo
       // custom properties mean nothing to a mail client; their values are already written into the styles
       for (const property of Array.from(el.style ?? [])) if (property.startsWith("--") || property === "flex-shrink") el.style.removeProperty(property);
     });
-    // 7. Gmail lays a "download" button over any sizeable picture that is not a link. The button is a <div>
-    //    it inserts right after the image, so each picture gets a class the style rule below can hide it by,
-    //    and a wrapper of its own so that rule can never match one of the email's own elements.
+    // 7. Gmail lays a "download" button over any sizeable picture that is not a link, and it drops <style>
+    //    blocks sent inside the body, so the button cannot be hidden with CSS. A picture that is a link gets
+    //    no button, so each unlinked one is made a link to itself.
     stage.querySelectorAll<HTMLImageElement>("img").forEach(img => {
-      if ((img.width || parseFloat(img.style.width) || 999) < 100 || img.closest("a")) return;
-      img.classList.add("g-img");
-      if (!img.nextElementSibling) return;
-      const wrapper = document.createElement("span");
-      wrapper.setAttribute("style", `display:${img.style.display === "block" ? "block" : "inline-block"};`);
-      img.replaceWith(wrapper);
-      wrapper.appendChild(img);
+      if ((img.width || parseFloat(img.style.width) || 999) < 100 || img.closest("a") || !/^https?:/.test(img.src)) return;
+      const link = document.createElement("a");
+      link.href = img.src;
+      link.target = "_blank";
+      link.setAttribute("style", `display:${img.style.display === "block" ? "block" : "inline-block"};text-decoration:none;cursor:default;`);
+      img.replaceWith(link);
+      link.appendChild(img);
     });
-    return `<style>.g-img + div { display: none !important; }</style>${stage.innerHTML}`;
+    return stage.innerHTML;
   } finally {
     stage.remove();
   }
