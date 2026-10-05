@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AutoAwesomeRounded,
   BugReportRounded,
@@ -130,9 +130,10 @@ function CodeBlock({
     <Box
       sx={{
         overflow: "hidden",
-        borderRadius: 1,
+        borderRadius: 1.5,
         bgcolor: "#211331",
         border: "1px solid rgba(255,210,112,.22)",
+        boxShadow: "0 12px 24px rgba(30,15,44,.12)",
       }}
     >
       <Stack
@@ -140,14 +141,14 @@ function CodeBlock({
         justifyContent="space-between"
         alignItems="center"
         sx={{
-          px: 1.5,
-          py: 0.65,
+          px: 1.7,
+          py: 0.9,
           bgcolor: "rgba(255,206,99,.08)",
           borderBottom: "1px solid rgba(255,210,112,.14)",
         }}
       >
         <Typography
-          fontSize={10}
+          fontSize={11}
           fontWeight={900}
           letterSpacing={1.2}
           color="#ffd36a"
@@ -176,8 +177,8 @@ function CodeBlock({
           overflow: "auto",
           color: "#ffe3a0",
           fontFamily: "monospace",
-          fontSize: 11,
-          lineHeight: 1.6,
+          fontSize: 12,
+          lineHeight: 1.7,
           whiteSpace: "pre-wrap",
         }}
       >
@@ -220,7 +221,7 @@ function SectionHeading({
         {eyebrow && (
           <Typography
             color={dark ? "#ffd36a" : "#7132d3"}
-            fontSize={9}
+            fontSize={10}
             fontWeight={900}
             letterSpacing={1.4}
           >
@@ -232,7 +233,7 @@ function SectionHeading({
           sx={{
             mt: eyebrow ? 0.2 : 0,
             color: dark ? "#fff" : undefined,
-            fontSize: { xs: 19, md: 22 },
+            fontSize: { xs: 21, md: 25 },
             lineHeight: 1.2,
             fontWeight: 850,
           }}
@@ -241,8 +242,8 @@ function SectionHeading({
         </Typography>
         <Typography
           color={dark ? "rgba(255,255,255,.68)" : "text.secondary"}
-          fontSize={12}
-          sx={{ mt: 0.45, lineHeight: 1.5 }}
+          fontSize={13}
+          sx={{ mt: 0.6, lineHeight: 1.6 }}
         >
           {description}
         </Typography>
@@ -254,7 +255,33 @@ function SectionHeading({
 export default function IntegrationDocumentation() {
   const { active } = useActiveProject();
   const [copied, setCopied] = useState<string>();
+  const [activeStep, setActiveStep] = useState("install");
   const projectId = active?.id ?? "YOUR_PROJECT_ID";
+  useEffect(() => {
+    const sections = ["install", "measure", "activate", "brief"]
+      .map((id) => document.getElementById(id))
+      .filter((section): section is HTMLElement => Boolean(section));
+    if (!sections.length) return;
+
+    const updateActiveStep = () => {
+      const marker = window.scrollY + window.innerHeight * 0.3;
+      let current = sections[0];
+      sections.forEach((section) => {
+        if (section.getBoundingClientRect().top + window.scrollY <= marker) {
+          current = section;
+        }
+      });
+      setActiveStep((previous) => previous === current.id ? previous : current.id);
+    };
+
+    updateActiveStep();
+    window.addEventListener("scroll", updateActiveStep, { passive: true });
+    window.addEventListener("resize", updateActiveStep);
+    return () => {
+      window.removeEventListener("scroll", updateActiveStep);
+      window.removeEventListener("resize", updateActiveStep);
+    };
+  }, []);
   const copy = async (value: string, label: string) => {
     await navigator.clipboard.writeText(
       value.replaceAll("YOUR_PROJECT_ID", projectId),
@@ -272,12 +299,115 @@ export default function IntegrationDocumentation() {
   ];
   return (
     <Stack
-      gap={2.25}
+      gap={{ xs: 2.5, md: 3 }}
       sx={{
-        "& .MuiCard-root": { borderRadius: "10px !important" },
-        "& .integration-code-block": { borderRadius: "8px !important" },
+        display: "grid",
+        gridTemplateColumns: { xs: "1fr", lg: "238px minmax(0, 1fr)" },
+        alignItems: "start",
+        columnGap: { xs: 0, lg: 3 },
+        rowGap: { xs: 2.5, lg: 3 },
+        "& > .integration-rail": {
+          gridColumn: "1",
+          gridRow: { xs: "auto", lg: "1 / -1" },
+          position: { xs: "static", lg: "sticky" },
+          top: { lg: 24 },
+        },
+        "& > *:not(.integration-rail)": {
+          gridColumn: "2",
+          "@media (max-width: 1199px)": { gridColumn: "1" },
+        },
+        "& .MuiCard-root": {
+          borderRadius: "16px !important",
+          borderColor: "#e4d9ef",
+          boxShadow: "0 12px 30px rgba(44,24,69,.055)",
+        },
+        "& .integration-code-block": { borderRadius: "12px !important" },
+        "& .integration-main .MuiTypography-body1": { fontSize: "14px" },
       }}
     >
+      <Card
+        className="integration-rail"
+        sx={{
+          p: 2,
+          border: "1px solid #dfd2ed",
+          background: "linear-gradient(180deg,#211331 0%,#35205a 100%) !important",
+          color: "#fff",
+          boxShadow: "0 16px 34px rgba(38,19,60,.16) !important",
+        }}
+      >
+        <Typography fontSize={10} fontWeight={900} letterSpacing={1.4} color="#c9a8ff">
+          INTEGRATION WORKSPACE
+        </Typography>
+        <Typography fontSize={21} fontWeight={900} sx={{ mt: 0.7, letterSpacing: "-.03em" }}>
+          Get connected
+        </Typography>
+        <Typography fontSize={12} lineHeight={1.55} sx={{ mt: 0.7, color: "rgba(255,255,255,.68)" }}>
+          A guided path for installing the SDK, sending reliable events, and activating campaigns.
+        </Typography>
+        <Divider sx={{ my: 2, borderColor: "rgba(255,255,255,.14)" }} />
+        <Stack gap={0.7}>
+          {[
+            ["01", "Install SDK", "Connect your project", "#install"],
+            ["02", "Track events", "Measure behavior", "#measure"],
+            ["03", "Activate", "Build audiences", "#activate"],
+            ["04", "Ship safely", "Review the brief", "#brief"],
+          ].map(([number, label, detail, href]) => {
+            const isActiveStep = activeStep === href.slice(1);
+            return (
+              <Button
+                key={number}
+                href={href}
+                onClick={() => setActiveStep(href.slice(1))}
+                sx={{
+                  p: 1,
+                  minHeight: 56,
+                  gap: 1,
+                  justifyContent: "flex-start",
+                  alignItems: "center",
+                  borderRadius: 1.5,
+                  color: "#fff",
+                  textTransform: "none",
+                  textAlign: "left",
+                  backgroundColor: isActiveStep ? "rgba(255,255,255,.16)" : "transparent",
+                  boxShadow: isActiveStep ? "inset 0 0 0 1px rgba(255,255,255,.12)" : "none",
+                  "&:hover": { backgroundColor: "rgba(255,255,255,.1)" },
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 29,
+                    height: 29,
+                    flexShrink: 0,
+                    display: "grid",
+                    placeItems: "center",
+                    borderRadius: "50%",
+                    color: isActiveStep ? "#fff" : "#dcc8ff",
+                    backgroundColor: isActiveStep ? "#7132d3" : "rgba(255,255,255,.1)",
+                    fontSize: 10,
+                    fontWeight: 900,
+                  }}
+                >
+                  {number}
+                </Box>
+                <Box>
+                  <Typography fontSize={12} fontWeight={900}>{label}</Typography>
+                  <Typography fontSize={10} sx={{ mt: 0.15, color: "rgba(255,255,255,.58)" }}>{detail}</Typography>
+                </Box>
+              </Button>
+            );
+          })}
+        </Stack>
+        <Box sx={{ mt: 2, p: 1.25, borderRadius: 1.5, backgroundColor: "rgba(255,255,255,.08)" }}>
+          <Stack direction="row" alignItems="center" gap={0.8}>
+            <Box sx={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#7ee49b", boxShadow: "0 0 0 4px rgba(126,228,155,.12)" }} />
+            <Typography fontSize={11} fontWeight={800}>Guide ready</Typography>
+          </Stack>
+          <Typography fontSize={10} sx={{ mt: 0.7, color: "rgba(255,255,255,.58)" }}>
+            Public SDK key only · safe for client apps
+          </Typography>
+        </Box>
+      </Card>
+      <Stack className="integration-main" gap={{ xs: 2.5, md: 3 }}>
       {copied && (
         <Alert
           severity="success"
@@ -289,10 +419,12 @@ export default function IntegrationDocumentation() {
       )}
       <Card
         sx={{
-          p: { xs: 2.5, md: 4 },
-          border: "1px solid #e8ddf2",
-          bgcolor: "#fff",
-          boxShadow: "0 12px 32px rgba(44,24,69,.07)",
+          p: { xs: 2.75, md: 4.5 },
+          minHeight: { md: 320 },
+          border: "0 !important",
+          color: "#fff",
+          background: "radial-gradient(circle at 86% 12%,rgba(190,108,255,.32),transparent 28%), linear-gradient(118deg,#20112f 0%,#422071 55%,#7028c8 100%) !important",
+          boxShadow: "0 22px 46px rgba(52,24,86,.2) !important",
         }}
       >
         <Stack
@@ -306,8 +438,8 @@ export default function IntegrationDocumentation() {
                 label="PIXLPUSH INTEGRATION GUIDE"
                 size="small"
                 sx={{
-                  bgcolor: "#f0e5ff",
-                  color: "#7132d3",
+                  bgcolor: "rgba(255,255,255,.14)",
+                  color: "#fff",
                   fontSize: 10,
                   fontWeight: 900,
                   letterSpacing: 1,
@@ -317,13 +449,13 @@ export default function IntegrationDocumentation() {
                 label="React + React Native"
                 size="small"
                 variant="outlined"
-                sx={{ fontSize: 10, fontWeight: 800 }}
+                sx={{ fontSize: 10, fontWeight: 800, color: "rgba(255,255,255,.82)", borderColor: "rgba(255,255,255,.35)" }}
               />
             </Stack>
             <Typography
               variant="h2"
               sx={{
-                fontSize: { xs: 28, md: 38 },
+                fontSize: { xs: 31, md: 44 },
                 lineHeight: 1.08,
                 fontWeight: 850,
                 maxWidth: 690,
@@ -332,9 +464,9 @@ export default function IntegrationDocumentation() {
               From first event to loyal customer.
             </Typography>
             <Typography
-              color="text.secondary"
-              fontSize={13}
-              sx={{ mt: 1.2, maxWidth: 650, lineHeight: 1.6 }}
+              color="rgba(255,255,255,.78)"
+              fontSize={14}
+              sx={{ mt: 1.35, maxWidth: 650, lineHeight: 1.7 }}
             >
               A practical implementation guide for product analytics, lifecycle
               segments, audience groups, email marketing, and push notification
@@ -346,7 +478,7 @@ export default function IntegrationDocumentation() {
                 variant="contained"
                 href="#install"
                 startIcon={<TerminalRounded />}
-                sx={{ textTransform: "none", fontWeight: 900 }}
+                sx={{ textTransform: "none", fontWeight: 900, color: "#32134f", backgroundColor: "#fff", "&:hover": { backgroundColor: "#f4ebff" } }}
               >
                 Start integration
               </Button>
@@ -354,7 +486,7 @@ export default function IntegrationDocumentation() {
                 variant="outlined"
                 href="/docs"
                 endIcon={<OpenInNewRounded />}
-                sx={{ textTransform: "none", fontWeight: 800 }}
+                sx={{ textTransform: "none", fontWeight: 800, color: "#fff", borderColor: "rgba(255,255,255,.45)", "&:hover": { borderColor: "#fff", backgroundColor: "rgba(255,255,255,.1)" } }}
               >
                 View public docs
               </Button>
@@ -366,13 +498,15 @@ export default function IntegrationDocumentation() {
               alignSelf: "center",
               p: 2,
               borderRadius: 1.2,
-              bgcolor: "#211331",
+              bgcolor: "rgba(20,10,31,.48)",
               color: "#fff",
+              border: "1px solid rgba(255,255,255,.16)",
+              backdropFilter: "blur(12px)",
             }}
           >
             <Typography
               color="#ffd36a"
-              fontSize={10}
+              fontSize={11}
               fontWeight={900}
               letterSpacing={1.3}
             >
@@ -391,18 +525,18 @@ export default function IntegrationDocumentation() {
             <Divider sx={{ my: 1.8, borderColor: "rgba(255,255,255,.14)" }} />
             <Stack gap={1}>
               <Stack direction="row" justifyContent="space-between">
-                <Typography fontSize={11} color="rgba(255,255,255,.62)">
+                <Typography fontSize={12} color="rgba(255,255,255,.62)">
                   SDK status
                 </Typography>
-                <Typography fontSize={11} color="#9bf2bd" fontWeight={800}>
+                <Typography fontSize={12} color="#9bf2bd" fontWeight={800}>
                   Ready to connect
                 </Typography>
               </Stack>
               <Stack direction="row" justifyContent="space-between">
-                <Typography fontSize={11} color="rgba(255,255,255,.62)">
+                <Typography fontSize={12} color="rgba(255,255,255,.62)">
                   Data destination
                 </Typography>
-                <Typography fontSize={11} fontWeight={800}>
+                <Typography fontSize={12} fontWeight={800}>
                   PixlPush Cloud
                 </Typography>
               </Stack>
@@ -410,50 +544,65 @@ export default function IntegrationDocumentation() {
           </Box>
         </Stack>
       </Card>
+      <Box>
+        <Typography variant="h3" sx={{ fontSize: { xs: 21, md: 25 }, fontWeight: 850 }}>
+          What you’ll connect
+        </Typography>
+        <Typography color="text.secondary" fontSize={13} sx={{ mt: 0.5 }}>
+          One SDK foundation, four outcomes your product and marketing teams can use immediately.
+        </Typography>
+      </Box>
       <Grid container spacing={2}>
         {[
           [
             DataObjectRounded,
             "Behavioral data",
             "Identify people and capture the events that describe activation, engagement, conversion, and retention.",
+            "Core SDK",
           ],
           [
             GroupsRounded,
             "Lifecycle audiences",
             "Use events and user properties to create dynamic segments such as new users, trial users, and paid customers.",
+            "Segmentation",
           ],
           [
             EmailRounded,
             "Email marketing",
             "Send relevant onboarding, lifecycle, and product education campaigns with consent-aware audience targeting.",
+            "Messaging",
           ],
           [
             NotificationsActiveRounded,
             "Push notifications",
             "Connect notification permission and delivery events to create timely, measurable push journeys.",
+            "Delivery",
           ],
-        ].map(([Icon, title, description]) => (
+        ].map(([Icon, title, description, label]) => (
           <Grid item xs={12} sm={6} lg={3} key={title as string}>
             <Card sx={{ height: "100%", p: 2.2, border: "1px solid #eee7f3" }}>
-              <Box
-                sx={{
-                  width: 38,
-                  height: 38,
-                  display: "grid",
-                  placeItems: "center",
-                  borderRadius: 1.8,
-                  bgcolor: "#f4ecff",
-                  color: "#7132d3",
-                }}
-              >
-                <Icon />
-              </Box>
-              <Typography fontWeight={900} sx={{ mt: 1.5 }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap={1}>
+                <Box
+                  sx={{
+                    width: 42,
+                    height: 42,
+                    display: "grid",
+                    placeItems: "center",
+                    borderRadius: 1.5,
+                    bgcolor: "#f4ecff",
+                    color: "#7132d3",
+                  }}
+                >
+                  <Icon />
+                </Box>
+                <Chip label={label as string} size="small" sx={{ height: 24, color: "#7132d3", bgcolor: "#f5edff", fontSize: 10, fontWeight: 850 }} />
+              </Stack>
+              <Typography fontWeight={900} fontSize={15} sx={{ mt: 1.7 }}>
                 {title as string}
               </Typography>
               <Typography
                 color="text.secondary"
-                fontSize={12}
+                fontSize={13}
                 lineHeight={1.6}
                 sx={{ mt: 0.6 }}
               >
@@ -484,7 +633,7 @@ export default function IntegrationDocumentation() {
                 <Typography fontWeight={900}>What you need</Typography>
                 <Typography
                   color="text.secondary"
-                  fontSize={12}
+                  fontSize={13}
                   sx={{ mt: 0.5 }}
                 >
                   Create or select a Project, then open Settings → SDK keys to
@@ -505,11 +654,11 @@ export default function IntegrationDocumentation() {
                     border: "1px solid #eee7f3",
                   }}
                 >
-                  <Typography color="text.secondary" fontSize={11}>
+                  <Typography color="text.secondary" fontSize={12}>
                     {label}
                   </Typography>
                   <Typography
-                    fontSize={12}
+                    fontSize={13}
                     fontWeight={900}
                     sx={{ mt: 0.4, wordBreak: "break-all" }}
                   >
@@ -535,7 +684,7 @@ export default function IntegrationDocumentation() {
           </Grid>
         </Grid>
       </Card>
-      <Card sx={{ p: { xs: 2.5, md: 3.5 }, border: "1px solid #e8ddf2" }}>
+      <Card id="measure" sx={{ p: { xs: 2.5, md: 3.5 }, border: "1px solid #e8ddf2", scrollMarginTop: 90 }}>
         <SectionHeading
           eyebrow="02 · MEASURE THE JOURNEY"
           title="Track the signals PixlPush needs"
@@ -579,10 +728,10 @@ export default function IntegrationDocumentation() {
                     }}
                   />
                   <Box sx={{ flex: 1 }}>
-                    <Typography fontSize={11} fontWeight={900}>
+                    <Typography fontSize={12} fontWeight={900}>
                       {event}
                     </Typography>
-                    <Typography fontSize={10} color="text.secondary">
+                    <Typography fontSize={11} color="text.secondary">
                       {meaning}
                     </Typography>
                   </Box>
@@ -597,7 +746,7 @@ export default function IntegrationDocumentation() {
           </Grid>
         </Grid>
       </Card>
-      <Card sx={{ p: { xs: 2.5, md: 3.5 }, border: "1px solid #e8ddf2" }}>
+      <Card id="activate" sx={{ p: { xs: 2.5, md: 3.5 }, border: "1px solid #e8ddf2", scrollMarginTop: 90 }}>
         <SectionHeading
           eyebrow="03 · ACTIVATE CUSTOMERS"
           title="Turn data into campaigns"
@@ -654,12 +803,12 @@ export default function IntegrationDocumentation() {
                     }}
                   />
                 </Stack>
-                <Typography fontSize={11} fontWeight={800} sx={{ mt: 1 }}>
+                <Typography fontSize={12} fontWeight={800} sx={{ mt: 1 }}>
                   {audience}
                 </Typography>
                 <Typography
                   color="text.secondary"
-                  fontSize={11}
+                  fontSize={12}
                   lineHeight={1.55}
                   sx={{ mt: 0.5 }}
                 >
@@ -670,7 +819,7 @@ export default function IntegrationDocumentation() {
           ))}
         </Grid>
       </Card>
-      <Card sx={{ p: { xs: 2.5, md: 3.5 }, border: "1px solid #e8ddf2" }}>
+      <Card id="brief" sx={{ p: { xs: 2.5, md: 3.5 }, border: "1px solid #e8ddf2", scrollMarginTop: 90 }}>
         <Stack
           direction={{ xs: "column", sm: "row" }}
           justifyContent="space-between"
@@ -729,7 +878,7 @@ export default function IntegrationDocumentation() {
                   <CheckRounded
                     sx={{ color: "#23a26d", fontSize: 18, mt: 0.1 }}
                   />
-                  <Typography fontSize={12}>{item}</Typography>
+                  <Typography fontSize={13}>{item}</Typography>
                 </Stack>
               ))}
             </Stack>
@@ -765,11 +914,11 @@ export default function IntegrationDocumentation() {
                 ],
               ].map(([title, description]) => (
                 <Box key={title}>
-                  <Typography fontSize={12} fontWeight={900} color="#ffd36a">
+                  <Typography fontSize={13} fontWeight={900} color="#ffd36a">
                     {title}
                   </Typography>
                   <Typography
-                    fontSize={11}
+                    fontSize={12}
                     color="rgba(255,255,255,.68)"
                     sx={{ mt: 0.3 }}
                   >
@@ -786,18 +935,19 @@ export default function IntegrationDocumentation() {
           <LockRounded sx={{ color: "#bd7b00", mt: 0.2 }} />
           <Box>
             <Typography fontWeight={900}>Security boundary</Typography>
-            <Typography color="text.secondary" fontSize={12} sx={{ mt: 0.4 }}>
+            <Typography color="text.secondary" fontSize={13} sx={{ mt: 0.4 }}>
               Public SDK keys identify the Project and are safe for client apps.
               Firebase service accounts, private API keys, campaign secrets, and
               backend credentials must stay in environment secrets or your
               server.
             </Typography>
-            <Typography fontSize={12} sx={{ mt: 1, color: "#725000" }}>
+            <Typography fontSize={13} sx={{ mt: 1, color: "#725000" }}>
               Active Project ID: <b>{projectId}</b>
             </Typography>
           </Box>
         </Stack>
       </Card>
+      </Stack>
     </Stack>
   );
 }
