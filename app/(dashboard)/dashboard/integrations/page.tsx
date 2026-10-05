@@ -7,6 +7,7 @@ export default function IntegrationsPage() {
       active="Integrations"
       title="Integrations"
       description="Connect your product to PixlPush with the React SDK and start turning behavior into retention."
+      hideHeader
     >
       <IntegrationDocumentation />
     </DashboardFrame>

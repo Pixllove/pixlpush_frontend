@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   AutoAwesomeRounded,
   BugReportRounded,
   CheckRounded,
   ContentCopyRounded,
   DataObjectRounded,
-  EmailRounded,
   GroupsRounded,
   LockRounded,
   NotificationsActiveRounded,
@@ -131,9 +130,9 @@ function CodeBlock({
       sx={{
         overflow: "hidden",
         borderRadius: 1.5,
-        bgcolor: "#211331",
-        border: "1px solid rgba(255,210,112,.22)",
-        boxShadow: "0 12px 24px rgba(30,15,44,.12)",
+        bgcolor: "#101936",
+        border: "1px solid #252f5d",
+        boxShadow: "0 14px 28px rgba(18,28,70,.14)",
       }}
     >
       <Stack
@@ -143,15 +142,15 @@ function CodeBlock({
         sx={{
           px: 1.7,
           py: 0.9,
-          bgcolor: "rgba(255,206,99,.08)",
-          borderBottom: "1px solid rgba(255,210,112,.14)",
+          bgcolor: "#18234a",
+          borderBottom: "1px solid #2b3768",
         }}
       >
         <Typography
           fontSize={11}
           fontWeight={900}
           letterSpacing={1.2}
-          color="#ffd36a"
+          color="#ffd166"
         >
           {label}
         </Typography>
@@ -161,7 +160,7 @@ function CodeBlock({
           startIcon={<ContentCopyRounded fontSize="small" />}
           sx={{
             minWidth: 0,
-            color: "#ffd36a",
+            color: "#dbe1ff",
             textTransform: "none",
             fontWeight: 800,
           }}
@@ -175,7 +174,7 @@ function CodeBlock({
           m: 0,
           p: 1.6,
           overflow: "auto",
-          color: "#ffe3a0",
+          color: "#dce3ff",
           fontFamily: "monospace",
           fontSize: 12,
           lineHeight: 1.7,
@@ -211,8 +210,8 @@ function SectionHeading({
           placeItems: "center",
           flexShrink: 0,
           borderRadius: 1,
-          bgcolor: dark ? "rgba(255,211,106,.14)" : "#efe5ff",
-          color: dark ? "#ffd36a" : "#7132d3",
+          bgcolor: dark ? "rgba(255,209,102,.14)" : "#eeeaff",
+          color: dark ? "#ffd166" : "#6544e8",
         }}
       >
         <Icon fontSize="small" />
@@ -220,7 +219,7 @@ function SectionHeading({
       <Box>
         {eyebrow && (
           <Typography
-            color={dark ? "#ffd36a" : "#7132d3"}
+            color={dark ? "#ffd166" : "#6544e8"}
             fontSize={10}
             fontWeight={900}
             letterSpacing={1.4}
@@ -255,33 +254,7 @@ function SectionHeading({
 export default function IntegrationDocumentation() {
   const { active } = useActiveProject();
   const [copied, setCopied] = useState<string>();
-  const [activeStep, setActiveStep] = useState("install");
   const projectId = active?.id ?? "YOUR_PROJECT_ID";
-  useEffect(() => {
-    const sections = ["install", "measure", "activate", "brief"]
-      .map((id) => document.getElementById(id))
-      .filter((section): section is HTMLElement => Boolean(section));
-    if (!sections.length) return;
-
-    const updateActiveStep = () => {
-      const marker = window.scrollY + window.innerHeight * 0.3;
-      let current = sections[0];
-      sections.forEach((section) => {
-        if (section.getBoundingClientRect().top + window.scrollY <= marker) {
-          current = section;
-        }
-      });
-      setActiveStep((previous) => previous === current.id ? previous : current.id);
-    };
-
-    updateActiveStep();
-    window.addEventListener("scroll", updateActiveStep, { passive: true });
-    window.addEventListener("resize", updateActiveStep);
-    return () => {
-      window.removeEventListener("scroll", updateActiveStep);
-      window.removeEventListener("resize", updateActiveStep);
-    };
-  }, []);
   const copy = async (value: string, label: string) => {
     await navigator.clipboard.writeText(
       value.replaceAll("YOUR_PROJECT_ID", projectId),
@@ -301,113 +274,31 @@ export default function IntegrationDocumentation() {
     <Stack
       gap={{ xs: 2.5, md: 3 }}
       sx={{
-        display: "grid",
-        gridTemplateColumns: { xs: "1fr", lg: "238px minmax(0, 1fr)" },
-        alignItems: "start",
-        columnGap: { xs: 0, lg: 3 },
-        rowGap: { xs: 2.5, lg: 3 },
-        "& > .integration-rail": {
-          gridColumn: "1",
-          gridRow: { xs: "auto", lg: "1 / -1" },
-          position: { xs: "static", lg: "sticky" },
-          top: { lg: 24 },
-        },
-        "& > *:not(.integration-rail)": {
-          gridColumn: "2",
-          "@media (max-width: 1199px)": { gridColumn: "1" },
-        },
+        display: "block",
+        overflow: "hidden",
+        border: "1px solid #dfe5f5",
+        borderRadius: { xs: 2, lg: 3 },
+        backgroundColor: "#f7faff",
+        boxShadow: "0 20px 50px rgba(28,39,92,.08)",
         "& .MuiCard-root": {
-          borderRadius: "16px !important",
-          borderColor: "#e4d9ef",
-          boxShadow: "0 12px 30px rgba(44,24,69,.055)",
+          borderRadius: "12px !important",
+          borderColor: "#dfe5f5",
+          boxShadow: "0 8px 22px rgba(28,39,92,.05)",
         },
         "& .integration-code-block": { borderRadius: "12px !important" },
         "& .integration-main .MuiTypography-body1": { fontSize: "14px" },
       }}
     >
-      <Card
-        className="integration-rail"
+      <Stack
+        className="integration-main"
         sx={{
-          p: 2,
-          border: "1px solid #dfd2ed",
-          background: "linear-gradient(180deg,#211331 0%,#35205a 100%) !important",
-          color: "#fff",
-          boxShadow: "0 16px 34px rgba(38,19,60,.16) !important",
+          minWidth: 0,
+          display: "block",
+          p: { xs: 1.5, md: 2.5 },
+          background: "linear-gradient(180deg,#f9fbff 0%,#f4f8ff 100%)",
         }}
       >
-        <Typography fontSize={10} fontWeight={900} letterSpacing={1.4} color="#c9a8ff">
-          INTEGRATION WORKSPACE
-        </Typography>
-        <Typography fontSize={21} fontWeight={900} sx={{ mt: 0.7, letterSpacing: "-.03em" }}>
-          Get connected
-        </Typography>
-        <Typography fontSize={12} lineHeight={1.55} sx={{ mt: 0.7, color: "rgba(255,255,255,.68)" }}>
-          A guided path for installing the SDK, sending reliable events, and activating campaigns.
-        </Typography>
-        <Divider sx={{ my: 2, borderColor: "rgba(255,255,255,.14)" }} />
-        <Stack gap={0.7}>
-          {[
-            ["01", "Install SDK", "Connect your project", "#install"],
-            ["02", "Track events", "Measure behavior", "#measure"],
-            ["03", "Activate", "Build audiences", "#activate"],
-            ["04", "Ship safely", "Review the brief", "#brief"],
-          ].map(([number, label, detail, href]) => {
-            const isActiveStep = activeStep === href.slice(1);
-            return (
-              <Button
-                key={number}
-                href={href}
-                onClick={() => setActiveStep(href.slice(1))}
-                sx={{
-                  p: 1,
-                  minHeight: 56,
-                  gap: 1,
-                  justifyContent: "flex-start",
-                  alignItems: "center",
-                  borderRadius: 1.5,
-                  color: "#fff",
-                  textTransform: "none",
-                  textAlign: "left",
-                  backgroundColor: isActiveStep ? "rgba(255,255,255,.16)" : "transparent",
-                  boxShadow: isActiveStep ? "inset 0 0 0 1px rgba(255,255,255,.12)" : "none",
-                  "&:hover": { backgroundColor: "rgba(255,255,255,.1)" },
-                }}
-              >
-                <Box
-                  sx={{
-                    width: 29,
-                    height: 29,
-                    flexShrink: 0,
-                    display: "grid",
-                    placeItems: "center",
-                    borderRadius: "50%",
-                    color: isActiveStep ? "#fff" : "#dcc8ff",
-                    backgroundColor: isActiveStep ? "#7132d3" : "rgba(255,255,255,.1)",
-                    fontSize: 10,
-                    fontWeight: 900,
-                  }}
-                >
-                  {number}
-                </Box>
-                <Box>
-                  <Typography fontSize={12} fontWeight={900}>{label}</Typography>
-                  <Typography fontSize={10} sx={{ mt: 0.15, color: "rgba(255,255,255,.58)" }}>{detail}</Typography>
-                </Box>
-              </Button>
-            );
-          })}
-        </Stack>
-        <Box sx={{ mt: 2, p: 1.25, borderRadius: 1.5, backgroundColor: "rgba(255,255,255,.08)" }}>
-          <Stack direction="row" alignItems="center" gap={0.8}>
-            <Box sx={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#7ee49b", boxShadow: "0 0 0 4px rgba(126,228,155,.12)" }} />
-            <Typography fontSize={11} fontWeight={800}>Guide ready</Typography>
-          </Stack>
-          <Typography fontSize={10} sx={{ mt: 0.7, color: "rgba(255,255,255,.58)" }}>
-            Public SDK key only · safe for client apps
-          </Typography>
-        </Box>
-      </Card>
-      <Stack className="integration-main" gap={{ xs: 2.5, md: 3 }}>
+      <Stack className="integration-content" gap={{ xs: 2.5, md: 3 }} sx={{ minWidth: 0 }}>
       {copied && (
         <Alert
           severity="success"
@@ -422,9 +313,23 @@ export default function IntegrationDocumentation() {
           p: { xs: 2.75, md: 4.5 },
           minHeight: { md: 320 },
           border: "0 !important",
+          position: "relative",
+          overflow: "hidden",
           color: "#fff",
-          background: "radial-gradient(circle at 86% 12%,rgba(190,108,255,.32),transparent 28%), linear-gradient(118deg,#20112f 0%,#422071 55%,#7028c8 100%) !important",
+          background: "radial-gradient(circle at 84% 18%,rgba(97,160,255,.5),transparent 24%), radial-gradient(circle at 76% 110%,rgba(236,79,188,.34),transparent 35%), linear-gradient(118deg,#10163b 0%,#25206d 52%,#5b2acb 100%) !important",
           boxShadow: "0 22px 46px rgba(52,24,86,.2) !important",
+          "&:before": {
+            content: "\"\"",
+            position: "absolute",
+            width: 330,
+            height: 330,
+            right: -110,
+            top: -160,
+            border: "1px solid rgba(255,255,255,.16)",
+            borderRadius: "50%",
+            boxShadow: "0 0 0 38px rgba(255,255,255,.035), 0 0 0 78px rgba(255,255,255,.025)",
+          },
+          "& > *": { position: "relative", zIndex: 1 },
         }}
       >
         <Stack
@@ -546,37 +451,37 @@ export default function IntegrationDocumentation() {
       </Card>
       <Box>
         <Typography variant="h3" sx={{ fontSize: { xs: 21, md: 25 }, fontWeight: 850 }}>
-          What you’ll connect
+          What you’ll need
         </Typography>
         <Typography color="text.secondary" fontSize={13} sx={{ mt: 0.5 }}>
-          One SDK foundation, four outcomes your product and marketing teams can use immediately.
+          Make sure you have these essentials ready before starting the integration.
         </Typography>
       </Box>
       <Grid container spacing={2}>
         {[
           [
-            DataObjectRounded,
-            "Behavioral data",
-            "Identify people and capture the events that describe activation, engagement, conversion, and retention.",
-            "Core SDK",
+            TerminalRounded,
+            "Project setup",
+            "A running project with access to your codebase and the active Project ID.",
+            "Required",
+          ],
+          [
+            SecurityRounded,
+            "SDK key",
+            "Get your public SDK key from the PixlPush dashboard settings.",
+            "Client safe",
           ],
           [
             GroupsRounded,
-            "Lifecycle audiences",
-            "Use events and user properties to create dynamic segments such as new users, trial users, and paid customers.",
-            "Segmentation",
-          ],
-          [
-            EmailRounded,
-            "Email marketing",
-            "Send relevant onboarding, lifecycle, and product education campaigns with consent-aware audience targeting.",
-            "Messaging",
+            "User identifiers",
+            "Identify users with stable IDs so events belong to the right customer.",
+            "Recommended",
           ],
           [
             NotificationsActiveRounded,
-            "Push notifications",
-            "Connect notification permission and delivery events to create timely, measurable push journeys.",
-            "Delivery",
+            "Permissions",
+            "Make sure your app has the required permissions for email and push notifications.",
+            "Important",
           ],
         ].map(([Icon, title, description, label]) => (
           <Grid item xs={12} sm={6} lg={3} key={title as string}>
@@ -948,6 +853,7 @@ export default function IntegrationDocumentation() {
         </Stack>
       </Card>
       </Stack>
+    </Stack>
     </Stack>
   );
 }
