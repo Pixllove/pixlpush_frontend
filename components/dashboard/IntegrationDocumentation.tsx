@@ -120,10 +120,12 @@ function CodeBlock({
   code,
   label,
   onCopy,
+  copied = false,
 }: {
   code: string;
   label: string;
   onCopy: () => void;
+  copied?: boolean;
 }) {
   return (
     <Box
@@ -157,15 +159,22 @@ function CodeBlock({
         <Button
           size="small"
           onClick={onCopy}
-          startIcon={<ContentCopyRounded fontSize="small" />}
+          startIcon={
+            copied ? (
+              <CheckRounded fontSize="small" />
+            ) : (
+              <ContentCopyRounded fontSize="small" />
+            )
+          }
           sx={{
             minWidth: 0,
-            color: "#dbe1ff",
+            color: copied ? "#78e6a8" : "#dbe1ff",
             textTransform: "none",
             fontWeight: 800,
+            "&:hover": { color: copied ? "#9af1be" : "#fff" },
           }}
         >
-          Copy
+          {copied ? "Copied" : "Copy"}
         </Button>
       </Stack>
       <Box
@@ -260,7 +269,7 @@ export default function IntegrationDocumentation() {
       value.replaceAll("YOUR_PROJECT_ID", projectId),
     );
     setCopied(label);
-    window.setTimeout(() => setCopied(undefined), 1800);
+    window.setTimeout(() => setCopied(undefined), 3000);
   };
   const eventRows = [
     ["sign_up", "Account created", "New user"],
@@ -578,12 +587,14 @@ export default function IntegrationDocumentation() {
               code={sdkInstall}
               label="Terminal"
               onCopy={() => copy(sdkInstall, "Install command")}
+              copied={copied === "Install command"}
             />
             <Box sx={{ mt: 1.5 }}>
               <CodeBlock
                 code={sdkSetup}
                 label="JavaScript · app entry point"
                 onCopy={() => copy(sdkSetup, "SDK setup")}
+                copied={copied === "SDK setup"}
               />
             </Box>
           </Grid>
@@ -602,12 +613,14 @@ export default function IntegrationDocumentation() {
               code={eventSetup}
               label="JavaScript · event helper"
               onCopy={() => copy(eventSetup, "Event snippet")}
+              copied={copied === "Event snippet"}
             />
             <Box sx={{ mt: 1.5 }}>
               <CodeBlock
                 code={consentSetup}
                 label="JavaScript · consent and logout"
                 onCopy={() => copy(consentSetup, "Consent snippet")}
+                copied={copied === "Consent snippet"}
               />
             </Box>
           </Grid>
@@ -738,16 +751,18 @@ export default function IntegrationDocumentation() {
           />
           <Button
             variant="contained"
-            startIcon={<ContentCopyRounded />}
+            startIcon={copied === "AI integration prompt" ? <CheckRounded /> : <ContentCopyRounded />}
             onClick={() => copy(aiPrompt, "AI integration prompt")}
             sx={{
               alignSelf: { xs: "stretch", sm: "flex-start" },
               textTransform: "none",
               fontWeight: 900,
               whiteSpace: "nowrap",
+              backgroundColor: copied === "AI integration prompt" ? "#209b63" : undefined,
+              "&:hover": { backgroundColor: copied === "AI integration prompt" ? "#168052" : undefined },
             }}
           >
-            Copy full prompt
+            {copied === "AI integration prompt" ? "Copied" : "Copy full prompt"}
           </Button>
         </Stack>
         <Divider sx={{ my: 2.5 }} />
@@ -755,6 +770,7 @@ export default function IntegrationDocumentation() {
           code={aiPrompt}
           label="Detailed AI integration prompt"
           onCopy={() => copy(aiPrompt, "AI integration prompt")}
+          copied={copied === "AI integration prompt"}
         />
       </Card>
       <Grid container spacing={2}>
