@@ -6,15 +6,19 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useSelector } from "react-redux";
 import {
   AddRounded,
+  AccountBalanceWalletRounded,
   ArrowForwardRounded,
   AutoGraphRounded,
+  AutorenewRounded,
   CalendarTodayRounded,
   CheckCircleRounded,
   CodeRounded,
   ContentCopyRounded,
+  CreditCardRounded,
   DeleteOutlineRounded,
   EditRounded,
   EmailRounded,
+  ErrorOutlineRounded,
   EventRounded,
   FiberManualRecordRounded,
   FileDownloadRounded,
@@ -32,19 +36,27 @@ import {
   PeopleAltRounded,
   PlayCircleOutlineRounded,
   RocketLaunchRounded,
+  ReceiptLongRounded,
   SearchRounded,
   SendRounded,
   SettingsRounded,
   StorageRounded,
+  ShieldRounded,
   TrendingUpRounded,
   VerifiedRounded,
 } from "@mui/icons-material";
 import {
+  Alert,
   Box,
   Button,
   Card,
   Chip,
+  CircularProgress,
   Divider,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Grid,
   IconButton,
   InputAdornment,
@@ -64,13 +76,19 @@ import { RootState } from "@/lib/store";
 import { projectContext } from "@/lib/projects";
 import {
   audienceGroupsApi,
+  billingApi,
   emailApi,
   lifecycleSegmentsApi,
   pushApi,
   userStatsApi,
   usersApi,
 } from "@/lib/projects/api";
-import type { AudienceGroup, EndUser, LifecycleSegment } from "@/types/project";
+import type {
+  AudienceGroup,
+  BillingContact,
+  EndUser,
+  LifecycleSegment,
+} from "@/types/project";
 import type {
   EmailCampaign,
   EmailTemplate,
@@ -2487,94 +2505,1036 @@ export function TeamSection() {
   return <TeamAccessPanel />;
 }
 
+type BillingTab = "overview" | "history" | "methods" | "profile";
+type PaymentMethodType = "card" | "paypal" | "stripe" | "payoneer";
+type VerificationStatus = "idle" | "verifying" | "success" | "error";
+
+type PaymentMethodRecord = {
+  id: string;
+  type: PaymentMethodType;
+  brand?: "Visa" | "Mastercard" | "Card";
+  last4?: string;
+  holder?: string;
+  expiry?: string;
+  account?: string;
+  isDefault: boolean;
+};
+
+const billingPlans = {
+  free: { label: "Free", price: "$0", description: "For exploring PixlPush with a lightweight setup." },
+  starter: { label: "Starter", price: "$49", description: "For growing teams sending their first campaigns." },
+  pro: { label: "Pro", price: "$249", description: "For teams running serious retention programs." },
+  enterprise: { label: "Enterprise", price: "Custom", description: "Flexible limits, support, and controls for larger teams." },
+};
+
+const billingHistory = [
+  { date: "Oct 01, 2026", description: "Free plan · Monthly subscription", amount: "$0.00", status: "Active" },
+  { date: "Sep 01, 2026", description: "Pro plan · Monthly subscription", amount: "$249.00", status: "Paid" },
+  { date: "Aug 01, 2026", description: "Pro plan · Monthly subscription", amount: "$249.00", status: "Paid" },
+  { date: "Jul 01, 2026", description: "Pro plan · Monthly subscription", amount: "$249.00", status: "Paid" },
+];
+
+function cardBrandFromNumber(number: string): "Visa" | "Mastercard" | "Card" {
+  const digits = number.replace(/\D/g, "");
+  if (digits.startsWith("4")) return "Visa";
+  if (/^(5[1-5]|2[2-7])/.test(digits)) return "Mastercard";
+  return "Card";
+}
+
+function paymentMethodLabel(type: PaymentMethodType) {
+  if (type === "paypal") return "PayPal";
+  if (type === "stripe") return "Stripe";
+  if (type === "payoneer") return "Payoneer";
+  return "Credit or debit card";
+}
+
+function formatCardNumber(value: string) {
+  return value
+    .replace(/\D/g, "")
+    .slice(0, 19)
+    .replace(/(.{4})/g, "$1 ")
+    .trim();
+}
+
+function formatExpiry(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 4);
+  return digits.length > 2 ? digits.slice(0, 2) + "/" + digits.slice(2) : digits;
+}
+
+function PaymentBrandMark({
+  type,
+  compact = false,
+}: {
+  type: PaymentMethodType;
+  compact?: boolean;
+}) {
+  if (type === "card") {
+    return (
+      <Box
+        sx={{
+          width: compact ? 34 : 42,
+          height: compact ? 23 : 28,
+          borderRadius: 0.75,
+          display: "grid",
+          placeItems: "center",
+          color: "#fff",
+          background: "linear-gradient(135deg, #1c2541, #4355a4)",
+          fontSize: compact ? 8 : 10,
+          fontWeight: 900,
+          letterSpacing: 0.3,
+        }}
+      >
+        <Stack direction="row" alignItems="center" gap={0.25}>
+          <Box sx={{ width: compact ? 9 : 11, height: compact ? 9 : 11, borderRadius: "50%", backgroundColor: "#ef4444", opacity: 0.92 }} />
+          <Box sx={{ width: compact ? 9 : 11, height: compact ? 9 : 11, borderRadius: "50%", backgroundColor: "#fbbf24", opacity: 0.92, ml: -0.8 }} />
+        </Stack>
+      </Box>
+    );
+  }
+  const labels: Record<Exclude<PaymentMethodType, "card">, string> = {
+    paypal: "P",
+    stripe: "S",
+    payoneer: "p",
+  };
+  return (
+    <Box
+      sx={{
+        width: compact ? 34 : 42,
+        height: compact ? 23 : 28,
+        borderRadius: 0.75,
+        display: "grid",
+        placeItems: "center",
+        color: "#fff",
+        background:
+          type === "paypal"
+            ? "#125ba8"
+            : type === "stripe"
+              ? "#635bff"
+              : "#18a775",
+        fontSize: compact ? 14 : 17,
+        fontWeight: 900,
+        fontStyle: type === "payoneer" ? "italic" : "normal",
+      }}
+    >
+      {labels[type]}
+    </Box>
+  );
+}
+
+function PaymentMethodPreview({
+  method,
+  onDefault,
+  onRemove,
+}: {
+  method: PaymentMethodRecord;
+  onDefault: () => void;
+  onRemove: () => void;
+}) {
+  const isCard = method.type === "card";
+  return (
+    <Card
+      sx={{
+        p: 1.5,
+        border: "1px solid #ebe8f2",
+        borderRadius: 2,
+        boxShadow: "0 10px 30px rgba(48, 24, 83, .06)",
+      }}
+    >
+      <Box
+        sx={{
+          width: "100%",
+          maxWidth: 380,
+          aspectRatio: "1.586 / 1",
+          borderRadius: 1.75,
+          p: 2,
+          color: "#fff",
+          background:
+            method.type === "card"
+              ? "linear-gradient(135deg, #211234 0%, #55209c 58%, #ba317e 100%)"
+              : "linear-gradient(135deg, #17132b 0%, #312052 100%)",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          position: "relative",
+          overflow: "hidden",
+          boxShadow: "inset 0 1px 0 rgba(255,255,255,.25), 0 12px 24px rgba(35,20,62,.18)",
+        }}
+      >
+        <Box sx={{ position: "absolute", width: 180, height: 180, borderRadius: "50%", right: -78, top: -80, background: "rgba(255,255,255,.08)" }} />
+        <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Stack direction="row" alignItems="center" gap={1}>
+            <PaymentBrandMark type={method.type} compact />
+            <Typography fontWeight={800} fontSize={13}>{isCard ? method.brand : paymentMethodLabel(method.type)}</Typography>
+          </Stack>
+          {!method.isDefault && (
+            <Chip
+              label="Payment method"
+              size="small"
+              sx={{ color: "#fff", backgroundColor: "rgba(255,255,255,.16)", fontSize: 10, fontWeight: 700 }}
+            />
+          )}
+          {method.isDefault && (
+            <Box
+              sx={{
+                position: "absolute",
+                top: 12,
+                right: 12,
+                display: "flex",
+                alignItems: "center",
+                gap: 0.5,
+                px: 1,
+                py: 0.5,
+                borderRadius: 1,
+                color: "#176b38",
+                backgroundColor: "#d9f8e4",
+                boxShadow: "0 3px 10px rgba(14,96,47,.18)",
+              }}
+            >
+              <CheckCircleRounded sx={{ fontSize: 15 }} />
+              <Typography fontSize={10} fontWeight={900}>Default</Typography>
+            </Box>
+          )}
+        </Stack>
+        {isCard && (
+          <Stack direction="row" alignItems="center" gap={1.25}>
+            <Box sx={{ width: 34, height: 25, borderRadius: 0.75, background: "linear-gradient(135deg,#e8d39d,#fff0bd)", border: "1px solid rgba(84,51,10,.35)" }} />
+            <Typography fontSize={16} sx={{ letterSpacing: 2, opacity: 0.9 }}>)))</Typography>
+          </Stack>
+        )}
+        <Box>
+          <Typography
+            sx={{
+              letterSpacing: isCard ? 2 : 0,
+              fontSize: isCard ? { xs: 15, sm: 18 } : 15,
+              fontWeight: 700,
+              fontFamily: isCard ? "monospace" : "inherit",
+            }}
+          >
+            {isCard ? "•••• •••• •••• " + method.last4 : method.account}
+          </Typography>
+          {isCard && (
+            <Stack direction="row" justifyContent="space-between" sx={{ mt: 1 }}>
+              <Typography fontSize={11} sx={{ opacity: 0.75 }}>
+                {method.holder}
+              </Typography>
+              <Typography fontSize={11} sx={{ opacity: 0.75 }}>
+                Expires {method.expiry}
+              </Typography>
+            </Stack>
+          )}
+        </Box>
+      </Box>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1} sx={{ mt: 1.25 }}>
+        <Typography fontSize={12} color="text.secondary">
+          {isCard ? "Securely stored card" : "Connected payment account"}
+        </Typography>
+        <Stack direction="row" gap={0.5}>
+          {!method.isDefault && (
+            <Button size="small" onClick={onDefault} sx={{ textTransform: "none" }}>
+              Make default
+            </Button>
+          )}
+          <IconButton size="small" color="error" onClick={onRemove} aria-label="Remove payment method">
+            <DeleteOutlineRounded fontSize="small" />
+          </IconButton>
+        </Stack>
+      </Stack>
+    </Card>
+  );
+}
+
+function PaymentVerificationDialog({
+  status,
+  method,
+  onClose,
+  onRetry,
+}: {
+  status: VerificationStatus;
+  method: PaymentMethodRecord | null;
+  onClose: () => void;
+  onRetry: () => void;
+}) {
+  if (status === "idle") return null;
+  const isVerifying = status === "verifying";
+  const isSuccess = status === "success";
+  const title = isVerifying
+    ? "Verifying your payment method"
+    : isSuccess
+      ? "Payment method verified"
+      : "We couldn’t verify this method";
+  const description = isVerifying
+    ? "We’re securely checking the payment details. This usually takes a few seconds."
+    : isSuccess
+      ? "Your payment method is verified and ready for future billing."
+      : "Check the details and try again. Your payment method was not saved.";
+
+  return (
+    <Dialog
+      open
+      onClose={isVerifying ? undefined : onClose}
+      maxWidth="xs"
+      fullWidth
+      PaperProps={{
+        sx: {
+          overflow: "hidden",
+          borderRadius: 2.5,
+          border: "1px solid #ebe5f2",
+          boxShadow: "0 28px 80px rgba(37,21,65,.26)",
+        },
+      }}
+    >
+      <DialogContent sx={{ px: 3, pt: 3.5, pb: 2.5, textAlign: "center" }}>
+        <Box
+          sx={{
+            width: 96,
+            height: 96,
+            mx: "auto",
+            position: "relative",
+            display: "grid",
+            placeItems: "center",
+            borderRadius: "50%",
+            backgroundColor: isSuccess ? "#e8f8ee" : status === "error" ? "#fff0f1" : "#f1eafd",
+            color: isSuccess ? "#159447" : status === "error" ? "#d6314b" : "#6724c8",
+          }}
+        >
+          {isVerifying && (
+            <>
+              <CircularProgress
+                size={88}
+                thickness={2.5}
+                sx={{ position: "absolute", color: "#7a35d9", animationDuration: "1.1s" }}
+              />
+              <AutorenewRounded
+                sx={{
+                  fontSize: 34,
+                  animation: "payment-verify-spin 1s linear infinite",
+                  "@keyframes payment-verify-spin": {
+                    from: { transform: "rotate(0deg)" },
+                    to: { transform: "rotate(360deg)" },
+                  },
+                }}
+              />
+            </>
+          )}
+          {isSuccess && <CheckCircleRounded sx={{ fontSize: 58 }} />}
+          {status === "error" && <ErrorOutlineRounded sx={{ fontSize: 58 }} />}
+        </Box>
+        <Typography fontSize={22} fontWeight={900} sx={{ mt: 2.25, color: "#28163c" }}>
+          {title}
+        </Typography>
+        <Typography color="text.secondary" fontSize={13} sx={{ mt: 0.75, lineHeight: 1.6 }}>
+          {description}
+        </Typography>
+        {method && (
+          <Box
+            sx={{
+              mt: 2.25,
+              px: 1.5,
+              py: 1.25,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 1,
+              border: "1px solid #e9e2f1",
+              borderRadius: 1.5,
+              backgroundColor: "#fcfbff",
+            }}
+          >
+            <CreditCardRounded sx={{ color: "#6e28d9", fontSize: 20 }} />
+            <Typography fontSize={12} fontWeight={800}>
+              {method.type === "card"
+                ? method.brand + " ending in " + method.last4
+                : paymentMethodLabel(method.type)}
+            </Typography>
+          </Box>
+        )}
+      </DialogContent>
+      <DialogActions sx={{ justifyContent: "center", gap: 1, px: 3, pb: 3 }}>
+        {isVerifying ? (
+          <Button disabled sx={{ textTransform: "none", color: "#6e28d9", fontWeight: 800 }}>
+            Verifying securely…
+          </Button>
+        ) : isSuccess ? (
+          <Button variant="contained" onClick={onClose} sx={{ minWidth: 130, borderRadius: 1.5, textTransform: "none", fontWeight: 800 }}>
+            Done
+          </Button>
+        ) : (
+          <>
+            <Button variant="outlined" onClick={onClose} sx={{ borderRadius: 1.5, textTransform: "none", fontWeight: 800 }}>
+              Close
+            </Button>
+            <Button variant="contained" onClick={onRetry} sx={{ borderRadius: 1.5, textTransform: "none", fontWeight: 800 }}>
+              Try again
+            </Button>
+          </>
+        )}
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+function SetDefaultPaymentDialog({
+  method,
+  onClose,
+  onConfirm,
+}: {
+  method: PaymentMethodRecord | null;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <Dialog
+      open={Boolean(method)}
+      onClose={onClose}
+      maxWidth="xs"
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 2.5,
+          border: "1px solid #ebe5f2",
+          boxShadow: "0 24px 70px rgba(37,21,65,.24)",
+        },
+      }}
+    >
+      <DialogContent sx={{ px: 3, pt: 3.5, pb: 2, textAlign: "center" }}>
+        <Box sx={{ width: 68, height: 68, mx: "auto", display: "grid", placeItems: "center", borderRadius: "50%", color: "#159447", backgroundColor: "#e8f8ee" }}>
+          <CheckCircleRounded sx={{ fontSize: 40 }} />
+        </Box>
+        <Typography fontSize={21} fontWeight={900} sx={{ mt: 2, color: "#28163c" }}>
+          Set as default?
+        </Typography>
+        <Typography color="text.secondary" fontSize={13} sx={{ mt: 0.75, lineHeight: 1.6 }}>
+          Use this payment method for future billing and move it to the top of your payment methods.
+        </Typography>
+        {method && (
+          <Box sx={{ mt: 2, p: 1.25, display: "inline-flex", alignItems: "center", gap: 1, border: "1px solid #e9e2f1", borderRadius: 1.5, backgroundColor: "#fcfbff" }}>
+            <CreditCardRounded sx={{ color: "#6e28d9", fontSize: 20 }} />
+            <Typography fontSize={12} fontWeight={800}>
+              {method.type === "card" ? method.brand + " ending in " + method.last4 : paymentMethodLabel(method.type)}
+            </Typography>
+          </Box>
+        )}
+      </DialogContent>
+      <DialogActions sx={{ justifyContent: "center", gap: 1, px: 3, pb: 3 }}>
+        <Button onClick={onClose} sx={{ borderRadius: 1.5, textTransform: "none", fontWeight: 800 }}>Cancel</Button>
+        <Button variant="contained" onClick={onConfirm} sx={{ borderRadius: 1.5, textTransform: "none", fontWeight: 800 }}>
+          Set as default
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
 export function BillingSection() {
   const { active } = useActiveProject();
-  const projectName = active?.name ?? "this project";
   const project = projectContext(active?.id ?? "");
+  const [tab, setTab] = useState<BillingTab>("overview");
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodRecord[]>([]);
+  const [paymentStorageKey, setPaymentStorageKey] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [paymentType, setPaymentType] = useState<PaymentMethodType>("card");
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardHolder, setCardHolder] = useState("");
+  const [cardExpiry, setCardExpiry] = useState("");
+  const [cardCvc, setCardCvc] = useState("");
+  const [accountIdentifier, setAccountIdentifier] = useState("");
+  const [paymentError, setPaymentError] = useState("");
+  const [paymentMethodToDelete, setPaymentMethodToDelete] = useState<PaymentMethodRecord | null>(null);
+  const [paymentMethodToMakeDefault, setPaymentMethodToMakeDefault] = useState<PaymentMethodRecord | null>(null);
+  const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>("idle");
+  const [pendingPaymentMethod, setPendingPaymentMethod] = useState<PaymentMethodRecord | null>(null);
+  const [verificationWillFail, setVerificationWillFail] = useState(false);
+  const [profile, setProfile] = useState<BillingContact>({ email: "" });
+
+  const billingQuery = useQuery({
+    queryKey: ["projects", "billing", active?.id, "subscription"],
+    queryFn: () => billingApi.subscription(active!.id),
+    enabled: Boolean(active?.id),
+  });
+  const saveProfileMutation = useMutation({
+    mutationFn: (input: BillingContact) => billingApi.updateContact(active!.id, input),
+    onSuccess: (saved) => setProfile(saved),
+  });
+
+  useEffect(() => {
+    if (!active?.id) {
+      setPaymentMethods([]);
+      setPaymentStorageKey(null);
+      return;
+    }
+    const key = "pixlpush-payment-methods-" + active.id;
+    setPaymentStorageKey(key);
+    try {
+      const stored = window.localStorage.getItem(key);
+      setPaymentMethods(stored ? (JSON.parse(stored) as PaymentMethodRecord[]) : []);
+    } catch {
+      setPaymentMethods([]);
+    }
+  }, [active?.id]);
+
+  useEffect(() => {
+    if (paymentStorageKey) {
+      window.localStorage.setItem(paymentStorageKey, JSON.stringify(paymentMethods));
+    }
+  }, [paymentMethods, paymentStorageKey]);
+
+  useEffect(() => {
+    if (billingQuery.data?.billingContact) setProfile(billingQuery.data.billingContact);
+  }, [billingQuery.data]);
+
+  useEffect(() => {
+    if (verificationStatus !== "verifying" || !pendingPaymentMethod) return;
+    const timer = window.setTimeout(() => {
+      if (verificationWillFail) {
+        setVerificationStatus("error");
+        return;
+      }
+      setPaymentMethods((current) => [...current, pendingPaymentMethod]);
+      setVerificationStatus("success");
+    }, 1800);
+    return () => window.clearTimeout(timer);
+  }, [pendingPaymentMethod, verificationStatus, verificationWillFail]);
+
+  const subscriptionPlan = active?.subscription?.plan ?? "free";
+  const plan = billingPlans[subscriptionPlan];
+  const usage = [
+    { label: "Reachable users", value: project.metrics.reachable, limit: "25,000", percent: 169, icon: PeopleAltRounded, color: "#f0445d" },
+    { label: "Email sends", value: "125,400", limit: "250,000", percent: 50, icon: EmailRounded, color: "#db3291" },
+    { label: "Push sends", value: "84,200", limit: "500,000", percent: 17, icon: SendRounded, color: "#7a3be0" },
+    { label: "Active journeys", value: "3", limit: "20", percent: 15, icon: AutoGraphRounded, color: "#18a677" },
+    { label: "AI credits", value: "624", limit: "2,000", percent: 31, icon: InsightsRounded, color: "#ee9c35" },
+  ];
+
+  const resetPaymentForm = () => {
+    setPaymentType("card");
+    setCardNumber("");
+    setCardHolder("");
+    setCardExpiry("");
+    setCardCvc("");
+    setAccountIdentifier("");
+    setPaymentError("");
+  };
+
+  const addPaymentMethod = () => {
+    if (paymentType === "card") {
+      const digits = cardNumber.replace(/\D/g, "");
+      if (digits.length < 12 || !cardHolder.trim() || !cardExpiry.trim() || cardCvc.replace(/\D/g, "").length < 3) {
+        setPaymentError("Enter valid card details to continue.");
+        return;
+      }
+    } else if (!accountIdentifier.trim()) {
+      setPaymentError("Enter the email or account ID for this payment method.");
+      return;
+    }
+
+    const digits = cardNumber.replace(/\D/g, "");
+    const method: PaymentMethodRecord =
+      paymentType === "card"
+        ? {
+            id: String(Date.now()),
+            type: "card",
+            brand: cardBrandFromNumber(cardNumber),
+            last4: digits.slice(-4),
+            holder: cardHolder.trim(),
+            expiry: cardExpiry.trim(),
+            isDefault: paymentMethods.length === 0,
+          }
+        : {
+            id: String(Date.now()),
+            type: paymentType,
+            account: accountIdentifier.trim(),
+            isDefault: paymentMethods.length === 0,
+          };
+    setPendingPaymentMethod(method);
+    setVerificationWillFail(
+      (paymentType === "card" && (cardCvc.replace(/\D/g, "") === "000" || digits.endsWith("0000"))) ||
+        accountIdentifier.trim().toLowerCase().includes("fail"),
+    );
+    setDialogOpen(false);
+    resetPaymentForm();
+    setVerificationStatus("verifying");
+  };
+
+  const removePaymentMethod = (id: string) => {
+    setPaymentMethods((current) => {
+      const removed = current.find((item) => item.id === id);
+      const remaining = current.filter((item) => item.id !== id);
+      if (removed?.isDefault && remaining[0]) remaining[0] = { ...remaining[0], isDefault: true };
+      return remaining;
+    });
+  };
+
+  const makeDefault = (id: string) => {
+    setPaymentMethods((current) => current.map((item) => ({ ...item, isDefault: item.id === id })));
+  };
+
+  const displayedPaymentMethods = [...paymentMethods].sort(
+    (first, second) => Number(second.isDefault) - Number(first.isDefault),
+  );
+
+  const closeVerification = () => {
+    setVerificationStatus("idle");
+    setPendingPaymentMethod(null);
+    setVerificationWillFail(false);
+  };
+
+  const retryVerification = () => {
+    closeVerification();
+    resetPaymentForm();
+    setDialogOpen(true);
+  };
+
+  const exportBillingHistory = () => {
+    const csv = [
+      ["Date", "Description", "Amount", "Status"],
+      ...billingHistory.map((entry) => [entry.date, entry.description, entry.amount, entry.status]),
+    ]
+      .map((row) => row.map((cell) => '"' + cell.replace(/"/g, '""') + '"').join(","))
+      .join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "pixlpush-billing-history.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const profileFields = [
+    ["name", "Billing name"],
+    ["company", "Company"],
+    ["email", "Billing email"],
+    ["addressLine1", "Address"],
+    ["city", "City"],
+    ["postalCode", "Postal code"],
+    ["country", "Country"],
+    ["vatId", "VAT / tax ID"],
+  ] as const;
+
   return (
     <Stack gap={2.5}>
-      <Box>
-        <Typography variant="h3">Billing & Usage</Typography>
-        <Typography color="text.secondary" fontSize={12}>
-          Plan, limits and usage for the active {projectName} Project.
-        </Typography>
-      </Box>
-      <Card className="plan-card">
-        <Stack
-          direction={{ xs: "column", sm: "row" }}
-          justifyContent="space-between"
-          gap={2}
-        >
-          <Box>
-            <Chip label="CURRENT PLAN" size="small" />
-            <Typography fontSize={30} fontWeight={900} sx={{ mt: 1 }}>
-              {active?.subscription?.plan
-                ? active.subscription.plan.charAt(0).toUpperCase() +
-                  active.subscription.plan.slice(1)
-                : "—"}
-            </Typography>
-            <Typography color="text.secondary" fontSize={13}>
-              For growing products with serious retention programs.
-            </Typography>
-          </Box>
-          <Box textAlign={{ sm: "right" }}>
-            <Typography fontSize={26} fontWeight={900}>
-              {project.plan.includes("Internal") ? "Internal" : "$249"}{" "}
-              {!project.plan.includes("Internal") && (
-                <Typography
-                  component="span"
-                  color="text.secondary"
-                  fontSize={13}
-                >
-                  / month
-                </Typography>
-              )}
-            </Typography>
-            <Button variant="outlined" sx={{ mt: 1 }}>
-              Manage subscription
-            </Button>
-          </Box>
-        </Stack>
-      </Card>
-      <Grid container spacing={2}>
+      <Box className="workspace-tabs billing-workspace-tabs">
         {[
-          ["Reachable Users", project.metrics.reachable, "25,000", "169%"],
-          ["Email Sends", "125,400", "250,000", "50%"],
-          ["Push Sends", "84,200", "500,000", "17%"],
-          ["Active Journeys", "3", "20", "15%"],
-          ["AI Credits", "624", "2,000", "31%"],
-        ].map(([label, value, limit, percent]) => (
-          <Grid item xs={12} sm={6} md={4} key={label}>
-            <Card className="usage-card">
-              <Stack direction="row" justifyContent="space-between">
-                <Typography fontWeight={800} fontSize={13}>
-                  {label}
-                </Typography>
-                <Typography fontSize={12} color="text.secondary">
-                  {value} / {limit}
-                </Typography>
-              </Stack>
-              <LinearProgress
-                variant="determinate"
-                value={Math.min(Number(percent.replace("%", "")), 100)}
-                sx={{ mt: 1.5 }}
-              />
-              <Typography color="text.secondary" fontSize={11} sx={{ mt: 0.7 }}>
-                {percent} used this billing period
-              </Typography>
-            </Card>
-          </Grid>
+          { id: "overview" as BillingTab, label: "Overview", icon: InsightsRounded },
+          { id: "history" as BillingTab, label: "Billing history", icon: ReceiptLongRounded },
+          { id: "methods" as BillingTab, label: "Payment methods", icon: CreditCardRounded },
+          { id: "profile" as BillingTab, label: "Billing details", icon: AccountBalanceWalletRounded },
+        ].map(({ id, label, icon: Icon }) => (
+          <Button
+            key={id}
+            onClick={() => setTab(id)}
+            className={tab === id ? "workspace-tab active" : "workspace-tab"}
+            startIcon={<Icon />}
+            aria-pressed={tab === id}
+          >
+            {label}
+          </Button>
         ))}
-      </Grid>
-      <Card className="saas-card">
-        <Typography variant="h3">Invoices</Typography>
-        <Typography color="text.secondary" fontSize={12}>
-          Your Project billing history
-        </Typography>
-        <Typography color="text.secondary" fontSize={13} sx={{ mt: 2 }}>
-          No invoices available in this prototype.
-        </Typography>
-      </Card>
+      </Box>
+
+      {tab === "overview" && (
+        <Stack gap={2.5}>
+          <Card
+            sx={{
+              overflow: "hidden",
+              borderRadius: 2,
+              border: "1px solid #e8e1f0",
+              boxShadow: "0 14px 35px rgba(58,34,96,.08)",
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", md: "1.45fr .8fr" },
+            }}
+          >
+            <Box sx={{ p: { xs: 2.5, md: 3.25 }, color: "#fff", background: "linear-gradient(125deg,#24133c 0%,#4b1e88 62%,#7026c9 100%)" }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap={2}>
+                <Box>
+                  <Typography fontSize={11} fontWeight={900} sx={{ letterSpacing: 1.6, color: "rgba(255,255,255,.68)" }}>
+                    CURRENT PLAN
+                  </Typography>
+                  <Typography fontSize={{ xs: 30, md: 38 }} fontWeight={900} sx={{ mt: 0.5 }}>
+                    {plan.label}
+                  </Typography>
+                </Box>
+                <Chip icon={<CheckCircleRounded />} label="Active" size="small" sx={{ color: "#fff", backgroundColor: "rgba(255,255,255,.14)", "& .MuiChip-icon": { color: "#a6f2b4" } }} />
+              </Stack>
+              <Typography sx={{ color: "rgba(255,255,255,.76)", maxWidth: 500, mt: 1 }} fontSize={13}>
+                {plan.description}
+              </Typography>
+              <Stack direction="row" gap={1} flexWrap="wrap" sx={{ mt: 2.5 }}>
+                <Chip icon={<ShieldRounded />} label="Secure billing" size="small" sx={{ color: "#fff", backgroundColor: "rgba(255,255,255,.12)", "& .MuiChip-icon": { color: "#d8c3ff" } }} />
+                <Chip label="Renews monthly" size="small" sx={{ color: "rgba(255,255,255,.8)", backgroundColor: "rgba(255,255,255,.08)" }} />
+              </Stack>
+            </Box>
+            <Box sx={{ p: { xs: 2.5, md: 3.25 }, backgroundColor: "#fff" }}>
+              <Typography fontSize={11} fontWeight={900} sx={{ letterSpacing: 1.3, color: "#8e8798" }}>
+                MONTHLY INVESTMENT
+              </Typography>
+              <Typography fontSize={{ xs: 30, md: 36 }} fontWeight={900} sx={{ mt: 0.35, color: "#241434" }}>
+                {plan.price}
+                {plan.price !== "Custom" && <Typography component="span" fontSize={13} color="text.secondary"> / month</Typography>}
+              </Typography>
+              <Divider sx={{ my: 2 }} />
+              <Stack direction="row" justifyContent="space-between" gap={2}>
+                <Box>
+                  <Typography fontSize={11} color="text.secondary">Next billing date</Typography>
+                  <Typography fontSize={13} fontWeight={800} sx={{ mt: 0.35 }}>Nov 01, 2026</Typography>
+                </Box>
+                <Box sx={{ textAlign: "right" }}>
+                  <Typography fontSize={11} color="text.secondary">Payment method</Typography>
+                  <Typography fontSize={13} fontWeight={800} sx={{ mt: 0.35 }}>Not added</Typography>
+                </Box>
+              </Stack>
+              <Button variant="outlined" onClick={() => setTab("profile")} fullWidth sx={{ mt: 2.25, borderRadius: 1.25, textTransform: "none", fontWeight: 800 }}>
+                Manage subscription
+              </Button>
+            </Box>
+          </Card>
+
+          <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ sm: "end" }} gap={1.5}>
+            <Box>
+              <Typography variant="h3">Usage this billing cycle</Typography>
+              <Typography color="text.secondary" fontSize={12}>Keep an eye on the limits that matter to your project.</Typography>
+            </Box>
+            <Stack direction="row" gap={1} flexWrap="wrap" sx={{ alignSelf: { xs: "flex-start", sm: "auto" } }}>
+              <Chip label="1 limit needs attention" size="small" sx={{ backgroundColor: "#fff0f1", color: "#d72f48", fontWeight: 800 }} />
+              <Chip label="Oct 01 – Oct 31, 2026" size="small" sx={{ backgroundColor: "#f3edfc", color: "#6422c5", fontWeight: 800 }} />
+            </Stack>
+          </Stack>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: {
+                xs: "1fr",
+                sm: "repeat(2, minmax(0, 1fr))",
+                lg: "repeat(5, minmax(0, 1fr))",
+              },
+              gap: 2,
+            }}
+          >
+            {usage.map(({ label, value, limit, percent, icon: UsageIcon, color }) => (
+              <Card
+                className="usage-card"
+                key={label}
+                sx={{
+                  p: 2,
+                  minHeight: 184,
+                  borderRadius: 2,
+                  position: "relative",
+                  overflow: "hidden",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  "&::before": { content: '""', position: "absolute", left: 0, top: 0, bottom: 0, width: 4, backgroundColor: color },
+                }}
+              >
+                <Stack direction="row" justifyContent="space-between" gap={1}>
+                  <Stack direction="row" gap={1} alignItems="center" minWidth={0}>
+                    <Box sx={{ width: 34, height: 34, flexShrink: 0, display: "grid", placeItems: "center", borderRadius: 1.25, color, backgroundColor: color + "18" }}>
+                      <UsageIcon fontSize="small" />
+                    </Box>
+                    <Typography fontWeight={800} fontSize={13} sx={{ lineHeight: 1.25 }}>{label}</Typography>
+                  </Stack>
+                  <Box
+                    sx={{
+                      width: 44,
+                      height: 44,
+                      flexShrink: 0,
+                      borderRadius: "50%",
+                      display: "grid",
+                      placeItems: "center",
+                      background: "conic-gradient(" + color + " " + Math.min(percent, 100) + "%, #eeeaf5 0)",
+                    }}
+                  >
+                    <Box sx={{ width: 34, height: 34, borderRadius: "50%", display: "grid", placeItems: "center", backgroundColor: "#fff" }}>
+                      <Typography fontSize={10} fontWeight={900} sx={{ color }}>{percent}%</Typography>
+                    </Box>
+                  </Box>
+                </Stack>
+                <Box sx={{ mt: 1.5 }}>
+                  <Typography fontSize={19} fontWeight={900} sx={{ color: "#261735" }}>
+                    {value}
+                    <Typography component="span" fontSize={11} fontWeight={600} color="text.secondary"> / {limit}</Typography>
+                  </Typography>
+                  <LinearProgress
+                    variant="determinate"
+                    value={Math.min(percent, 100)}
+                    sx={{ mt: 1, "& .MuiLinearProgress-bar": { backgroundColor: color } }}
+                  />
+                  <Typography color={percent > 100 ? "error.main" : "text.secondary"} fontSize={11} fontWeight={percent > 100 ? 800 : 400} sx={{ mt: 0.8 }}>
+                    {percent > 100 ? "Over limit" : percent + "% used this period"}
+                  </Typography>
+                </Box>
+              </Card>
+            ))}
+          </Box>
+          <Card className="saas-card" sx={{ p: 2.5, borderRadius: 2 }}>
+            <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" gap={1}>
+              <Box>
+                <Typography variant="h3">Need more capacity?</Typography>
+                <Typography color="text.secondary" fontSize={12}>Upgrade your plan when your audience and campaigns grow.</Typography>
+              </Box>
+              <Button variant="contained" onClick={() => setTab("profile")} sx={{ alignSelf: { sm: "center" }, textTransform: "none" }}>
+                View plan options
+              </Button>
+            </Stack>
+          </Card>
+        </Stack>
+      )}
+
+      {tab === "history" && (
+        <Card className="saas-card" sx={{ p: 2.5 }}>
+          <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" gap={1}>
+            <Box>
+              <Typography variant="h3">Billing history</Typography>
+              <Typography color="text.secondary" fontSize={12}>Invoices and payment activity for this project.</Typography>
+            </Box>
+            <Button variant="outlined" startIcon={<FileDownloadRounded />} onClick={exportBillingHistory} sx={{ textTransform: "none", borderRadius: 1.25 }}>
+              Export CSV
+            </Button>
+          </Stack>
+          <Divider sx={{ my: 2 }} />
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Date</TableCell>
+                <TableCell>Description</TableCell>
+                <TableCell>Amount</TableCell>
+                <TableCell>Status</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {billingHistory.map((entry) => (
+                <TableRow key={entry.date + entry.description} hover>
+                  <TableCell sx={{ fontSize: 12, whiteSpace: "nowrap" }}>{entry.date}</TableCell>
+                  <TableCell sx={{ fontSize: 12, fontWeight: 700 }}>{entry.description}</TableCell>
+                  <TableCell sx={{ fontSize: 12, fontWeight: 800 }}>{entry.amount}</TableCell>
+                  <TableCell>
+                    <Chip
+                      label={entry.status}
+                      size="small"
+                      icon={<CheckCircleRounded />}
+                      sx={{
+                        color: entry.status === "Active" ? "#19743c" : "#2763a5",
+                        backgroundColor: entry.status === "Active" ? "#e7f8ed" : "#eaf2ff",
+                        fontSize: 11,
+                        fontWeight: 800,
+                        "& .MuiChip-icon": { color: "inherit" },
+                      }}
+                    />
+                  </TableCell>
+                </TableRow>
+              ))}
+              <TableRow>
+                <TableCell colSpan={4} sx={{ pt: 2, borderBottom: 0 }}>
+                  <Stack direction="row" alignItems="center" gap={1}>
+                    <ReceiptLongRounded sx={{ fontSize: 18, color: "#9874c9" }} />
+                    <Typography color="text.secondary" fontSize={11}>
+                      Sample billing activity shown for preview purposes.
+                    </Typography>
+                  </Stack>
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </Card>
+      )}
+
+      {tab === "methods" && (
+        <Stack gap={2.5}>
+          <Card className="saas-card" sx={{ p: 2.5 }}>
+            <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ sm: "center" }} gap={2}>
+              <Box>
+                <Typography variant="h3">Payment methods</Typography>
+                <Typography color="text.secondary" fontSize={12}>Add multiple methods and choose which one is used by default.</Typography>
+              </Box>
+              <Button variant="contained" startIcon={<AddRounded />} onClick={() => setDialogOpen(true)} sx={{ textTransform: "none" }}>Add payment method</Button>
+            </Stack>
+          </Card>
+          {paymentMethods.length === 0 ? (
+            <Card className="saas-card" sx={{ p: 5, textAlign: "center" }}>
+              <CreditCardRounded sx={{ fontSize: 48, color: "#9874c9" }} />
+              <Typography variant="h3" sx={{ mt: 1 }}>No payment methods added</Typography>
+              <Typography color="text.secondary" fontSize={13} sx={{ mt: 0.5 }}>Add a card or connect a payment account to manage future billing.</Typography>
+              <Button variant="outlined" startIcon={<AddRounded />} onClick={() => setDialogOpen(true)} sx={{ mt: 2, textTransform: "none" }}>Add your first method</Button>
+            </Card>
+          ) : (
+            <Grid container spacing={2}>
+              {displayedPaymentMethods.map((method) => (
+                <Grid item xs={12} sm={6} lg={4} key={method.id}>
+                  <PaymentMethodPreview method={method} onDefault={() => setPaymentMethodToMakeDefault(method)} onRemove={() => setPaymentMethodToDelete(method)} />
+                </Grid>
+              ))}
+            </Grid>
+          )}
+          <Alert severity="info" icon={<ShieldRounded />} sx={{ borderRadius: 2 }}>
+            Your full card number and security code are never stored in this workspace. Only the masked last four digits are shown.
+          </Alert>
+        </Stack>
+      )}
+
+      {tab === "profile" && (
+        <Card className="saas-card" sx={{ p: 2.5 }}>
+          <Typography variant="h3">Billing details</Typography>
+          <Typography color="text.secondary" fontSize={12}>Keep your invoice recipient and tax information up to date.</Typography>
+          <Grid container spacing={2} sx={{ mt: 0.5 }}>
+            {profileFields.map(([key, label]) => (
+              <Grid item xs={12} sm={key === "addressLine1" || key === "company" ? 6 : 4} key={key}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label={label}
+                  value={profile[key] ?? ""}
+                  onChange={(event) => setProfile((current) => ({ ...current, [key]: event.target.value }))}
+                  type={key === "email" ? "email" : "text"}
+                />
+              </Grid>
+            ))}
+          </Grid>
+          <Stack direction="row" justifyContent="flex-end" sx={{ mt: 2 }}>
+            <Button
+              variant="contained"
+              disabled={!active?.id || !profile.email || saveProfileMutation.isPending}
+              onClick={() => active?.id && saveProfileMutation.mutate(profile)}
+              sx={{ textTransform: "none" }}
+            >
+              {saveProfileMutation.isPending ? "Saving..." : "Save billing details"}
+            </Button>
+          </Stack>
+        </Card>
+      )}
+
+      <Dialog
+        open={dialogOpen}
+        onClose={() => { setDialogOpen(false); resetPaymentForm(); }}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2.5,
+            overflow: "hidden",
+            border: "1px solid #ebe8f2",
+            boxShadow: "0 24px 70px rgba(30,18,52,.24)",
+          },
+        }}
+      >
+        <DialogTitle sx={{ px: 3, pt: 3, pb: 1.5 }}>
+          <Stack direction="row" alignItems="center" gap={1.5}>
+            <Box sx={{ width: 42, height: 42, borderRadius: 1.5, display: "grid", placeItems: "center", color: "#6e28d9", backgroundColor: "#f1eafd" }}>
+              <CreditCardRounded />
+            </Box>
+            <Box>
+              <Typography fontSize={22} fontWeight={900}>Add payment method</Typography>
+              <Typography color="text.secondary" fontSize={12} sx={{ mt: 0.25 }}>
+                Add a secure method for future billing.
+              </Typography>
+            </Box>
+          </Stack>
+        </DialogTitle>
+        <DialogContent sx={{ px: 3, pt: 1.5, backgroundColor: "#fcfbff" }}>
+          <Alert severity="info" icon={<ShieldRounded />} sx={{ mb: 2, borderRadius: 1.5, fontSize: 12 }}>
+            Your full card number and CVC are never stored.
+          </Alert>
+          <Typography fontSize={12} fontWeight={900} sx={{ mb: 1 }}>
+            Choose a payment method
+          </Typography>
+          <Grid container spacing={1} sx={{ mb: 2.5 }}>
+            {(["card", "paypal", "stripe", "payoneer"] as PaymentMethodType[]).map((type) => (
+              <Grid item xs={6} key={type}>
+                <Button
+                  fullWidth
+                  variant={paymentType === type ? "contained" : "outlined"}
+                  onClick={() => { setPaymentType(type); setPaymentError(""); }}
+                  sx={{
+                    minHeight: 58,
+                    justifyContent: "flex-start",
+                    gap: 1,
+                    px: 1.25,
+                    borderRadius: 1.5,
+                    textTransform: "none",
+                    borderColor: paymentType === type ? "transparent" : "#ddd6eb",
+                    color: paymentType === type ? "#fff" : "#342047",
+                    backgroundColor: paymentType === type ? "#6422c5" : "#fff",
+                    "&:hover": {
+                      borderColor: "#6422c5",
+                      backgroundColor: paymentType === type ? "#5519b3" : "#f7f2ff",
+                    },
+                  }}
+                >
+                  <PaymentBrandMark type={type} compact />
+                  <Box sx={{ textAlign: "left" }}>
+                    <Typography fontSize={12} fontWeight={900}>
+                      {type === "card" ? "Visa / Mastercard" : paymentMethodLabel(type)}
+                    </Typography>
+                    <Typography fontSize={10} sx={{ opacity: 0.7 }}>
+                      {type === "card" ? "Credit or debit card" : "Connected account"}
+                    </Typography>
+                  </Box>
+                </Button>
+              </Grid>
+            ))}
+          </Grid>
+          {paymentType === "card" ? (
+            <Stack gap={2}>
+              <TextField label="Card number" value={cardNumber} onChange={(event) => setCardNumber(formatCardNumber(event.target.value))} fullWidth size="small" placeholder="1234 5678 9012 3456" inputProps={{ inputMode: "numeric" }} />
+              <TextField label="Name on card" value={cardHolder} onChange={(event) => setCardHolder(event.target.value)} fullWidth size="small" />
+              <Stack direction="row" gap={2}>
+                <TextField label="Expiry" value={cardExpiry} onChange={(event) => setCardExpiry(formatExpiry(event.target.value))} fullWidth size="small" placeholder="MM/YY" />
+                <TextField label="CVC" value={cardCvc} onChange={(event) => setCardCvc(event.target.value)} fullWidth size="small" type="password" inputProps={{ inputMode: "numeric", maxLength: 4 }} />
+              </Stack>
+            </Stack>
+          ) : (
+            <TextField
+              label={paymentType === "paypal" ? "PayPal email" : paymentMethodLabel(paymentType) + " account ID or email"}
+              value={accountIdentifier}
+              onChange={(event) => setAccountIdentifier(event.target.value)}
+              fullWidth
+              size="small"
+              type={paymentType === "paypal" ? "email" : "text"}
+              placeholder={paymentType === "paypal" ? "you@example.com" : "Account ID or email"}
+            />
+          )}
+          {paymentError && <Alert severity="warning" sx={{ mt: 2 }}>{paymentError}</Alert>}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2.5, borderTop: "1px solid #eeeaf5", backgroundColor: "#fff" }}>
+          <Button onClick={() => { setDialogOpen(false); resetPaymentForm(); }} sx={{ textTransform: "none", color: "#6b6378" }}>Cancel</Button>
+          <Button variant="contained" onClick={addPaymentMethod} sx={{ textTransform: "none", borderRadius: 1.5, px: 2.5 }}>
+            Add method
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <DeleteConfirmDialog
+        open={Boolean(paymentMethodToDelete)}
+        onClose={() => setPaymentMethodToDelete(null)}
+        onConfirm={() => {
+          if (paymentMethodToDelete) {
+            removePaymentMethod(paymentMethodToDelete.id);
+            setPaymentMethodToDelete(null);
+          }
+        }}
+        title="Remove this payment method?"
+        description={
+          paymentMethodToDelete
+            ? "Remove " +
+              (paymentMethodToDelete.type === "card"
+                ? paymentMethodToDelete.brand + " ending in " + paymentMethodToDelete.last4
+                : paymentMethodLabel(paymentMethodToDelete.type)) +
+              "? This action cannot be undone."
+            : "This action cannot be undone."
+        }
+      />
+      <PaymentVerificationDialog
+        status={verificationStatus}
+        method={pendingPaymentMethod}
+        onClose={closeVerification}
+        onRetry={retryVerification}
+      />
+      <SetDefaultPaymentDialog
+        method={paymentMethodToMakeDefault}
+        onClose={() => setPaymentMethodToMakeDefault(null)}
+        onConfirm={() => {
+          if (paymentMethodToMakeDefault) {
+            makeDefault(paymentMethodToMakeDefault.id);
+            setPaymentMethodToMakeDefault(null);
+          }
+        }}
+      />
     </Stack>
   );
 }
