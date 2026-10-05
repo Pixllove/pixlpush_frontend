@@ -9,7 +9,18 @@ import type {
   AudienceGroupMember,
   AudienceGroupSchema,
   BillingContact,
+  BillingInterval,
+  BillingInvoice,
+  BillingPaymentMethod,
+  SavedCard,
+  CheckoutInput,
+  CheckoutTotals,
+  BillingPrice,
   BillingSubscription,
+  BillingUsage,
+  PaidPlan,
+  PlanLimits,
+  PlanName,
   CreatedSdkKey,
   EmailSettings,
   FirebaseSettings,
@@ -448,7 +459,51 @@ export const billingApi = {
       input,
       BASE,
       "PUT",
-    ),
+    ),  usage: (projectId: string) =>
+    authRequest<BillingUsage>(at(projectId, "/billing/usage"), undefined, BASE),
+  /** Plan limits, by plan name. */
+  plans: (projectId: string) =>
+    authRequest<Record<PlanName, PlanLimits>>(at(projectId, "/billing/plans"), undefined, BASE),
+  /** What can be bought, read from Stripe by the backend. Empty where Stripe is not configured. */
+  prices: (projectId: string) =>
+    authRequest<BillingPrice[]>(at(projectId, "/billing/prices"), undefined, BASE),
+  invoices: (projectId: string) =>
+    authRequest<BillingInvoice[]>(at(projectId, "/billing/invoices"), undefined, BASE),
+  /** Subtotal, tax and total Stripe calculates for a plan at this billing address. */
+  previewCheckout: (projectId: string, input: CheckoutInput) =>
+    authRequest<CheckoutTotals>(at(projectId, "/billing/checkout/preview"), input, BASE, "POST"),
+  /**
+   * First purchase on PixlPush's own checkout page: the backend creates the (still unpaid) subscription
+   * at the approved price and returns the client secret its first payment is confirmed with by Stripe.js.
+   */
+  createCheckoutSubscription: (projectId: string, input: CheckoutInput) =>
+    authRequest<CheckoutTotals & { subscriptionId: string; clientSecret: string }>(at(projectId, "/billing/checkout/subscription"), input, BASE, "POST"),
+  /** Brand, last four and expiry of the method the subscription is charged to; null when there is none. */
+  paymentMethod: (projectId: string) =>
+    authRequest<BillingPaymentMethod | null>(at(projectId, "/billing/payment-method"), undefined, BASE),
+  /** A SetupIntent secret for saving a new card with Stripe's Payment Element. */
+  setupPaymentMethod: (projectId: string) =>
+    authRequest<{ clientSecret: string }>(at(projectId, "/billing/payment-method/setup"), {}, BASE, "POST"),
+  /** Makes the saved card the default; the backend checks it belongs to this project and retries an unpaid invoice. */
+  savePaymentMethod: (projectId: string, paymentMethodId: string) =>
+    authRequest<{ retriedInvoice: "paid" | "failed" | null; paymentMethod: BillingPaymentMethod | null }>(at(projectId, "/billing/payment-method"), { paymentMethodId }, BASE, "PUT"),
+  /** Every saved card of the project's Stripe customer, the default first. */
+  paymentMethods: (projectId: string) =>
+    authRequest<SavedCard[]>(at(projectId, "/billing/payment-methods"), undefined, BASE),
+  /** Expiry and holder name of a saved card; the number can only be replaced by adding a new card. */
+  updatePaymentMethod: (projectId: string, paymentMethodId: string, input: { expMonth: number; expYear: number; name?: string }) =>
+    authRequest<SavedCard>(at(projectId, `/billing/payment-methods/${encodeURIComponent(paymentMethodId)}`), input, BASE, "PATCH"),
+  removePaymentMethod: (projectId: string, paymentMethodId: string) =>
+    authRequest<{ removed: true }>(at(projectId, `/billing/payment-methods/${encodeURIComponent(paymentMethodId)}`), {}, BASE, "DELETE"),
+  /** The secret of a payment the bank wants authenticated (3D Secure); finished with stripe.handleNextAction. */
+  confirmOpenPayment: (projectId: string) =>
+    authRequest<{ clientSecret: string }>(at(projectId, "/billing/payment/confirm"), {}, BASE, "POST"),
+  changeSubscription: (projectId: string, input: { plan: PaidPlan; interval: BillingInterval }) =>
+    authRequest<{ plan: PlanName; pendingPlan: PlanName | null }>(at(projectId, "/billing/subscription"), input, BASE, "POST"),
+  cancelSubscription: (projectId: string) =>
+    authRequest<{ status: string; currentPeriodEnd: string | null }>(at(projectId, "/billing/subscription/cancel"), {}, BASE, "POST"),
+  resumeSubscription: (projectId: string) =>
+    authRequest<{ status: string; currentPeriodEnd: string | null }>(at(projectId, "/billing/subscription/resume"), {}, BASE, "POST"),
 };
 
 export const teamApi = {

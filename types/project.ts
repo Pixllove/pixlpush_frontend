@@ -45,13 +45,85 @@ export interface BillingContact {
   addressLine2?: string | null;
   postalCode?: string | null;
   city?: string | null;
+  state?: string | null;
   country?: string | null;
   vatId?: string | null;
+  /** After a save: whether the VAT id could be put on Stripe invoices (false for a country Stripe has no type for here). */
+  taxIdSent?: boolean;
+}
+
+export type PaidPlan = "starter" | "pro";
+export type BillingInterval = "month" | "year";
+/** The billing state the backend keeps in step with Stripe (by webhook). */
+export type BillingStatus =
+  | "active" | "trialing" | "cancel_at_period_end" | "billing_attention"
+  | "past_due" | "incomplete" | "paused" | "unpaid";
+export type BillingProblem =
+  | "payment_failed" | "payment_action_required" | "tax_location_missing"
+  | "invoice_finalization_failed" | "dispute";
+
+export interface SubscriptionState {
+  plan: PlanName;
+  status: BillingStatus;
+  stripeStatus: string | null;
+  billingInterval: BillingInterval | null;
+  currency: string | null;
+  /** Smallest currency unit, for one interval, before tax. */
+  unitAmount: number | null;
+  taxExclusive: boolean;
+  currentPeriodStart: string | null;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+  canceledAt: string | null;
+  pendingPlan: PlanName | null;
+  pendingInterval: BillingInterval | null;
+  billingProblem: BillingProblem | null;
 }
 
 export interface BillingSubscription {
-  subscription: Record<string, unknown> | null;
+  /** null for a Project that never had a subscription: treat as Free. */
+  subscription: SubscriptionState | null;
   billingContact: BillingContact | null;
+}
+
+/** One price that can be bought. Amounts are in the smallest currency unit, before tax. */
+export interface BillingPrice {
+  plan: PaidPlan;
+  interval: BillingInterval;
+  unitAmount: number;
+  currency: string;
+  taxExclusive: boolean;
+}
+
+export interface PlanLimits {
+  reachableUsers: number | null;
+  emailSendsPerMonth: number | null;
+  pushSendsPerMonth: number | null;
+  activeJourneys: number | null;
+  aiCreditsPerMonth: number | null;
+  eventsPerMonth: number | null;
+}
+
+export interface BillingUsage {
+  plan: PlanName;
+  periodStart: string;
+  usage: { reachable_users: number; email_sends: number; push_sends: number; event_ingestion: number; active_journeys: number; ai_credits: number };
+  limits: PlanLimits;
+  overLimit: { reachableUsers: boolean; emailSends: boolean; pushSends: boolean; activeJourneys: boolean };
+}
+
+export interface BillingInvoice {
+  id: string;
+  number: string | null;
+  status: "draft" | "open" | "paid" | "uncollectible" | "void";
+  currency: string;
+  subtotalExcludingTax: number;
+  tax: number;
+  total: number;
+  amountPaid: number;
+  createdAt: string;
+  hostedInvoiceUrl: string | null;
+  invoicePdf: string | null;
 }
 
 export interface ProjectMember {
@@ -412,4 +484,34 @@ export interface UserStats {
   reachable: number;
   eventsToday: number;
   eventsYesterday: number;
+}
+
+/** What the in-app checkout sends: a plan, an interval and the billing address. Never a price or amount. */
+export interface CheckoutInput {
+  plan: PaidPlan;
+  interval: BillingInterval;
+  address: { name: string; line1: string; line2?: string; city?: string; state?: string; postalCode?: string; country: string };
+}
+
+/** The first invoice as Stripe calculates it, in the smallest currency unit. `tax` is null until Stripe can place the address. */
+export interface CheckoutTotals {
+  currency: string;
+  subtotal: number;
+  tax: number | null;
+  discount: number;
+  total: number;
+}
+
+export interface BillingPaymentMethod {
+  type: string;
+  brand: string | null;
+  last4: string | null;
+  expMonth: number | null;
+  expYear: number | null;
+}
+
+export interface SavedCard extends BillingPaymentMethod {
+  id: string;
+  name: string | null;
+  isDefault: boolean;
 }

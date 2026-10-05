@@ -21,6 +21,11 @@ const nextConfig = {
       },
     ];
   },
+  // The backend's default Stripe return address; the billing page lives one level up. The query string
+  // (?checkout=success) is carried over.
+  async redirects() {
+    return [{ source: '/dashboard/settings/billing', destination: '/dashboard/billing', permanent: false }];
+  },
   async rewrites() {
     return [
       {
