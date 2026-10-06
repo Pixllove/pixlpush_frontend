@@ -504,68 +504,163 @@ export function BillingSection() {
           </Box>
 
           {currentPlan !== "enterprise" && (
-            <Card className="saas-card" sx={{ p: 2.5, borderRadius: 2 }} ref={plansRef}>
-              <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ sm: "center" }} gap={1.5}>
-                <Box>
-                  <Typography variant="h3">Need more capacity?</Typography>
-                  <Typography color="text.secondary" fontSize={12}>Upgrade your plan when your audience and campaigns grow.</Typography>
-                </Box>
-                <ToggleButtonGroup exclusive size="small" value={interval} onChange={(_, value: BillingInterval | null) => value && setInterval(value)} aria-label="Billing interval">
-                  <ToggleButton value="month" sx={{ textTransform: "none", px: 2 }}>Monthly</ToggleButton>
-                  <ToggleButton value="year" sx={{ textTransform: "none", px: 2 }}>Yearly</ToggleButton>
-                </ToggleButtonGroup>
-              </Stack>
-              <Grid container spacing={2} sx={{ mt: 0.5 }}>
-                {paidPlans.map((option) => {
-                  const price = priceOf(prices, option, interval);
-                  const limits = plansQuery.data?.[option];
-                  const isCurrent = subscribed && option === currentPlan && interval === currentInterval;
-                  const action = isCurrent ? "Current plan"
-                    : !subscribed ? "Choose plan"
-                    : planRank[option] > planRank[currentPlan] ? "Upgrade"
-                    : planRank[option] < planRank[currentPlan] ? "Downgrade"
-                    : interval === "year" ? "Switch to yearly" : "Switch to monthly";
-                  return (
-                    <Grid item xs={12} md={6} key={option}>
-                      <Box sx={{ p: 2, height: "100%", borderRadius: 2, border: "1px solid", borderColor: isCurrent || (!subscribed && option === wantedPlan) ? "#6422c5" : "#e8e1f0" }}>
-                        <Stack direction="row" justifyContent="space-between" alignItems="baseline" gap={1}>
-                          <Typography fontWeight={900} fontSize={17}>{planCopy[option].label}</Typography>
-                          <Typography fontWeight={900} fontSize={20} sx={{ color: "#241434" }}>
-                            {formatMoney(price.unitAmount, price.currency)}
-                            <Typography component="span" fontSize={12} color="text.secondary"> / {interval}</Typography>
-                          </Typography>
-                        </Stack>
-                        <Typography color="text.secondary" fontSize={12} sx={{ mt: 0.5 }}>{planCopy[option].description}</Typography>
-                        {limits && (
-                          <Typography color="text.secondary" fontSize={12} sx={{ mt: 1 }}>
-                            {[
-                              limits.reachableUsers && `${number(limits.reachableUsers)} reachable users`,
-                              limits.emailSendsPerMonth && `${number(limits.emailSendsPerMonth)} emails`,
-                              limits.pushSendsPerMonth && `${number(limits.pushSendsPerMonth)} pushes`,
-                              limits.activeJourneys && `${limits.activeJourneys} journeys`,
-                            ].filter(Boolean).join(" · ")}
-                          </Typography>
-                        )}
-                        {interval === "year" && (
-                          <Typography fontSize={12} fontWeight={800} sx={{ mt: 1, color: "#18a677" }}>
-                            Save {formatMoney(yearlySaving(prices, option), price.currency)} a year — pay for ten months, get twelve.
-                          </Typography>
-                        )}
-                        {canManage && (
-                          <Button variant={isCurrent ? "outlined" : "contained"} fullWidth disabled={isCurrent || Boolean(busy)} onClick={() => choosePlan(option)} sx={{ mt: 1.5, textTransform: "none", borderRadius: 1.25 }}>
-                            {busy === `plan-${option}` ? "Updating…" : action}
-                          </Button>
-                        )}
-                      </Box>
-                    </Grid>
-                  );
-                })}
-              </Grid>
-              <Typography color="text.secondary" fontSize={11} sx={{ mt: 1.5 }}>
-                Prices are in AED and exclude tax. Applicable VAT or tax is calculated at checkout from your billing location. Need custom limits?{" "}
-                <Link href="/pricing" underline="hover">Contact sales</Link> for Enterprise.
-              </Typography>
-              {!canManage && <Typography color="text.secondary" fontSize={11} sx={{ mt: 0.5 }}>Ask an owner, admin or billing member of this project to change the plan.</Typography>}
+            <Card
+              className="saas-card"
+              ref={plansRef}
+              sx={{
+                p: 0,
+                overflow: "hidden",
+                borderRadius: 3,
+                border: "1px solid #e0d8f1",
+                background: "linear-gradient(145deg, #fcfaff 0%, #f2f6ff 100%)",
+                boxShadow: "0 18px 45px rgba(56, 28, 116, 0.08)",
+              }}
+            >
+              <Box
+                sx={{
+                  position: "relative",
+                  overflow: "hidden",
+                  px: { xs: 2.5, md: 3.25 },
+                  py: { xs: 2.5, md: 3 },
+                  color: "#fff",
+                  background: "linear-gradient(115deg, #21133d 0%, #4b1d8e 52%, #7435d0 100%)",
+                  "&::before": {
+                    content: '""',
+                    position: "absolute",
+                    width: 300,
+                    height: 300,
+                    right: -125,
+                    top: -190,
+                    borderRadius: "50%",
+                    border: "1px solid rgba(255,255,255,.2)",
+                    boxShadow: "0 0 0 28px rgba(255,255,255,.035), 0 0 0 58px rgba(255,255,255,.025)",
+                  },
+                }}
+              >
+                <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ sm: "center" }} gap={2} sx={{ position: "relative", zIndex: 1 }}>
+                  <Stack direction="row" alignItems="center" gap={1.5}>
+                    <Box sx={{ width: 44, height: 44, display: "grid", placeItems: "center", flexShrink: 0, borderRadius: 1.75, color: "#f4d46b", backgroundColor: "rgba(255,255,255,.14)", border: "1px solid rgba(255,255,255,.18)" }}>
+                      <AutoGraphRounded />
+                    </Box>
+                    <Box>
+                      <Typography fontSize={11} fontWeight={900} letterSpacing=".14em" sx={{ color: "#e7c5ff" }}>PLAN BUILDER</Typography>
+                      <Typography fontSize={{ xs: 22, md: 25 }} fontWeight={900} sx={{ mt: 0.25, lineHeight: 1.1 }}>Scale with confidence</Typography>
+                    </Box>
+                  </Stack>
+                  <Stack alignItems={{ xs: "flex-start", sm: "flex-end" }} gap={0.75}>
+                    <Typography fontSize={10} fontWeight={900} letterSpacing=".12em" sx={{ color: "#ddc9fa" }}>BILLING CYCLE</Typography>
+                    <ToggleButtonGroup
+                      exclusive
+                      size="small"
+                      value={interval}
+                      onChange={(_, value: BillingInterval | null) => value && setInterval(value)}
+                      aria-label="Billing interval"
+                      sx={{
+                        p: 0.4,
+                        borderRadius: 2,
+                        backgroundColor: "rgba(255,255,255,.12)",
+                        border: "1px solid rgba(255,255,255,.2)",
+                        "& .MuiToggleButton-root": { color: "rgba(255,255,255,.8)", border: 0, borderRadius: 1.5, px: 1.6, py: 0.65, textTransform: "none", fontWeight: 800, fontSize: 12 },
+                        "& .MuiToggleButton-root.Mui-selected": { color: "#291444", backgroundColor: "#fff", boxShadow: "0 4px 12px rgba(19,8,47,.22)" },
+                      }}
+                    >
+                      <ToggleButton value="month">Monthly</ToggleButton>
+                      <ToggleButton value="year">Yearly</ToggleButton>
+                    </ToggleButtonGroup>
+                  </Stack>
+                </Stack>
+                <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ sm: "center" }} gap={1} sx={{ position: "relative", zIndex: 1, mt: 2 }}>
+                  <Typography fontSize={13} sx={{ color: "rgba(255,255,255,.78)", maxWidth: 560 }}>
+                    Pick the plan that matches your audience, messaging volume, and journey goals. You can change your plan whenever your project grows.
+                  </Typography>
+                  {interval === "year" && <Chip label="Yearly billing saves 2 months" size="small" sx={{ color: "#204b35", backgroundColor: "#baf3cf", fontWeight: 900 }} />}
+                </Stack>
+              </Box>
+
+              <Box sx={{ p: { xs: 2, md: 2.75 } }}>
+                <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ sm: "center" }} gap={1}>
+                  <Box>
+                    <Typography fontSize={16} fontWeight={900} sx={{ color: "#241434" }}>Plans for your next stage</Typography>
+                    <Typography color="text.secondary" fontSize={12}>Compare limits and choose the right amount of room to grow.</Typography>
+                  </Box>
+                  <Chip icon={<ShieldRounded sx={{ fontSize: 16 }} />} label="Secure billing" size="small" sx={{ width: "fit-content", color: "#5c2ab5", backgroundColor: "#eee6ff", fontWeight: 800 }} />
+                </Stack>
+
+                <Grid container spacing={2} sx={{ mt: 0.75 }}>
+                  {paidPlans.map((option, index) => {
+                    const price = priceOf(prices, option, interval);
+                    const limits = plansQuery.data?.[option];
+                    const isCurrent = subscribed && option === currentPlan && interval === currentInterval;
+                    const isHighlighted = option === "pro";
+                    const metrics = limits ? [
+                      limits.reachableUsers && `${number(limits.reachableUsers)} users`,
+                      limits.emailSendsPerMonth && `${number(limits.emailSendsPerMonth)} emails`,
+                      limits.pushSendsPerMonth && `${number(limits.pushSendsPerMonth)} pushes`,
+                      limits.activeJourneys && `${limits.activeJourneys} journeys`,
+                    ].filter(Boolean) : [];
+                    const action = isCurrent ? "Current plan"
+                      : !subscribed ? "Choose plan"
+                      : planRank[option] > planRank[currentPlan] ? "Upgrade"
+                      : planRank[option] < planRank[currentPlan] ? "Downgrade"
+                      : interval === "year" ? "Switch to yearly" : "Switch to monthly";
+                    return (
+                      <Grid item xs={12} md={6} key={option}>
+                        <Box
+                          sx={{
+                            position: "relative",
+                            height: "100%",
+                            p: { xs: 2, md: 2.25 },
+                            borderRadius: 2.5,
+                            border: "1px solid",
+                            borderColor: isCurrent || (!subscribed && option === wantedPlan) ? "#6422c5" : isHighlighted ? "#d7c2fb" : "#e5e0ee",
+                            background: isHighlighted ? "linear-gradient(145deg, #fff 0%, #f8f2ff 100%)" : "#fff",
+                            boxShadow: isCurrent ? "0 0 0 3px rgba(100,34,197,.1)" : "0 8px 20px rgba(50,28,91,.04)",
+                          }}
+                        >
+                          {(isCurrent || isHighlighted) && (
+                            <Chip label={isCurrent ? "Your current plan" : "Best for growing teams"} size="small" sx={{ position: "absolute", top: 14, right: 14, color: isCurrent ? "#19743c" : "#6422c5", backgroundColor: isCurrent ? "#e6f8ed" : "#eee6ff", fontWeight: 900, fontSize: 10 }} />
+                          )}
+                          <Stack direction="row" alignItems="center" gap={1.25}>
+                            <Box sx={{ width: 36, height: 36, display: "grid", placeItems: "center", borderRadius: 1.25, color: isHighlighted ? "#6422c5" : "#4f2a8f", backgroundColor: isHighlighted ? "#eee6ff" : "#f1ecfb" }}>
+                              {index === 0 ? <CreditCardRounded fontSize="small" /> : <AutoGraphRounded fontSize="small" />}
+                            </Box>
+                            <Box>
+                              <Typography fontSize={17} fontWeight={900} sx={{ color: "#241434" }}>{planCopy[option].label}</Typography>
+                              <Typography fontSize={11} color="text.secondary">{option === "pro" ? "For teams ready to scale" : "A simple start for growing teams"}</Typography>
+                            </Box>
+                          </Stack>
+                          <Stack direction="row" alignItems="baseline" gap={0.5} sx={{ mt: 2 }}>
+                            <Typography fontSize={27} fontWeight={950} sx={{ color: "#241434", lineHeight: 1 }}>{formatMoney(price.unitAmount, price.currency)}</Typography>
+                            <Typography fontSize={12} color="text.secondary">/ {interval}</Typography>
+                          </Stack>
+                          <Typography color="text.secondary" fontSize={12} sx={{ mt: 0.8, minHeight: 34 }}>{planCopy[option].description}</Typography>
+                          {metrics.length > 0 && (
+                            <Stack direction="row" flexWrap="wrap" gap={0.75} sx={{ mt: 1.5 }}>
+                              {metrics.map((metric) => <Chip key={metric} icon={<CheckCircleRounded sx={{ fontSize: 14 }} />} label={metric} size="small" sx={{ color: "#51435f", backgroundColor: "#f6f3fa", fontSize: 10, fontWeight: 700, "& .MuiChip-icon": { color: "#25a365" } }} />)}
+                            </Stack>
+                          )}
+                          {interval === "year" && (
+                            <Typography fontSize={11} fontWeight={800} sx={{ mt: 1.25, color: "#16814d" }}>
+                              Save {formatMoney(yearlySaving(prices, option), price.currency)} a year
+                            </Typography>
+                          )}
+                          {canManage && (
+                            <Button variant={isCurrent ? "outlined" : "contained"} fullWidth disabled={isCurrent || Boolean(busy)} onClick={() => choosePlan(option)} sx={{ mt: 2, textTransform: "none", borderRadius: 1.5, minHeight: 40, fontWeight: 800 }}>
+                              {busy === `plan-${option}` ? "Updating…" : action}
+                            </Button>
+                          )}
+                        </Box>
+                      </Grid>
+                    );
+                  })}
+                </Grid>
+
+                <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" gap={0.75} sx={{ mt: 2, pt: 1.75, borderTop: "1px solid #e9e3f2" }}>
+                  <Typography color="text.secondary" fontSize={11}>Prices are in AED and exclude tax. VAT is calculated at checkout.</Typography>
+                  <Link href="/pricing" underline="hover" sx={{ fontSize: 11, fontWeight: 800, whiteSpace: "nowrap" }}>Contact sales for Enterprise</Link>
+                </Stack>
+                {!canManage && <Typography color="text.secondary" fontSize={11} sx={{ mt: 0.75 }}>Ask an owner, admin or billing member of this project to change the plan.</Typography>}
+              </Box>
             </Card>
           )}
         </Stack>
@@ -645,7 +740,7 @@ export function BillingSection() {
                 <Typography variant="h3">Payment methods</Typography>
                 <Typography color="text.secondary" fontSize={12}>Cards saved for this project. Renewals are charged to the default card; a new card is checked by Stripe and also pays any unpaid invoice.</Typography>
               </Box>
-              {hasBillingAccount && (
+              {projectId && (
                 <Button variant="contained" disabled={Boolean(busy)} onClick={updateCard} sx={{ textTransform: "none", borderRadius: 1.25 }}>
                   {busy === "card" ? "Opening…" : "Add a card"}
                 </Button>

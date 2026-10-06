@@ -294,7 +294,7 @@ describe('BillingSection', () => {
     api.removePaymentMethod.mockResolvedValue({ removed: true });
     wrap();
     await userEvent.click(await screen.findByRole('button', { name: 'Payment methods' }));
-    expect(await screen.findByText('•••• •••• •••• 4242')).toBeInTheDocument();
+    expect(await screen.findByText('**** **** **** 4242')).toBeInTheDocument();
     expect(screen.getByText('01/28')).toBeInTheDocument();
     for (const label of [/card number/i, /cvc/i]) expect(screen.queryByLabelText(label)).not.toBeInTheDocument();
     // the default card cannot be removed here
