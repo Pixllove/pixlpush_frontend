@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AutoAwesomeRounded,
-  CalculateRounded,
   CheckCircleRounded,
   CloseRounded,
   ExpandMoreRounded,
@@ -42,7 +41,7 @@ import type { BillingInterval, PaidPlan } from '@/types/project';
 
 type Currency = 'usd' | 'eur' | 'aed' | 'pkr';
 type PlanKey = 'free' | PaidPlan | 'enterprise';
-type FeatureValue = 'Included' | 'Limited' | 'Not included' | 'Custom' | 'Upgrade' | 'Basic' | 'Advanced' | 'Partial' | 'Priority' | 'Optional' | 'Unlimited' | 'Multiple' | '1' | '3' | '5' | '10' | '20' | '2,000' | '5,000' | '25,000' | '50,000' | '10,000' | '250,000' | '1,000,000' | '100' | '500' | '$0.01' | '$0.008' | 'Talk to Sales';
+type FeatureValue = 'Included' | 'Limited' | 'Not included' | 'Custom' | 'Upgrade' | 'Basic' | 'Advanced' | 'Partial' | 'Priority' | 'Optional' | 'Unlimited' | 'Multiple' | '1' | '3' | '5' | '10' | '20' | '2,000' | '5,000' | '25,000' | '50,000' | '10,000' | '250,000' | '1,000,000' | '100' | '500' | '$0.01' | '$0.008' | '50,000\n+ $1 / 1,000 additional emails' | '250,000\n+ $1 / 1,000 additional emails' | 'Talk to Sales';
 
 const currencyMeta: Record<Currency, { label: string; symbol: string }> = {
   usd: { label: 'USD', symbol: '$' },
@@ -79,7 +78,7 @@ const prices: Record<Currency, Record<PaidPlan, { month: number; year: number }>
 };
 
 const planDetails: Record<PlanKey, { label: string; description: string; audience: string; features: string[] }> = {
-  free: { label: 'Free', description: 'Explore the core retention workflow.', audience: 'For teams starting their first retention loop.', features: ['2,000 reachable users', '1 active Journey', 'Basic automations', '5 lifecycle segments', '5 audience groups', '100 AI Credits / month', 'Unlimited Journey Steps', 'Unlimited push within allowance'] },
+  free: { label: 'Free', description: 'Explore the core retention workflow.', audience: 'For teams starting their first retention loop.', features: ['2,000 reachable users', '1 active Journey', 'Basic automations', '5 lifecycle segments', '5 audience groups', '100 AI Credits / month'] },
   starter: { label: 'Starter', description: 'More powerful automations for growing teams.', audience: 'For early teams building their first lifecycle engine.', features: ['5,000 reachable users', '5 active Journeys', 'Journey Conditions & Branching', '10 lifecycle segments', '10 audience groups', '500 AI Credits / month', 'Unlimited Journey Steps', 'Unlimited push within allowance'] },
   pro: { label: 'Pro', description: 'Advanced Journey orchestration at scale.', audience: 'For products running serious retention programs.', features: ['25,000 reachable users', '20 active Journeys', 'Advanced Journey Automation', '20 lifecycle segments', '20 audience groups', '2,000 AI Credits / month', 'Unlimited Journey Steps', 'Unlimited push within allowance'] },
   enterprise: { label: 'Enterprise', description: 'Custom automation, limits, and support.', audience: 'For advanced teams with custom scale and controls.', features: ['Custom reachable users', 'Custom journey limits', 'Custom integrations', 'Advanced permissions', 'SSO / SAML', 'SLA & priority support', 'Custom onboarding', 'Talk to Sales'] },
@@ -90,7 +89,7 @@ const comparisonGroups: { group: string; rows: [string, Record<PlanKey, FeatureV
     ['Reachable Users included', { free: '2,000', starter: '5,000', pro: '25,000', enterprise: 'Custom' }],
     ['Additional Reachable User', { free: 'Upgrade', starter: '$0.01', pro: '$0.008', enterprise: 'Custom' }],
     ['Custom Behavioral Events / month', { free: '50,000', starter: '250,000', pro: '1,000,000', enterprise: 'Custom' }],
-    ['Emails / month', { free: '10,000', starter: '50,000', pro: '250,000', enterprise: 'Custom' }],
+    ['Emails / month', { free: '10,000', starter: '50,000\n+ $1 / 1,000 additional emails', pro: '250,000\n+ $1 / 1,000 additional emails', enterprise: 'Custom' }],
     ['Push Notifications', { free: 'Unlimited', starter: 'Unlimited', pro: 'Unlimited', enterprise: 'Custom' }],
   ] },
   { group: 'Journeys & Automation', rows: [
@@ -153,6 +152,7 @@ const faq = [
 ];
 
 const money = (minor: number, currency: Currency) => new Intl.NumberFormat('en-US', { style: 'currency', currency: currency.toUpperCase(), maximumFractionDigits: 0 }).format(minor / 100);
+const moneyExact = (minor: number, currency: Currency) => minor === 0 ? money(0, currency) : new Intl.NumberFormat('en-US', { style: 'currency', currency: currency.toUpperCase(), minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(minor / 100);
 const yearlySaving = (plan: PaidPlan, currency: Currency) => prices[currency][plan].month * 12 - prices[currency][plan].year;
 const yearlySavingPercent = Math.round((1 - prices.usd.starter.year / (prices.usd.starter.month * 12)) * 100);
 const number = (value: number) => value.toLocaleString('en-US');
@@ -175,9 +175,8 @@ export default function PricingExperience() {
   const [currency, setCurrency] = useState<Currency>('usd');
   const [localCurrency, setLocalCurrency] = useState<Currency | null>(null);
   const [sales, setSales] = useState(false);
-  const [emailReachable, setEmailReachable] = useState(3500);
-  const [pushReachable, setPushReachable] = useState(1800);
-  const [uniqueReachable, setUniqueReachable] = useState(3500);
+  const [pushReachable, setPushReachable] = useState(2000);
+  const [emailSends, setEmailSends] = useState(10000);
   const calculatorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -194,27 +193,31 @@ export default function PricingExperience() {
   const displayCurrencies: Currency[] = localCurrency && localCurrency !== 'usd' ? ['usd', localCurrency] : ['usd'];
   const scrollToCalculator = () => calculatorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   const calculator = useMemo(() => {
-    const audience = Math.max(0, uniqueReachable || Math.max(emailReachable, pushReachable));
-    const eligible: PlanKey[] = audience <= 2000 ? ['free', 'starter', 'pro'] : ['starter', 'pro'];
+    const audience = Math.max(0, pushReachable);
+    const eligible: PlanKey[] = audience <= 2000 && emailSends <= 10000 ? ['free', 'starter', 'pro'] : ['starter', 'pro'];
     const costs = eligible.map((plan) => {
       const included = plan === 'free' ? 2000 : plan === 'starter' ? 5000 : 25000;
       const rate = plan === 'starter' ? 0.01 : plan === 'pro' ? 0.008 : 0;
       const additional = Math.max(0, audience - included);
       const overage = Math.round(additional * rate * 100);
+      const includedEmails = plan === 'free' ? 10000 : plan === 'starter' ? 50000 : 250000;
+      const emailOverage = plan === 'free' ? 0 : Math.ceil(Math.max(0, emailSends - includedEmails) / 1000) * 100;
       const baseMonthly = plan === 'free' || plan === 'enterprise' ? 0 : prices[currency][plan].month;
       const baseYearly = plan === 'free' || plan === 'enterprise' ? 0 : prices[currency][plan].year;
-      const base = interval === 'year' ? baseYearly : baseMonthly;
-      const annualTotal = base + overage * 12;
-      return { plan, included, rate, additional, overage, base, baseMonthly, baseYearly, annualTotal, monthlyEquivalent: annualTotal / 12 };
+      const monthlyTotal = baseMonthly + overage + emailOverage;
+      const annualTotal = baseYearly + (overage + emailOverage) * 12;
+      const comparisonTotal = interval === 'year' ? annualTotal : monthlyTotal;
+      return { plan, included, rate, additional, overage, includedEmails, emailOverage, baseMonthly, baseYearly, monthlyTotal, annualTotal, comparisonTotal, monthlyEquivalent: interval === 'year' ? annualTotal / 12 : monthlyTotal };
     });
-    const best = costs.sort((first, second) => first.annualTotal - second.annualTotal)[0];
-    return { audience, costs, best, freeOverLimit: audience > 2000 };
-  }, [currency, emailReachable, interval, pushReachable, uniqueReachable]);
+    const best = costs.sort((first, second) => first.comparisonTotal - second.comparisonTotal)[0];
+    return { audience, costs, best };
+  }, [currency, emailSends, interval, pushReachable]);
 
   const recommendedPlan = calculator.best?.plan ?? 'free';
   const platformCost = calculator.best ? (interval === 'year' ? calculator.best.baseYearly / 12 : calculator.best.baseMonthly) : 0;
-  const overageCost = calculator.best?.overage ?? 0;
-  const monthlyTotal = platformCost + overageCost;
+  const reachableOverageCost = calculator.best?.overage ?? 0;
+  const emailOverageCost = calculator.best?.emailOverage ?? 0;
+  const monthlyTotal = platformCost + reachableOverageCost + emailOverageCost;
 
   return (
     <SiteShell>
@@ -271,55 +274,52 @@ export default function PricingExperience() {
               <Stack alignItems="center" textAlign="center" sx={{ px: { xs: 2, md: 4 }, pt: { xs: 3.5, md: 5 }, pb: { xs: 3, md: 4 } }}>
                 <Typography fontSize={12} fontWeight={950} letterSpacing=".14em" color="#6422c5">PLAN FIT CALCULATOR</Typography>
                 <Typography variant="h2" sx={{ fontSize: { xs: 31, md: 48 }, mt: .8, letterSpacing: '-.045em' }}>Estimate your cost.</Typography>
-                <Typography color="text.secondary" sx={{ mt: 1, maxWidth: 720, fontSize: { xs: 14, md: 17 } }}>Email and push are channel breakdowns. People reachable through both count once.</Typography>
+                <Typography color="text.secondary" sx={{ mt: 1, maxWidth: 720, fontSize: { xs: 14, md: 17 } }}>Use your mobile audience and monthly email volume to find the right plan.</Typography>
               </Stack>
               <Grid container spacing={0}>
                 <Grid item xs={12} md={5} sx={{ p: { xs: 2, md: 3 }, backgroundColor: '#f3f3f5', borderRight: { md: '1px solid #e5e3e8' } }}>
                   <Stack gap={1.5}>
                     <Typography fontSize={20} fontWeight={950} sx={{ color: '#102235' }}>Your audience</Typography>
                     <Box sx={{ p: 1.5, borderRadius: 1, backgroundColor: '#e8e8ea' }}>
-                      <Typography fontSize={16} fontWeight={900} sx={{ color: '#102235' }}>Reachable users</Typography>
+                      <Typography fontSize={16} fontWeight={900} sx={{ color: '#102235' }}>Mobile push notification</Typography>
                       <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1} sx={{ mt: 1.4 }}>
-                        <Typography fontSize={13} sx={{ color: '#27313d' }}>Via email</Typography>
-                        <TextField aria-label="Reachable Users via Email" type="number" inputProps={{ min: 0 }} value={emailReachable} onChange={(event) => { const value = Math.max(0, Number(event.target.value)); setEmailReachable(value); if (uniqueReachable < value) setUniqueReachable(value); }} sx={{ width: 132, '& .MuiOutlinedInput-root': { backgroundColor: '#fff', borderRadius: .75, height: 42 } }} />
-                      </Stack>
-                      <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1} sx={{ mt: 1 }}>
-                        <Typography fontSize={13} sx={{ color: '#27313d' }}>Via push</Typography>
-                        <TextField aria-label="Reachable Users via Push" type="number" inputProps={{ min: 0 }} value={pushReachable} onChange={(event) => setPushReachable(Math.max(0, Number(event.target.value)))} sx={{ width: 132, '& .MuiOutlinedInput-root': { backgroundColor: '#fff', borderRadius: .75, height: 42 } }} />
+                        <Typography fontSize={13} sx={{ color: '#27313d' }}>Reachable users</Typography>
+                        <TextField aria-label="Mobile reachable users" type="number" inputProps={{ min: 0 }} value={pushReachable} onChange={(event) => setPushReachable(Math.max(0, Number(event.target.value)))} sx={{ width: 132, '& .MuiOutlinedInput-root': { backgroundColor: '#fff', borderRadius: .75, height: 42 } }} />
                       </Stack>
                     </Box>
                     <Box sx={{ p: 1.5, borderRadius: 1, backgroundColor: '#e8e8ea' }}>
-                      <Typography fontSize={16} fontWeight={900} sx={{ color: '#102235' }}>Unique audience</Typography>
+                      <Typography fontSize={16} fontWeight={900} sx={{ color: '#102235' }}>Email</Typography>
                       <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1} sx={{ mt: 1.4 }}>
-                        <Typography fontSize={13} sx={{ color: '#27313d' }}>Total reachable users</Typography>
-                        <TextField aria-label="Estimated Total Unique Reachable Users" type="number" inputProps={{ min: 0 }} value={uniqueReachable} onChange={(event) => setUniqueReachable(Math.max(0, Number(event.target.value)))} sx={{ width: 132, '& .MuiOutlinedInput-root': { backgroundColor: '#fff', borderRadius: .75, height: 42 } }} />
+                        <Typography fontSize={13} sx={{ color: '#27313d' }}>Number of email sends</Typography>
+                        <TextField aria-label="Number of email sends" type="number" inputProps={{ min: 0 }} value={emailSends} onChange={(event) => setEmailSends(Math.max(0, Number(event.target.value)))} sx={{ width: 132, '& .MuiOutlinedInput-root': { backgroundColor: '#fff', borderRadius: .75, height: 42 } }} />
                       </Stack>
-                      <Typography color="text.secondary" fontSize={11} sx={{ mt: 1 }}>People in both channels count once.</Typography>
                     </Box>
-                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1 }}>
-                      <Box sx={{ minHeight: 92, p: 1.4, borderRadius: 1, backgroundColor: '#e8e8ea', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}><Typography fontSize={16} fontWeight={950} sx={{ color: '#102235' }}>In-app messaging</Typography><Typography color="text.secondary" fontSize={12}>Included with PixlPush</Typography></Box>
-                      <Box sx={{ minHeight: 92, p: 1.4, borderRadius: 1, backgroundColor: '#e8e8ea', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}><Typography fontSize={16} fontWeight={950} sx={{ color: '#102235' }}>SMS / RCS</Typography><Button variant="text" size="small" onClick={() => setSales(true)} sx={{ alignSelf: 'flex-start', minWidth: 0, p: 0, textTransform: 'none', color: '#5135b9', textDecoration: 'underline', fontSize: 13 }}>Talk to sales</Button></Box>
-                    </Box>
+                    <Card sx={{ p: 1.7, borderRadius: 1.25, color: '#fff', background: 'linear-gradient(135deg,#2d145e 0%,#6422c5 100%)', boxShadow: '0 10px 20px rgba(100,34,197,.18)' }}>
+                      <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} gap={1.5}>
+                        <Box>
+                          <Typography fontSize={16} fontWeight={950}>Need more customize offer?</Typography>
+                        </Box>
+                        <Button variant="contained" onClick={() => setSales(true)} sx={{ flexShrink: 0, minHeight: 38, px: 2, borderRadius: 1, color: '#32114d', backgroundColor: '#fff', textTransform: 'none', fontWeight: 950, '&:hover': { backgroundColor: '#f5edff' } }}>Talk to sales</Button>
+                      </Stack>
+                    </Card>
                   </Stack>
                 </Grid>
                 <Grid item xs={12} md={7} sx={{ p: { xs: 2, md: 3 } }}>
                   <Stack gap={1.7}>
                     <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} gap={1}>
-                      <Box><Typography fontSize={20} fontWeight={950} sx={{ color: '#102235' }}>Your cost breakdown</Typography><Typography color="text.secondary" fontSize={13}>{number(calculator.audience)} estimated unique reachable users</Typography></Box>
-                      <Chip icon={<CalculateRounded />} label={calculator.best?.plan === 'pro' ? 'Best value at this size' : 'Most cost-effective'} sx={{ color: '#fff', backgroundColor: '#6422c5', fontWeight: 900 }} />
+                      <Typography fontSize={20} fontWeight={950} sx={{ color: '#102235' }}>Your cost breakdown</Typography>
                     </Stack>
-                    {calculator.freeOverLimit && <Alert severity="warning" sx={{ borderRadius: 2 }}>Free supports up to 2,000 Reachable Users and does not create automatic overage charges.</Alert>}
+                    {recommendedPlan === 'free' && <Alert severity="warning" sx={{ borderRadius: 2 }}>Free includes up to 2,000 Reachable Users and 10,000 email sends per month. Upgrade to continue beyond those limits.</Alert>}
                     <Typography fontSize={13} fontWeight={900} fontStyle="italic" sx={{ color: '#253342' }}>{planDetails[recommendedPlan].label} plan</Typography>
                     <Stack gap={1.15} sx={{ color: '#27313d' }}>
                       <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontSize={14}>Platform cost</Typography><Typography fontSize={14} fontWeight={700}>{money(platformCost, currency)}</Typography></Stack>
-                      <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontSize={14}>Additional reachable users</Typography><Typography fontSize={14} fontWeight={700}>{overageCost ? money(overageCost, currency) : 'Included'}</Typography></Stack>
-                      <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontSize={14}>Email</Typography><Typography fontSize={14} color="text.secondary">Included with {planDetails[recommendedPlan].label}</Typography></Stack>
-                      <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontSize={14}>Push notifications</Typography><Typography fontSize={14} color="text.secondary">Included with {planDetails[recommendedPlan].label}</Typography></Stack>
-                      <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontSize={14}>In-app messaging</Typography><Typography fontSize={14} color="text.secondary">Included with PixlPush</Typography></Stack>
-                      <Stack direction="row" justifyContent="space-between" alignItems="center" gap={2}><Typography fontSize={14}>SMS / RCS</Typography><Button variant="text" size="small" onClick={() => setSales(true)} sx={{ minWidth: 0, p: 0, textTransform: 'none', color: '#6422c5', textDecoration: 'underline', fontSize: 14 }}>Talk to sales</Button></Stack>
+                      <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontSize={14}>Reachable users</Typography><Typography fontSize={14} fontWeight={700}>{number(pushReachable)}</Typography></Stack>
+                      <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontSize={14}>Additional reachable users</Typography><Typography fontSize={14} fontWeight={700}>{moneyExact(reachableOverageCost, currency)}</Typography></Stack>
+                      <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontSize={14}>Push notifications</Typography><Typography fontSize={14} fontWeight={700} color="#16814d">Unlimited</Typography></Stack>
+                      <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontSize={14}>Email sends</Typography><Typography fontSize={14} fontWeight={700}>{emailOverageCost ? moneyExact(emailOverageCost, currency) : `Included with ${planDetails[recommendedPlan].label}`}</Typography></Stack>
                     </Stack>
                     <Divider />
-                    <Stack direction="row" justifyContent="space-between" alignItems="baseline" gap={2}><Typography fontSize={15} fontWeight={950} sx={{ color: '#102235' }}>Estimated cost per month</Typography><Typography fontSize={{ xs: 27, md: 34 }} fontWeight={950} sx={{ color: '#102235' }}>{money(monthlyTotal, currency)}<Typography component="span" color="text.secondary" fontSize={12}> / month equivalent</Typography></Typography></Stack>
+                    <Stack direction="row" justifyContent="space-between" alignItems="baseline" gap={2}><Typography fontSize={15} fontWeight={950} sx={{ color: '#102235' }}>Estimated cost per month</Typography><Typography fontSize={{ xs: 27, md: 34 }} fontWeight={950} sx={{ color: '#102235' }}>{moneyExact(monthlyTotal, currency)}<Typography component="span" color="text.secondary" fontSize={12}> / month equivalent</Typography></Typography></Stack>
                     <Typography color="text.secondary" fontSize={11}>Additional Reachable Users are billed monthly. Annual subscription discounts apply to the base plan, not usage overage.</Typography>
                   </Stack>
                 </Grid>
@@ -350,7 +350,7 @@ function PricingCard({ plan, interval, currency, authenticated, recommended, onS
   const priceSurface = recommended ? '#f1eaff' : '#faf9fc';
   return (
     <Grid item xs={12} sm={6} lg={3}>
-      <Card sx={{ position: 'relative', mt: recommended ? 1.5 : 0, height: '100%', overflow: 'visible', borderRadius: 2, border: recommended ? '2px solid #6422c5' : '1px solid #ded5e8', borderTop: `4px solid ${accent}`, boxShadow: recommended ? '0 14px 28px rgba(100,34,197,.15)' : '0 8px 18px rgba(69,30,91,.05)', background: surface, transition: 'transform .2s ease, box-shadow .2s ease', '&:hover': { transform: 'translateY(-3px)', boxShadow: recommended ? '0 18px 34px rgba(100,34,197,.2)' : '0 14px 26px rgba(69,30,91,.1)' } }}>
+      <Card sx={{ position: 'relative', mt: 0, height: '100%', overflow: 'visible', borderRadius: 2, border: recommended ? '2px solid #6422c5' : '1px solid #ded5e8', borderTop: `4px solid ${accent}`, boxShadow: recommended ? '0 14px 28px rgba(100,34,197,.15)' : '0 8px 18px rgba(69,30,91,.05)', background: surface, transition: 'transform .2s ease, box-shadow .2s ease', '&:hover': { transform: 'translateY(-3px)', boxShadow: recommended ? '0 18px 34px rgba(100,34,197,.2)' : '0 14px 26px rgba(69,30,91,.1)' } }}>
         {recommended && <Chip label="RECOMMENDED" size="small" sx={{ position: 'absolute', zIndex: 2, top: -16, left: '50%', transform: 'translateX(-50%)', height: 24, px: .8, borderRadius: .5, color: '#fff', backgroundColor: '#6422c5', fontSize: 10, fontWeight: 950, letterSpacing: '.08em', boxShadow: '0 5px 12px rgba(100,34,197,.22)' }} />}
         <Stack sx={{ p: { xs: 2.3, md: 2.5 }, pt: 2.25, height: '100%' }}>
           <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap={1}>
@@ -397,7 +397,7 @@ function ComparisonTable({ interval, currency, authenticated, onSales }: { inter
         </TableCell>
         {(['free', 'starter', 'pro', 'enterprise'] as PlanKey[]).map((key) => (
           <TableCell align="center" key={key} sx={{ px: 1.2, py: 1.35, color: statusColor(values[key]), fontSize: 13, fontWeight: 800, verticalAlign: 'middle' }}>
-            {values[key] === 'Included' ? <CheckCircleRounded aria-label="Included" sx={{ color: '#2b9862', fontSize: 19, verticalAlign: 'middle' }} /> : values[key]}
+            {values[key] === 'Included' ? <CheckCircleRounded aria-label="Included" sx={{ color: '#2b9862', fontSize: 19, verticalAlign: 'middle' }} /> : <Typography component="span" sx={{ whiteSpace: 'pre-line', fontSize: 'inherit', fontWeight: 'inherit' }}>{values[key]}</Typography>}
           </TableCell>
         ))}
       </TableRow>
