@@ -3,11 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AutoAwesomeRounded,
-  ArrowForwardRounded,
   CalculateRounded,
   CheckCircleRounded,
   CloseRounded,
-  CompareArrowsRounded,
   ExpandMoreRounded,
   InfoOutlined,
   ShieldRounded,
@@ -176,7 +174,6 @@ export default function PricingExperience() {
   const [interval, setInterval] = useState<BillingInterval>('month');
   const [currency, setCurrency] = useState<Currency>('usd');
   const [localCurrency, setLocalCurrency] = useState<Currency | null>(null);
-  const [comparisonOpen, setComparisonOpen] = useState(false);
   const [sales, setSales] = useState(false);
   const [emailReachable, setEmailReachable] = useState(3500);
   const [pushReachable, setPushReachable] = useState(1800);
@@ -260,15 +257,13 @@ export default function PricingExperience() {
             </Box>
           </Box>
         </Stack>
-        <Alert icon={<ShieldRounded />} severity="info" sx={{ mb: 3, borderRadius: 2, color: '#245c7b', backgroundColor: '#e8f7ff', '& .MuiAlert-icon': { color: '#258fca' } }}>Prices are exclusive of applicable taxes. Taxes are calculated at checkout based on your billing country.</Alert>
         <Grid container spacing={2.5} alignItems="stretch">
           <PricingCard plan="free" interval={interval} currency={currency} authenticated={isAuthenticated} onEstimate={scrollToCalculator} />
           <PricingCard plan="starter" interval={interval} currency={currency} authenticated={isAuthenticated} recommended onEstimate={scrollToCalculator} />
           <PricingCard plan="pro" interval={interval} currency={currency} authenticated={isAuthenticated} onEstimate={scrollToCalculator} />
           <PricingCard plan="enterprise" interval={interval} currency={currency} authenticated={isAuthenticated} onSales={() => setSales(true)} onEstimate={scrollToCalculator} />
         </Grid>
-        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} gap={2} sx={{ mt: 3, p: 1.8, borderRadius: 2, border: '1px solid #ded5e8', backgroundColor: '#fff' }}><Stack direction="row" gap={1.25} alignItems="center"><Box sx={{ width: 34, height: 34, display: 'grid', placeItems: 'center', borderRadius: 1.2, color: '#6422c5', backgroundColor: '#eee6ff' }}><CompareArrowsRounded fontSize="small" /></Box><Box><Typography fontWeight={900}>Need every detail before you decide?</Typography><Typography color="text.secondary" fontSize={12}>Compare the complete approved plan matrix by category.</Typography></Box></Stack><Button variant="outlined" onClick={() => setComparisonOpen((open) => !open)} endIcon={<ArrowForwardRounded />} sx={{ textTransform: 'none', fontWeight: 900, whiteSpace: 'nowrap', borderRadius: 1.5 }}>{comparisonOpen ? 'Hide full comparison' : 'Compare all features'}</Button></Stack>
-        {comparisonOpen && <ComparisonTable interval={interval} currency={currency} authenticated={isAuthenticated} onSales={() => setSales(true)} />}
+        <ComparisonTable interval={interval} currency={currency} authenticated={isAuthenticated} onSales={() => setSales(true)} />
 
         <Box ref={calculatorRef} sx={{ mt: 6, scrollMarginTop: 28 }}>
           <Box sx={{ p: { xs: 1, md: 2.25 }, borderRadius: 1.75, background: 'linear-gradient(135deg,#241452 0%,#5926b9 56%,#f27c68 100%)', boxShadow: '0 18px 40px rgba(82,38,150,.18)' }}>
@@ -392,16 +387,18 @@ function PricingCard({ plan, interval, currency, authenticated, recommended, onS
 function ComparisonTable({ interval, currency, authenticated, onSales }: { interval: BillingInterval; currency: Currency; authenticated: boolean; onSales: () => void }) {
   const rows = comparisonGroups.flatMap((category) => [
     <TableRow key={`${category.group}-header`}>
-      <TableCell colSpan={5} sx={{ py: 1.2, color: '#6422c5', backgroundColor: '#f5efff', fontWeight: 950, letterSpacing: '.04em' }}>{category.group}</TableCell>
+      <TableCell colSpan={5} sx={{ py: 1.6, px: 2, color: '#241536', backgroundColor: '#f1e8ff', fontSize: 14, fontWeight: 950, letterSpacing: '.02em' }}>{category.group}</TableCell>
     </TableRow>,
-    ...category.rows.map(([label, values]) => (
-      <TableRow key={`${category.group}-${label}`} hover>
-        <TableCell sx={{ fontSize: 12, fontWeight: 700 }}>
+    ...category.rows.map(([label, values], rowIndex) => (
+      <TableRow key={`${category.group}-${label}`} sx={{ backgroundColor: rowIndex % 2 ? '#f3f3f3' : '#fff', '&:hover': { backgroundColor: '#eee9f6' } }}>
+        <TableCell sx={{ px: 2, py: 1.35, fontSize: 13, fontWeight: 700, color: '#233247', verticalAlign: 'top' }}>
           {label}
-          {label === 'Push Notifications' && <Typography component="span" display="block" color="text.secondary" fontSize={10} fontWeight={400}>Unlimited push notifications within your Reachable User allowance, subject to fair-use and abuse-prevention policies.</Typography>}
+          {label === 'Push Notifications' && <Typography component="span" display="block" color="text.secondary" fontSize={11} lineHeight={1.4} fontWeight={400} sx={{ mt: .35 }}>Unlimited push notifications within your Reachable User allowance, subject to fair-use and abuse-prevention policies.</Typography>}
         </TableCell>
         {(['free', 'starter', 'pro', 'enterprise'] as PlanKey[]).map((key) => (
-          <TableCell align="center" key={key} sx={{ color: statusColor(values[key]), fontSize: 12, fontWeight: 800 }}>{values[key]}</TableCell>
+          <TableCell align="center" key={key} sx={{ px: 1.2, py: 1.35, color: statusColor(values[key]), fontSize: 13, fontWeight: 800, verticalAlign: 'middle' }}>
+            {values[key] === 'Included' ? <CheckCircleRounded aria-label="Included" sx={{ color: '#2b9862', fontSize: 19, verticalAlign: 'middle' }} /> : values[key]}
+          </TableCell>
         ))}
       </TableRow>
     )),
@@ -425,17 +422,17 @@ function ComparisonTable({ interval, currency, authenticated, onSales }: { inter
         <Typography color="text.secondary" fontSize={13} sx={{ mt: .7 }}>Compare the features and benefits of each PixlPush plan.</Typography>
         <Chip icon={<InfoOutlined />} label="Included · Limited · Not included · Custom · Upgrade" size="small" sx={{ mt: 1.4, fontWeight: 800, color: '#5d3a8c', backgroundColor: '#f1eaff' }} />
       </Box>
-      <TableContainer component={Card} sx={{ borderRadius: 1.5, border: '1px solid #ded5e8', boxShadow: '0 14px 34px rgba(69,30,91,.06)', backgroundColor: '#fff' }}>
-        <Table size="small" sx={{ minWidth: 840 }}>
+      <TableContainer component={Card} sx={{ borderRadius: 1.5, border: '1px solid #ded5e8', boxShadow: '0 14px 34px rgba(69,30,91,.06)', backgroundColor: '#fff', overflowX: 'auto' }}>
+        <Table size="medium" sx={{ minWidth: 1080 }}>
           <TableHead>
             <TableRow sx={{ '& th': { backgroundColor: '#fff', color: '#102235', borderBottom: '1px solid #ded5e8', position: 'sticky', top: 0, zIndex: 2 } }}>
-              <TableCell sx={{ minWidth: 260, verticalAlign: 'bottom', pb: 2.2 }}><Typography fontSize={13} fontWeight={900}>Feature</Typography></TableCell>
+              <TableCell sx={{ minWidth: 320, verticalAlign: 'bottom', pb: 2.2, px: 2 }}><Typography fontSize={14} fontWeight={900}>Feature</Typography></TableCell>
               {(['free', 'starter', 'pro', 'enterprise'] as PlanKey[]).map((plan) => {
                 const action = planActions[plan];
-                return <TableCell key={plan} align="center" sx={{ minWidth: 138, py: 1.5, backgroundColor: plan === 'starter' ? '#faf6ff' : '#fff', borderLeft: '1px solid #f0ebf4' }}>
-                  <Typography fontSize={15} fontWeight={950} sx={{ color: '#241536' }}>{planDetails[plan].label}</Typography>
-                  <Typography color="text.secondary" fontSize={10} sx={{ mt: .35, mb: 1 }}>{planPrice(plan)}</Typography>
-                  <Button variant={plan === 'starter' ? 'contained' : 'outlined'} size="small" href={action.href} onClick={action.onClick} sx={{ minWidth: 112, minHeight: 30, px: 1, borderRadius: .7, textTransform: 'none', fontSize: 10, fontWeight: 900, whiteSpace: 'nowrap' }}>{action.label}</Button>
+                return <TableCell key={plan} align="center" sx={{ minWidth: 175, py: 1.8, px: 1.2, backgroundColor: plan === 'starter' ? '#faf6ff' : '#fff', borderLeft: '1px solid #f0ebf4' }}>
+                  <Typography fontSize={16} fontWeight={950} sx={{ color: '#241536' }}>{planDetails[plan].label}</Typography>
+                  <Typography color="text.secondary" fontSize={11} sx={{ mt: .4, mb: 1.2 }}>{planPrice(plan)}</Typography>
+                  <Button variant={plan === 'starter' ? 'contained' : 'outlined'} size="small" href={action.href} onClick={action.onClick} sx={{ minWidth: 140, minHeight: 36, px: 1.2, borderRadius: .7, textTransform: 'none', fontSize: 11, fontWeight: 900, whiteSpace: 'nowrap' }}>{action.label}</Button>
                 </TableCell>;
               })}
             </TableRow>
