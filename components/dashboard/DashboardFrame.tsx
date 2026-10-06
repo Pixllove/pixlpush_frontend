@@ -155,7 +155,7 @@ export default function DashboardFrame({
           >
             <Button
               component="a"
-              href="/dashboard/billing"
+              href="/pricing"
               startIcon={<WorkspacePremiumRounded fontSize="small" />}
               sx={{
                 display: { xs: "none", sm: "inline-flex" },
