@@ -515,3 +515,62 @@ export interface SavedCard extends BillingPaymentMethod {
   name: string | null;
   isDefault: boolean;
 }
+
+/** Journey Automations: mirrors the backend's /journeys contract (see backend.md). */
+export type JourneyDisplayStatus = "running" | "scheduled" | "draft" | "paused" | "archived";
+
+/** One step as the API stores it. `meta` is the builder's own settings, returned unchanged. */
+export interface JourneyStep {
+  id?: string;
+  key: string;
+  type: "push" | "email" | "delay" | "condition" | "repeat" | "exit";
+  templateId?: string;
+  /** Email steps: replace the template's subject / sender name. */
+  subject?: string;
+  fromName?: string;
+  /** Delay: "HH:MM" on a clock `utcOffset` minutes east of UTC. */
+  time?: string;
+  utcOffset?: number;
+  /** Repeat: how many extra runs. */
+  count?: number;
+  amount?: number;
+  unit?: "minutes" | "hours" | "days";
+  until?: string;
+  condition?: Record<string, unknown>;
+  next?: string | null;
+  onTrue?: string | null;
+  onFalse?: string | null;
+  meta?: Record<string, unknown>;
+  stats?: { waiting?: number; completed?: number; exitedEarly?: number; sent?: number; opened?: number; clicked?: number; paused?: number; deleted?: number };
+  /** Message steps: what the chosen template says. */
+  template?: { name: string; title?: string; body?: string; subject?: string } | null;
+}
+
+export interface JourneyInput {
+  name: string;
+  trigger: "audience" | "event";
+  entryEvent?: string | null;
+  audience: { allUsers?: boolean; lifecycleSegmentIds?: string[]; audienceGroupIds?: string[] };
+  exitOnAudienceLeave?: boolean;
+  exitRules?: string[];
+  steps: JourneyStep[];
+}
+
+export interface Journey extends JourneyInput {
+  id: string;
+  status: "draft" | "active" | "paused" | "archived";
+  displayStatus: JourneyDisplayStatus;
+  messageType: "push" | "email" | "mixed" | null;
+  createdAt: string;
+  activatedAt: string | null;
+  participants?: Record<string, number>;
+  entrance?: { entered: number; unreachable: number };
+}
+
+/** A row of GET /journeys. */
+export interface JourneyListItem extends Omit<Journey, "steps"> {
+  started: number;
+  active: number;
+  completed: number;
+  exited: number;
+}

@@ -1222,3 +1222,27 @@ html[data-email-editor] body::before { content: ""; position: fixed; inset: 0; z
 @keyframes project-empty-float { 50% { transform: translateY(-6px); } }
 @media (prefers-reduced-motion: reduce) { .project-empty-icon { animation: none; } }
 @media (max-width: 700px) { .project-empty { padding: 48px 20px 28px; border-radius: 22px; } .project-empty-steps { grid-template-columns: 1fr; margin-top: 36px; } }
+
+/* Journey list: one colour per status. */
+.journey-status-chip { font-size: 10px !important; font-weight: 800 !important; }
+.journey-status-chip.running { color: #15965e !important; background: #e8f8ef !important; }
+.journey-status-chip.draft { color: #a16207 !important; background: #fef3c7 !important; }
+.journey-status-chip.scheduled { color: #2563c9 !important; background: #e6f0ff !important; }
+.journey-status-chip.paused { color: #c2410c !important; background: #ffedd5 !important; }
+.journey-status-chip.archived { color: #6b6378 !important; background: #eeebf2 !important; }
+
+/* Journey list: the pause / resume switch. A pill track with a thumb that slides and stretches on press. */
+.journey-switch.MuiSwitch-root { width: 40px; height: 22px; padding: 0; margin-right: 8px; overflow: visible; }
+.journey-switch .MuiSwitch-switchBase { padding: 3px; transition: transform .28s cubic-bezier(.3,1.4,.5,1); }
+.journey-switch .MuiSwitch-switchBase:hover { background: transparent; }
+.journey-switch .MuiSwitch-switchBase.Mui-checked { transform: translateX(18px); color: #fff; }
+.journey-switch .MuiSwitch-thumb { width: 16px; height: 16px; background: #fff; box-shadow: 0 1px 3px rgba(22,18,29,.28), 0 0 0 .5px rgba(22,18,29,.06); transition: width .18s ease; }
+.journey-switch .MuiSwitch-switchBase:active .MuiSwitch-thumb { width: 20px; }
+.journey-switch .MuiSwitch-switchBase.Mui-checked:active { transform: translateX(14px); }
+.journey-switch .MuiSwitch-track { border-radius: 999px; background: #d9d4e2; opacity: 1; transition: background-color .25s ease, box-shadow .25s ease; }
+.journey-switch .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track { background: #1fae6b; opacity: 1; }
+.journey-switch .MuiSwitch-switchBase.Mui-focusVisible + .MuiSwitch-track { box-shadow: 0 0 0 3px rgba(85,23,184,.25); }
+.journey-switch:hover .MuiSwitch-switchBase:not(.Mui-disabled) + .MuiSwitch-track { box-shadow: 0 0 0 3px rgba(31,174,107,.14); }
+.journey-switch .MuiSwitch-switchBase.Mui-disabled + .MuiSwitch-track { background: #ece9f1; opacity: 1; }
+.journey-switch .MuiSwitch-switchBase.Mui-disabled .MuiSwitch-thumb { box-shadow: 0 1px 2px rgba(22,18,29,.12); }
+@media (prefers-reduced-motion: reduce) { .journey-switch .MuiSwitch-switchBase, .journey-switch .MuiSwitch-thumb, .journey-switch .MuiSwitch-track { transition: none; } }
