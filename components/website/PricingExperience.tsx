@@ -281,10 +281,10 @@ export default function PricingExperience() {
                   <Stack gap={1.5}>
                     <Typography fontSize={20} fontWeight={950} sx={{ color: '#102235' }}>Your audience</Typography>
                     <Box sx={{ p: 1.5, borderRadius: 1, backgroundColor: '#e8e8ea' }}>
-                      <Typography fontSize={16} fontWeight={900} sx={{ color: '#102235' }}>Mobile push notification</Typography>
+                      <Typography fontSize={16} fontWeight={900} sx={{ color: '#102235' }}>Reachable users</Typography>
                       <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1} sx={{ mt: 1.4 }}>
-                        <Typography fontSize={13} sx={{ color: '#27313d' }}>Reachable users</Typography>
-                        <TextField aria-label="Mobile reachable users" type="number" inputProps={{ min: 0 }} value={pushReachable} onChange={(event) => setPushReachable(Math.max(0, Number(event.target.value)))} sx={{ width: 132, '& .MuiOutlinedInput-root': { backgroundColor: '#fff', borderRadius: .75, height: 42 } }} />
+                        <Typography fontSize={13} sx={{ color: '#27313d' }}>Reachable users for Email and Push</Typography>
+                        <TextField aria-label="Reachable users for Email and Push" type="number" inputProps={{ min: 0 }} value={pushReachable} onChange={(event) => setPushReachable(Math.max(0, Number(event.target.value)))} sx={{ width: 132, '& .MuiOutlinedInput-root': { backgroundColor: '#fff', borderRadius: .75, height: 42 } }} />
                       </Stack>
                     </Box>
                     <Box sx={{ p: 1.5, borderRadius: 1, backgroundColor: '#e8e8ea' }}>
