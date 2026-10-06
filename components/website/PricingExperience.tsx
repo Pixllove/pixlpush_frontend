@@ -5,13 +5,12 @@ import {
   AutoAwesomeRounded,
   ArrowForwardRounded,
   CalculateRounded,
-  CheckRounded,
+  CheckCircleRounded,
   CloseRounded,
   CompareArrowsRounded,
   ExpandMoreRounded,
   InfoOutlined,
   ShieldRounded,
-  StarRounded,
 } from '@mui/icons-material';
 import {
   Accordion,
@@ -43,7 +42,7 @@ import { SiteShell } from './SiteShell';
 import { useCurrentUser } from '@/hooks/auth/use-current-user';
 import type { BillingInterval, PaidPlan } from '@/types/project';
 
-type Currency = 'usd' | 'eur' | 'aed';
+type Currency = 'usd' | 'eur' | 'aed' | 'pkr';
 type PlanKey = 'free' | PaidPlan | 'enterprise';
 type FeatureValue = 'Included' | 'Limited' | 'Not included' | 'Custom' | 'Upgrade' | 'Basic' | 'Advanced' | 'Partial' | 'Priority' | 'Optional' | 'Unlimited' | 'Multiple' | '1' | '3' | '5' | '10' | '20' | '2,000' | '5,000' | '25,000' | '50,000' | '10,000' | '250,000' | '1,000,000' | '100' | '500' | '$0.01' | '$0.008' | 'Talk to Sales';
 
@@ -51,12 +50,34 @@ const currencyMeta: Record<Currency, { label: string; symbol: string }> = {
   usd: { label: 'USD', symbol: '$' },
   eur: { label: 'EUR', symbol: '€' },
   aed: { label: 'AED', symbol: 'AED' },
+  pkr: { label: 'PKR', symbol: 'PKR' },
 };
+
+const euroRegions = new Set(['AT', 'BE', 'BG', 'CY', 'DE', 'EE', 'ES', 'FI', 'FR', 'GR', 'HR', 'IE', 'IT', 'LT', 'LU', 'LV', 'MT', 'NL', 'PT', 'SI', 'SK']);
+
+function detectLocalCurrency(): Currency | null {
+  if (typeof window === 'undefined') return null;
+  const locale = window.navigator.language || '';
+  const region = (() => {
+    try {
+      return new Intl.Locale(locale).region?.toUpperCase();
+    } catch {
+      return undefined;
+    }
+  })();
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+  if (region === 'AE' || timezone === 'Asia/Dubai') return 'aed';
+  if (region === 'PK' || timezone === 'Asia/Karachi') return 'pkr';
+  if (region && euroRegions.has(region)) return 'eur';
+  return null;
+}
 
 const prices: Record<Currency, Record<PaidPlan, { month: number; year: number }>> = {
   usd: { starter: { month: 2900, year: 29000 }, pro: { month: 7900, year: 79000 } },
   eur: { starter: { month: 2700, year: 27000 }, pro: { month: 7300, year: 73000 } },
   aed: { starter: { month: 10700, year: 107000 }, pro: { month: 29000, year: 290000 } },
+  // Localized display estimates for Pakistan; configure matching server-side Stripe prices before enabling PKR checkout.
+  pkr: { starter: { month: 807200, year: 8072000 }, pro: { month: 2187760, year: 21877600 } },
 };
 
 const planDetails: Record<PlanKey, { label: string; description: string; audience: string; features: string[] }> = {
@@ -92,6 +113,7 @@ const comparisonGroups: { group: string; rows: [string, Record<PlanKey, FeatureV
     ['Audience Groups', { free: '5', starter: '10', pro: '20', enterprise: 'Custom' }],
     ['Basic User Properties', { free: 'Included', starter: 'Included', pro: 'Included', enterprise: 'Included' }],
     ['Custom User Properties', { free: 'Limited', starter: 'Included', pro: 'Included', enterprise: 'Custom' }],
+    ['Custom Behavioral Event Targeting', { free: 'Not included', starter: 'Included', pro: 'Included', enterprise: 'Custom' }],
     ['CSV Import', { free: 'Limited', starter: 'Included', pro: 'Included', enterprise: 'Included' }],
   ] },
   { group: 'Campaigns & Channels', rows: [
@@ -134,6 +156,7 @@ const faq = [
 
 const money = (minor: number, currency: Currency) => new Intl.NumberFormat('en-US', { style: 'currency', currency: currency.toUpperCase(), maximumFractionDigits: 0 }).format(minor / 100);
 const yearlySaving = (plan: PaidPlan, currency: Currency) => prices[currency][plan].month * 12 - prices[currency][plan].year;
+const yearlySavingPercent = Math.round((1 - prices.usd.starter.year / (prices.usd.starter.month * 12)) * 100);
 const number = (value: number) => value.toLocaleString('en-US');
 
 function planHref(plan: PaidPlan, interval: BillingInterval, currency: Currency, authenticated: boolean) {
@@ -152,6 +175,7 @@ export default function PricingExperience() {
   const { isAuthenticated } = useCurrentUser();
   const [interval, setInterval] = useState<BillingInterval>('month');
   const [currency, setCurrency] = useState<Currency>('usd');
+  const [localCurrency, setLocalCurrency] = useState<Currency | null>(null);
   const [comparisonOpen, setComparisonOpen] = useState(false);
   const [sales, setSales] = useState(false);
   const [emailReachable, setEmailReachable] = useState(3500);
@@ -160,14 +184,17 @@ export default function PricingExperience() {
   const calculatorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const detected = detectLocalCurrency();
+    setLocalCurrency(detected);
     const stored = window.localStorage.getItem('pixlpush-pricing-currency');
-    if (stored === 'usd' || stored === 'eur' || stored === 'aed') setCurrency(stored);
+    if (stored === 'usd' || (detected && stored === detected)) setCurrency(stored as Currency);
   }, []);
 
   const chooseCurrency = (value: Currency) => {
     setCurrency(value);
     window.localStorage.setItem('pixlpush-pricing-currency', value);
   };
+  const displayCurrencies: Currency[] = localCurrency && localCurrency !== 'usd' ? ['usd', localCurrency] : ['usd'];
   const scrollToCalculator = () => calculatorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   const calculator = useMemo(() => {
     const audience = Math.max(0, uniqueReachable || Math.max(emailReachable, pushReachable));
@@ -221,14 +248,14 @@ export default function PricingExperience() {
             <Typography variant="h2" sx={{ fontSize: { xs: 30, md: 40 }, mt: .6, letterSpacing: '-.035em' }}>Choose the right room to grow.</Typography>
             <Typography color="text.secondary" sx={{ mt: .7 }}>Every Project starts independently. Change plans as your audience changes.</Typography>
           </Box>
-          <Box sx={{ position: 'relative', minHeight: 52, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: 'center', justifyContent: 'center', gap: { xs: 1, md: 0 } }}>
+          <Box sx={{ position: 'relative', minHeight: 52, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: { xs: 'stretch', md: 'center' }, justifyContent: 'space-between', gap: { xs: 1.5, md: 2 } }}>
             <Box className="workspace-tabs" sx={{ width: 'fit-content', maxWidth: '100%', overflowX: 'auto' }} aria-label="Billing interval">
-              <Button onClick={() => setInterval('month')} className={interval === 'month' ? 'workspace-tab active' : 'workspace-tab'}>Monthly<Chip label="Flexible" size="small" /></Button>
-              <Button onClick={() => setInterval('year')} className={interval === 'year' ? 'workspace-tab active' : 'workspace-tab'}>Yearly<Chip label="2 months free" size="small" /></Button>
+              <Button onClick={() => setInterval('month')} className={interval === 'month' ? 'workspace-tab active' : 'workspace-tab'}>Monthly</Button>
+              <Button onClick={() => setInterval('year')} className={interval === 'year' ? 'workspace-tab active' : 'workspace-tab'}>Yearly<Chip label={`Save ${yearlySavingPercent}%`} size="small" /></Button>
             </Box>
-            <Box sx={{ position: { xs: 'static', md: 'absolute' }, right: { md: 0 }, mt: { xs: 1.5, md: 0 } }}>
+            <Box sx={{ alignSelf: { xs: 'flex-end', md: 'auto' } }}>
               <Box className="workspace-tabs" sx={{ p: .5 }} aria-label="Currency">
-                {(['usd', 'eur', 'aed'] as Currency[]).map((value) => <Button key={value} onClick={() => chooseCurrency(value)} className={currency === value ? 'workspace-tab active' : 'workspace-tab'} sx={{ minWidth: 48 }}>{currencyMeta[value].label}</Button>)}
+                {displayCurrencies.map((value) => <Button key={value} onClick={() => chooseCurrency(value)} className={currency === value ? 'workspace-tab active' : 'workspace-tab'} sx={{ minWidth: 54 }}>{currencyMeta[value].label}</Button>)}
               </Box>
             </Box>
           </Box>
@@ -241,7 +268,7 @@ export default function PricingExperience() {
           <PricingCard plan="enterprise" interval={interval} currency={currency} authenticated={isAuthenticated} onSales={() => setSales(true)} onEstimate={scrollToCalculator} />
         </Grid>
         <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} gap={2} sx={{ mt: 3, p: 1.8, borderRadius: 2, border: '1px solid #ded5e8', backgroundColor: '#fff' }}><Stack direction="row" gap={1.25} alignItems="center"><Box sx={{ width: 34, height: 34, display: 'grid', placeItems: 'center', borderRadius: 1.2, color: '#6422c5', backgroundColor: '#eee6ff' }}><CompareArrowsRounded fontSize="small" /></Box><Box><Typography fontWeight={900}>Need every detail before you decide?</Typography><Typography color="text.secondary" fontSize={12}>Compare the complete approved plan matrix by category.</Typography></Box></Stack><Button variant="outlined" onClick={() => setComparisonOpen((open) => !open)} endIcon={<ArrowForwardRounded />} sx={{ textTransform: 'none', fontWeight: 900, whiteSpace: 'nowrap', borderRadius: 1.5 }}>{comparisonOpen ? 'Hide full comparison' : 'Compare all features'}</Button></Stack>
-        {comparisonOpen && <ComparisonTable />}
+        {comparisonOpen && <ComparisonTable interval={interval} currency={currency} authenticated={isAuthenticated} onSales={() => setSales(true)} />}
 
         <Box ref={calculatorRef} sx={{ mt: 6, scrollMarginTop: 28 }}>
           <Box sx={{ p: { xs: 1, md: 2.25 }, borderRadius: 1.75, background: 'linear-gradient(135deg,#241452 0%,#5926b9 56%,#f27c68 100%)', boxShadow: '0 18px 40px rgba(82,38,150,.18)' }}>
@@ -324,44 +351,45 @@ function PricingCard({ plan, interval, currency, authenticated, recommended, onS
   const href = isPaid ? planHref(plan, interval, currency, authenticated) : '/get-started?plan=free';
   const accent = plan === 'enterprise' ? '#e27b4f' : recommended ? '#6422c5' : '#7e5bb7';
   const tag = plan === 'free' ? 'Start simple' : plan === 'starter' ? 'For growing teams' : plan === 'pro' ? 'For scaling teams' : 'Tailored partnership';
-  const surface = plan === 'free' ? '#eef7ff' : plan === 'starter' ? '#f4edff' : plan === 'pro' ? '#fff1e8' : '#fff7e8';
-  const priceSurface = plan === 'free' ? '#e3f1ff' : plan === 'starter' ? '#ede2ff' : plan === 'pro' ? '#ffe4d5' : '#ffedc8';
+  const surface = '#fff';
+  const priceSurface = recommended ? '#f1eaff' : '#faf9fc';
   return (
     <Grid item xs={12} sm={6} lg={3}>
-      <Card sx={{ position: 'relative', height: '100%', overflow: 'hidden', borderRadius: 2, border: recommended ? '1px solid #6422c5' : '1px solid #ded5e8', borderTop: `4px solid ${accent}`, boxShadow: recommended ? '0 14px 28px rgba(100,34,197,.15)' : '0 8px 18px rgba(69,30,91,.05)', background: surface, transition: 'transform .2s ease, box-shadow .2s ease', '&:hover': { transform: 'translateY(-3px)', boxShadow: recommended ? '0 18px 34px rgba(100,34,197,.2)' : '0 14px 26px rgba(69,30,91,.1)' } }}>
+      <Card sx={{ position: 'relative', mt: recommended ? 1.5 : 0, height: '100%', overflow: 'visible', borderRadius: 2, border: recommended ? '2px solid #6422c5' : '1px solid #ded5e8', borderTop: `4px solid ${accent}`, boxShadow: recommended ? '0 14px 28px rgba(100,34,197,.15)' : '0 8px 18px rgba(69,30,91,.05)', background: surface, transition: 'transform .2s ease, box-shadow .2s ease', '&:hover': { transform: 'translateY(-3px)', boxShadow: recommended ? '0 18px 34px rgba(100,34,197,.2)' : '0 14px 26px rgba(69,30,91,.1)' } }}>
+        {recommended && <Chip label="RECOMMENDED" size="small" sx={{ position: 'absolute', zIndex: 2, top: -16, left: '50%', transform: 'translateX(-50%)', height: 24, px: .8, borderRadius: .5, color: '#fff', backgroundColor: '#6422c5', fontSize: 10, fontWeight: 950, letterSpacing: '.08em', boxShadow: '0 5px 12px rgba(100,34,197,.22)' }} />}
         <Stack sx={{ p: { xs: 2.3, md: 2.5 }, pt: 2.25, height: '100%' }}>
-          {recommended && <Typography fontSize={10} fontWeight={950} letterSpacing='.13em' color='#6422c5' sx={{ mb: 1.1 }}>RECOMMENDED FOR MOST TEAMS</Typography>}
           <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap={1}>
             <Box>
-              <Stack direction="row" alignItems="center" gap={1}>
-                <Typography fontSize={22} fontWeight={950} sx={{ color: '#241536' }}>{detail.label}</Typography>
-                <Chip label={tag} size="small" sx={{ height: 22, color: accent, backgroundColor: recommended ? '#eee6ff' : '#f6f2fa', fontSize: 10, fontWeight: 900 }} />
+              <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap" sx={{ minWidth: 0 }}>
+                <Typography fontSize={23} fontWeight={950} sx={{ color: '#241536', flexShrink: 0 }}>{detail.label}</Typography>
+                <Chip label={tag} size="small" sx={{ height: 23, maxWidth: 132, color: accent, backgroundColor: recommended ? '#eee6ff' : '#f6f2fa', fontSize: 11, fontWeight: 900, flexShrink: 0, '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }} />
               </Stack>
-              <Typography color="text.secondary" fontSize={12} lineHeight={1.45} sx={{ mt: .75, minHeight: 35 }}>{detail.description}</Typography>
+              <Typography color="text.secondary" fontSize={13} lineHeight={1.45} sx={{ mt: .75, minHeight: 35 }}>{detail.description}</Typography>
             </Box>
-            {recommended && <StarRounded sx={{ color: '#f4b42c', fontSize: 21 }} />}
           </Stack>
-          <Typography color="text.secondary" fontSize={12} lineHeight={1.45} sx={{ mt: 1.5, minHeight: 36 }}>{detail.audience}</Typography>
-          <Box sx={{ mt: 1.75, p: 1.5, borderRadius: 2, backgroundColor: priceSurface, border: '1px solid', borderColor: recommended ? '#dcc8ff' : 'rgba(100,34,197,.1)' }}>
-            <Stack direction="row" alignItems="baseline" gap={.6}>
-              {interval === 'year' && isPaid && <Typography component="span" color="text.disabled" sx={{ textDecoration: 'line-through', fontSize: 13 }}>{money(monthly, currency)}</Typography>}
-              <Typography fontSize={30} fontWeight={950} sx={{ color: '#241536' }}>{isPaid ? money(display, currency) : plan === 'free' ? money(0, currency) : 'Custom'}</Typography>
-              <Typography color="text.secondary" fontSize={11}>{isPaid ? `per ${interval}, plus tax` : plan === 'free' ? 'Forever' : 'tailored to your scale'}</Typography>
+          <Typography color="text.secondary" fontSize={13} lineHeight={1.45} sx={{ mt: 1.5, minHeight: 36 }}>{detail.audience}</Typography>
+          <Box sx={{ mt: 1.75, p: 1.5, minHeight: interval === 'year' && isPaid ? 132 : 116, borderRadius: 2, backgroundColor: priceSurface, border: '1px solid', borderColor: recommended ? '#dcc8ff' : 'rgba(100,34,197,.1)' }}>
+            <Stack gap={.35}>
+              <Stack direction="row" alignItems="baseline" gap={.6} flexWrap="wrap">
+                {interval === 'year' && isPaid && <Typography component="span" color="text.disabled" sx={{ textDecoration: 'line-through', fontSize: 13, whiteSpace: 'nowrap' }}>{money(monthly, currency)}</Typography>}
+                <Typography fontSize={{ xs: 29, md: 31 }} fontWeight={950} sx={{ color: '#241536', whiteSpace: 'nowrap' }}>{isPaid ? money(display, currency) : plan === 'free' ? money(0, currency) : 'Custom'}</Typography>
+              </Stack>
+              <Typography color="text.secondary" fontSize={12} lineHeight={1.35}>{isPaid ? `per ${interval}, plus tax` : plan === 'free' ? 'Forever' : 'tailored to your scale'}</Typography>
             </Stack>
-            {interval === 'year' && isPaid ? <Stack direction="row" gap={.7} alignItems="center" sx={{ mt: .8 }}><Chip label={`Save ${money(yearlySaving(plan, currency), currency)}`} size="small" sx={{ height: 21, color: '#16764a', backgroundColor: '#e7f8ed', fontWeight: 900, fontSize: 10 }} /><Typography color="text.secondary" fontSize={10}>billed annually</Typography></Stack> : <Typography color="text.secondary" fontSize={10} sx={{ mt: .8 }}>No setup fees. Cancel when you need to.</Typography>}
+            {interval === 'year' && isPaid ? <Stack direction="row" gap={.7} alignItems="center" flexWrap="wrap" sx={{ mt: 1 }}><Chip label={`Save ${yearlySavingPercent}% · ${money(yearlySaving(plan, currency), currency)}`} size="small" sx={{ height: 22, color: '#16764a', backgroundColor: '#e7f8ed', fontWeight: 900, fontSize: 10, maxWidth: '100%' }} /><Typography color="text.secondary" fontSize={11}>billed annually</Typography></Stack> : <Typography color="text.secondary" fontSize={11} sx={{ mt: 1 }}>No setup fees. Cancel when you need to.</Typography>}
           </Box>
           <Button variant={recommended ? 'contained' : 'outlined'} fullWidth href={plan === 'enterprise' ? undefined : href} onClick={plan === 'enterprise' ? onSales : undefined} sx={{ mt: 1.7, textTransform: 'none', fontWeight: 900, borderRadius: 1.5, minHeight: 42 }}>{plan === 'enterprise' ? 'Talk to Sales' : authenticated && isPaid ? 'Choose plan' : isPaid ? 'Start free trial' : 'Start for free'}</Button>
           <Button variant="text" size="small" onClick={onEstimate} sx={{ mt: .4, textTransform: 'none', color: '#6422c5', fontWeight: 800 }}>Estimate your cost</Button>
           <Divider sx={{ my: 1.75 }} />
-          <Typography fontSize={11} fontWeight={900} letterSpacing='.08em' color='#8b719e' sx={{ mb: .9, textTransform: 'uppercase' }}>What’s included</Typography>
-          <Stack gap={1.05}>{detail.features.map((feature) => <Stack direction="row" gap={.8} alignItems="flex-start" key={feature}><CheckRounded sx={{ color: recommended ? '#6422c5' : '#25a365', fontSize: 16, mt: .1 }} /><Typography fontSize={12} lineHeight={1.35}>{feature}</Typography></Stack>)}</Stack>
+          <Typography fontSize={12} fontWeight={900} letterSpacing='.08em' color='#8b719e' sx={{ mb: .9, textTransform: 'uppercase' }}>What’s included</Typography>
+          <Stack gap={1.05}>{detail.features.map((feature) => <Stack direction="row" gap={.8} alignItems="flex-start" key={feature}><CheckCircleRounded sx={{ color: '#22a064', fontSize: 17, mt: .1 }} /><Typography fontSize={13} lineHeight={1.35}>{feature}</Typography></Stack>)}</Stack>
         </Stack>
       </Card>
     </Grid>
   );
 }
 
-function ComparisonTable() {
+function ComparisonTable({ interval, currency, authenticated, onSales }: { interval: BillingInterval; currency: Currency; authenticated: boolean; onSales: () => void }) {
   const rows = comparisonGroups.flatMap((category) => [
     <TableRow key={`${category.group}-header`}>
       <TableCell colSpan={5} sx={{ py: 1.2, color: '#6422c5', backgroundColor: '#f5efff', fontWeight: 950, letterSpacing: '.04em' }}>{category.group}</TableCell>
@@ -378,15 +406,40 @@ function ComparisonTable() {
       </TableRow>
     )),
   ]);
+  const planActions: Record<PlanKey, { label: string; href?: string; onClick?: () => void }> = {
+    free: { label: 'Start for free', href: '/get-started?plan=free' },
+    starter: { label: authenticated ? 'Choose plan' : 'Start free trial', href: planHref('starter', interval, currency, authenticated) },
+    pro: { label: authenticated ? 'Choose plan' : 'Start free trial', href: planHref('pro', interval, currency, authenticated) },
+    enterprise: { label: 'Talk to sales', onClick: onSales },
+  };
+  const planPrice = (plan: PlanKey) => {
+    if (plan === 'free') return `${money(0, currency)}/mo`;
+    if (plan === 'enterprise') return 'Custom';
+    return interval === 'year' ? `${money(prices[currency][plan].year, currency)}/yr` : `${money(prices[currency][plan].month, currency)}/mo`;
+  };
   return (
     <Box sx={{ mt: 4 }}>
-      <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" gap={1} sx={{ mb: 1.5 }}>
-        <Box><Typography fontSize={21} fontWeight={950}>Full plan comparison</Typography><Typography color="text.secondary" fontSize={12}>Clear entitlements for teams that need to go deeper.</Typography></Box>
-        <Chip icon={<InfoOutlined />} label="Included · Limited · Not included · Custom" size="small" sx={{ width: 'fit-content', fontWeight: 800 }} />
-      </Stack>
-      <TableContainer component={Card} sx={{ borderRadius: 2.5, border: '1px solid #e5dcef', boxShadow: '0 14px 34px rgba(69,30,91,.06)' }}>
+      <Box sx={{ textAlign: 'center', mb: 3 }}>
+        <Typography fontSize={12} fontWeight={950} letterSpacing=".14em" color="#6422c5">COMPARE PLANS IN DETAIL</Typography>
+        <Typography fontSize={{ xs: 27, md: 36 }} fontWeight={950} sx={{ mt: .7, letterSpacing: '-.035em', color: '#241536' }}>Comprehensive feature breakdown</Typography>
+        <Typography color="text.secondary" fontSize={13} sx={{ mt: .7 }}>Compare the features and benefits of each PixlPush plan.</Typography>
+        <Chip icon={<InfoOutlined />} label="Included · Limited · Not included · Custom · Upgrade" size="small" sx={{ mt: 1.4, fontWeight: 800, color: '#5d3a8c', backgroundColor: '#f1eaff' }} />
+      </Box>
+      <TableContainer component={Card} sx={{ borderRadius: 1.5, border: '1px solid #ded5e8', boxShadow: '0 14px 34px rgba(69,30,91,.06)', backgroundColor: '#fff' }}>
         <Table size="small" sx={{ minWidth: 840 }}>
-          <TableHead><TableRow sx={{ '& th': { backgroundColor: '#241536', color: '#fff', borderBottom: 0, fontWeight: 900, position: 'sticky', top: 0, zIndex: 2 } }}><TableCell sx={{ minWidth: 260 }}>Feature</TableCell><TableCell align="center">Free</TableCell><TableCell align="center" sx={{ backgroundColor: '#5a24b2 !important' }}>Starter</TableCell><TableCell align="center">Pro</TableCell><TableCell align="center">Enterprise</TableCell></TableRow></TableHead>
+          <TableHead>
+            <TableRow sx={{ '& th': { backgroundColor: '#fff', color: '#102235', borderBottom: '1px solid #ded5e8', position: 'sticky', top: 0, zIndex: 2 } }}>
+              <TableCell sx={{ minWidth: 260, verticalAlign: 'bottom', pb: 2.2 }}><Typography fontSize={13} fontWeight={900}>Feature</Typography></TableCell>
+              {(['free', 'starter', 'pro', 'enterprise'] as PlanKey[]).map((plan) => {
+                const action = planActions[plan];
+                return <TableCell key={plan} align="center" sx={{ minWidth: 138, py: 1.5, backgroundColor: plan === 'starter' ? '#faf6ff' : '#fff', borderLeft: '1px solid #f0ebf4' }}>
+                  <Typography fontSize={15} fontWeight={950} sx={{ color: '#241536' }}>{planDetails[plan].label}</Typography>
+                  <Typography color="text.secondary" fontSize={10} sx={{ mt: .35, mb: 1 }}>{planPrice(plan)}</Typography>
+                  <Button variant={plan === 'starter' ? 'contained' : 'outlined'} size="small" href={action.href} onClick={action.onClick} sx={{ minWidth: 112, minHeight: 30, px: 1, borderRadius: .7, textTransform: 'none', fontSize: 10, fontWeight: 900, whiteSpace: 'nowrap' }}>{action.label}</Button>
+                </TableCell>;
+              })}
+            </TableRow>
+          </TableHead>
           <TableBody>{rows}</TableBody>
         </Table>
       </TableContainer>
