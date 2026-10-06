@@ -11,6 +11,10 @@ import type {
   BillingContact,
   BillingInterval,
   BillingInvoice,
+  Journey,
+  JourneyDisplayStatus,
+  JourneyInput,
+  JourneyListItem,
   BillingPaymentMethod,
   SavedCard,
   CheckoutInput,
@@ -444,6 +448,32 @@ export const emailApi = {
         "DELETE",
       ),
   },
+};
+
+const journeyPath = (journeyId: string, action = "") => `/journeys/${encodeURIComponent(journeyId)}${action}`;
+
+/** Journey Automations. Writes need owner, admin, developer or analyst. */
+export const journeysApi = {
+  list: (projectId: string, params: { status?: JourneyDisplayStatus; search?: string; page?: number; limit?: number } = {}) => {
+    const query = new URLSearchParams({ page: String(params.page ?? 1), limit: String(params.limit ?? 25) });
+    if (params.status) query.set("status", params.status);
+    if (params.search) query.set("search", params.search);
+    return authRequest<PushPaginated<JourneyListItem>>(at(projectId, `/journeys?${query.toString()}`), undefined, BASE);
+  },
+  /** With per-step `stats` for the builder's block counters. */
+  get: (projectId: string, journeyId: string) =>
+    authRequest<Journey>(at(projectId, journeyPath(journeyId)), undefined, BASE),
+  create: (projectId: string, input: JourneyInput) =>
+    authRequest<Journey>(at(projectId, "/journeys"), input, BASE, "POST"),
+  /** A running journey accepts name changes only (409 JOURNEY_ACTIVE for trigger, audience or steps). */
+  update: (projectId: string, journeyId: string, input: Partial<JourneyInput>) =>
+    authRequest<Journey>(at(projectId, journeyPath(journeyId)), input, BASE, "PATCH"),
+  /** Draft or archived only. */
+  remove: (projectId: string, journeyId: string) =>
+    authRequest<void>(at(projectId, journeyPath(journeyId)), {}, BASE, "DELETE"),
+  /** activate (draft → live), pause, resume, archive (stops for good), duplicate (new draft copy). */
+  action: (projectId: string, journeyId: string, action: "activate" | "pause" | "resume" | "archive" | "duplicate") =>
+    authRequest<Journey>(at(projectId, journeyPath(journeyId, `/${action}`)), {}, BASE, "POST"),
 };
 
 export const billingApi = {
