@@ -33,6 +33,7 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import { SiteShell } from './SiteShell';
@@ -169,6 +170,60 @@ function statusColor(value: FeatureValue) {
   return '#4d4359';
 }
 
+const categoryDescriptions: Record<string, string> = {
+  'Usage & Reachability': 'The audience size, events, email volume, and push capacity available to your workspace.',
+  'Journeys & Automation': 'Tools for building automated customer journeys with triggers, steps, conditions, and branching.',
+  'AI Features': 'AI-assisted tools for creating, translating, and analyzing customer communication and journeys.',
+  'Audiences & Data': 'Ways to organize people, import data, and use customer properties for targeting.',
+  'Campaigns & Channels': 'The channels and campaign tools available for sending messages to your audience.',
+  Analytics: 'Reporting and experimentation tools for measuring campaign and journey performance.',
+  Integrations: 'Connections that let PixlPush exchange data with other systems and services.',
+  'Team & Security': 'Workspace access, collaboration, project management, and security controls.',
+  'Support & Enterprise': 'Priority service, onboarding, migration, and custom sales options.',
+};
+
+const featureDescriptions: Record<string, string> = {
+  'Reachable Users included': 'The number of people your plan can reach through supported channels such as mobile push.',
+  'Additional Reachable User': 'The charge applied to each reachable person above the plan allowance.',
+  'Custom App Events / month': 'The monthly number of custom app log events your app can send to PixlPush. These events can be used to build audiences, trigger journeys, personalize messages, and measure behavior.',
+  'Emails / month': 'The monthly email send allowance. Paid plans charge $1 for each additional 1,000 emails after the included allowance.',
+  'Push Notifications': 'Mobile push messages are unlimited within your Reachable User allowance and subject to fair-use protections.',
+  'Active Journeys': 'The number of automated journeys that can be active and running at the same time.',
+  'Journey Steps': 'The actions, waits, messages, and decisions that can be placed inside an automated journey.',
+  'Basic Automations': 'Core automation actions for sending messages and responding to customer activity.',
+  'Journey Conditions & Branching': 'Rules that split people into different paths based on their properties or behavior.',
+  'Advanced Journey Automation': 'More advanced orchestration controls for complex lifecycle and retention programs.',
+  'AI Credits / month': 'The monthly allowance used by PixlPush AI tools. Different AI actions use different credit amounts.',
+  'AI Email Creator': 'Generate email copy and campaign content with AI assistance.',
+  'AI Translations': 'Translate message content into additional languages with AI assistance.',
+  'AI Journey Analysis': 'Use AI to review journey performance and identify opportunities to improve it.',
+  'Lifecycle Segments': 'Reusable groups based on where people are in their customer lifecycle.',
+  'Audience Groups': 'Saved audiences used to target campaigns and journeys.',
+  'Basic User Properties': 'Standard customer fields such as identity, contact details, and account information.',
+  'Custom User Properties': 'Additional customer attributes that your team defines for your product and targeting needs.',
+  'Custom Behavioral Event Targeting': 'Target people based on specific actions they have taken in your product.',
+  'CSV Import': 'Bring customer or audience data into PixlPush from a CSV file.',
+  'SDK & Firebase': 'Connect product events and mobile push delivery through the PixlPush SDK and Firebase.',
+  'Email Campaigns': 'Create and send one-time or scheduled email campaigns.',
+  'Push Campaigns': 'Create and send one-time or scheduled mobile push campaigns.',
+  'Push Deep Links': 'Open a specific screen or destination in your app when someone taps a push message.',
+  'Sending Domains': 'The domains authorized to send email messages for your organization.',
+  'Basic Analytics': 'Core delivery, engagement, and campaign performance reporting.',
+  'Advanced Analytics': 'Deeper performance analysis for understanding outcomes across journeys and campaigns.',
+  'Conversion Tracking': 'Measure when messages lead to a defined conversion or business outcome.',
+  'Revenue Tracking': 'Connect campaign and journey activity to revenue outcomes.',
+  'A/B Testing': 'Compare message or journey variations to learn which performs better.',
+  Webhooks: 'Send PixlPush events to another system in real time when something happens.',
+  'CRM Integrations': 'Connect customer and engagement data with your CRM or customer-data systems.',
+  'Team Members': 'The number of people who can access and work in the workspace.',
+  'Multiple Projects': 'Manage more than one independent Project from the same workspace.',
+  'Remove Branding': 'Remove PixlPush branding from supported customer-facing experiences.',
+  'SSO / SAML': 'Let team members sign in through your organization’s identity provider.',
+  'SLA & Priority Support': 'Faster support response and service commitments for larger or business-critical programs.',
+  'Custom Onboarding / Migration': 'Hands-on help setting up PixlPush or moving data and workflows from another tool.',
+  'Sales Option': 'A path to discuss custom limits, pricing, integrations, or enterprise requirements with the sales team.',
+};
+
 export default function PricingExperience() {
   const { isAuthenticated } = useCurrentUser();
   const [interval, setInterval] = useState<BillingInterval>('month');
@@ -218,6 +273,7 @@ export default function PricingExperience() {
   const reachableOverageCost = calculator.best?.overage ?? 0;
   const emailOverageCost = calculator.best?.emailOverage ?? 0;
   const monthlyTotal = platformCost + reachableOverageCost + emailOverageCost;
+  const showProductSpecialistCta = monthlyTotal >= 100000;
 
   return (
     <SiteShell>
@@ -320,6 +376,16 @@ export default function PricingExperience() {
                     </Stack>
                     <Divider />
                     <Stack direction="row" justifyContent="space-between" alignItems="baseline" gap={2}><Typography fontSize={15} fontWeight={950} sx={{ color: '#102235' }}>Estimated cost per month</Typography><Typography fontSize={{ xs: 27, md: 34 }} fontWeight={950} sx={{ color: '#102235' }}>{moneyExact(monthlyTotal, currency)}<Typography component="span" color="text.secondary" fontSize={12}> / month equivalent</Typography></Typography></Stack>
+                    {showProductSpecialistCta && <Box sx={{ position: 'relative', overflow: 'hidden', mt: .5, p: { xs: 2.1, md: 2.6 }, borderRadius: 1.75, color: '#fff', background: 'linear-gradient(135deg,#12133f 0%,#1c1d55 46%,#4b2094 100%)', border: '1px solid rgba(170,132,255,.42)', boxShadow: '0 18px 34px rgba(39,23,96,.26), inset 0 1px 0 rgba(255,255,255,.14)', '&:before': { content: '""', position: 'absolute', width: 230, height: 230, right: -92, top: -145, borderRadius: '50%', background: 'radial-gradient(circle,rgba(255,255,255,.2) 0%,rgba(255,255,255,0) 68%)', pointerEvents: 'none' }, '&:after': { content: '""', position: 'absolute', left: 22, right: 22, bottom: 0, height: 1, background: 'linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.42),rgba(255,255,255,0))', pointerEvents: 'none' } }}>
+                      <Stack position="relative" zIndex={1} alignItems="center" gap={1.5}>
+                        <Stack direction="row" alignItems="center" gap={.8} sx={{ color: '#d8c5ff' }}>
+                          <AutoAwesomeRounded sx={{ fontSize: 17 }} />
+                          <Typography fontSize={11} fontWeight={950} letterSpacing=".12em">PREMIUM SUPPORT</Typography>
+                        </Stack>
+                        <Typography textAlign="center" fontSize={{ xs: 14, md: 16 }} fontWeight={900} lineHeight={1.45} sx={{ maxWidth: 660 }}>Talk to us for volume-based discounting, support package, custom contract, and more</Typography>
+                        <Button component="a" href="https://calendly.com/" target="_blank" rel="noreferrer" fullWidth startIcon={<AutoAwesomeRounded sx={{ fontSize: 18 }} />} sx={{ minHeight: 50, mt: .2, px: 3, color: '#241536', background: 'linear-gradient(135deg,#fff 0%,#f0e6ff 100%)', border: '1px solid rgba(255,255,255,.72)', boxShadow: '0 10px 20px rgba(7,7,36,.28), inset 0 1px 0 rgba(255,255,255,.95)', textTransform: 'none', fontWeight: 950, fontSize: { xs: 13, md: 14 }, letterSpacing: '.01em', borderRadius: 1, '& .MuiButton-startIcon': { color: '#6422c5' }, '&:hover': { color: '#241536', background: 'linear-gradient(135deg,#fff 0%,#e6d3ff 100%)', boxShadow: '0 13px 24px rgba(7,7,36,.34), inset 0 1px 0 rgba(255,255,255,.95)' } }}>Talk to a product specialist</Button>
+                      </Stack>
+                    </Box>}
                     <Typography color="text.secondary" fontSize={11}>Additional Reachable Users are billed monthly. Annual subscription discounts apply to the base plan, not usage overage.</Typography>
                   </Stack>
                 </Grid>
@@ -387,13 +453,18 @@ function PricingCard({ plan, interval, currency, authenticated, recommended, onS
 function ComparisonTable({ interval, currency, authenticated, onSales }: { interval: BillingInterval; currency: Currency; authenticated: boolean; onSales: () => void }) {
   const rows = comparisonGroups.flatMap((category) => [
     <TableRow key={`${category.group}-header`}>
-      <TableCell colSpan={5} sx={{ py: 1.6, px: 2, color: '#241536', backgroundColor: '#f1e8ff', fontSize: 14, fontWeight: 950, letterSpacing: '.02em' }}>{category.group}</TableCell>
+      <TableCell colSpan={5} sx={{ py: 1.6, px: 2, color: '#241536', backgroundColor: '#f1e8ff', fontSize: 14, fontWeight: 950, letterSpacing: '.02em' }}>
+        <Tooltip title={categoryDescriptions[category.group] ?? ''} arrow placement="top" enterTouchDelay={0}>
+          <Box component="span" sx={{ cursor: 'help', borderBottom: '1px dashed #8b719e' }}>{category.group}</Box>
+        </Tooltip>
+      </TableCell>
     </TableRow>,
     ...category.rows.map(([label, values], rowIndex) => (
       <TableRow key={`${category.group}-${label}`} sx={{ backgroundColor: rowIndex % 2 ? '#f3f3f3' : '#fff', '&:hover': { backgroundColor: '#eee9f6' } }}>
         <TableCell sx={{ px: 2, py: 1.35, fontSize: 13, fontWeight: 700, color: '#233247', verticalAlign: 'top' }}>
-          {label}
-          {label === 'Push Notifications' && <Typography component="span" display="block" color="text.secondary" fontSize={11} lineHeight={1.4} fontWeight={400} sx={{ mt: .35 }}>Unlimited push notifications within your Reachable User allowance, subject to fair-use and abuse-prevention policies.</Typography>}
+          <Tooltip title={featureDescriptions[label]} arrow placement="top-start" enterTouchDelay={0}>
+            <Box component="span" sx={{ cursor: 'help', borderBottom: '1px dashed #8b719e' }}>{label}</Box>
+          </Tooltip>
         </TableCell>
         {(['free', 'starter', 'pro', 'enterprise'] as PlanKey[]).map((key) => (
           <TableCell align="center" key={key} sx={{ px: 1.2, py: 1.35, color: statusColor(values[key]), fontSize: 13, fontWeight: 800, verticalAlign: 'middle' }}>
