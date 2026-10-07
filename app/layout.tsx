@@ -10,9 +10,9 @@ export const metadata: Metadata = {
   title: 'PixlPush — Make more of the users you already have',
   description: 'AI-powered journey automation for apps, SaaS and digital products.',
   icons: {
-    icon: '/assets/site-icon.png',
-    shortcut: '/assets/site-icon.png',
-    apple: '/assets/site-icon.png',
+    icon: '/assets/favicon.png',
+    shortcut: '/assets/favicon.png',
+    apple: '/assets/favicon.png',
   },
 };
 
