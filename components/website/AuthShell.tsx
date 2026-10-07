@@ -45,7 +45,7 @@ const STEPS = [
  * The one frame for every auth page: the form on a white column, and beside it (from 1024px up) a brand
  * panel on the app's own accent surface with a small glimpse of the product built from real UI.
  */
-export default function AuthShell({ children, mode }: { children: React.ReactNode; mode: Mode }) {
+export default function AuthShell({ children, mode, back = true }: { children: React.ReactNode; mode: Mode; /** Off where leaving makes no sense, such as mid sign-in. */ back?: boolean }) {
   const panel = PANEL[mode];
   return (
     <Box className="auth-shell">
@@ -57,7 +57,7 @@ export default function AuthShell({ children, mode }: { children: React.ReactNod
             PixlPush
           </Link>
           {/* The way out: quiet, opposite the brand, where people look for it. */}
-          <Button href="/" size="small" startIcon={<ArrowBackRounded />} className="auth-back">Back to home</Button>
+          {back && <Button href="/" size="small" startIcon={<ArrowBackRounded />} className="auth-back">Back to home</Button>}
         </Box>
         <Box className="auth-form-wrap">{children}</Box>
         <Typography className="auth-foot">

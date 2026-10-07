@@ -287,7 +287,7 @@ Every auth route (`/login`, `/get-started`, `/reset-password`, `/verify-email`, 
 
 - **Frame**: a white form column on the left (about 46%) with the mark and "PixlPush" top-left (the mark has
   a fixed 32px height and its own width; never force both) a quiet "Back to home" text button
-  top-right of the column, and a quiet footer line. On the right, a brand
+  top-right of the column (not on the signing-in screen), and a quiet footer line. On the right, a brand
   panel on `var(--pp-hero)`, inset 12px with a 16px radius. Below 1024px the panel is hidden and the form is
   the whole page.
 - **Brand panel**: an overline, a 32px headline, one sentence, a white "product glimpse" card built from

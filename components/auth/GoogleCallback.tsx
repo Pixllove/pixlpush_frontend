@@ -56,7 +56,7 @@ export default function GoogleCallback() {
   }, []);
 
   return (
-    <AuthShell mode="login">
+    <AuthShell mode="login" back={false}>
       <div className="auth-signin" style={{ '--auth-fill': [0.3, 0.65, 1][step], '--auth-progress': step / (STEPS.length - 1) } as React.CSSProperties}>
         {/* The mark inside a ring that fills as the three steps complete. */}
         <div className={`auth-signin-ring${step === STEPS.length - 1 ? ' done' : ''}`} aria-hidden>
