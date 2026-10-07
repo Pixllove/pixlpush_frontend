@@ -290,7 +290,7 @@ export default function PricingExperience() {
   const reachableOverageCost = calculator.best?.overage ?? 0;
   const emailOverageCost = calculator.best?.emailOverage ?? 0;
   const monthlyTotal = platformCost + reachableOverageCost + emailOverageCost;
-  const showProductSpecialistCta = monthlyTotal >= 100000;
+  const showProductSpecialistCta = monthlyTotal > 100000;
   const includedReachable = calculator.best?.included ?? 0;
   const additionalReachable = calculator.best?.additional ?? 0;
   const reachableRate = calculator.best?.rate ?? 0;
@@ -388,14 +388,14 @@ export default function PricingExperience() {
                         <TextField aria-label="Number of email sends" type="number" inputProps={{ min: 0 }} value={emailSends} onChange={(event) => setEmailSends(Math.max(0, Number(event.target.value)))} sx={{ width: 132 }} />
                       </Stack>
                     </Box>
-                    <Card sx={{ p: 1.7, borderRadius: 1.25, color: '#fff', background: 'linear-gradient(135deg,#2d145e 0%,#6422c5 100%)', boxShadow: '0 10px 20px rgba(100,34,197,.18)' }}>
+                    {!showProductSpecialistCta && <Card sx={{ p: 1.7, borderRadius: 1.25, color: '#fff', background: 'linear-gradient(135deg,#2d145e 0%,#6422c5 100%)', boxShadow: '0 10px 20px rgba(100,34,197,.18)' }}>
                       <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} gap={1.5}>
                         <Box>
                           <Typography fontSize={16} fontWeight={600}>Need more customize offer?</Typography>
                         </Box>
                         <Button variant="contained" onClick={() => setSales(true)} sx={{ flexShrink: 0, minHeight: 38, px: 2, borderRadius: 1, color: '#32114d', backgroundColor: '#fff', textTransform: 'none', '&:hover': { backgroundColor: '#f5edff' } }}>Talk to sales</Button>
                       </Stack>
-                    </Card>
+                    </Card>}
                   </Stack>
                 </Grid>
                 <Grid item xs={12} md={7} sx={{ p: { xs: 2, md: 3 } }}>
@@ -406,14 +406,14 @@ export default function PricingExperience() {
                     {recommendedPlan === 'free' && <Alert severity="warning" sx={{ borderRadius: 2 }}>Free includes up to 2,000 Reachable Users and 10,000 email sends per month. Upgrade to continue beyond those limits.</Alert>}
                     <Typography fontSize={13} fontWeight={600} fontStyle="italic" sx={{ color: '#253342' }}>{planDetails[recommendedPlan].label} plan</Typography>
                     <Stack gap={1.15} sx={{ color: '#27313d' }}>
-                      <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontSize={14}>Platform cost</Typography><Typography fontSize={14} fontWeight={600}><CostTooltip title={platformTooltip}>{money(platformCost, currency)}</CostTooltip></Typography></Stack>
+                      <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontSize={14}>Platform cost</Typography><Typography fontSize={14} fontWeight={600}>{showProductSpecialistCta ? 'Custom' : <CostTooltip title={platformTooltip}>{money(platformCost, currency)}</CostTooltip>}</Typography></Stack>
                       <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontSize={14}>Reachable users</Typography><Typography fontSize={14} fontWeight={600}><CostTooltip title={reachableTooltip}>{number(pushReachable)}</CostTooltip></Typography></Stack>
-                      <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontSize={14}>Additional reachable users</Typography><Typography fontSize={14} fontWeight={600}><CostTooltip title={additionalReachableTooltip}>{moneyExact(reachableOverageCost, currency)}</CostTooltip></Typography></Stack>
+                      <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontSize={14}>Additional reachable users</Typography><Typography fontSize={14} fontWeight={600}>{showProductSpecialistCta ? 'Custom' : <CostTooltip title={additionalReachableTooltip}>{moneyExact(reachableOverageCost, currency)}</CostTooltip>}</Typography></Stack>
                       <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontSize={14}>Push notifications</Typography><Typography fontSize={14} fontWeight={600} color="#16814d"><CostTooltip title={pushTooltip}>Unlimited</CostTooltip></Typography></Stack>
-                      <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontSize={14}>Email sends</Typography><Typography fontSize={14} fontWeight={600}><CostTooltip title={emailTooltip}>{emailOverageCost ? moneyExact(emailOverageCost, currency) : `Included with ${planDetails[recommendedPlan].label}`}</CostTooltip></Typography></Stack>
+                      <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontSize={14}>Email sends</Typography><Typography fontSize={14} fontWeight={600}>{emailOverageCost && showProductSpecialistCta ? 'Custom' : <CostTooltip title={emailTooltip}>{emailOverageCost ? moneyExact(emailOverageCost, currency) : `Included with ${planDetails[recommendedPlan].label}`}</CostTooltip>}</Typography></Stack>
                     </Stack>
                     <Divider />
-                    <Stack direction="row" justifyContent="space-between" alignItems="baseline" gap={2}><Typography fontSize={14} fontWeight={600} sx={{ color: '#102235' }}>Estimated cost per month</Typography><Typography fontSize={{ xs: 24, md: 32 }} fontWeight={600} sx={{ color: '#102235' }}><CostTooltip title={monthlyTotalTooltip}>{moneyExact(monthlyTotal, currency)}</CostTooltip><Typography component="span" color="text.secondary" fontSize={12}> / month equivalent</Typography></Typography></Stack>
+                    <Stack direction="row" justifyContent="space-between" alignItems="baseline" gap={2}><Typography fontSize={14} fontWeight={600} sx={{ color: '#102235' }}>Estimated cost per month</Typography><Typography fontSize={{ xs: 24, md: 32 }} fontWeight={600} sx={{ color: '#102235' }}>{showProductSpecialistCta ? 'Custom' : <><CostTooltip title={monthlyTotalTooltip}>{moneyExact(monthlyTotal, currency)}</CostTooltip><Typography component="span" color="text.secondary" fontSize={12}> / month equivalent</Typography></>}</Typography></Stack>
                     {showProductSpecialistCta && <Box sx={{ position: 'relative', overflow: 'hidden', mt: .5, p: { xs: 2.1, md: 2.6 }, borderRadius: 1.75, color: '#fff', background: 'linear-gradient(135deg,#12133f 0%,#1c1d55 46%,#4b2094 100%)', border: '1px solid rgba(170,132,255,.42)', boxShadow: '0 18px 34px rgba(39,23,96,.26), inset 0 1px 0 rgba(255,255,255,.14)', '&:before': { content: '""', position: 'absolute', width: 230, height: 230, right: -92, top: -145, borderRadius: '50%', background: 'radial-gradient(circle,rgba(255,255,255,.2) 0%,rgba(255,255,255,0) 68%)', pointerEvents: 'none' }, '&:after': { content: '""', position: 'absolute', left: 22, right: 22, bottom: 0, height: 1, background: 'linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.42),rgba(255,255,255,0))', pointerEvents: 'none' } }}>
                       <Stack position="relative" zIndex={1} alignItems="center" gap={1.5}>
                         <Stack direction="row" alignItems="center" gap={.8} sx={{ color: '#d8c5ff' }}>
