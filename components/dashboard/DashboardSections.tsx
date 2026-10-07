@@ -2124,6 +2124,7 @@ function PushSection() {
           {tab === "templates" && (
             <IconButton
               size="small"
+              className="duplicate-action"
               aria-label={`Duplicate ${row.name}`}
               onClick={() =>
                 actionMutation.mutate({ kind: "duplicate", id: row.id })
@@ -2135,6 +2136,7 @@ function PushSection() {
           )}
           <IconButton
             size="small"
+            className="delete-action"
             aria-label={
               tab === "send" ? `Cancel ${row.name}` : `Delete ${row.name}`
             }

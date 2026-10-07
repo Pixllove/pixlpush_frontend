@@ -1342,6 +1342,14 @@ code, pre, kbd { font-family: var(--pp-mono); }
 .table-row-actions .MuiIconButton-root, .email-table-row-actions .MuiIconButton-root { border-radius: var(--pp-r) !important; color: var(--pp-text-3) !important; border-color: transparent !important; }
 .table-row-actions .MuiIconButton-root:hover, .email-table-row-actions .MuiIconButton-root:hover { color: var(--pp-text) !important; background: var(--pp-subtle) !important; }
 .table-row-actions .MuiIconButton-root:last-child:hover, .email-table-row-actions .MuiIconButton-root.delete-action:hover { color: var(--pp-error) !important; background: var(--pp-error-soft) !important; }
+.table-row-actions .MuiIconButton-root.edit-action, .email-table-row-actions .MuiIconButton-root.edit-action { color: #4c83df !important; }
+.table-row-actions .MuiIconButton-root.duplicate-action, .email-table-row-actions .MuiIconButton-root.duplicate-action { color: #7650c7 !important; }
+.table-row-actions .MuiIconButton-root.delete-action, .email-table-row-actions .MuiIconButton-root.delete-action, .table-row-actions .MuiIconButton-root.group-delete-button, .MuiTableCell-root .group-delete-button { color: #e1645b !important; }
+.table-row-actions .MuiIconButton-root.edit-action:hover, .email-table-row-actions .MuiIconButton-root.edit-action:hover { color: #356bc9 !important; background: #edf4ff !important; }
+.table-row-actions .MuiIconButton-root.duplicate-action:hover, .email-table-row-actions .MuiIconButton-root.duplicate-action:hover { color: #623cb0 !important; background: #f3edff !important; }
+.table-row-actions .MuiIconButton-root.delete-action:hover, .email-table-row-actions .MuiIconButton-root.delete-action:hover, .MuiTableCell-root .group-delete-button:hover { color: #c94f48 !important; background: #fff0ef !important; }
+.MuiTableCell-root .delete-action { color: #e1645b !important; }
+.MuiTableCell-root .delete-action:hover { color: #c94f48 !important; background: #fff0ef !important; }
 
 /* ---- Status badges: the only pills ---- */
 .active-chip, .paused-chip, .neutral-chip, .journey-status-chip { height: 20px !important; border-radius: 9999px !important; font-size: 11.0px !important; font-weight: 500 !important; }

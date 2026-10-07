@@ -646,6 +646,7 @@ export default function UserImportDialog({
                                     <IconButton
                                       size="small"
                                       color="error"
+                                      className="delete-action"
                                       aria-label={`Delete users imported from ${record.fileName}`}
                                       disabled={deletingId !== null}
                                       onClick={() =>
