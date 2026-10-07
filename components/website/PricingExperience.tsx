@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   AutoAwesomeRounded,
   CheckCircleRounded,
@@ -158,6 +158,21 @@ const yearlySaving = (plan: PaidPlan, currency: Currency) => prices[currency][pl
 const yearlySavingPercent = Math.round((1 - prices.usd.starter.year / (prices.usd.starter.month * 12)) * 100);
 const number = (value: number) => value.toLocaleString('en-US');
 
+function CostTooltip({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <Tooltip
+      title={title}
+      arrow
+      placement="top-start"
+      enterTouchDelay={0}
+      leaveTouchDelay={3000}
+      componentsProps={{ tooltip: { sx: { maxWidth: 270, p: 1.15, borderRadius: 1, fontSize: 12, lineHeight: 1.45 } } }}
+    >
+      <Box component="span" sx={{ cursor: 'help', borderBottom: '1px dashed #8b719e' }}>{children}</Box>
+    </Tooltip>
+  );
+}
+
 function planHref(plan: PaidPlan, interval: BillingInterval, currency: Currency, authenticated: boolean) {
   const query = `plan=${plan}&interval=${interval}&currency=${currency}`;
   return authenticated ? `/dashboard/billing/checkout?${query}` : `/get-started?${query}`;
@@ -274,6 +289,27 @@ export default function PricingExperience() {
   const emailOverageCost = calculator.best?.emailOverage ?? 0;
   const monthlyTotal = platformCost + reachableOverageCost + emailOverageCost;
   const showProductSpecialistCta = monthlyTotal >= 100000;
+  const includedReachable = calculator.best?.included ?? 0;
+  const additionalReachable = calculator.best?.additional ?? 0;
+  const reachableRate = calculator.best?.rate ?? 0;
+  const includedEmails = calculator.best?.includedEmails ?? 0;
+  const additionalEmails = Math.max(0, emailSends - includedEmails);
+  const platformTooltip = recommendedPlan === 'free'
+    ? 'The Free plan has no platform charge and includes up to 2,000 reachable users and 10,000 email sends per month.'
+    : interval === 'year'
+      ? `${planDetails[recommendedPlan].label} annual platform fee: ${money(calculator.best?.baseYearly ?? 0, currency)} per year, shown here as ${money(platformCost, currency)} per month equivalent.`
+      : `${planDetails[recommendedPlan].label} platform subscription: ${money(platformCost, currency)} per month.`;
+  const reachableTooltip = `Your estimate uses ${number(pushReachable)} reachable users. People reachable through email and push count once.`;
+  const additionalReachableTooltip = additionalReachable > 0
+    ? `${number(additionalReachable)} users are above the ${number(includedReachable)} included in ${planDetails[recommendedPlan].label}. The overage rate is ${moneyExact(Math.round(reachableRate * 100), currency)} per additional user, for an estimated ${moneyExact(reachableOverageCost, currency)}.`
+    : `Your ${planDetails[recommendedPlan].label} plan includes up to ${number(includedReachable)} reachable users. There is no additional reachable-user charge at this usage.`;
+  const pushTooltip = 'Push notifications are unlimited within your Reachable User allowance and subject to fair-use and abuse-prevention policies.';
+  const emailTooltip = emailOverageCost > 0
+    ? `${planDetails[recommendedPlan].label} includes ${number(includedEmails)} email sends per month. ${number(additionalEmails)} additional sends are charged at ${moneyExact(100, currency)} per 1,000 sends, for an estimated ${moneyExact(emailOverageCost, currency)}.`
+    : `${planDetails[recommendedPlan].label} includes up to ${number(includedEmails)} email sends per month at no additional charge.`;
+  const monthlyTotalTooltip = interval === 'year'
+    ? `Monthly equivalent of the ${planDetails[recommendedPlan].label} annual plan, including any reachable-user and email overage charges.`
+    : 'Estimated monthly total: platform cost plus any additional reachable-user and email-send charges.';
 
   return (
     <SiteShell>
@@ -368,14 +404,14 @@ export default function PricingExperience() {
                     {recommendedPlan === 'free' && <Alert severity="warning" sx={{ borderRadius: 2 }}>Free includes up to 2,000 Reachable Users and 10,000 email sends per month. Upgrade to continue beyond those limits.</Alert>}
                     <Typography fontSize={13} fontWeight={900} fontStyle="italic" sx={{ color: '#253342' }}>{planDetails[recommendedPlan].label} plan</Typography>
                     <Stack gap={1.15} sx={{ color: '#27313d' }}>
-                      <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontSize={14}>Platform cost</Typography><Typography fontSize={14} fontWeight={700}>{money(platformCost, currency)}</Typography></Stack>
-                      <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontSize={14}>Reachable users</Typography><Typography fontSize={14} fontWeight={700}>{number(pushReachable)}</Typography></Stack>
-                      <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontSize={14}>Additional reachable users</Typography><Typography fontSize={14} fontWeight={700}>{moneyExact(reachableOverageCost, currency)}</Typography></Stack>
-                      <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontSize={14}>Push notifications</Typography><Typography fontSize={14} fontWeight={700} color="#16814d">Unlimited</Typography></Stack>
-                      <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontSize={14}>Email sends</Typography><Typography fontSize={14} fontWeight={700}>{emailOverageCost ? moneyExact(emailOverageCost, currency) : `Included with ${planDetails[recommendedPlan].label}`}</Typography></Stack>
+                      <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontSize={14}>Platform cost</Typography><Typography fontSize={14} fontWeight={700}><CostTooltip title={platformTooltip}>{money(platformCost, currency)}</CostTooltip></Typography></Stack>
+                      <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontSize={14}>Reachable users</Typography><Typography fontSize={14} fontWeight={700}><CostTooltip title={reachableTooltip}>{number(pushReachable)}</CostTooltip></Typography></Stack>
+                      <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontSize={14}>Additional reachable users</Typography><Typography fontSize={14} fontWeight={700}><CostTooltip title={additionalReachableTooltip}>{moneyExact(reachableOverageCost, currency)}</CostTooltip></Typography></Stack>
+                      <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontSize={14}>Push notifications</Typography><Typography fontSize={14} fontWeight={700} color="#16814d"><CostTooltip title={pushTooltip}>Unlimited</CostTooltip></Typography></Stack>
+                      <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontSize={14}>Email sends</Typography><Typography fontSize={14} fontWeight={700}><CostTooltip title={emailTooltip}>{emailOverageCost ? moneyExact(emailOverageCost, currency) : `Included with ${planDetails[recommendedPlan].label}`}</CostTooltip></Typography></Stack>
                     </Stack>
                     <Divider />
-                    <Stack direction="row" justifyContent="space-between" alignItems="baseline" gap={2}><Typography fontSize={15} fontWeight={950} sx={{ color: '#102235' }}>Estimated cost per month</Typography><Typography fontSize={{ xs: 27, md: 34 }} fontWeight={950} sx={{ color: '#102235' }}>{moneyExact(monthlyTotal, currency)}<Typography component="span" color="text.secondary" fontSize={12}> / month equivalent</Typography></Typography></Stack>
+                    <Stack direction="row" justifyContent="space-between" alignItems="baseline" gap={2}><Typography fontSize={15} fontWeight={950} sx={{ color: '#102235' }}>Estimated cost per month</Typography><Typography fontSize={{ xs: 27, md: 34 }} fontWeight={950} sx={{ color: '#102235' }}><CostTooltip title={monthlyTotalTooltip}>{moneyExact(monthlyTotal, currency)}</CostTooltip><Typography component="span" color="text.secondary" fontSize={12}> / month equivalent</Typography></Typography></Stack>
                     {showProductSpecialistCta && <Box sx={{ position: 'relative', overflow: 'hidden', mt: .5, p: { xs: 2.1, md: 2.6 }, borderRadius: 1.75, color: '#fff', background: 'linear-gradient(135deg,#12133f 0%,#1c1d55 46%,#4b2094 100%)', border: '1px solid rgba(170,132,255,.42)', boxShadow: '0 18px 34px rgba(39,23,96,.26), inset 0 1px 0 rgba(255,255,255,.14)', '&:before': { content: '""', position: 'absolute', width: 230, height: 230, right: -92, top: -145, borderRadius: '50%', background: 'radial-gradient(circle,rgba(255,255,255,.2) 0%,rgba(255,255,255,0) 68%)', pointerEvents: 'none' }, '&:after': { content: '""', position: 'absolute', left: 22, right: 22, bottom: 0, height: 1, background: 'linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.42),rgba(255,255,255,0))', pointerEvents: 'none' } }}>
                       <Stack position="relative" zIndex={1} alignItems="center" gap={1.5}>
                         <Stack direction="row" alignItems="center" gap={.8} sx={{ color: '#d8c5ff' }}>
