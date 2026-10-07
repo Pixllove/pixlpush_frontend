@@ -337,6 +337,17 @@ Every auth route (`/login`, `/get-started`, `/reset-password`, `/verify-email`, 
 - < 600px: one column, sidebar as an overlay, 16px gutters, primary actions full width.
 - No horizontal page scroll at any width. Tab tracks and tables scroll inside themselves.
 
+### Dashboard sidebar
+
+- The dashboard sidebar is a flat `--pp-plum` surface with `--pp-plum-soft` for the active route and project card; it does not use a gradient.
+- Desktop navigation is grouped under Workspace and Project, with 42px MUI navigation targets and a restrained left accent indicator for the active route.
+- The sidebar can collapse to a 68px icon rail. The expanded rail uses the full PixlPush wordmark; the collapsed rail uses the dedicated `site-icon.png` mark rather than cropping the wordmark.
+- The collapse control remains visible in both states, changes direction to communicate restore/ collapse, exposes `aria-expanded`, and has an accessible tooltip and focus state.
+- Collapsed items must retain tooltips, visible focus states, and `aria-current="page"`.
+- The project identity card stays pinned below the scrolling navigation. Its text hides in the collapsed rail while the project initial remains available.
+- At widths below 761px the sidebar is a 280px temporary drawer with a backdrop; selecting a route closes it.
+- Sidebar transitions use short width/colour transforms and must respect `prefers-reduced-motion`.
+
 ## 12. Do and don't
 
 **Do**

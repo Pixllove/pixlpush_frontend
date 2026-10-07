@@ -3,6 +3,7 @@
 import { ReactNode, useEffect, useState } from "react";
 import {
   AddRounded,
+  ChevronLeftRounded,
   MenuRounded,
   RocketLaunchRounded,
   WorkspacePremiumRounded,
@@ -14,6 +15,7 @@ import {
   MenuItem,
   Select,
   Stack,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import { useDispatch } from "react-redux";
@@ -47,6 +49,7 @@ export default function DashboardFrame({
   children: ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const dispatch = useDispatch();
   const {
     projects,
@@ -67,12 +70,33 @@ export default function DashboardFrame({
   // Nothing invented: the heading names the real Project, or says there is none.
   const projectName = activeProject?.name ?? (isEmpty ? "No project" : "");
   return (
-    <Box className="dashboard-app">
+    <Box className={`dashboard-app${sidebarCollapsed ? " sidebar-is-collapsed" : ""}${mobileOpen ? " mobile-navigation-open" : ""}`}>
       <DashboardSidebar
         active={active}
         setActive={() => setMobileOpen(false)}
         mobileOpen={mobileOpen}
+        collapsed={sidebarCollapsed}
       />
+      <Tooltip
+        title={mobileOpen ? "Close navigation" : sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        placement="right"
+      >
+        <IconButton
+          className="dashboard-sidebar-toggle"
+          onClick={() => {
+            if (window.matchMedia("(max-width: 760px)").matches) {
+              setMobileOpen(false);
+            } else {
+              setSidebarCollapsed((value) => !value);
+            }
+          }}
+          aria-label={mobileOpen ? "Close navigation" : sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-expanded={mobileOpen ? true : !sidebarCollapsed}
+          size="small"
+        >
+          <ChevronLeftRounded className="dashboard-sidebar-toggle-icon" />
+        </IconButton>
+      </Tooltip>
       {mobileOpen && (
         <Box
           className="dashboard-backdrop"
@@ -82,6 +106,7 @@ export default function DashboardFrame({
       <Box className="dashboard-main">
         <Box className="dashboard-topbar">
           <IconButton
+            className="dashboard-mobile-menu"
             onClick={() => setMobileOpen(true)}
             sx={{ display: { md: "none" } }}
           >
