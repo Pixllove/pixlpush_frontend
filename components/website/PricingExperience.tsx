@@ -88,7 +88,7 @@ const comparisonGroups: { group: string; rows: [string, Record<PlanKey, FeatureV
   { group: 'Usage & Reachability', rows: [
     ['Reachable Users included', { free: '2,000', starter: '5,000', pro: '25,000', enterprise: 'Custom' }],
     ['Additional Reachable User', { free: 'Upgrade', starter: '$0.01', pro: '$0.008', enterprise: 'Custom' }],
-    ['Custom Behavioral Events / month', { free: '50,000', starter: '250,000', pro: '1,000,000', enterprise: 'Custom' }],
+    ['Custom App Events / month', { free: '50,000', starter: '250,000', pro: '1,000,000', enterprise: 'Custom' }],
     ['Emails / month', { free: '10,000', starter: '50,000\n+ $1 / 1,000 additional emails', pro: '250,000\n+ $1 / 1,000 additional emails', enterprise: 'Custom' }],
     ['Push Notifications', { free: 'Unlimited', starter: 'Unlimited', pro: 'Unlimited', enterprise: 'Custom' }],
   ] },
