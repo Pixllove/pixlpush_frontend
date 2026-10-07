@@ -118,7 +118,7 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
         Back to Users
       </Button>
       <Box className="user-detail-breadcrumb">
-        <Typography color="text.secondary" fontSize={10}>
+        <Typography color="text.secondary" fontSize={11}>
           Users&nbsp; › &nbsp;{user?.email || userId}
         </Typography>
         <Stack
@@ -157,8 +157,8 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
               className="user-detail-card-header"
             >
               <Box>
-                <Typography fontWeight={900}>User Details</Typography>
-                <Typography color="text.secondary" fontSize={10}>
+                <Typography fontWeight={600}>User Details</Typography>
+                <Typography color="text.secondary" fontSize={11}>
                   Account identity, subscription, permissions, device, and
                   profile information
                 </Typography>
@@ -281,7 +281,7 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
             <Grid container spacing={2}>
               <Grid item xs={12} md={6}>
                 <Box className="group-engagement-panel">
-                <Typography fontWeight={900}>Email engagement</Typography>
+                <Typography fontWeight={600}>Email engagement</Typography>
                 <MetricRows
                   rows={[
                     "Open rate|0%",
@@ -296,7 +296,7 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
               </Grid>
               <Grid item xs={12} md={6}>
                 <Box className="group-engagement-panel">
-                <Typography fontWeight={900}>Push engagement</Typography>
+                <Typography fontWeight={600}>Push engagement</Typography>
                 <MetricRows
                   rows={[
                     "Sent|0",
@@ -330,7 +330,7 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
                 value="No"
               />
             </Grid>
-            <Typography color="text.secondary" fontSize={10} sx={{ mt: 1 }}>
+            <Typography color="text.secondary" fontSize={11} sx={{ mt: 1 }}>
               SDK events recorded:{" "}
               {eventsQuery.isLoading ? "…" : events.length.toLocaleString()}
             </Typography>
@@ -386,7 +386,7 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
               maxHeight: "65vh",
               overflow: "auto",
               color: "#f7f1ff",
-              fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+              fontFamily: "var(--pp-mono)",
               fontSize: 12,
               lineHeight: 1.65,
             }}
@@ -396,7 +396,7 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
         </DialogContent>
         <DialogActions sx={{ justifyContent: "space-between" }}>
           {copied ? (
-            <Typography color="success.main" fontSize={12} fontWeight={800}>
+            <Typography color="success.main" fontSize={12} fontWeight={500}>
               JSON copied
             </Typography>
           ) : (
@@ -464,7 +464,7 @@ function ActivityCard({
                 </Box>
                 <Box>
                   <Stack direction="row" gap={1} alignItems="center">
-                    <Typography fontSize={11} fontWeight={900}>
+                    <Typography fontSize={11} fontWeight={500}>
                       {activity.title || activity.type || "Activity"}
                     </Typography>
                     <Chip
@@ -472,10 +472,10 @@ function ActivityCard({
                       size="small"
                     />
                   </Stack>
-                  <Typography color="text.secondary" fontSize={10}>
+                  <Typography color="text.secondary" fontSize={11}>
                     {formatDate(activity.occurredAt || activity.createdAt)}
                   </Typography>
-                  <Typography color="text.secondary" fontSize={10}>
+                  <Typography color="text.secondary" fontSize={11}>
                     {activity.description || "No additional details available"}
                   </Typography>
                   <Button
@@ -497,7 +497,7 @@ function ActivityCard({
         )}
       </Stack>
       <Stack direction="row" justifyContent="space-between" sx={{ mt: 2 }}>
-        <Typography color="text.secondary" fontSize={10}>
+        <Typography color="text.secondary" fontSize={11}>
           Activity is paginated by the backend
         </Typography>
         <Stack direction="row" gap={1}>
@@ -551,10 +551,10 @@ function DetailHeader({
         <Icon fontSize="small" />
       </Box>
       <Box>
-        <Typography fontWeight={900} fontSize={13}>
+        <Typography fontWeight={600} fontSize={13}>
           {title}
         </Typography>
-        <Typography color="text.secondary" fontSize={10}>
+        <Typography color="text.secondary" fontSize={11}>
           {subtitle}
         </Typography>
       </Box>
@@ -570,7 +570,7 @@ function UserDetailSection({
 }) {
   return (
     <Box className="user-detail-section">
-      <Typography fontWeight={900} fontSize={11} sx={{ mb: 1 }}>
+      <Typography fontWeight={500} fontSize={11} sx={{ mb: 1 }}>
         {title}
       </Typography>
       <Grid container spacing={1.2}>
@@ -595,14 +595,14 @@ function DetailItem({
       <Box className="user-detail-item">
         <Stack direction="row" gap={0.7} alignItems="center">
           <Icon sx={{ fontSize: 13, color: "#6678ee" }} />
-          <Typography color="text.secondary" fontSize={9}>
+          <Typography color="text.secondary" fontSize={11}>
             {label}
           </Typography>
         </Stack>
         {badge ? (
           <Chip label={value} size="small" className="active-chip" />
         ) : (
-          <Typography fontSize={10} fontWeight={800}>
+          <Typography fontSize={11} fontWeight={500}>
             {value}
           </Typography>
         )}
@@ -616,13 +616,13 @@ function MetricRows({ rows, empty = "—" }: { rows: string[]; empty?: string })
       {rows.length ? (
         rows.map((row) => (
           <Stack key={row} direction="row" justifyContent="space-between" alignItems="center" className="group-metric-row">
-            <Typography fontSize={10}>{row.split("|")[0]}</Typography>
-            <Typography fontSize={10} fontWeight={900}>{row.split("|")[1] ?? "—"}</Typography>
+            <Typography fontSize={11}>{row.split("|")[0]}</Typography>
+            <Typography fontSize={11} fontWeight={500}>{row.split("|")[1] ?? "—"}</Typography>
           </Stack>
         ))
       ) : (
         <Stack direction="row" justifyContent="space-between" alignItems="center" className="group-metric-row">
-          <Typography fontSize={10}>{empty}</Typography>
+          <Typography fontSize={11}>{empty}</Typography>
         </Stack>
       )}
     </Stack>
@@ -634,10 +634,10 @@ function metric(Icon: ElementType, label: string, value: string) {
       <Box className="user-detail-icon">
         <Icon fontSize="small" />
       </Box>
-      <Typography color="text.secondary" fontSize={10}>
+      <Typography color="text.secondary" fontSize={11}>
         {label}
       </Typography>
-      <Typography fontSize={20} fontWeight={900}>
+      <Typography fontSize={20} fontWeight={600}>
         {value}
       </Typography>
     </Card>

@@ -7,10 +7,10 @@ import { setSelectedProject } from '@/lib/uiSlice';
 import { useProjects } from './use-projects';
 import type { Project } from '@/types/project';
 
-/** The secondary label beside a Project name, e.g. "Pro project". */
+/** The secondary label beside a Project name: its plan, e.g. "Pro". */
 export function planLabel(project: Pick<Project, 'subscription'>): string {
   const plan = project.subscription?.plan;
-  return plan ? `${plan.charAt(0).toUpperCase()}${plan.slice(1)} project` : 'Project';
+  return plan ? `${plan.charAt(0).toUpperCase()}${plan.slice(1)}` : 'Project';
 }
 
 /**

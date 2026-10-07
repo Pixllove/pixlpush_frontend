@@ -5,18 +5,15 @@ import {
   AddRounded,
   MenuRounded,
   RocketLaunchRounded,
-  SearchRounded,
   WorkspacePremiumRounded,
 } from "@mui/icons-material";
 import {
   Box,
   Button,
   IconButton,
-  InputAdornment,
   MenuItem,
   Select,
   Stack,
-  TextField,
   Typography,
 } from "@mui/material";
 import { useDispatch } from "react-redux";
@@ -29,6 +26,7 @@ import CreateProjectDialog from "./CreateProjectDialog";
 import DashboardSidebar from "./DashboardSidebar";
 import AccountMenu from "@/components/auth/AccountMenu";
 import NotificationMenu from "@/components/dashboard/NotificationMenu";
+import SearchField from "./SearchField";
 
 export default function DashboardFrame({
   active,
@@ -135,51 +133,24 @@ export default function DashboardFrame({
             ))}
             <MenuItem value="create">＋ Create project</MenuItem>
           </Select>
-          <TextField
-            placeholder="Search users, events, campaigns..."
-            size="small"
-            className="dashboard-search"
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchRounded fontSize="small" />
-                </InputAdornment>
-              ),
-            }}
-          />
+          <SearchField placeholder="Search users, events, campaigns" sx={{ width: { xs: "42vw", sm: "min(330px, 42vw)" } }} />
           <Stack
             direction="row"
             alignItems="center"
             gap={1.5}
             sx={{ ml: "auto" }}
           >
-            <Button
+            {/* Nothing to upgrade to once the Project is on Pro or Enterprise. */}
+            {!['pro', 'enterprise'].includes(activeProject?.subscription?.plan ?? '') && <Button
               component="a"
               href="/pricing"
               startIcon={<WorkspacePremiumRounded fontSize="small" />}
-              sx={{
-                display: { xs: "none", sm: "inline-flex" },
-                minHeight: 36,
-                px: 1.5,
-                borderRadius: 2,
-                textTransform: "none",
-                whiteSpace: "nowrap",
-                fontSize: 12,
-                fontWeight: 900,
-                letterSpacing: 0.1,
-                color: "#fff",
-                background:
-                  "linear-gradient(135deg, #7132d3 0%, #9b3dd2 55%, #ee653d 100%)",
-                boxShadow: "0 6px 16px rgba(113, 50, 211, 0.22)",
-                "&:hover": {
-                  background:
-                    "linear-gradient(135deg, #5f20c2 0%, #8730bf 55%, #df5731 100%)",
-                  boxShadow: "0 8px 20px rgba(113, 50, 211, 0.3)",
-                },
-              }}
+              variant="outlined"
+              size="small"
+              sx={{ display: { xs: "none", sm: "inline-flex" }, whiteSpace: "nowrap" }}
             >
               Upgrade to Pro
-            </Button>
+            </Button>}
             <NotificationMenu />
             <AccountMenu />
           </Stack>

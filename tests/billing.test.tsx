@@ -130,7 +130,7 @@ describe('BillingSection', () => {
     expect(screen.getByText('Over limit')).toBeInTheDocument();
     expect(api.subscription).not.toHaveBeenCalled();
     for (const name of ['Choose plan', 'Manage subscription', 'Cancel subscription', 'View plan options']) expect(screen.queryByRole('button', { name })).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Billing details' }));
+    await userEvent.click(screen.getByRole('tab', { name: 'Billing details' }));
     expect(screen.getByText(/Only owners, admins and billing members/)).toBeInTheDocument();
     expect(screen.queryByLabelText(/Billing email/)).not.toBeInTheDocument();
   });
@@ -238,7 +238,7 @@ describe('BillingSection', () => {
   it('lists invoices with tax on its own, and says so when there are none', async () => {
     serve(sub());
     wrap();
-    await userEvent.click(await screen.findByRole('button', { name: 'Billing history' }));
+    await userEvent.click(await screen.findByRole('tab', { name: 'Billing history' }));
     expect(await screen.findByText('Your invoices will appear here after your first successful payment.')).toBeInTheDocument();
   });
 
@@ -246,7 +246,7 @@ describe('BillingSection', () => {
     serve(sub());
     api.invoices.mockResolvedValue([{ id: 'in_1', number: 'PIXL-0001', status: 'paid', currency: 'aed', subtotalExcludingTax: 29000, tax: 1450, total: 30450, amountPaid: 30450, createdAt: '2026-10-05T10:00:00.000Z', hostedInvoiceUrl: 'https://invoice.stripe.com/i/1', invoicePdf: 'https://pay.stripe.com/i/1.pdf' }]);
     wrap();
-    await userEvent.click(await screen.findByRole('button', { name: 'Billing history' }));
+    await userEvent.click(await screen.findByRole('tab', { name: 'Billing history' }));
     const row = (await screen.findByText('PIXL-0001')).closest('tr')!;
     expect(within(row).getByText('AED 290')).toBeInTheDocument();
     expect(within(row).getByText('AED 14.50')).toBeInTheDocument();
@@ -258,7 +258,7 @@ describe('BillingSection', () => {
     serve(null, { email: 'finance@acme.de', country: 'DE', vatId: 'DE123456789' });
     api.updateContact.mockResolvedValue({ email: 'finance@acme.de' });
     wrap();
-    await userEvent.click(await screen.findByRole('button', { name: 'Billing details' }));
+    await userEvent.click(await screen.findByRole('tab', { name: 'Billing details' }));
     const country = await screen.findByLabelText(/Country code/);
     await waitFor(() => expect(country).toHaveValue('DE'));
     expect(screen.getByLabelText(/VAT/)).toHaveValue('DE123456789');
@@ -293,7 +293,7 @@ describe('BillingSection', () => {
     api.savePaymentMethod.mockResolvedValue({ retriedInvoice: null, paymentMethod: null });
     api.removePaymentMethod.mockResolvedValue({ removed: true });
     wrap();
-    await userEvent.click(await screen.findByRole('button', { name: 'Payment methods' }));
+    await userEvent.click(await screen.findByRole('tab', { name: 'Payment methods' }));
     expect(await screen.findByText('**** **** **** 4242')).toBeInTheDocument();
     expect(screen.getByText('01/28')).toBeInTheDocument();
     for (const label of [/card number/i, /cvc/i]) expect(screen.queryByLabelText(label)).not.toBeInTheDocument();

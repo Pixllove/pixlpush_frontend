@@ -37,7 +37,6 @@ import {
   InsertEmoticonRounded,
   LinkRounded,
   RedoRounded,
-  SearchRounded,
   SendRounded,
   SettingsRounded,
   StrikethroughSRounded,
@@ -56,6 +55,7 @@ import {
   RssFeedRounded,
   ShareRounded,
   VerticalAlignBottomRounded,
+  ScheduleRounded,
 } from "@mui/icons-material";
 import {
   Box,
@@ -64,7 +64,6 @@ import {
   Chip,
   Divider,
   IconButton,
-  InputAdornment,
   Menu,
   MenuItem,
   Paper,
@@ -99,6 +98,7 @@ import { useActiveProject } from "@/hooks/projects/use-active-project";
 import { emailApi } from "@/lib/projects/api";
 import type { EmailCampaign, EmailTemplate } from "@/lib/projects/api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import SearchField from "./SearchField";
 
 type TabId = "send" | "drafts" | "templates";
 type Editor = "simple" | "drag";
@@ -500,6 +500,8 @@ export default function EmailWorkspace() {
   const [items, setItems] = useState<EmailItem[]>([]);
   const [tab, setTab] = useState<TabId>("templates");
   const [query, setQuery] = useState("");
+  // What the server was last asked for; the list is also filtered on `query` at once from what is loaded.
+  const [appliedQuery, setAppliedQuery] = useState("");
   const [view, setView] = useState<"list" | "choice" | "editor">("list");
   const [kind, setKind] = useState<"drafts" | "templates">("drafts");
   const [editor, setEditor] = useState<Editor>("simple");
@@ -566,32 +568,32 @@ export default function EmailWorkspace() {
     return () => window.clearTimeout(timer);
   }, [notice]);
   const templatesQuery = useQuery({
-    queryKey: ["email", "templates", activeProject?.id, query],
+    queryKey: ["email", "templates", activeProject?.id, appliedQuery],
     queryFn: () => emailApi.templates.list(activeProject!.id, {
       page: 1,
       limit: 25,
-      search: query,
+      search: appliedQuery,
       category: "template",
     }),
     enabled: Boolean(activeProject?.id),
   });
   const draftsQuery = useQuery({
-    queryKey: ["email", "campaigns", activeProject?.id, "draft", query],
+    queryKey: ["email", "campaigns", activeProject?.id, "draft", appliedQuery],
     queryFn: () => emailApi.campaigns.list(activeProject!.id, {
       tab: "draft",
       page: 1,
       limit: 25,
-      search: query,
+      search: appliedQuery,
     }),
     enabled: Boolean(activeProject?.id),
   });
   const sentQuery = useQuery({
-    queryKey: ["email", "campaigns", activeProject?.id, "sent", query],
+    queryKey: ["email", "campaigns", activeProject?.id, "sent", appliedQuery],
     queryFn: () => emailApi.campaigns.list(activeProject!.id, {
       tab: "sent",
       page: 1,
       limit: 25,
-      search: query,
+      search: appliedQuery,
     }),
     enabled: Boolean(activeProject?.id),
   });
@@ -857,32 +859,11 @@ export default function EmailWorkspace() {
           </Button>
         </Stack>
       </Stack>
-      <Box className="workspace-tabs">
-        <WorkspaceTab
-          active={tab === "send"}
-          label="Send"
-          count={tabCounts?.send ?? sentQuery.data?.total ?? 0}
-          icon={<SendRounded />}
-          onClick={() => setTab("send")}
-          color="send-tab"
-        />
-        <WorkspaceTab
-          active={tab === "drafts"}
-          label="Drafts"
-          count={tabCounts?.drafts ?? draftsQuery.data?.total ?? 0}
-          icon={<EditRounded />}
-          onClick={() => setTab("drafts")}
-          color="drafts-tab"
-        />
-        <WorkspaceTab
-          active={tab === "templates"}
-          label="My Templates"
-          count={templatesQuery.data?.total ?? 0}
-          icon={<GridViewRounded />}
-          onClick={() => setTab("templates")}
-          color="templates-tab"
-        />
-      </Box>
+      <Tabs value={tab} onChange={(_, value) => setTab(value)}>
+        <Tab value="send" icon={<SendRounded />} iconPosition="start" label={<>Send<Chip label={tabCounts?.send ?? sentQuery.data?.total ?? 0} size="small" /></>} />
+        <Tab value="drafts" icon={<EditRounded />} iconPosition="start" label={<>Drafts<Chip label={tabCounts?.drafts ?? draftsQuery.data?.total ?? 0} size="small" /></>} />
+        <Tab value="templates" icon={<GridViewRounded />} iconPosition="start" label={<>My Templates<Chip label={templatesQuery.data?.total ?? 0} size="small" /></>} />
+      </Tabs>
       <Card className="saas-card data-panel email-data-panel email-table-panel">
         <Stack
           direction={{ xs: "column", sm: "row" }}
@@ -907,20 +888,7 @@ export default function EmailWorkspace() {
             </Typography>
           </Box>
           <Stack direction="row" gap={1} className="data-toolbar email-toolbar">
-            <TextField
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              size="small"
-              placeholder="Search by name, subject, or message"
-              className="table-search"
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchRounded fontSize="small" />
-                  </InputAdornment>
-                ),
-              }}
-            />
+            <SearchField value={query} onChange={setQuery} onSearch={setAppliedQuery} placeholder="Search by name, subject or message" />
             <Select
               size="small"
               defaultValue="recent"
@@ -988,7 +956,7 @@ export default function EmailWorkspace() {
             <Typography color="text.secondary" fontSize={11}>
               Rows
             </Typography>
-            <Select size="small" defaultValue={25} className="rows-select">
+            <Select size="small" defaultValue={25} className="rows-select compact">
               <MenuItem value={25}>25</MenuItem>
             </Select>
             <Button size="small" disabled>
@@ -1016,32 +984,6 @@ export default function EmailWorkspace() {
     </Stack>
   );
 }
-function WorkspaceTab({
-  active,
-  label,
-  count,
-  icon,
-  onClick,
-  color,
-}: {
-  active: boolean;
-  label: string;
-  count: number;
-  icon: React.ReactNode;
-  onClick: () => void;
-  color: string;
-}) {
-  return (
-    <Button
-      onClick={onClick}
-      className={`workspace-tab ${color} ${active ? "active" : ""}`}
-      startIcon={icon}
-    >
-      <span>{label}</span>
-      <Chip label={count} size="small" />
-    </Button>
-  );
-}
 function EmailTableRow({
   item,
   onEdit,
@@ -1056,10 +998,10 @@ function EmailTableRow({
   return (
     <TableRow hover>
       <TableCell>
-        <Typography fontSize={12} fontWeight={900}>
+        <Typography fontSize={12} fontWeight={500}>
           {item.name}
         </Typography>
-        <Typography color="text.secondary" fontSize={10}>
+        <Typography color="text.secondary" fontSize={11}>
           {item.kind === "templates"
             ? "Email template"
             : item.kind === "drafts"
@@ -1280,7 +1222,7 @@ function ChoiceScreen({
                   <Box />
                 </Box>
                 <Box sx={{ flex: 1, textAlign: "left" }}>
-                  <Typography fontWeight={900}>{item.name}</Typography>
+                  <Typography fontWeight={600}>{item.name}</Typography>
                   <Typography color="text.secondary" fontSize={12}>
                     {item.description}
                   </Typography>
@@ -1301,12 +1243,12 @@ function ChoiceScreen({
           <Typography
             color="primary"
             fontSize={11}
-            fontWeight={900}
+            fontWeight={500}
             letterSpacing=".16em"
           >
             EMAIL LANGUAGE
           </Typography>
-          <Typography variant="h2" fontSize={22} sx={{ mt: 1 }}>
+          <Typography variant="h2" fontSize={20} sx={{ mt: 1 }}>
             Choose language to start
           </Typography>
         </DialogTitle>
@@ -1315,7 +1257,7 @@ function ChoiceScreen({
             The editor will open in this language first, and AI translation will
             use it as an available editor version.
           </Typography>
-          <Typography fontSize={12} fontWeight={900} sx={{ mt: 2, mb: 0.75 }}>
+          <Typography fontSize={12} fontWeight={500} sx={{ mt: 2, mb: 0.75 }}>
             Create email in
           </Typography>
           <Select
@@ -1341,7 +1283,7 @@ function ChoiceScreen({
               onClick={(event) => event.stopPropagation()}
             />
             <Box>
-              <Typography fontSize={12} fontWeight={900}>
+              <Typography fontSize={12} fontWeight={500}>
                 Set as default for next time
               </Typography>
               <Typography color="text.secondary" fontSize={11}>
@@ -1593,6 +1535,8 @@ function SimpleEditor({
       <CampaignReview
         name={name}
         subject={subject}
+        onNameChange={setName}
+        onSubjectChange={setSubject}
         html={content || "<p>Your email content will appear here.</p>"}
         editor="Simple editor"
         onBack={() => setReview(false)}
@@ -1652,7 +1596,7 @@ function SimpleEditor({
                 color="success"
                 sx={{ mt: 1 }}
               />
-              <Typography fontWeight={900} sx={{ mt: 3 }}>
+              <Typography fontWeight={600} sx={{ mt: 3 }}>
                 Translate into
               </Typography>
               {[
@@ -1725,7 +1669,7 @@ function SimpleEditor({
               sx={{ p: 2, borderBottom: "1px solid #eeeaf4" }}
             >
               <EmailRounded color="primary" />
-              <Typography fontWeight={900}>Subject</Typography>
+              <Typography fontWeight={600}>Subject</Typography>
               <TextField
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
@@ -1735,7 +1679,7 @@ function SimpleEditor({
               />
             </Stack>
             <Box sx={{ p: 2 }}>
-              <Typography fontWeight={900} sx={{ mb: 1 }}>
+              <Typography fontWeight={600} sx={{ mb: 1 }}>
                 Email content
               </Typography>
               <Box
@@ -2255,7 +2199,9 @@ function DragEditor({
     return (
       <CampaignReview
         name={name}
-        subject={emailSubject}
+        subject={subject}
+        onNameChange={setName}
+        onSubjectChange={setSubject}
         html={emailHtml}
         editor="Drag & drop editor"
         onBack={() => setReview(false)}
@@ -2311,20 +2257,7 @@ function DragEditor({
             <>
               <Typography className="drag-panel-kicker">BLOCKS</Typography>
               <Typography variant="h3">Add sections</Typography>
-              <TextField
-                size="small"
-                placeholder="Search blocks"
-                value={blockSearch}
-                onChange={(event) => { setBlockSearch(event.target.value); if (event.target.value) openLibrary(activeCategory); }}
-                sx={{ mt: 2 }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchRounded fontSize="small" />
-                    </InputAdornment>
-                  ),
-                }}
-              />
+              <SearchField fullWidth placeholder="Search blocks" value={blockSearch} onChange={(value) => { setBlockSearch(value); if (value) openLibrary(activeCategory); }} sx={{ mt: 2 }} />
               <Box className="drag-category-list">
                 {dragCategories.map((category) => (
                   <Button key={category} className={`drag-category ${activeCategory === category && libraryOpen ? "active" : ""}`} onMouseEnter={() => openLibrary(category)} onClick={() => openLibrary(category)}>
@@ -2495,7 +2428,7 @@ function DragEditor({
               <Typography color="text.secondary" fontSize={12} sx={{mt:1}}>Set default colors, typography, and layout for this whole email.</Typography>
             </Paper>
             <TextField fullWidth size="small" label="Subject line" placeholder="What recipients see in their inbox" value={subject} onChange={event=>setSubject(event.target.value)} inputProps={{maxLength:998}} InputLabelProps={{shrink:true}} sx={{mt:3}} />
-            <Typography fontWeight={900} sx={{mt:3}}>Layout</Typography>
+            <Typography fontWeight={600} sx={{mt:3}}>Layout</Typography>
             <ToggleButtonGroup exclusive size="small" value={style.width} onChange={(_,value)=>value&&setStyle(current=>({...current,width:value}))} sx={{mt:1}}>
               <ToggleButton value={640}>Default</ToggleButton><ToggleButton value={760}>Wide</ToggleButton>
             </ToggleButtonGroup>
@@ -2506,14 +2439,14 @@ function DragEditor({
             <Typography variant="h3" sx={{mt:1}}>{selectedBlock.variant || selectedBlock.type}</Typography>
             <Typography color="text.secondary" fontSize={12} sx={{mt:1}}>Click any text in the email to edit it. Links, social icons and style are set here.</Typography>
             {selectedLinks.length > 0 && <Paper className="inspector-upload-card" sx={{mt:2}}>
-              <Typography fontWeight={800} fontSize={12}>Links and buttons</Typography>
+              <Typography fontWeight={500} fontSize={12}>Links and buttons</Typography>
               {selectedLinks.map((link, linkIndex) => <Box className="inspector-link-row" key={linkIndex}>
                 <TextField size="small" fullWidth label={link.label} placeholder="https://" value={link.href === "#" ? "" : link.href} onChange={event=>editSelectedHtml(root=>root.querySelectorAll("[data-link]")[linkIndex]?.setAttribute("href", safeHref(event.target.value)))} InputLabelProps={{shrink:true}} />
                 <IconButton size="small" aria-label={`Remove ${link.label}`} title="Remove" onClick={()=>editSelectedHtml(root=>root.querySelectorAll("[data-link]")[linkIndex]?.remove())}><DeleteOutlineRounded /></IconButton>
               </Box>)}
             </Paper>}
             {selectedHasSocials && <Paper className="inspector-upload-card" sx={{mt:2}}>
-              <Typography fontWeight={800} fontSize={12}>Social links</Typography>
+              <Typography fontWeight={500} fontSize={12}>Social links</Typography>
               {selectedSocials.map((social, socialIndex) => <Box className="inspector-link-row inspector-social-row" key={socialIndex}>
                 <TextField select size="small" aria-label="Network" value={socialNetworks[social.network] ? social.network : "facebook"} onChange={event=>editSelectedHtml(root=>{const el=root.querySelectorAll("[data-social]")[socialIndex]; if(!el) return; const wasDefault=social.href===socialNetworks[social.network]?.url; el.outerHTML=socialHtml(event.target.value, wasDefault ? undefined : social.href);})}>
                   {Object.entries(socialNetworks).map(([key, item]) => <MenuItem key={key} value={key}>{item.label}</MenuItem>)}
@@ -2524,13 +2457,13 @@ function DragEditor({
               <Button size="small" variant="outlined" startIcon={<AddRounded />} sx={{mt:1.5}} disabled={selectedSocials.length >= Object.keys(socialNetworks).length} onClick={()=>editSelectedHtml(root=>{const used=selectedSocials.map(item=>item.network); const next=Object.keys(socialNetworks).find(key=>!used.includes(key)) || "facebook"; root.querySelector("[data-socials]")?.insertAdjacentHTML("beforeend", socialHtml(next));})}>Add social link</Button>
             </Paper>}
             {selectedHasLogo && <Paper className="inspector-upload-card" sx={{mt:2}}>
-              <Typography fontWeight={800} fontSize={12}>Logo</Typography>
+              <Typography fontWeight={500} fontSize={12}>Logo</Typography>
               <Stack direction="row" gap={1} sx={{mt:1}}>
                 <Button component="label" variant="contained" color="success" size="small" disabled={uploading}>{uploading ? "Uploading…" : selectedBlock.imageSrc ? "Replace" : "Upload logo"}<input ref={imageInputRef} hidden type="file" accept="image/*" onChange={event=>{void uploadImage(event.target.files?.[0],"logo");event.currentTarget.value=""}} /></Button>
                 {selectedBlock.imageSrc && selected !== null && <Button variant="outlined" size="small" onClick={()=>removeSelectedImage(selected)}>Remove</Button>}
               </Stack>
               {selectedBlock.imageSrc ? <>
-                <Stack direction="row" justifyContent="space-between" sx={{mt:2}}><Typography fontSize={12}>Size</Typography><Typography fontSize={12} fontWeight={800}>{selectedBlock.logoWidth ?? logoSizes.md}px wide</Typography></Stack>
+                <Stack direction="row" justifyContent="space-between" sx={{mt:2}}><Typography fontSize={12}>Size</Typography><Typography fontSize={12} fontWeight={500}>{selectedBlock.logoWidth ?? logoSizes.md}px wide</Typography></Stack>
                 <ToggleButtonGroup exclusive fullWidth size="small" value={selectedBlock.logoWidth ?? logoSizes.md} onChange={(_,value)=>value&&changeSelected({logoWidth:value})} sx={{mt:1}}>
                   {Object.entries(logoSizes).map(([name,width])=><ToggleButton key={name} value={width} title={`${width}px`}>{name.toUpperCase()}</ToggleButton>)}
                 </ToggleButtonGroup>
@@ -2540,7 +2473,7 @@ function DragEditor({
               </> : <Typography className="inspector-hint">No image yet, so the text logo is shown. Click it in the email to type your brand name, or upload a logo to replace it.</Typography>}
             </Paper>}
             {selectedHasImage && <Paper className="inspector-upload-card" sx={{mt:2}}>
-              <Typography fontWeight={800} fontSize={12}>Image</Typography>
+              <Typography fontWeight={500} fontSize={12}>Image</Typography>
               <Stack direction="row" gap={1} sx={{mt:1}}>
                 <Button component="label" variant="contained" color="success" size="small" disabled={uploading}>{uploading ? "Uploading…" : selectedBlock.imageSrc ? "Replace" : "Upload image"}<input ref={imageInputRef} hidden type="file" accept="image/*" onChange={event=>{void uploadImage(event.target.files?.[0],"image");event.currentTarget.value=""}} /></Button>
                 {selectedBlock.imageSrc && selected !== null && <Button variant="outlined" size="small" onClick={()=>removeSelectedImage(selected)}>Remove</Button>}
@@ -2559,7 +2492,7 @@ function DragEditor({
                     <ToggleButton value="cover" title="Fill the frame and crop the overflow">Fill and crop</ToggleButton>
                     <ToggleButton value="contain" title="Show the whole image inside the frame">Fit whole image</ToggleButton>
                   </ToggleButtonGroup>
-                  {sliders.map(slider => <Box className="inspector-slider-row" key={slider.label}><Stack direction="row" justifyContent="space-between"><Typography fontSize={12}>{slider.label}</Typography><Typography fontSize={12} fontWeight={800}>{slider.value}{slider.unit}</Typography></Stack><input type="range" aria-label={`Image ${slider.label.toLowerCase()}`} min={slider.min} max={slider.max} step={slider.step} value={slider.value} onChange={event=>slider.set(Number(event.target.value))} /></Box>)}
+                  {sliders.map(slider => <Box className="inspector-slider-row" key={slider.label}><Stack direction="row" justifyContent="space-between"><Typography fontSize={12}>{slider.label}</Typography><Typography fontSize={12} fontWeight={500}>{slider.value}{slider.unit}</Typography></Stack><input type="range" aria-label={`Image ${slider.label.toLowerCase()}`} min={slider.min} max={slider.max} step={slider.step} value={slider.value} onChange={event=>slider.set(Number(event.target.value))} /></Box>)}
                   <Button variant="outlined" size="small" sx={{mt:1.5}} onClick={()=>changeSelectedImage({ x: 50, y: 50, zoom: 1 })}>Centre and reset zoom</Button>
                   <TextField size="small" fullWidth label="Image description (alt text)" placeholder="Describe the image" value={selectedBlock.image?.alt ?? ""} onChange={event=>changeSelectedImage({alt:event.target.value})} InputLabelProps={{shrink:true}} sx={{mt:2}} />
                   <Typography className="inspector-hint">Use the toolbar on the image to replace, zoom or delete it. Drag the white handles to resize: sides change the width, the bottom changes the height, corners change both. Drag the image itself to choose which part shows; if it does not move, zoom in first.</Typography>
@@ -2567,7 +2500,7 @@ function DragEditor({
               })() : <Typography className="inspector-hint">Click the grey placeholder in the email or upload an image here.</Typography>}
             </Paper>}
             <TextField select fullWidth label="Font" value={selectedBlock.sectionStyle?.font || "Arial, sans-serif"} onChange={event=>changeSectionStyle({font:event.target.value})} sx={{mt:2}}><MenuItem value="Arial, sans-serif">Arial</MenuItem><MenuItem value="Inter, sans-serif">Inter</MenuItem><MenuItem value="Georgia, serif">Georgia</MenuItem><MenuItem value="Verdana, sans-serif">Verdana</MenuItem></TextField>
-            {([['headingSize','Heading size',18,64,1],['textSize','Text size',10,28,1],['lineHeight','Line height',1,2.2,.1],['padding','Section spacing',0,64,1]] as const).filter(([key])=>key==='headingSize'?selectedText.heading:key==='padding'||selectedText.text).map(([key,label,min,max,step])=><Box className="inspector-slider-row" key={key}><Stack direction="row" justifyContent="space-between"><Typography fontSize={12}>{label}</Typography><Typography fontSize={12} fontWeight={800}>{selectedBlock.sectionStyle?.[key] ?? styleDefaults(selectedBlock)[key]}{key === 'lineHeight' ? '' : 'px'}</Typography></Stack><input type="range" min={min} max={max} step={step} value={selectedBlock.sectionStyle?.[key] ?? styleDefaults(selectedBlock)[key]} onChange={event=>changeSectionStyle({[key]:Number(event.target.value)})} /></Box>)}
+            {([['headingSize','Heading size',18,64,1],['textSize','Text size',10,28,1],['lineHeight','Line height',1,2.2,.1],['padding','Section spacing',0,64,1]] as const).filter(([key])=>key==='headingSize'?selectedText.heading:key==='padding'||selectedText.text).map(([key,label,min,max,step])=><Box className="inspector-slider-row" key={key}><Stack direction="row" justifyContent="space-between"><Typography fontSize={12}>{label}</Typography><Typography fontSize={12} fontWeight={500}>{selectedBlock.sectionStyle?.[key] ?? styleDefaults(selectedBlock)[key]}{key === 'lineHeight' ? '' : 'px'}</Typography></Stack><input type="range" min={min} max={max} step={step} value={selectedBlock.sectionStyle?.[key] ?? styleDefaults(selectedBlock)[key]} onChange={event=>changeSectionStyle({[key]:Number(event.target.value)})} /></Box>)}
             {([['primary','Primary color'],['heading','Heading color'],['text','Text color'],['background','Section background']] as const).map(([key,label])=><TextField key={key} fullWidth type="color" label={label} value={{...styleDefaults(selectedBlock),...selectedBlock.sectionStyle}[key]} onChange={event=>changeSectionStyle({[key]:event.target.value})} sx={{mt:1.5}} />)}
             <Button variant="outlined" onClick={()=>changeSelected({sectionStyle:undefined})} sx={{mt:2}}>Reset section style</Button>
           </>}
@@ -2589,6 +2522,8 @@ function DragEditor({
 function CampaignReview({
   name,
   subject,
+  onNameChange,
+  onSubjectChange,
   html,
   editor,
   onBack,
@@ -2597,6 +2532,8 @@ function CampaignReview({
 }: {
   name: string;
   subject: string;
+  onNameChange: (value: string) => void;
+  onSubjectChange: (value: string) => void;
   html: string;
   editor: string;
   onBack: () => void;
@@ -2604,20 +2541,22 @@ function CampaignReview({
   onNotice: (message: string) => void;
 }) {
   const [deliveryMode, setDeliveryMode] = useState<"immediately" | "specific">("immediately");
+  // ponytail: the preheader is not stored or sent yet; it lives here until the campaign API has a field for it
+  const [preheader, setPreheader] = useState("");
   return (
     <Box className="campaign-review-screen">
       <Box className="campaign-review-inner">
         <Stack className="campaign-review-topbar" direction="row" justifyContent="space-between" alignItems="center">
           <Button startIcon={<ArrowBackRounded />} onClick={onBack}>Back to editor</Button>
-          <Button variant="contained" color="success" onClick={() => { onSaveLater(); onNotice("Campaign saved for later"); }}>Save for later</Button>
+          <Button variant="outlined" onClick={() => { onSaveLater(); onNotice("Campaign saved for later"); }}>Save for later</Button>
         </Stack>
         <Stack className="campaign-review-heading" direction={{ xs: "column", md: "row" }} justifyContent="space-between" gap={2}>
           <Box>
-            <Typography className="campaign-eyebrow">CAMPAIGN SETUP</Typography>
+            <Typography className="campaign-eyebrow">Campaign setup</Typography>
             <Typography variant="h1">Review your campaign</Typography>
             <Typography color="text.secondary">Check the details, preview your email, and send when you’re ready.</Typography>
           </Box>
-          <Chip className="campaign-ready" label="Draft ready for review" />
+          <Chip className="campaign-ready" color="success" size="small" label="Draft ready for review" />
         </Stack>
         <Box className="campaign-review-grid">
           <Stack gap={2.5}>
@@ -2626,17 +2565,15 @@ function CampaignReview({
                 <Box><Typography variant="h3">Campaign details</Typography><Typography color="text.secondary" fontSize={12}>Give your campaign a clear identity.</Typography></Box>
                 <Chip label={editor} size="small" />
               </Stack>
-              <Typography className="review-label">Campaign name</Typography><TextField fullWidth size="small" value={name} InputProps={{ readOnly: true }} />
-              <Typography className="review-label">Subject line</Typography><TextField fullWidth size="small" value={subject} placeholder="Add a subject" InputProps={{ readOnly: true }} />
-              <Typography className="review-label">Preheader <span>(optional)</span></Typography><TextField fullWidth size="small" placeholder="A short preview of your email content" InputProps={{ readOnly: true }} />
+              <TextField fullWidth label="Campaign name" value={name} onChange={(event) => onNameChange(event.target.value)} /><TextField fullWidth label="Subject line" value={subject} placeholder="Add a subject" onChange={(event) => onSubjectChange(event.target.value)} /><TextField fullWidth label="Preheader (optional)" value={preheader} placeholder="A short preview of your email content" onChange={(event) => setPreheader(event.target.value)} />
             </Paper>
-            <ReviewInfoCard icon={<EmailRounded />} title="Sender details" copy="These details come from Email Marketing settings."><Box className="review-info-grid"><span><small>FROM NAME</small><b>PixlPush</b></span><span><small>FROM EMAIL</small><b>hello@pixlpush.com</b></span></Box></ReviewInfoCard>
-            <ReviewInfoCard icon={<InsertEmoticonRounded />} title="Recipients" copy="Who should receive this campaign?"><Select fullWidth size="small" value="All eligible users"><MenuItem value="All eligible users">All eligible users</MenuItem></Select><Typography color="text.secondary" fontSize={11} sx={{ mt: 1.5 }}>You can change your recipient selection before the campaign is sent.</Typography><Typography fontWeight={900} fontSize={12} sx={{ mt: 1 }}>87,493 eligible recipients</Typography></ReviewInfoCard>
-            <Paper className="campaign-review-card"><Stack direction="row" gap={1.5} alignItems="flex-start"><Box className="review-icon review-icon-orange">◷</Box><Box><Typography variant="h3">Schedule delivery</Typography><Typography color="text.secondary" fontSize={12}>Leave it blank to start delivery now, or choose a future time.</Typography></Box></Stack><Typography className="review-label">When should this message start sending?</Typography><Box className={`review-option ${deliveryMode === "immediately" ? "selected" : ""}`} onClick={() => setDeliveryMode("immediately")}>◉ Immediately</Box><Box className={`review-option ${deliveryMode === "specific" ? "selected" : ""}`} onClick={() => setDeliveryMode("specific")}>○ Specific date</Box>{deliveryMode === "specific" ? <Box className="review-schedule-panel"><Typography className="review-label">Select date</Typography><TextField fullWidth size="small" type="date" /><Stack direction="row" gap={1} sx={{ mt: 1.5 }}><TextField size="small" label="Hour" defaultValue="12" /><TextField size="small" label="Minute" defaultValue="00" /><Select size="small" defaultValue="AM"><MenuItem value="AM">AM</MenuItem><MenuItem value="PM">PM</MenuItem></Select></Stack><Typography className="review-timezone">Scheduled using your workspace timezone (UTC+1).</Typography></Box> : <Typography className="review-note">Immediate campaigns start through the background delivery pipeline.</Typography>}</Paper>
+            <ReviewInfoCard icon={<EmailRounded />} title="Sender details" copy="These details come from Email Marketing settings."><Box className="review-info-grid"><span><small>From name</small><b>PixlPush</b></span><span><small>From email</small><b>hello@pixlpush.com</b></span></Box></ReviewInfoCard>
+            <ReviewInfoCard icon={<InsertEmoticonRounded />} title="Recipients" copy="Who should receive this campaign?"><Select fullWidth size="small" value="All eligible users"><MenuItem value="All eligible users">All eligible users</MenuItem></Select><Typography color="text.secondary" fontSize={11} sx={{ mt: 1.5 }}>You can change your recipient selection before the campaign is sent.</Typography><Typography fontWeight={500} fontSize={12} sx={{ mt: 1 }}>87,493 eligible recipients</Typography></ReviewInfoCard>
+            <Paper className="campaign-review-card"><Stack direction="row" gap={1.5} alignItems="flex-start"><Box className="review-icon"><ScheduleRounded /></Box><Box><Typography variant="h3">Schedule delivery</Typography><Typography color="text.secondary" fontSize={12}>Leave it blank to start delivery now, or choose a future time.</Typography></Box></Stack><Tabs value={deliveryMode} onChange={(_, value) => setDeliveryMode(value)} aria-label="Delivery time"><Tab value="immediately" label="Immediately" /><Tab value="specific" label="Specific date" /></Tabs>{deliveryMode === "specific" ? <Box className="review-schedule-panel"><TextField fullWidth type="date" label="Date" InputLabelProps={{ shrink: true }} /><Stack direction="row" gap={1} sx={{ mt: 1.5 }}><TextField size="small" label="Hour" defaultValue="12" /><TextField size="small" label="Minute" defaultValue="00" /><Select size="small" defaultValue="AM"><MenuItem value="AM">AM</MenuItem><MenuItem value="PM">PM</MenuItem></Select></Stack><Typography className="review-timezone">Scheduled using your workspace timezone (UTC+1).</Typography></Box> : <Typography className="review-note">Immediate campaigns start through the background delivery pipeline.</Typography>}</Paper>
           </Stack>
           <Paper className="campaign-review-card campaign-review-preview"><Stack direction="row" justifyContent="space-between" alignItems="center"><Box><Typography variant="h3">Email preview</Typography><Typography color="text.secondary" fontSize={12}>This is how your campaign will look.</Typography></Box><Button variant="outlined" onClick={onBack}>Edit content</Button></Stack><Paper className="review-email-frame" dangerouslySetInnerHTML={{ __html: html || "<p>Your email content will appear here.</p>" }} /></Paper>
         </Box>
-        <Paper className="campaign-review-footer"><Box><Typography fontWeight={900}>Ready to send this campaign?</Typography><Typography color="text.secondary" fontSize={11}>The campaign is prepared locally and can be sent when you are ready.</Typography></Box><Button variant="contained" startIcon={<SendRounded />} onClick={() => onNotice("Campaign ready to send locally")}>Send campaign</Button></Paper>
+        <Paper className="campaign-review-footer"><Box><Typography fontWeight={600}>Ready to send this campaign?</Typography><Typography color="text.secondary" fontSize={11}>The campaign is prepared locally and can be sent when you are ready.</Typography></Box><Button variant="contained" startIcon={<SendRounded />} onClick={() => onNotice("Campaign ready to send locally")}>Send campaign</Button></Paper>
       </Box>
     </Box>
   );

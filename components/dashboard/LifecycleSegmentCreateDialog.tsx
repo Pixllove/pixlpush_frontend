@@ -5,7 +5,6 @@ import {
   ArrowForwardRounded,
   CheckRounded,
   CloseRounded,
-  SearchRounded,
 } from "@mui/icons-material";
 import {
   Box,
@@ -18,7 +17,6 @@ import {
   DialogTitle,
   Divider,
   IconButton,
-  InputAdornment,
   ListItemButton,
   Pagination,
   Skeleton,
@@ -28,6 +26,7 @@ import {
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import type { LifecycleSegmentSchema } from "@/types/project";
+import SearchField from "./SearchField";
 
 type EventOption = {
   name: string;
@@ -119,7 +118,7 @@ export default function LifecycleSegmentCreateDialog({
           color="primary"
           fontSize={12}
           letterSpacing={1.5}
-          fontWeight={900}
+          fontWeight={500}
         >
           LIFECYCLE SEGMENTS
         </Typography>
@@ -153,34 +152,19 @@ export default function LifecycleSegmentCreateDialog({
                   placeItems: "center",
                   color: "#fff",
                   bgcolor: "primary.main",
-                  fontWeight: 900,
+                  fontWeight: 600,
                 }}
               >
                 1
               </Box>
               <Box>
-                <Typography fontWeight={900}>Select events</Typography>
+                <Typography fontWeight={600}>Select events</Typography>
                 <Typography color="text.secondary" fontSize={12}>
                   Users who complete any selected event will enter this segment.
                 </Typography>
               </Box>
             </Stack>
-            <TextField
-              size="small"
-              value={search}
-              onChange={(event) => {
-                setSearch(event.target.value);
-                setPage(1);
-              }}
-              placeholder="Search events"
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchRounded fontSize="small" />
-                  </InputAdornment>
-                ),
-              }}
-            />
+            <SearchField value={search} onChange={(value) => { setSearch(value); setPage(1); }} placeholder="Search events" />
             <Box
               sx={{
                 border: "1px solid #e3dcef",
@@ -243,12 +227,12 @@ export default function LifecycleSegmentCreateDialog({
                           sx={{ mr: 1 }}
                         />
                         <Box sx={{ flex: 1, minWidth: 0 }}>
-                          <Typography fontSize={12} fontWeight={800} noWrap>
+                          <Typography fontSize={12} fontWeight={500} noWrap>
                             {option.name}
                           </Typography>
                           <Typography
                             color="text.secondary"
-                            fontSize={10}
+                            fontSize={11}
                             noWrap
                           >
                             {option.assigned
@@ -311,13 +295,13 @@ export default function LifecycleSegmentCreateDialog({
                   placeItems: "center",
                   color: "#fff",
                   bgcolor: "primary.main",
-                  fontWeight: 900,
+                  fontWeight: 600,
                 }}
               >
                 2
               </Box>
               <Box>
-                <Typography fontWeight={900}>Add segment details</Typography>
+                <Typography fontWeight={600}>Add segment details</Typography>
                 <Typography color="text.secondary" fontSize={12}>
                   Give this lifecycle segment a clear name your team will
                   recognize.
@@ -350,7 +334,7 @@ export default function LifecycleSegmentCreateDialog({
                 bgcolor: "#faf8ff",
               }}
             >
-              <Typography fontWeight={900} fontSize={13}>
+              <Typography fontWeight={600} fontSize={13}>
                 Users enter when they complete any of these events
               </Typography>
               <Stack direction="row" gap={1} flexWrap="wrap" sx={{ mt: 1 }}>
@@ -364,7 +348,7 @@ export default function LifecycleSegmentCreateDialog({
                       bgcolor: "#eee5ff",
                       color: "#5f22be",
                       fontSize: 12,
-                      fontWeight: 800,
+                      fontWeight: 500,
                     }}
                   >
                     {event}

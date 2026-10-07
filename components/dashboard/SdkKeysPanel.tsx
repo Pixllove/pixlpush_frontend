@@ -61,7 +61,7 @@ export default function SdkKeysPanel() {
 
       {fresh && (
         <Alert severity="warning" onClose={() => setFresh(undefined)}>
-          <Typography fontWeight={800} fontSize={13}>Copy &quot;{fresh.name}&quot; now. It is shown only once.</Typography>
+          <Typography fontWeight={600} fontSize={13}>Copy &quot;{fresh.name}&quot; now. It is shown only once.</Typography>
           <Box className="key-field" sx={{ mt: 1 }}>
             <KeyRounded /><Typography sx={{ wordBreak: 'break-all' }}>{fresh.key}</Typography>
             <Button size="small" startIcon={<ContentCopyRounded />} onClick={copy}>{copied ? 'Copied' : 'Copy'}</Button>
@@ -76,7 +76,7 @@ export default function SdkKeysPanel() {
         <Card className="saas-card" key={key.id}>
           <Stack direction="row" justifyContent="space-between" alignItems="center">
             <Box>
-              <Typography fontWeight={900}>{key.name}</Typography>
+              <Typography fontWeight={600}>{key.name}</Typography>
               <Typography color="text.secondary" fontSize={12}>
                 Created {date(key.createdAt)} · {key.status === 'revoked' ? `Revoked ${date(key.revokedAt!)}` : key.lastUsedAt ? `Last used ${date(key.lastUsedAt)}` : 'Never used'}
               </Typography>

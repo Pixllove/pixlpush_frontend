@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Alert, Box, Card, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Card, MenuItem, Select, Skeleton, Stack, TextField, Typography } from '@mui/material';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
 import { useProject, useUpdateProject } from '@/hooks/projects/use-projects';
 import SubmitButton from '@/components/auth/SubmitButton';
@@ -33,7 +33,8 @@ export default function ProjectDetailsPanel() {
 
   // Only an owner or admin may change these; the backend enforces it too.
   const canEdit = project?.role === 'owner' || project?.role === 'admin';
-  const disabled = isPending || updateProject.isPending || !canEdit;
+  // Loading is not a reason to disable: until the Project arrives the fields are placeholders of the same size.
+  const disabled = updateProject.isPending || !canEdit;
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -61,13 +62,25 @@ export default function ProjectDetailsPanel() {
       </Box>
       <Card className="saas-card">
         <Box component="form" onSubmit={submit}>
-          <Stack gap={2}>
+          <Stack gap={3}>
             {error && <Alert severity="error">{error}</Alert>}
             {saved && <Alert severity="success">Project updated.</Alert>}
             {project && !canEdit && (
               <Alert severity="info">Your role on this Project does not allow changing these settings.</Alert>
             )}
 
+            {isPending ? (
+              <>
+                <Skeleton variant="rounded" height={40} />
+                <Stack direction={{ xs: 'column', sm: 'row' }} gap={2}>
+                  <Skeleton variant="rounded" height={40} sx={{ flex: 1 }} />
+                  <Skeleton variant="rounded" height={40} sx={{ flex: 1 }} />
+                </Stack>
+                <Skeleton variant="rounded" height={88} />
+                <Skeleton variant="rounded" width={128} height={40} />
+              </>
+            ) : (
+              <>
             <TextField label="Project name" value={name} onChange={(e) => setName(e.target.value)} disabled={disabled} />
             <Stack direction={{ xs: 'column', sm: 'row' }} gap={2}>
               {/* The slug is assigned at creation and is not editable. */}
@@ -82,6 +95,8 @@ export default function ProjectDetailsPanel() {
             <SubmitButton type="submit" variant="contained" pending={updateProject.isPending} disabled={disabled || !name.trim()} sx={{ alignSelf: 'flex-start' }}>
               Save changes
             </SubmitButton>
+              </>
+            )}
           </Stack>
         </Box>
       </Card>

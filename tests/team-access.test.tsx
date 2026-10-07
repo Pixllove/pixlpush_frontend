@@ -199,7 +199,7 @@ describe('Audit Logs', () => {
     expect(audit.list).toHaveBeenLastCalledWith(expect.objectContaining({ cursor: 'l1', limit: 25 }));
 
     audit.list.mockResolvedValue({ items: [], nextCursor: null });
-    await userEvent.click(screen.getByRole('button', { name: 'Team & access' }));
+    await userEvent.click(screen.getByRole('tab', { name: 'Team & access' }));
     await waitFor(() => expect(audit.list).toHaveBeenLastCalledWith(expect.objectContaining({ category: 'team' })));
     expect(await screen.findByText('No activity found')).toBeInTheDocument();
     fireEvent.mouseDown(screen.getByLabelText('Project'));
@@ -209,7 +209,7 @@ describe('Audit Logs', () => {
     await waitFor(() => expect(audit.list).toHaveBeenLastCalledWith({ limit: 25, cursor: null }));
 
     audit.list.mockRejectedValue({ status: 0, code: 'NETWORK_ERROR', message: '' });
-    await userEvent.click(screen.getByRole('button', { name: 'Workspace' }));
+    await userEvent.click(screen.getByRole('tab', { name: 'Workspace' }));
     expect(await screen.findByText('Cannot reach the server. Check your connection.')).toBeInTheDocument();
   });
 });

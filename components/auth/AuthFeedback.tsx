@@ -1,7 +1,7 @@
 'use client';
 
 import type { ComponentProps } from 'react';
-import { Alert, Slide, Snackbar } from '@mui/material';
+import { Alert, Box, Slide, Snackbar, Stack, Typography } from '@mui/material';
 
 function ToastTransition(props: ComponentProps<typeof Slide>) {
   return <Slide {...props} direction="left" />;
@@ -11,9 +11,28 @@ function ToastTransition(props: ComponentProps<typeof Slide>) {
 export function FormError({ message }: { message?: string }) {
   if (!message) return null;
   return (
-    <Alert severity="error" sx={{ mb: 1 }}>
+    <Alert severity="error">
       {message}
     </Alert>
+  );
+}
+
+/**
+ * A waiting, finished or failed step of an auth flow: an icon tile, the page title, then whatever
+ * explains it and the one action to take next.
+ */
+export function AuthStatus({ tone = 'accent', icon, title, children }: {
+  tone?: 'accent' | 'success' | 'warning' | 'error';
+  icon: React.ReactNode;
+  title: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <Stack className="auth-block" alignItems="flex-start">
+      <Box className={`auth-tile ${tone}`} aria-hidden>{icon}</Box>
+      <Typography component="h1" variant="h1">{title}</Typography>
+      {children}
+    </Stack>
   );
 }
 

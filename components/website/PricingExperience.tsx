@@ -35,6 +35,8 @@ import {
   TextField,
   Tooltip,
   Typography,
+  Tab,
+  Tabs,
 } from '@mui/material';
 import { SiteShell } from './SiteShell';
 import { useCurrentUser } from '@/hooks/auth/use-current-user';
@@ -319,14 +321,14 @@ export default function PricingExperience() {
             <Box sx={{ maxWidth: 720 }}>
               <Stack direction="row" alignItems="center" gap={1} sx={{ mb: 1.2 }}>
                 <Box sx={{ width: 28, height: 28, display: 'grid', placeItems: 'center', borderRadius: 1.2, color: '#fff', backgroundColor: 'rgba(100,34,197,.78)' }}><AutoAwesomeRounded sx={{ fontSize: 16 }} /></Box>
-                <Typography fontSize={12} fontWeight={900} letterSpacing=".14em" color="#6422c5">PIXLPUSH PRICING</Typography>
+                <Typography fontSize={12} fontWeight={500} letterSpacing=".14em" color="#6422c5">PIXLPUSH PRICING</Typography>
               </Stack>
-              <Typography variant="h1" sx={{ fontSize: { xs: 36, md: 54 }, lineHeight: .98, letterSpacing: '-.045em', color: '#241536' }}>Plans that grow with the people you can reach.</Typography>
-              <Typography sx={{ mt: 1.7, maxWidth: 600, fontSize: { xs: 15, md: 17 }, lineHeight: 1.55, color: '#60385f' }}>Start with a focused Project, then upgrade as your audience and retention program become more valuable.</Typography>
+              <Typography variant="h1" sx={{ fontSize: { xs: 32, md: 56 }, lineHeight: .98, letterSpacing: '-.045em', color: '#241536' }}>Plans that grow with the people you can reach.</Typography>
+              <Typography sx={{ mt: 1.7, maxWidth: 600, fontSize: { xs: 14, md: 16 }, lineHeight: 1.55, color: '#60385f' }}>Start with a focused Project, then upgrade as your audience and retention program become more valuable.</Typography>
             </Box>
             <Box sx={{ position: 'relative', zIndex: 1, minWidth: { md: 270 }, p: 2, border: '1px solid rgba(100,34,197,.2)', borderRadius: 2, backgroundColor: 'rgba(255,255,255,.74)', boxShadow: '0 10px 22px rgba(77,39,126,.1)' }}>
-              <Typography fontSize={11} fontWeight={900} letterSpacing=".1em" color="#8b719e">ONE PROJECT. CLEAR LIMITS.</Typography>
-              <Typography fontSize={15} fontWeight={900} sx={{ mt: .8, color: '#241536' }}>Pay for reach, not message volume.</Typography>
+              <Typography fontSize={11} fontWeight={500} letterSpacing=".1em" color="#8b719e">ONE PROJECT. CLEAR LIMITS.</Typography>
+              <Typography fontSize={14} fontWeight={600} sx={{ mt: .8, color: '#241536' }}>Pay for reach, not message volume.</Typography>
               <Typography fontSize={12} lineHeight={1.5} color="text.secondary" sx={{ mt: .5 }}>Every plan includes the core PixlPush workflow.</Typography>
             </Box>
           </Stack>
@@ -336,19 +338,19 @@ export default function PricingExperience() {
       <Container maxWidth="lg" sx={{ py: { xs: 4, md: 6 } }}>
         <Stack gap={2.5} sx={{ mb: 3, pb: 3, borderBottom: '1px solid #e9e2f0' }}>
           <Box sx={{ textAlign: 'center' }}>
-            <Typography fontSize={12} fontWeight={900} letterSpacing=".13em" color="#6422c5">SIMPLE, TRANSPARENT PRICING</Typography>
-            <Typography variant="h2" sx={{ fontSize: { xs: 30, md: 40 }, mt: .6, letterSpacing: '-.035em' }}>Choose the right room to grow.</Typography>
+            <Typography fontSize={12} fontWeight={500} letterSpacing=".13em" color="#6422c5">SIMPLE, TRANSPARENT PRICING</Typography>
+            <Typography variant="h2" sx={{ fontSize: { xs: 32, md: 40 }, mt: .6, letterSpacing: '-.035em' }}>Choose the right room to grow.</Typography>
             <Typography color="text.secondary" sx={{ mt: .7 }}>Every Project starts independently. Change plans as your audience changes.</Typography>
           </Box>
           <Box sx={{ position: 'relative', minHeight: 52, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: { xs: 'stretch', md: 'center' }, justifyContent: 'space-between', gap: { xs: 1.5, md: 2 } }}>
-            <Box className="workspace-tabs" sx={{ width: 'fit-content', maxWidth: '100%', overflowX: 'auto' }} aria-label="Billing interval">
-              <Button onClick={() => setInterval('month')} className={interval === 'month' ? 'workspace-tab active' : 'workspace-tab'}>Monthly</Button>
-              <Button onClick={() => setInterval('year')} className={interval === 'year' ? 'workspace-tab active' : 'workspace-tab'}>Yearly<Chip label={`Save ${yearlySavingPercent}%`} size="small" /></Button>
-            </Box>
+            <Tabs value={interval} onChange={(_, value) => setInterval(value)} aria-label="Billing interval" sx={{ mb: 0 }}>
+              <Tab value="month" label="Monthly" />
+              <Tab value="year" label={<>Yearly<Chip label={`Save ${yearlySavingPercent}%`} size="small" color="success" /></>} />
+            </Tabs>
             <Box sx={{ alignSelf: { xs: 'flex-end', md: 'auto' } }}>
-              <Box className="workspace-tabs" sx={{ p: .5 }} aria-label="Currency">
-                {displayCurrencies.map((value) => <Button key={value} onClick={() => chooseCurrency(value)} className={currency === value ? 'workspace-tab active' : 'workspace-tab'} sx={{ minWidth: 54 }}>{currencyMeta[value].label}</Button>)}
-              </Box>
+              <Tabs value={currency} onChange={(_, value) => chooseCurrency(value)} aria-label="Currency" sx={{ mb: 0 }}>
+                {displayCurrencies.map((value) => <Tab key={value} value={value} label={currencyMeta[value].label} />)}
+              </Tabs>
             </Box>
           </Box>
         </Stack>
@@ -364,34 +366,34 @@ export default function PricingExperience() {
           <Box sx={{ p: { xs: 1, md: 2.25 }, borderRadius: 1.75, background: 'linear-gradient(135deg,#241452 0%,#5926b9 56%,#f27c68 100%)', boxShadow: '0 18px 40px rgba(82,38,150,.18)' }}>
             <Card sx={{ overflow: 'hidden', borderRadius: 1.5, boxShadow: '0 10px 22px rgba(31,16,63,.1)', backgroundColor: '#fff' }}>
               <Stack alignItems="center" textAlign="center" sx={{ px: { xs: 2, md: 4 }, pt: { xs: 3.5, md: 5 }, pb: { xs: 3, md: 4 } }}>
-                <Typography fontSize={12} fontWeight={950} letterSpacing=".14em" color="#6422c5">PLAN FIT CALCULATOR</Typography>
-                <Typography variant="h2" sx={{ fontSize: { xs: 31, md: 48 }, mt: .8, letterSpacing: '-.045em' }}>Estimate your cost.</Typography>
-                <Typography color="text.secondary" sx={{ mt: 1, maxWidth: 720, fontSize: { xs: 14, md: 17 } }}>Use your mobile audience and monthly email volume to find the right plan.</Typography>
+                <Typography fontSize={12} fontWeight={500} letterSpacing=".14em" color="#6422c5">PLAN FIT CALCULATOR</Typography>
+                <Typography variant="h2" sx={{ fontSize: { xs: 32, md: 48 }, mt: .8, letterSpacing: '-.045em' }}>Estimate your cost.</Typography>
+                <Typography color="text.secondary" sx={{ mt: 1, maxWidth: 720, fontSize: { xs: 14, md: 16 } }}>Use your mobile audience and monthly email volume to find the right plan.</Typography>
               </Stack>
               <Grid container spacing={0}>
                 <Grid item xs={12} md={5} sx={{ p: { xs: 2, md: 3 }, backgroundColor: '#f3f3f5', borderRight: { md: '1px solid #e5e3e8' } }}>
                   <Stack gap={1.5}>
-                    <Typography fontSize={20} fontWeight={950} sx={{ color: '#102235' }}>Your audience</Typography>
+                    <Typography fontSize={20} fontWeight={600} sx={{ color: '#102235' }}>Your audience</Typography>
                     <Box sx={{ p: 1.5, borderRadius: 1, backgroundColor: '#e8e8ea' }}>
-                      <Typography fontSize={16} fontWeight={900} sx={{ color: '#102235' }}>Reachable users</Typography>
+                      <Typography fontSize={16} fontWeight={600} sx={{ color: '#102235' }}>Reachable users</Typography>
                       <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1} sx={{ mt: 1.4 }}>
                         <Typography fontSize={13} sx={{ color: '#27313d' }}>Reachable users for Email and Push</Typography>
-                        <TextField aria-label="Reachable users for Email and Push" type="number" inputProps={{ min: 0 }} value={pushReachable} onChange={(event) => setPushReachable(Math.max(0, Number(event.target.value)))} sx={{ width: 132, '& .MuiOutlinedInput-root': { backgroundColor: '#fff', borderRadius: .75, height: 42 } }} />
+                        <TextField aria-label="Reachable users for Email and Push" type="number" inputProps={{ min: 0 }} value={pushReachable} onChange={(event) => setPushReachable(Math.max(0, Number(event.target.value)))} sx={{ width: 132 }} />
                       </Stack>
                     </Box>
                     <Box sx={{ p: 1.5, borderRadius: 1, backgroundColor: '#e8e8ea' }}>
-                      <Typography fontSize={16} fontWeight={900} sx={{ color: '#102235' }}>Email</Typography>
+                      <Typography fontSize={16} fontWeight={600} sx={{ color: '#102235' }}>Email</Typography>
                       <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1} sx={{ mt: 1.4 }}>
                         <Typography fontSize={13} sx={{ color: '#27313d' }}>Number of email sends</Typography>
-                        <TextField aria-label="Number of email sends" type="number" inputProps={{ min: 0 }} value={emailSends} onChange={(event) => setEmailSends(Math.max(0, Number(event.target.value)))} sx={{ width: 132, '& .MuiOutlinedInput-root': { backgroundColor: '#fff', borderRadius: .75, height: 42 } }} />
+                        <TextField aria-label="Number of email sends" type="number" inputProps={{ min: 0 }} value={emailSends} onChange={(event) => setEmailSends(Math.max(0, Number(event.target.value)))} sx={{ width: 132 }} />
                       </Stack>
                     </Box>
                     <Card sx={{ p: 1.7, borderRadius: 1.25, color: '#fff', background: 'linear-gradient(135deg,#2d145e 0%,#6422c5 100%)', boxShadow: '0 10px 20px rgba(100,34,197,.18)' }}>
                       <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} gap={1.5}>
                         <Box>
-                          <Typography fontSize={16} fontWeight={950}>Need more customize offer?</Typography>
+                          <Typography fontSize={16} fontWeight={600}>Need more customize offer?</Typography>
                         </Box>
-                        <Button variant="contained" onClick={() => setSales(true)} sx={{ flexShrink: 0, minHeight: 38, px: 2, borderRadius: 1, color: '#32114d', backgroundColor: '#fff', textTransform: 'none', fontWeight: 950, '&:hover': { backgroundColor: '#f5edff' } }}>Talk to sales</Button>
+                        <Button variant="contained" onClick={() => setSales(true)} sx={{ flexShrink: 0, minHeight: 38, px: 2, borderRadius: 1, color: '#32114d', backgroundColor: '#fff', textTransform: 'none', '&:hover': { backgroundColor: '#f5edff' } }}>Talk to sales</Button>
                       </Stack>
                     </Card>
                   </Stack>
@@ -399,27 +401,27 @@ export default function PricingExperience() {
                 <Grid item xs={12} md={7} sx={{ p: { xs: 2, md: 3 } }}>
                   <Stack gap={1.7}>
                     <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} gap={1}>
-                      <Typography fontSize={20} fontWeight={950} sx={{ color: '#102235' }}>Your cost breakdown</Typography>
+                      <Typography fontSize={20} fontWeight={600} sx={{ color: '#102235' }}>Your cost breakdown</Typography>
                     </Stack>
                     {recommendedPlan === 'free' && <Alert severity="warning" sx={{ borderRadius: 2 }}>Free includes up to 2,000 Reachable Users and 10,000 email sends per month. Upgrade to continue beyond those limits.</Alert>}
-                    <Typography fontSize={13} fontWeight={900} fontStyle="italic" sx={{ color: '#253342' }}>{planDetails[recommendedPlan].label} plan</Typography>
+                    <Typography fontSize={13} fontWeight={600} fontStyle="italic" sx={{ color: '#253342' }}>{planDetails[recommendedPlan].label} plan</Typography>
                     <Stack gap={1.15} sx={{ color: '#27313d' }}>
-                      <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontSize={14}>Platform cost</Typography><Typography fontSize={14} fontWeight={700}><CostTooltip title={platformTooltip}>{money(platformCost, currency)}</CostTooltip></Typography></Stack>
-                      <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontSize={14}>Reachable users</Typography><Typography fontSize={14} fontWeight={700}><CostTooltip title={reachableTooltip}>{number(pushReachable)}</CostTooltip></Typography></Stack>
-                      <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontSize={14}>Additional reachable users</Typography><Typography fontSize={14} fontWeight={700}><CostTooltip title={additionalReachableTooltip}>{moneyExact(reachableOverageCost, currency)}</CostTooltip></Typography></Stack>
-                      <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontSize={14}>Push notifications</Typography><Typography fontSize={14} fontWeight={700} color="#16814d"><CostTooltip title={pushTooltip}>Unlimited</CostTooltip></Typography></Stack>
-                      <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontSize={14}>Email sends</Typography><Typography fontSize={14} fontWeight={700}><CostTooltip title={emailTooltip}>{emailOverageCost ? moneyExact(emailOverageCost, currency) : `Included with ${planDetails[recommendedPlan].label}`}</CostTooltip></Typography></Stack>
+                      <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontSize={14}>Platform cost</Typography><Typography fontSize={14} fontWeight={600}><CostTooltip title={platformTooltip}>{money(platformCost, currency)}</CostTooltip></Typography></Stack>
+                      <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontSize={14}>Reachable users</Typography><Typography fontSize={14} fontWeight={600}><CostTooltip title={reachableTooltip}>{number(pushReachable)}</CostTooltip></Typography></Stack>
+                      <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontSize={14}>Additional reachable users</Typography><Typography fontSize={14} fontWeight={600}><CostTooltip title={additionalReachableTooltip}>{moneyExact(reachableOverageCost, currency)}</CostTooltip></Typography></Stack>
+                      <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontSize={14}>Push notifications</Typography><Typography fontSize={14} fontWeight={600} color="#16814d"><CostTooltip title={pushTooltip}>Unlimited</CostTooltip></Typography></Stack>
+                      <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontSize={14}>Email sends</Typography><Typography fontSize={14} fontWeight={600}><CostTooltip title={emailTooltip}>{emailOverageCost ? moneyExact(emailOverageCost, currency) : `Included with ${planDetails[recommendedPlan].label}`}</CostTooltip></Typography></Stack>
                     </Stack>
                     <Divider />
-                    <Stack direction="row" justifyContent="space-between" alignItems="baseline" gap={2}><Typography fontSize={15} fontWeight={950} sx={{ color: '#102235' }}>Estimated cost per month</Typography><Typography fontSize={{ xs: 27, md: 34 }} fontWeight={950} sx={{ color: '#102235' }}><CostTooltip title={monthlyTotalTooltip}>{moneyExact(monthlyTotal, currency)}</CostTooltip><Typography component="span" color="text.secondary" fontSize={12}> / month equivalent</Typography></Typography></Stack>
+                    <Stack direction="row" justifyContent="space-between" alignItems="baseline" gap={2}><Typography fontSize={14} fontWeight={600} sx={{ color: '#102235' }}>Estimated cost per month</Typography><Typography fontSize={{ xs: 24, md: 32 }} fontWeight={600} sx={{ color: '#102235' }}><CostTooltip title={monthlyTotalTooltip}>{moneyExact(monthlyTotal, currency)}</CostTooltip><Typography component="span" color="text.secondary" fontSize={12}> / month equivalent</Typography></Typography></Stack>
                     {showProductSpecialistCta && <Box sx={{ position: 'relative', overflow: 'hidden', mt: .5, p: { xs: 2.1, md: 2.6 }, borderRadius: 1.75, color: '#fff', background: 'linear-gradient(135deg,#12133f 0%,#1c1d55 46%,#4b2094 100%)', border: '1px solid rgba(170,132,255,.42)', boxShadow: '0 18px 34px rgba(39,23,96,.26), inset 0 1px 0 rgba(255,255,255,.14)', '&:before': { content: '""', position: 'absolute', width: 230, height: 230, right: -92, top: -145, borderRadius: '50%', background: 'radial-gradient(circle,rgba(255,255,255,.2) 0%,rgba(255,255,255,0) 68%)', pointerEvents: 'none' }, '&:after': { content: '""', position: 'absolute', left: 22, right: 22, bottom: 0, height: 1, background: 'linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.42),rgba(255,255,255,0))', pointerEvents: 'none' } }}>
                       <Stack position="relative" zIndex={1} alignItems="center" gap={1.5}>
                         <Stack direction="row" alignItems="center" gap={.8} sx={{ color: '#d8c5ff' }}>
                           <AutoAwesomeRounded sx={{ fontSize: 17 }} />
-                          <Typography fontSize={11} fontWeight={950} letterSpacing=".12em">PREMIUM SUPPORT</Typography>
+                          <Typography fontSize={11} fontWeight={500} letterSpacing=".12em">PREMIUM SUPPORT</Typography>
                         </Stack>
-                        <Typography textAlign="center" fontSize={{ xs: 14, md: 16 }} fontWeight={900} lineHeight={1.45} sx={{ maxWidth: 660 }}>Talk to us for volume-based discounting, support package, custom contract, and more</Typography>
-                        <Button component="a" href="https://calendly.com/" target="_blank" rel="noreferrer" fullWidth startIcon={<AutoAwesomeRounded sx={{ fontSize: 18 }} />} sx={{ minHeight: 50, mt: .2, px: 3, color: '#241536', background: 'linear-gradient(135deg,#fff 0%,#f0e6ff 100%)', border: '1px solid rgba(255,255,255,.72)', boxShadow: '0 10px 20px rgba(7,7,36,.28), inset 0 1px 0 rgba(255,255,255,.95)', textTransform: 'none', fontWeight: 950, fontSize: { xs: 13, md: 14 }, letterSpacing: '.01em', borderRadius: 1, '& .MuiButton-startIcon': { color: '#6422c5' }, '&:hover': { color: '#241536', background: 'linear-gradient(135deg,#fff 0%,#e6d3ff 100%)', boxShadow: '0 13px 24px rgba(7,7,36,.34), inset 0 1px 0 rgba(255,255,255,.95)' } }}>Talk to a product specialist</Button>
+                        <Typography textAlign="center" fontSize={{ xs: 14, md: 16 }} fontWeight={600} lineHeight={1.45} sx={{ maxWidth: 660 }}>Talk to us for volume-based discounting, support package, custom contract, and more</Typography>
+                        <Button component="a" href="https://calendly.com/" target="_blank" rel="noreferrer" fullWidth startIcon={<AutoAwesomeRounded sx={{ fontSize: 18 }} />} sx={{ minHeight: 50, mt: .2, px: 3, color: '#241536', background: 'linear-gradient(135deg,#fff 0%,#f0e6ff 100%)', border: '1px solid rgba(255,255,255,.72)', boxShadow: '0 10px 20px rgba(7,7,36,.28), inset 0 1px 0 rgba(255,255,255,.95)', textTransform: 'none', fontSize: { xs: 13, md: 14 }, letterSpacing: '.01em', borderRadius: 1, '& .MuiButton-startIcon': { color: '#6422c5' }, '&:hover': { color: '#241536', background: 'linear-gradient(135deg,#fff 0%,#e6d3ff 100%)', boxShadow: '0 13px 24px rgba(7,7,36,.34), inset 0 1px 0 rgba(255,255,255,.95)' } }}>Talk to a product specialist</Button>
                       </Stack>
                     </Box>}
                     <Typography color="text.secondary" fontSize={11}>Additional Reachable Users are billed monthly. Annual subscription discounts apply to the base plan, not usage overage.</Typography>
@@ -430,11 +432,11 @@ export default function PricingExperience() {
           </Box>
         </Box>
 
-        <Stack direction={{ xs: 'column', md: 'row' }} gap={2} sx={{ mt: 5 }}><Card sx={{ flex: 1, p: 2.2, borderRadius: 2, backgroundColor: '#fffaf6', border: '1px solid #f2dfd6', boxShadow: 'none' }}><Stack direction="row" gap={1.4} alignItems="flex-start"><Box sx={{ width: 34, height: 34, display: 'grid', placeItems: 'center', flexShrink: 0, borderRadius: 1.2, color: '#d16a3e', backgroundColor: '#ffeadf' }}><AutoAwesomeRounded fontSize="small" /></Box><Box><Typography fontWeight={900}>AI Credits are action-based</Typography><Typography color="text.secondary" fontSize={12} sx={{ mt: 0.6, lineHeight: 1.55 }}>AI Email Creator uses 10 credits per generation, Smart Translation uses 10 per target language, AI Journey Analysis uses 100, Journey Optimization uses 50, and AI Customized Journey uses 50.</Typography></Box></Stack></Card><Card sx={{ flex: 1, p: 2.2, borderRadius: 2, backgroundColor: '#f7f4ff', border: '1px solid #e4dafa', boxShadow: 'none' }}><Stack direction="row" gap={1.4} alignItems="flex-start"><Box sx={{ width: 34, height: 34, display: 'grid', placeItems: 'center', flexShrink: 0, borderRadius: 1.2, color: '#6422c5', backgroundColor: '#eee6ff' }}><ShieldRounded fontSize="small" /></Box><Box><Typography fontWeight={900}>Billing is Project-level</Typography><Typography color="text.secondary" fontSize={12} sx={{ mt: 0.6, lineHeight: 1.55 }}>Each Project has its own plan, usage, billing contact, invoices, and payment method. Payments are handled securely by Stripe.</Typography></Box></Stack></Card></Stack>
-        <Box sx={{ mt: 7 }}><Typography fontSize={12} fontWeight={900} letterSpacing=".13em" color="primary.main">QUESTIONS, ANSWERED</Typography><Typography variant="h2" sx={{ fontSize: { xs: 31, md: 42 }, mt: 0.5, mb: 2.5 }}>Pricing without surprises.</Typography><Box sx={{ border: '1px solid #ded5e8', borderRadius: 2, overflow: 'hidden', backgroundColor: '#fff' }}>{faq.map(([question, answer]) => <Accordion key={question} disableGutters elevation={0} sx={{ border: 0, borderBottom: '1px solid #eee8f3', borderRadius: 0, '&:last-child': { borderBottom: 0 }, '&:before': { display: 'none' } }}><AccordionSummary expandIcon={<ExpandMoreRounded />} sx={{ minHeight: 52, '& .MuiAccordionSummary-content': { my: 1.4 } }}><Typography fontWeight={900}>{question}</Typography></AccordionSummary><AccordionDetails sx={{ pt: 0, pb: 2.2 }}><Typography color="text.secondary" fontSize={14} lineHeight={1.6}>{answer}</Typography></AccordionDetails></Accordion>)}</Box></Box>
+        <Stack direction={{ xs: 'column', md: 'row' }} gap={2} sx={{ mt: 5 }}><Card sx={{ flex: 1, p: 2.2, borderRadius: 2, backgroundColor: '#fffaf6', border: '1px solid #f2dfd6', boxShadow: 'none' }}><Stack direction="row" gap={1.4} alignItems="flex-start"><Box sx={{ width: 34, height: 34, display: 'grid', placeItems: 'center', flexShrink: 0, borderRadius: 1.2, color: '#d16a3e', backgroundColor: '#ffeadf' }}><AutoAwesomeRounded fontSize="small" /></Box><Box><Typography fontWeight={600}>AI Credits are action-based</Typography><Typography color="text.secondary" fontSize={12} sx={{ mt: 0.6, lineHeight: 1.55 }}>AI Email Creator uses 10 credits per generation, Smart Translation uses 10 per target language, AI Journey Analysis uses 100, Journey Optimization uses 50, and AI Customized Journey uses 50.</Typography></Box></Stack></Card><Card sx={{ flex: 1, p: 2.2, borderRadius: 2, backgroundColor: '#f7f4ff', border: '1px solid #e4dafa', boxShadow: 'none' }}><Stack direction="row" gap={1.4} alignItems="flex-start"><Box sx={{ width: 34, height: 34, display: 'grid', placeItems: 'center', flexShrink: 0, borderRadius: 1.2, color: '#6422c5', backgroundColor: '#eee6ff' }}><ShieldRounded fontSize="small" /></Box><Box><Typography fontWeight={600}>Billing is Project-level</Typography><Typography color="text.secondary" fontSize={12} sx={{ mt: 0.6, lineHeight: 1.55 }}>Each Project has its own plan, usage, billing contact, invoices, and payment method. Payments are handled securely by Stripe.</Typography></Box></Stack></Card></Stack>
+        <Box sx={{ mt: 7 }}><Typography fontSize={12} fontWeight={500} letterSpacing=".13em" color="primary.main">QUESTIONS, ANSWERED</Typography><Typography variant="h2" sx={{ fontSize: { xs: 32, md: 40 }, mt: 0.5, mb: 2.5 }}>Pricing without surprises.</Typography><Box sx={{ border: '1px solid #ded5e8', borderRadius: 2, overflow: 'hidden', backgroundColor: '#fff' }}>{faq.map(([question, answer]) => <Accordion key={question} disableGutters elevation={0} sx={{ border: 0, borderBottom: '1px solid #eee8f3', borderRadius: 0, '&:last-child': { borderBottom: 0 }, '&:before': { display: 'none' } }}><AccordionSummary expandIcon={<ExpandMoreRounded />} sx={{ minHeight: 52, '& .MuiAccordionSummary-content': { my: 1.4 } }}><Typography fontWeight={600}>{question}</Typography></AccordionSummary><AccordionDetails sx={{ pt: 0, pb: 2.2 }}><Typography color="text.secondary" fontSize={14} lineHeight={1.6}>{answer}</Typography></AccordionDetails></Accordion>)}</Box></Box>
       </Container>
       </Box>
-      <Dialog open={sales} onClose={() => setSales(false)} maxWidth="sm" fullWidth><DialogTitle sx={{ fontWeight: 900 }}>Talk to Sales<IconButton onClick={() => setSales(false)} aria-label="Close" sx={{ position: 'absolute', right: 12, top: 12 }}><CloseRounded /></IconButton></DialogTitle><DialogContent><Typography color="text.secondary" fontSize={13} lineHeight={1.6}>Enterprise plans are arranged with our team: custom limits, permissions, integrations, onboarding, and support. Tell us about your audience and we’ll shape the right Project setup.</Typography><Button variant="contained" size="large" href="/get-started?intent=enterprise" fullWidth sx={{ mt: 2, textTransform: 'none', fontWeight: 900 }}>Continue to contact sales</Button></DialogContent></Dialog>
+      <Dialog open={sales} onClose={() => setSales(false)} maxWidth="sm" fullWidth><DialogTitle>Talk to Sales<IconButton onClick={() => setSales(false)} aria-label="Close" sx={{ position: 'absolute', right: 12, top: 12 }}><CloseRounded /></IconButton></DialogTitle><DialogContent><Typography color="text.secondary" fontSize={13} lineHeight={1.6}>Enterprise plans are arranged with our team: custom limits, permissions, integrations, onboarding, and support. Tell us about your audience and we’ll shape the right Project setup.</Typography><Button variant="contained" size="large" href="/get-started?intent=enterprise" fullWidth sx={{ mt: 2, textTransform: 'none' }}>Continue to contact sales</Button></DialogContent></Dialog>
     </SiteShell>
   );
 }
@@ -453,13 +455,13 @@ function PricingCard({ plan, interval, currency, authenticated, recommended, onS
   return (
     <Grid item xs={12} sm={6} lg={3}>
       <Card sx={{ position: 'relative', mt: 0, height: '100%', overflow: 'visible', borderRadius: 2, border: recommended ? '2px solid #6422c5' : '1px solid #ded5e8', borderTop: `4px solid ${accent}`, boxShadow: recommended ? '0 14px 28px rgba(100,34,197,.15)' : '0 8px 18px rgba(69,30,91,.05)', background: surface, transition: 'transform .2s ease, box-shadow .2s ease', '&:hover': { transform: 'translateY(-3px)', boxShadow: recommended ? '0 18px 34px rgba(100,34,197,.2)' : '0 14px 26px rgba(69,30,91,.1)' } }}>
-        {recommended && <Chip label="RECOMMENDED" size="small" sx={{ position: 'absolute', zIndex: 2, top: -16, left: '50%', transform: 'translateX(-50%)', height: 24, px: .8, borderRadius: .5, color: '#fff', backgroundColor: '#6422c5', fontSize: 10, fontWeight: 950, letterSpacing: '.08em', boxShadow: '0 5px 12px rgba(100,34,197,.22)' }} />}
+        {recommended && <Chip label="RECOMMENDED" size="small" sx={{ position: 'absolute', zIndex: 2, top: -16, left: '50%', transform: 'translateX(-50%)', height: 24, px: .8, borderRadius: .5, color: '#fff', backgroundColor: '#6422c5', fontSize: 11, fontWeight: 500, letterSpacing: '.08em', boxShadow: '0 5px 12px rgba(100,34,197,.22)' }} />}
         <Stack sx={{ p: { xs: 2.3, md: 2.5 }, pt: 2.25, height: '100%' }}>
           <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap={1}>
             <Box>
               <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap" sx={{ minWidth: 0 }}>
-                <Typography fontSize={23} fontWeight={950} sx={{ color: '#241536', flexShrink: 0 }}>{detail.label}</Typography>
-                <Chip label={tag} size="small" sx={{ height: 23, maxWidth: 132, color: accent, backgroundColor: recommended ? '#eee6ff' : '#f6f2fa', fontSize: 11, fontWeight: 900, flexShrink: 0, '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }} />
+                <Typography fontSize={20} fontWeight={600} sx={{ color: '#241536', flexShrink: 0 }}>{detail.label}</Typography>
+                <Chip label={tag} size="small" sx={{ height: 23, maxWidth: 132, color: accent, backgroundColor: recommended ? '#eee6ff' : '#f6f2fa', fontSize: 11, fontWeight: 500, flexShrink: 0, '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }} />
               </Stack>
               <Typography color="text.secondary" fontSize={13} lineHeight={1.45} sx={{ mt: .75, minHeight: 35 }}>{detail.description}</Typography>
             </Box>
@@ -469,16 +471,16 @@ function PricingCard({ plan, interval, currency, authenticated, recommended, onS
             <Stack gap={.35}>
               <Stack direction="row" alignItems="baseline" gap={.6} flexWrap="wrap">
                 {interval === 'year' && isPaid && <Typography component="span" color="text.disabled" sx={{ textDecoration: 'line-through', fontSize: 13, whiteSpace: 'nowrap' }}>{money(monthly, currency)}</Typography>}
-                <Typography fontSize={{ xs: 29, md: 31 }} fontWeight={950} sx={{ color: '#241536', whiteSpace: 'nowrap' }}>{isPaid ? money(display, currency) : plan === 'free' ? money(0, currency) : 'Custom'}</Typography>
+                <Typography fontSize={{ xs: 32, md: 32 }} fontWeight={600} sx={{ color: '#241536', whiteSpace: 'nowrap' }}>{isPaid ? money(display, currency) : plan === 'free' ? money(0, currency) : 'Custom'}</Typography>
               </Stack>
               <Typography color="text.secondary" fontSize={12} lineHeight={1.35}>{isPaid ? `per ${interval}, plus tax` : plan === 'free' ? 'Forever' : 'tailored to your scale'}</Typography>
             </Stack>
-            {interval === 'year' && isPaid ? <Stack direction="row" gap={.7} alignItems="center" flexWrap="wrap" sx={{ mt: 1 }}><Chip label={`Save ${yearlySavingPercent}% · ${money(yearlySaving(plan, currency), currency)}`} size="small" sx={{ height: 22, color: '#16764a', backgroundColor: '#e7f8ed', fontWeight: 900, fontSize: 10, maxWidth: '100%' }} /><Typography color="text.secondary" fontSize={11}>billed annually</Typography></Stack> : <Typography color="text.secondary" fontSize={11} sx={{ mt: 1 }}>No setup fees. Cancel when you need to.</Typography>}
+            {interval === 'year' && isPaid ? <Stack direction="row" gap={.7} alignItems="center" flexWrap="wrap" sx={{ mt: 1 }}><Chip label={`Save ${yearlySavingPercent}% · ${money(yearlySaving(plan, currency), currency)}`} size="small" sx={{ height: 22, color: '#16764a', backgroundColor: '#e7f8ed', fontWeight: 500, fontSize: 11, maxWidth: '100%' }} /><Typography color="text.secondary" fontSize={11}>billed annually</Typography></Stack> : <Typography color="text.secondary" fontSize={11} sx={{ mt: 1 }}>No setup fees. Cancel when you need to.</Typography>}
           </Box>
-          <Button variant={recommended ? 'contained' : 'outlined'} fullWidth href={plan === 'enterprise' ? undefined : href} onClick={plan === 'enterprise' ? onSales : undefined} sx={{ mt: 1.7, textTransform: 'none', fontWeight: 900, borderRadius: 1.5, minHeight: 42 }}>{plan === 'enterprise' ? 'Talk to Sales' : authenticated && isPaid ? 'Choose plan' : isPaid ? 'Start free trial' : 'Start for free'}</Button>
-          <Button variant="text" size="small" onClick={onEstimate} sx={{ mt: .4, textTransform: 'none', color: '#6422c5', fontWeight: 800 }}>Estimate your cost</Button>
+          <Button variant={recommended ? 'contained' : 'outlined'} fullWidth href={plan === 'enterprise' ? undefined : href} onClick={plan === 'enterprise' ? onSales : undefined} sx={{ mt: 1.7, textTransform: 'none', borderRadius: 1.5, minHeight: 42 }}>{plan === 'enterprise' ? 'Talk to Sales' : authenticated && isPaid ? 'Choose plan' : isPaid ? 'Start free trial' : 'Start for free'}</Button>
+          <Button variant="text" size="small" onClick={onEstimate} sx={{ mt: .4, textTransform: 'none', color: '#6422c5' }}>Estimate your cost</Button>
           <Divider sx={{ my: 1.75 }} />
-          <Typography fontSize={12} fontWeight={900} letterSpacing='.08em' color='#8b719e' sx={{ mb: .9, textTransform: 'uppercase' }}>What’s included</Typography>
+          <Typography fontSize={12} fontWeight={500} letterSpacing='.08em' color='#8b719e' sx={{ mb: .9, textTransform: 'uppercase' }}>What’s included</Typography>
           <Stack gap={1.05}>{detail.features.map((feature) => <Stack direction="row" gap={.8} alignItems="flex-start" key={feature}><CheckCircleRounded sx={{ color: '#22a064', fontSize: 17, mt: .1 }} /><Typography fontSize={13} lineHeight={1.35}>{feature}</Typography></Stack>)}</Stack>
         </Stack>
       </Card>
@@ -489,7 +491,7 @@ function PricingCard({ plan, interval, currency, authenticated, recommended, onS
 function ComparisonTable({ interval, currency, authenticated, onSales }: { interval: BillingInterval; currency: Currency; authenticated: boolean; onSales: () => void }) {
   const rows = comparisonGroups.flatMap((category) => [
     <TableRow key={`${category.group}-header`}>
-      <TableCell colSpan={5} sx={{ py: 1.6, px: 2, color: '#241536', backgroundColor: '#f1e8ff', fontSize: 14, fontWeight: 950, letterSpacing: '.02em' }}>
+      <TableCell colSpan={5} sx={{ py: 1.6, px: 2, color: '#241536', backgroundColor: '#f1e8ff', fontSize: 14, fontWeight: 500, letterSpacing: '.02em' }}>
         <Tooltip title={categoryDescriptions[category.group] ?? ''} arrow placement="top" enterTouchDelay={0}>
           <Box component="span" sx={{ cursor: 'help', borderBottom: '1px dashed #8b719e' }}>{category.group}</Box>
         </Tooltip>
@@ -497,13 +499,13 @@ function ComparisonTable({ interval, currency, authenticated, onSales }: { inter
     </TableRow>,
     ...category.rows.map(([label, values], rowIndex) => (
       <TableRow key={`${category.group}-${label}`} sx={{ backgroundColor: rowIndex % 2 ? '#f3f3f3' : '#fff', '&:hover': { backgroundColor: '#eee9f6' } }}>
-        <TableCell sx={{ px: 2, py: 1.35, fontSize: 13, fontWeight: 700, color: '#233247', verticalAlign: 'top' }}>
+        <TableCell sx={{ px: 2, py: 1.35, fontSize: 13, fontWeight: 500, color: '#233247', verticalAlign: 'top' }}>
           <Tooltip title={featureDescriptions[label]} arrow placement="top-start" enterTouchDelay={0}>
             <Box component="span" sx={{ cursor: 'help', borderBottom: '1px dashed #8b719e' }}>{label}</Box>
           </Tooltip>
         </TableCell>
         {(['free', 'starter', 'pro', 'enterprise'] as PlanKey[]).map((key) => (
-          <TableCell align="center" key={key} sx={{ px: 1.2, py: 1.35, color: statusColor(values[key]), fontSize: 13, fontWeight: 800, verticalAlign: 'middle' }}>
+          <TableCell align="center" key={key} sx={{ px: 1.2, py: 1.35, color: statusColor(values[key]), fontSize: 13, fontWeight: 500, verticalAlign: 'middle' }}>
             {values[key] === 'Included' ? <CheckCircleRounded aria-label="Included" sx={{ color: '#2b9862', fontSize: 19, verticalAlign: 'middle' }} /> : <Typography component="span" sx={{ whiteSpace: 'pre-line', fontSize: 'inherit', fontWeight: 'inherit' }}>{values[key]}</Typography>}
           </TableCell>
         ))}
@@ -524,22 +526,22 @@ function ComparisonTable({ interval, currency, authenticated, onSales }: { inter
   return (
     <Box sx={{ mt: 4 }}>
       <Box sx={{ textAlign: 'center', mb: 3 }}>
-        <Typography fontSize={12} fontWeight={950} letterSpacing=".14em" color="#6422c5">COMPARE PLANS IN DETAIL</Typography>
-        <Typography fontSize={{ xs: 27, md: 36 }} fontWeight={950} sx={{ mt: .7, letterSpacing: '-.035em', color: '#241536' }}>Comprehensive feature breakdown</Typography>
+        <Typography fontSize={12} fontWeight={500} letterSpacing=".14em" color="#6422c5">COMPARE PLANS IN DETAIL</Typography>
+        <Typography fontSize={{ xs: 24, md: 32 }} fontWeight={600} sx={{ mt: .7, letterSpacing: '-.035em', color: '#241536' }}>Comprehensive feature breakdown</Typography>
         <Typography color="text.secondary" fontSize={13} sx={{ mt: .7 }}>Compare the features and benefits of each PixlPush plan.</Typography>
-        <Chip icon={<InfoOutlined />} label="Included · Limited · Not included · Custom · Upgrade" size="small" sx={{ mt: 1.4, fontWeight: 800, color: '#5d3a8c', backgroundColor: '#f1eaff' }} />
+        <Chip icon={<InfoOutlined />} label="Included · Limited · Not included · Custom · Upgrade" size="small" sx={{ mt: 1.4, fontWeight: 500, color: '#5d3a8c', backgroundColor: '#f1eaff' }} />
       </Box>
       <TableContainer component={Card} sx={{ borderRadius: 1.5, border: '1px solid #ded5e8', boxShadow: '0 14px 34px rgba(69,30,91,.06)', backgroundColor: '#fff', overflowX: 'auto' }}>
         <Table size="medium" sx={{ minWidth: 1080 }}>
           <TableHead>
             <TableRow sx={{ '& th': { backgroundColor: '#fff', color: '#102235', borderBottom: '1px solid #ded5e8', position: 'sticky', top: 0, zIndex: 2 } }}>
-              <TableCell sx={{ minWidth: 320, verticalAlign: 'bottom', pb: 2.2, px: 2 }}><Typography fontSize={14} fontWeight={900}>Feature</Typography></TableCell>
+              <TableCell sx={{ minWidth: 320, verticalAlign: 'bottom', pb: 2.2, px: 2 }}><Typography fontSize={14} fontWeight={600}>Feature</Typography></TableCell>
               {(['free', 'starter', 'pro', 'enterprise'] as PlanKey[]).map((plan) => {
                 const action = planActions[plan];
                 return <TableCell key={plan} align="center" sx={{ minWidth: 175, py: 1.8, px: 1.2, backgroundColor: plan === 'starter' ? '#faf6ff' : '#fff', borderLeft: '1px solid #f0ebf4' }}>
-                  <Typography fontSize={16} fontWeight={950} sx={{ color: '#241536' }}>{planDetails[plan].label}</Typography>
+                  <Typography fontSize={16} fontWeight={600} sx={{ color: '#241536' }}>{planDetails[plan].label}</Typography>
                   <Typography color="text.secondary" fontSize={11} sx={{ mt: .4, mb: 1.2 }}>{planPrice(plan)}</Typography>
-                  <Button variant={plan === 'starter' ? 'contained' : 'outlined'} size="small" href={action.href} onClick={action.onClick} sx={{ minWidth: 140, minHeight: 36, px: 1.2, borderRadius: .7, textTransform: 'none', fontSize: 11, fontWeight: 900, whiteSpace: 'nowrap' }}>{action.label}</Button>
+                  <Button variant={plan === 'starter' ? 'contained' : 'outlined'} size="small" href={action.href} onClick={action.onClick} sx={{ minWidth: 140, minHeight: 36, px: 1.2, borderRadius: .7, textTransform: 'none', fontSize: 11, whiteSpace: 'nowrap' }}>{action.label}</Button>
                 </TableCell>;
               })}
             </TableRow>

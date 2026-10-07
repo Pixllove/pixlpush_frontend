@@ -74,12 +74,7 @@ export default function GoogleButton({
       variant="outlined"
       startIcon={<GoogleIcon />}
       onClick={handleClick}
-      sx={{
-        mt: 4,
-        py: 1.4,
-        borderColor: '#ddd5e5',
-        color: '#241536',
-      }}
+      size="large"
     >
       {label}
     </Button>

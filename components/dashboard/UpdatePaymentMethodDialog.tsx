@@ -21,7 +21,7 @@ export default function UpdatePaymentMethodDialog({ projectId, clientSecret, onC
 }) {
   return (
     <Dialog open={Boolean(clientSecret)} onClose={onClose} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 2.5 } }}>
-      <DialogTitle sx={{ fontWeight: 900 }}>Add a card</DialogTitle>
+      <DialogTitle>Add a card</DialogTitle>
       {clientSecret && stripePromise ? (
         <Elements stripe={stripePromise} options={{ clientSecret, appearance: stripeAppearance }}>
           <CardForm projectId={projectId} onClose={onClose} onSaved={onSaved} />
@@ -74,7 +74,7 @@ function CardForm({ projectId, onClose, onSaved }: { projectId: string; onClose:
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2.5 }}>
         <Button onClick={onClose} disabled={saving} sx={{ textTransform: "none" }}>Cancel</Button>
-        <Button variant="contained" startIcon={<LockRounded />} disabled={!stripe || !ready || saving} onClick={save} sx={{ textTransform: "none", fontWeight: 800 }}>
+        <Button variant="contained" startIcon={<LockRounded />} disabled={!stripe || !ready || saving} onClick={save} sx={{ textTransform: "none" }}>
           {saving ? "Saving…" : "Save card"}
         </Button>
       </DialogActions>

@@ -465,7 +465,7 @@ export default function PushComposer({
       </Stack>
 
       <Card className="push-type-card">
-        <Typography fontSize={12} fontWeight={900} color="text.secondary">
+        <Typography fontSize={12} fontWeight={500} color="text.secondary">
           Notification type
         </Typography>
         <Stack direction="row" className="push-type-toggle">
@@ -695,7 +695,7 @@ export default function PushComposer({
                 }}
                 sx={{
                   color: "primary.main",
-                  fontWeight: 700,
+                  fontWeight: 500,
                   justifyContent: "center",
                 }}
               >
@@ -1039,7 +1039,7 @@ export default function PushComposer({
                 }}
                 sx={{
                   color: "primary.main",
-                  fontWeight: 700,
+                  fontWeight: 500,
                   justifyContent: "center",
                 }}
               >
@@ -1202,7 +1202,7 @@ function PushHeading({
       <Box className="push-number-badge" sx={{ bgcolor: color }}>
         {number}
       </Box>
-      <Typography fontSize={20} fontWeight={900}>
+      <Typography fontSize={20} fontWeight={600}>
         {title}
       </Typography>
       {disabled && (
@@ -1233,7 +1233,7 @@ function PlatformCard({
       <Stack direction="row" alignItems="center" gap={1.2}>
         <Box className="push-platform-icon">{icon}</Box>
         <Box sx={{ flex: 1 }}>
-          <Typography fontWeight={900} fontSize={13}>
+          <Typography fontWeight={600} fontSize={13}>
             {title}
           </Typography>
           <Typography color="text.secondary" fontSize={11}>
@@ -1247,7 +1247,7 @@ function PlatformCard({
         />
       </Stack>
       {checked && (
-        <Typography color="#477fe4" fontSize={10} sx={{ mt: 1 }}>
+        <Typography color="#477fe4" fontSize={11} sx={{ mt: 1 }}>
           ✓ Enabled for this platform
         </Typography>
       )}

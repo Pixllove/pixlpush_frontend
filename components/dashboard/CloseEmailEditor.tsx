@@ -72,13 +72,13 @@ export default function CloseEmailEditor({ onDiscard, onSaveDraft, snapshot }: {
   }, []);
   return <>
     <IconButton onClick={() => setOpen(true)} aria-label="Close editor"><CloseRounded /></IconButton>
-    <Dialog open={open} onClose={() => setOpen(false)} aria-labelledby="close-email-title" sx={{ zIndex: 1400 }} PaperProps={{ sx: { width: 448, maxWidth: 'calc(100% - 32px)', m: 2, borderRadius: '12px', p: 1 } }}>
+    <Dialog open={open} onClose={() => setOpen(false)} aria-labelledby="close-email-title" sx={{ zIndex: 1400 }} PaperProps={{ sx: { width: 448, maxWidth: 'calc(100% - 32px)', m: 2, borderRadius: '8px', p: 1 } }}>
       <DialogContent sx={{ p: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography sx={{ fontSize: 12, letterSpacing: '.16em', fontWeight: 800, color: '#94a3b8' }}>CLOSE EDITOR</Typography>
+          <Typography sx={{ fontSize: 12, letterSpacing: '.16em', fontWeight: 500, color: '#94a3b8' }}>CLOSE EDITOR</Typography>
           <IconButton onClick={() => setOpen(false)} aria-label="Keep editing" size="small"><CloseRounded /></IconButton>
         </Box>
-        <Typography id="close-email-title" sx={{ fontSize: 24, fontWeight: 700, color: '#172033', mt: 1 }}>Save this email as a draft?</Typography>
+        <Typography id="close-email-title" sx={{ fontSize: 24, fontWeight: 600, color: '#172033', mt: 1 }}>Save this email as a draft?</Typography>
         <Typography sx={{ fontSize: 13, lineHeight: 1.8, color: '#64748b', mt: 1.5 }}>Save it in drafts to keep editing later, or discard to close without saving this version.</Typography>
       </DialogContent>
       <DialogActions sx={{ px: 2, pb: 2, gap: 1 }}>
@@ -86,13 +86,13 @@ export default function CloseEmailEditor({ onDiscard, onSaveDraft, snapshot }: {
         <Button variant="contained" onClick={onSaveDraft} sx={{ borderRadius: '7px', bgcolor: '#1d9854', '&:hover': { bgcolor: '#178047' } }}>Save as draft</Button>
       </DialogActions>
     </Dialog>
-    <Dialog open={reloadOpen} onClose={keepEditing} aria-labelledby="reload-email-title" sx={{ zIndex: 1400 }} PaperProps={{ sx: { width: 448, maxWidth: 'calc(100% - 32px)', m: 2, borderRadius: '12px', p: 1 } }}>
+    <Dialog open={reloadOpen} onClose={keepEditing} aria-labelledby="reload-email-title" sx={{ zIndex: 1400 }} PaperProps={{ sx: { width: 448, maxWidth: 'calc(100% - 32px)', m: 2, borderRadius: '8px', p: 1 } }}>
       <DialogContent sx={{ p: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography sx={{ fontSize: 12, letterSpacing: '.16em', fontWeight: 800, color: '#94a3b8' }}>RELOAD PAGE</Typography>
+          <Typography sx={{ fontSize: 12, letterSpacing: '.16em', fontWeight: 500, color: '#94a3b8' }}>RELOAD PAGE</Typography>
           <IconButton onClick={keepEditing} aria-label="Keep editing" size="small"><CloseRounded /></IconButton>
         </Box>
-        <Typography id="reload-email-title" sx={{ fontSize: 24, fontWeight: 700, color: '#172033', mt: 1 }}>Are you sure you want to reload?</Typography>
+        <Typography id="reload-email-title" sx={{ fontSize: 24, fontWeight: 600, color: '#172033', mt: 1 }}>Are you sure you want to reload?</Typography>
         <Typography sx={{ fontSize: 13, lineHeight: 1.8, color: '#64748b', mt: 1.5 }}>Reloading discards the changes you have not saved. Cancel to keep them and continue editing.</Typography>
       </DialogContent>
       <DialogActions sx={{ px: 2, pb: 2, gap: 1 }}>

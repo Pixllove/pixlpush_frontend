@@ -150,7 +150,7 @@ function CodeBlock({
       >
         <Typography
           fontSize={11}
-          fontWeight={900}
+          fontWeight={500}
           letterSpacing={1.2}
           color="#ffd166"
         >
@@ -170,7 +170,6 @@ function CodeBlock({
             minWidth: 0,
             color: copied ? "#78e6a8" : "#dbe1ff",
             textTransform: "none",
-            fontWeight: 800,
             "&:hover": { color: copied ? "#9af1be" : "#fff" },
           }}
         >
@@ -184,7 +183,7 @@ function CodeBlock({
           p: 1.6,
           overflow: "auto",
           color: "#dce3ff",
-          fontFamily: "monospace",
+          fontFamily: "var(--pp-mono)",
           fontSize: 12,
           lineHeight: 1.7,
           whiteSpace: "pre-wrap",
@@ -229,8 +228,8 @@ function SectionHeading({
         {eyebrow && (
           <Typography
             color={dark ? "#ffd166" : "#6544e8"}
-            fontSize={10}
-            fontWeight={900}
+            fontSize={11}
+            fontWeight={500}
             letterSpacing={1.4}
           >
             {eyebrow}
@@ -241,9 +240,9 @@ function SectionHeading({
           sx={{
             mt: eyebrow ? 0.2 : 0,
             color: dark ? "#fff" : undefined,
-            fontSize: { xs: 21, md: 25 },
+            fontSize: { xs: 20, md: 24 },
             lineHeight: 1.2,
-            fontWeight: 850,
+            fontWeight: 600,
           }}
         >
           {title}
@@ -320,24 +319,12 @@ export default function IntegrationDocumentation() {
       <Card
         sx={{
           p: { xs: 2.75, md: 4.5 },
-          minHeight: { md: 320 },
           border: "0 !important",
           position: "relative",
           overflow: "hidden",
           color: "#fff",
-          background: "radial-gradient(circle at 84% 18%,rgba(97,160,255,.5),transparent 24%), radial-gradient(circle at 76% 110%,rgba(236,79,188,.34),transparent 35%), linear-gradient(118deg,#10163b 0%,#25206d 52%,#5b2acb 100%) !important",
-          boxShadow: "0 22px 46px rgba(52,24,86,.2) !important",
-          "&:before": {
-            content: "\"\"",
-            position: "absolute",
-            width: 330,
-            height: 330,
-            right: -110,
-            top: -160,
-            border: "1px solid rgba(255,255,255,.16)",
-            borderRadius: "50%",
-            boxShadow: "0 0 0 38px rgba(255,255,255,.035), 0 0 0 78px rgba(255,255,255,.025)",
-          },
+          background: "var(--pp-hero) !important",
+          boxShadow: "none !important",
           "& > *": { position: "relative", zIndex: 1 },
         }}
       >
@@ -354,8 +341,8 @@ export default function IntegrationDocumentation() {
                 sx={{
                   bgcolor: "rgba(255,255,255,.14)",
                   color: "#fff",
-                  fontSize: 10,
-                  fontWeight: 900,
+                  fontSize: 11,
+                  fontWeight: 500,
                   letterSpacing: 1,
                 }}
               />
@@ -363,15 +350,15 @@ export default function IntegrationDocumentation() {
                 label="React + React Native"
                 size="small"
                 variant="outlined"
-                sx={{ fontSize: 10, fontWeight: 800, color: "rgba(255,255,255,.82)", borderColor: "rgba(255,255,255,.35)" }}
+                sx={{ fontSize: 11, fontWeight: 500, color: "rgba(255,255,255,.82)", borderColor: "rgba(255,255,255,.35)" }}
               />
             </Stack>
             <Typography
               variant="h2"
               sx={{
-                fontSize: { xs: 31, md: 44 },
+                fontSize: { xs: 20, md: 24 },
                 lineHeight: 1.08,
-                fontWeight: 850,
+                fontWeight: 600,
                 maxWidth: 690,
               }}
             >
@@ -392,7 +379,7 @@ export default function IntegrationDocumentation() {
                 variant="contained"
                 href="#install"
                 startIcon={<TerminalRounded />}
-                sx={{ textTransform: "none", fontWeight: 900, color: "#32134f", backgroundColor: "#fff", "&:hover": { backgroundColor: "#f4ebff" } }}
+                sx={{ textTransform: "none", color: "#32134f", backgroundColor: "#fff", "&:hover": { backgroundColor: "#f4ebff" } }}
               >
                 Start integration
               </Button>
@@ -400,7 +387,7 @@ export default function IntegrationDocumentation() {
                 variant="outlined"
                 href="/docs"
                 endIcon={<OpenInNewRounded />}
-                sx={{ textTransform: "none", fontWeight: 800, color: "#fff", borderColor: "rgba(255,255,255,.45)", "&:hover": { borderColor: "#fff", backgroundColor: "rgba(255,255,255,.1)" } }}
+                sx={{ textTransform: "none", color: "#fff", backgroundColor: "transparent", borderColor: "rgba(255,255,255,.45)", "&:hover": { borderColor: "#fff", backgroundColor: "rgba(255,255,255,.1)" } }}
               >
                 View public docs
               </Button>
@@ -421,12 +408,12 @@ export default function IntegrationDocumentation() {
             <Typography
               color="#ffd36a"
               fontSize={11}
-              fontWeight={900}
+              fontWeight={500}
               letterSpacing={1.3}
             >
               ACTIVE PROJECT
             </Typography>
-            <Typography fontWeight={900} sx={{ mt: 0.8 }}>
+            <Typography fontWeight={600} sx={{ mt: 0.8 }}>
               {active?.name ?? "Your project"}
             </Typography>
             <Typography
@@ -442,7 +429,7 @@ export default function IntegrationDocumentation() {
                 <Typography fontSize={12} color="rgba(255,255,255,.62)">
                   SDK status
                 </Typography>
-                <Typography fontSize={12} color="#9bf2bd" fontWeight={800}>
+                <Typography fontSize={12} color="#9bf2bd" fontWeight={500}>
                   Ready to connect
                 </Typography>
               </Stack>
@@ -450,7 +437,7 @@ export default function IntegrationDocumentation() {
                 <Typography fontSize={12} color="rgba(255,255,255,.62)">
                   Data destination
                 </Typography>
-                <Typography fontSize={12} fontWeight={800}>
+                <Typography fontSize={12} fontWeight={500}>
                   PixlPush Cloud
                 </Typography>
               </Stack>
@@ -459,7 +446,7 @@ export default function IntegrationDocumentation() {
         </Stack>
       </Card>
       <Box>
-        <Typography variant="h3" sx={{ fontSize: { xs: 21, md: 25 }, fontWeight: 850 }}>
+        <Typography variant="h3" sx={{ fontSize: { xs: 20, md: 24 }, fontWeight: 600 }}>
           What you’ll need
         </Typography>
         <Typography color="text.secondary" fontSize={13} sx={{ mt: 0.5 }}>
@@ -509,9 +496,9 @@ export default function IntegrationDocumentation() {
                 >
                   <Icon />
                 </Box>
-                <Chip label={label as string} size="small" sx={{ height: 24, color: "#7132d3", bgcolor: "#f5edff", fontSize: 10, fontWeight: 850 }} />
+                <Chip label={label as string} size="small" sx={{ height: 24, color: "#7132d3", bgcolor: "#f5edff", fontSize: 11, fontWeight: 500 }} />
               </Stack>
-              <Typography fontWeight={900} fontSize={15} sx={{ mt: 1.7 }}>
+              <Typography fontWeight={600} fontSize={14} sx={{ mt: 1.7 }}>
                 {title as string}
               </Typography>
               <Typography
@@ -544,7 +531,7 @@ export default function IntegrationDocumentation() {
           <Grid item xs={12} md={5}>
             <Stack gap={1.8}>
               <Box>
-                <Typography fontWeight={900}>What you need</Typography>
+                <Typography fontWeight={600}>What you need</Typography>
                 <Typography
                   color="text.secondary"
                   fontSize={13}
@@ -573,7 +560,7 @@ export default function IntegrationDocumentation() {
                   </Typography>
                   <Typography
                     fontSize={13}
-                    fontWeight={900}
+                    fontWeight={600}
                     sx={{ mt: 0.4, wordBreak: "break-all" }}
                   >
                     {value}
@@ -625,7 +612,7 @@ export default function IntegrationDocumentation() {
             </Box>
           </Grid>
           <Grid item xs={12} md={5}>
-            <Typography fontWeight={900} sx={{ mb: 1 }}>
+            <Typography fontWeight={600} sx={{ mb: 1 }}>
               Recommended event taxonomy
             </Typography>
             <Stack gap={0.7}>
@@ -646,7 +633,7 @@ export default function IntegrationDocumentation() {
                     }}
                   />
                   <Box sx={{ flex: 1 }}>
-                    <Typography fontSize={12} fontWeight={900}>
+                    <Typography fontSize={12} fontWeight={500}>
                       {event}
                     </Typography>
                     <Typography fontSize={11} color="text.secondary">
@@ -656,7 +643,7 @@ export default function IntegrationDocumentation() {
                   <Chip
                     label={use}
                     size="small"
-                    sx={{ height: 22, fontSize: 9, fontWeight: 800 }}
+                    sx={{ height: 22, fontSize: 11, fontWeight: 500 }}
                   />
                 </Stack>
               ))}
@@ -709,19 +696,19 @@ export default function IntegrationDocumentation() {
                 }}
               >
                 <Stack direction="row" justifyContent="space-between" gap={1}>
-                  <Typography fontWeight={900}>{title}</Typography>
+                  <Typography fontWeight={600}>{title}</Typography>
                   <Chip
                     label={channel}
                     size="small"
                     sx={{
                       color: "#7132d3",
                       bgcolor: "#eee2ff",
-                      fontWeight: 800,
-                      fontSize: 9,
+                      fontWeight: 500,
+                      fontSize: 11,
                     }}
                   />
                 </Stack>
-                <Typography fontSize={12} fontWeight={800} sx={{ mt: 1 }}>
+                <Typography fontSize={12} fontWeight={500} sx={{ mt: 1 }}>
                   {audience}
                 </Typography>
                 <Typography
@@ -756,7 +743,6 @@ export default function IntegrationDocumentation() {
             sx={{
               alignSelf: { xs: "stretch", sm: "flex-start" },
               textTransform: "none",
-              fontWeight: 900,
               whiteSpace: "nowrap",
               backgroundColor: copied === "AI integration prompt" ? "#209b63" : undefined,
               "&:hover": { backgroundColor: copied === "AI integration prompt" ? "#168052" : undefined },
@@ -835,7 +821,7 @@ export default function IntegrationDocumentation() {
                 ],
               ].map(([title, description]) => (
                 <Box key={title}>
-                  <Typography fontSize={13} fontWeight={900} color="#ffd36a">
+                  <Typography fontSize={13} fontWeight={600} color="#ffd36a">
                     {title}
                   </Typography>
                   <Typography
@@ -855,7 +841,7 @@ export default function IntegrationDocumentation() {
         <Stack direction="row" gap={1.4} alignItems="flex-start">
           <LockRounded sx={{ color: "#bd7b00", mt: 0.2 }} />
           <Box>
-            <Typography fontWeight={900}>Security boundary</Typography>
+            <Typography fontWeight={600}>Security boundary</Typography>
             <Typography color="text.secondary" fontSize={13} sx={{ mt: 0.4 }}>
               Public SDK keys identify the Project and are safe for client apps.
               Firebase service accounts, private API keys, campaign secrets, and

@@ -49,7 +49,7 @@ export default function DangerZonePanel() {
         <Card className="danger-card">
           <WarningAmberRounded />
           <Box sx={{ flex: 1 }}>
-            <Typography fontWeight={900}>{name} is deactivated</Typography>
+            <Typography fontWeight={600}>{name} is deactivated</Typography>
             <Typography color="text.secondary" fontSize={12} sx={{ mt: .5 }}>
               {recoveryOpen
                 ? `It can be restored until ${new Date(project!.recoveryUntil!).toLocaleString()}. Billing is unchanged.`
@@ -64,7 +64,7 @@ export default function DangerZonePanel() {
         <Card className="danger-card">
           <WarningAmberRounded />
           <Box sx={{ flex: 1 }}>
-            <Typography fontWeight={900}>Deactivate {name}</Typography>
+            <Typography fontWeight={600}>Deactivate {name}</Typography>
             <Typography color="text.secondary" fontSize={12} sx={{ mt: .5 }}>
               The Project enters a 14-day recovery window. After that, normal access cannot be restored. Deactivation does not cancel billing.
             </Typography>

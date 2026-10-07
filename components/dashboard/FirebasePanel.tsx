@@ -78,7 +78,7 @@ export default function FirebasePanel() {
           <Box className="settings-large-icon"><CloudUploadRounded /></Box>
           <Box sx={{ flex: 1 }}>
             <Stack direction="row" alignItems="center" gap={1}>
-              <Typography fontWeight={900}>Firebase service account</Typography>
+              <Typography fontWeight={600}>Firebase service account</Typography>
               {config && <SettingsStatus tone={connected ? 'success' : config.status === 'error' ? 'warning' : 'neutral'}>{connected ? 'Connected' : config.status === 'error' ? 'Error' : 'Not connected'}</SettingsStatus>}
             </Stack>
             <Typography color="text.secondary" fontSize={12} sx={{ mt: .6 }}>

@@ -122,7 +122,7 @@ describe('journey list', () => {
     expect(within(row).getByText('Running')).toBeInTheDocument();
     expect(within(row).getByText('1,200')).toBeInTheDocument();
     expect(screen.queryByText('Hot journey paywall drop')).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: /^Draft/ }));
+    await userEvent.click(screen.getByRole('tab', { name: /^Draft/ }));
     await waitFor(() => expect(api.list).toHaveBeenLastCalledWith('p1', expect.objectContaining({ status: 'draft', page: 1 })));
   });
 

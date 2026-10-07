@@ -36,7 +36,7 @@ export default function DeleteConfirmDialog({
         </Typography>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2.5 }}>
-        <Button onClick={onClose} disabled={loading} sx={{ textTransform: "none", fontWeight: 800 }}>
+        <Button onClick={onClose} disabled={loading} sx={{ textTransform: "none" }}>
           Cancel
         </Button>
         <Button
@@ -45,7 +45,7 @@ export default function DeleteConfirmDialog({
           startIcon={<DeleteOutlineRounded />}
           onClick={onConfirm}
           disabled={loading}
-          sx={{ textTransform: "none", fontWeight: 800 }}
+          sx={{ textTransform: "none" }}
         >
           {loading ? "Deleting…" : "Delete"}
         </Button>

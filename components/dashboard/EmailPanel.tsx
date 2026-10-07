@@ -67,7 +67,7 @@ export default function EmailPanel() {
           <Box className="settings-large-icon email"><EmailRounded /></Box>
           <Box sx={{ flex: 1 }}>
             <Stack direction="row" alignItems="center" gap={1}>
-              <Typography fontWeight={900}>{config?.sendingDomain ?? 'No sending domain yet'}</Typography>
+              <Typography fontWeight={600}>{config?.sendingDomain ?? 'No sending domain yet'}</Typography>
               {config && <SettingsStatus tone={tone}>{label}</SettingsStatus>}
             </Stack>
             <Typography color="text.secondary" fontSize={12} sx={{ mt: .6 }}>
@@ -92,8 +92,8 @@ export default function EmailPanel() {
                 {config!.dnsRecords.map((r) => (
                   <TableRow key={r.purpose}>
                     <TableCell>{r.purpose}</TableCell><TableCell>{r.type}</TableCell>
-                    <TableCell sx={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>{r.name}</TableCell>
-                    <TableCell sx={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>{r.value}</TableCell>
+                    <TableCell sx={{ fontFamily: 'var(--pp-mono)', wordBreak: 'break-all' }}>{r.name}</TableCell>
+                    <TableCell sx={{ fontFamily: 'var(--pp-mono)', wordBreak: 'break-all' }}>{r.value}</TableCell>
                     <TableCell>{r.verified ? 'Verified' : 'Pending'}</TableCell>
                   </TableRow>
                 ))}

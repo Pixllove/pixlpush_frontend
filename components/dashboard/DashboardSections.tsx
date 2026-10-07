@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import TeamAccessPanel from "./team/TeamAccessPanel";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSelector } from "react-redux";
@@ -37,7 +37,6 @@ import {
   PlayCircleOutlineRounded,
   RocketLaunchRounded,
   ReceiptLongRounded,
-  SearchRounded,
   SendRounded,
   SettingsRounded,
   StorageRounded,
@@ -69,8 +68,11 @@ import {
   TableCell,
   TableHead,
   TableRow,
-  TextField,
   Typography,
+  Tab,
+  Tabs,
+  ToggleButton,
+  ToggleButtonGroup,
 } from "@mui/material";
 import { RootState } from "@/lib/store";
 import { projectContext } from "@/lib/projects";
@@ -103,6 +105,7 @@ import LifecycleSegmentCreateDialog from "./LifecycleSegmentCreateDialog";
 import UserImportDialog from "./UserImportDialog";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
 import { Toast } from "@/components/auth/AuthFeedback";
+import SearchField from "./SearchField";
 
 export function StatCard({
   label,
@@ -124,11 +127,11 @@ export function StatCard({
         <Typography color="text.secondary" fontSize={12}>
           {label}
         </Typography>
-        <Typography fontSize={25} fontWeight={900}>
+        <Typography fontSize={24} fontWeight={600}>
           {value}
         </Typography>
         {trend && (
-          <Typography color="#129661" fontSize={11} fontWeight={800}>
+          <Typography color="#129661" fontSize={11} fontWeight={500}>
             {trend}
           </Typography>
         )}
@@ -140,7 +143,7 @@ export function OverviewSection() {
   const selectedProject = useSelector(
     (state: RootState) => state.ui.selectedProject,
   );
-  const { active } = useActiveProject();
+  const { active, projects } = useActiveProject();
   const projectName = active?.name ?? "this project";
   const project = projectContext(selectedProject);
   const [switching, setSwitching] = useState(false);
@@ -150,10 +153,13 @@ export function OverviewSection() {
   useEffect(() => {
     const previous = shownProject.current;
     shownProject.current = selectedProject;
-    if (!previous || previous === selectedProject) return;
+    // A switch is from one real Project to another. The stored selection replacing the placeholder on
+    // reload is not one, and fading for it dimmed the whole page on every load.
+    if (!previous || previous === selectedProject || !projects.some((p) => p.id === previous)) return;
     setSwitching(true);
     const timer = window.setTimeout(() => setSwitching(false), 260);
     return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only a change of selection can be a switch
   }, [selectedProject]);
   const m = project.metrics;
   const points =
@@ -200,7 +206,7 @@ export function OverviewSection() {
               <Box className="live-dot" />
               <Typography
                 fontSize={11}
-                fontWeight={900}
+                fontWeight={500}
                 color="#168c5b"
                 letterSpacing=".08em"
               >
@@ -314,14 +320,10 @@ export function OverviewSection() {
                   {projectName}
                 </Typography>
               </Box>
-              <Stack direction="row" gap={0.5}>
-                <Button size="small" className="chart-tab active">
-                  Reachable
-                </Button>
-                <Button size="small" className="chart-tab">
-                  Engaged
-                </Button>
-              </Stack>
+              <ToggleButtonGroup exclusive size="small" value="reachable" aria-label="Chart series">
+                <ToggleButton value="reachable">Reachable</ToggleButton>
+                <ToggleButton value="engaged">Engaged</ToggleButton>
+              </ToggleButtonGroup>
             </Stack>
             <Box className="analytics-chart">
               <Box className="chart-y-axis">
@@ -495,10 +497,10 @@ export function OverviewSection() {
                     justifyContent="space-between"
                     sx={{ mb: 0.7 }}
                   >
-                    <Typography fontSize={12} fontWeight={800}>
+                    <Typography fontSize={12} fontWeight={500}>
                       {name}
                     </Typography>
-                    <Typography fontSize={12} fontWeight={800}>
+                    <Typography fontSize={12} fontWeight={500}>
                       {count}
                       <span className="row-share"> · {share}</span>
                     </Typography>
@@ -564,7 +566,7 @@ export function OverviewSection() {
                             <GroupsRounded fontSize="small" />
                           )}
                         </Box>
-                        <Typography fontSize={12} fontWeight={800}>
+                        <Typography fontSize={12} fontWeight={500}>
                           {name}
                         </Typography>
                       </Stack>
@@ -580,7 +582,7 @@ export function OverviewSection() {
                     <TableCell align="right">
                       <Typography
                         fontSize={12}
-                        fontWeight={900}
+                        fontWeight={500}
                         color="#15965e"
                       >
                         {metric}
@@ -608,7 +610,7 @@ export function OverviewSection() {
           </Box>
           <Stack direction="row" alignItems="center" gap={0.7}>
             <Box className="live-dot" />
-            <Typography fontSize={11} fontWeight={800} color="#168c5b">
+            <Typography fontSize={11} fontWeight={500} color="#168c5b">
               Receiving events
             </Typography>
             <Button href="/dashboard/users" size="small" sx={{ ml: 1 }}>
@@ -640,7 +642,7 @@ export function OverviewSection() {
                 )}
               </Box>
               <Box sx={{ flex: 1 }}>
-                <Typography fontSize={12} fontWeight={800}>
+                <Typography fontSize={12} fontWeight={500}>
                   {type}
                 </Typography>
                 <Typography color="text.secondary" fontSize={11}>
@@ -673,7 +675,8 @@ export function UsersSection() {
   const [userCursors, setUserCursors] = useState<string[]>([]);
   const [segmentSearch, setSegmentSearch] = useState("");
   const [groupSearch, setGroupSearch] = useState("");
-  const deferredUserSearch = useDeferredValue(userSearch);
+  // What the server was last asked for: set once the user pauses typing, not on every key.
+  const [appliedUserSearch, setAppliedUserSearch] = useState("");
   const selectedProject = useSelector(
     (state: RootState) => state.ui.selectedProject,
   );
@@ -685,12 +688,12 @@ export function UsersSection() {
       "projects",
       "users",
       active?.id,
-      deferredUserSearch,
+      appliedUserSearch,
       userCursors[userCursors.length - 1],
     ],
     queryFn: () =>
       usersApi.list(active!.id, {
-        search: deferredUserSearch,
+        search: appliedUserSearch,
         limit: 100,
         cursor: userCursors[userCursors.length - 1],
       }),
@@ -763,7 +766,7 @@ export function UsersSection() {
       router.push(`/dashboard/users/segments/${segment.id}?tab=segments`);
     },
   });
-  useEffect(() => setUserCursors([]), [deferredUserSearch, active?.id]);
+  useEffect(() => setUserCursors([]), [appliedUserSearch, active?.id]);
   useEffect(() => {
     if (requestedTab === "users" || requestedTab === "segments" || requestedTab === "groups") setTab(requestedTab);
   }, [requestedTab]);
@@ -857,10 +860,10 @@ export function UsersSection() {
               router.push(`/dashboard/users/${row.id}?tab=users`);
           }}
         >
-          <Typography fontSize={12} fontWeight={800}>
+          <Typography fontSize={12} fontWeight={500}>
             {row.externalUserId || row.email || row.id}
           </Typography>
-          <Typography color="text.secondary" fontSize={10}>
+          <Typography color="text.secondary" fontSize={11}>
             {row.name || "Identified user"}
           </Typography>
         </Box>
@@ -925,12 +928,12 @@ export function UsersSection() {
             <Box className="segment-color" sx={{ bgcolor: "#9b53e1" }} />
             <Box>
               <Stack direction="row" alignItems="center" gap={1}>
-                <Typography fontSize={12} fontWeight={800}>
+                <Typography fontSize={12} fontWeight={500}>
                   {row.name}
                 </Typography>
                 <Chip label="AUTO LIFECYCLE" size="small" />
               </Stack>
-              <Typography color="text.secondary" fontSize={10}>
+              <Typography color="text.secondary" fontSize={11}>
                 {row.description ||
                   "Automatically updated based on user activity."}
               </Typography>
@@ -943,7 +946,7 @@ export function UsersSection() {
       key: "updatedAt",
       label: "Status",
       render: (row) => (
-        <Typography color="#168c5b" fontSize={11} fontWeight={800}>
+        <Typography color="#168c5b" fontSize={11} fontWeight={500}>
           {row.updatedAt
             ? `Updated ${new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(row.updatedAt))}`
             : "Updated automatically"}
@@ -968,7 +971,7 @@ export function UsersSection() {
       align: "right",
       render: (row) => (
         <Box className="segment-count">
-          <Typography color="text.secondary" fontSize={10}>
+          <Typography color="text.secondary" fontSize={11}>
             <GroupsRounded fontSize="inherit" /> Users
           </Typography>
           <strong>
@@ -1029,12 +1032,12 @@ export function UsersSection() {
           <Box className="group-dot" />
           <Box>
             <Stack direction="row" alignItems="center" gap={1}>
-              <Typography fontSize={12} fontWeight={800}>
+              <Typography fontSize={12} fontWeight={500}>
                 {row.name}
               </Typography>
               <Chip label="DYNAMIC" size="small" />
             </Stack>
-            <Typography color="text.secondary" fontSize={10}>
+            <Typography color="text.secondary" fontSize={11}>
               {row.description || "Dynamic audience group"}
             </Typography>
           </Box>
@@ -1060,7 +1063,7 @@ export function UsersSection() {
       align: "right",
       render: (row) => (
         <Box className="segment-count">
-          <Typography color="text.secondary" fontSize={10}>
+          <Typography color="text.secondary" fontSize={11}>
             <GroupsRounded fontSize="inherit" /> Users
           </Typography>
           <strong>{(row.memberCount ?? 0).toLocaleString()}</strong>
@@ -1104,19 +1107,11 @@ export function UsersSection() {
   ];
   return (
     <Stack gap={2.5} className="users-workspace">
-      <Box className="workspace-tabs">
+      <Tabs value={tab} onChange={(_, value) => { setTab(value); }}>
         {tabs.map(({ id, label, icon: Icon, count }) => (
-          <Button
-            key={id}
-            onClick={() => setTab(id)}
-            className={tab === id ? "workspace-tab active" : "workspace-tab"}
-            startIcon={<Icon />}
-          >
-            <span>{label}</span>
-            <Chip label={count} size="small" />
-          </Button>
+          <Tab key={id} value={id} icon={<Icon />} iconPosition="start" label={<>{label}<Chip label={count} size="small" /></>} />
         ))}
-      </Box>
+      </Tabs>
       {tab === "users" && (
         <Stack gap={2}>
           <Grid container spacing={2}>
@@ -1183,20 +1178,7 @@ export function UsersSection() {
               gap={1.2}
               className="data-toolbar"
             >
-              <TextField
-                size="small"
-                value={userSearch}
-                onChange={(event) => setUserSearch(event.target.value)}
-                placeholder="Search by user ID, email or country"
-                className="table-search"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchRounded fontSize="small" />
-                    </InputAdornment>
-                  ),
-                }}
-              />
+              <SearchField value={userSearch} onChange={setUserSearch} onSearch={setAppliedUserSearch} placeholder="Search by user ID, email or country" />
               <Select
                 size="small"
                 defaultValue="all"
@@ -1227,7 +1209,7 @@ export function UsersSection() {
                 totalCount={users.length}
                 noun="users"
                 showMenu={false}
-                loading={usersQuery.isLoading || usersQuery.isFetching}
+                loading={usersQuery.isLoading || usersQuery.isFetching || userSearch.trim() !== appliedUserSearch}
                 hasNextPage={Boolean(usersQuery.data?.nextCursor)}
                 hasPreviousPage={userCursors.length > 0}
                 onNextPage={() =>
@@ -1253,7 +1235,7 @@ export function UsersSection() {
                 <ManageSearchRounded />
               </Box>
               <Box>
-                <Typography fontWeight={900}>Getting started</Typography>
+                <Typography fontWeight={600}>Getting started</Typography>
                 <Typography color="text.secondary" fontSize={12}>
                   Create <strong>Lifecycle Segments</strong> based on what users
                   do in your app. Integrate the SDK, choose events, set
@@ -1282,7 +1264,7 @@ export function UsersSection() {
                 <Box>
                   <Stack direction="row" alignItems="center" gap={0.7}>
                     <span>1</span>
-                    <Typography fontSize={11} fontWeight={800}>
+                    <Typography fontSize={11} fontWeight={500}>
                       Integrate SDK
                     </Typography>
                   </Stack>
@@ -1299,7 +1281,7 @@ export function UsersSection() {
                 <Box>
                   <Stack direction="row" alignItems="center" gap={0.7}>
                     <span>2</span>
-                    <Typography fontSize={11} fontWeight={800}>
+                    <Typography fontSize={11} fontWeight={500}>
                       Choose events
                     </Typography>
                   </Stack>
@@ -1316,7 +1298,7 @@ export function UsersSection() {
                 <Box>
                   <Stack direction="row" alignItems="center" gap={0.7}>
                     <span>3</span>
-                    <Typography fontSize={11} fontWeight={800}>
+                    <Typography fontSize={11} fontWeight={500}>
                       Add conditions
                     </Typography>
                   </Stack>
@@ -1333,7 +1315,7 @@ export function UsersSection() {
                 <Box>
                   <Stack direction="row" alignItems="center" gap={0.7}>
                     <span>4</span>
-                    <Typography fontSize={11} fontWeight={800}>
+                    <Typography fontSize={11} fontWeight={500}>
                       Segment updates
                     </Typography>
                   </Stack>
@@ -1371,20 +1353,7 @@ export function UsersSection() {
               gap={1.2}
               className="data-toolbar"
             >
-              <TextField
-                size="small"
-                value={segmentSearch}
-                onChange={(event) => setSegmentSearch(event.target.value)}
-                placeholder="Search segments"
-                className="table-search"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchRounded fontSize="small" />
-                    </InputAdornment>
-                  ),
-                }}
-              />
+              <SearchField value={segmentSearch} onChange={setSegmentSearch} placeholder="Search segments" />
               <Select
                 size="small"
                 defaultValue="updated"
@@ -1443,20 +1412,7 @@ export function UsersSection() {
             gap={1.2}
             className="data-toolbar"
           >
-            <TextField
-              size="small"
-              value={groupSearch}
-              onChange={(event) => setGroupSearch(event.target.value)}
-              placeholder="Search audience groups"
-              className="table-search"
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchRounded fontSize="small" />
-                  </InputAdornment>
-                ),
-              }}
-            />
+            <SearchField value={groupSearch} onChange={setGroupSearch} placeholder="Search audience groups" />
             <Select
               size="small"
               defaultValue="created"
@@ -1542,25 +1498,25 @@ function EmailDataSection() {
   const [tab, setTab] = useState<"send" | "drafts" | "templates">("send");
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const deferredSearch = useDeferredValue(search);
+  const [appliedSearch, setAppliedSearch] = useState("");
   const templatesQuery = useQuery({
-    queryKey: ["email", "templates", active?.id, page, deferredSearch],
+    queryKey: ["email", "templates", active?.id, page, appliedSearch],
     queryFn: () => emailApi.templates.list(active!.id, {
-      page, limit: 25, search: deferredSearch, category: "template",
+      page, limit: 25, search: appliedSearch, category: "template",
     }),
     enabled: Boolean(active?.id),
   });
   const draftsQuery = useQuery({
-    queryKey: ["email", "campaigns", active?.id, "draft", page, deferredSearch],
+    queryKey: ["email", "campaigns", active?.id, "draft", page, appliedSearch],
     queryFn: () => emailApi.campaigns.list(active!.id, {
-      tab: "draft", page, limit: 25, search: deferredSearch,
+      tab: "draft", page, limit: 25, search: appliedSearch,
     }),
     enabled: Boolean(active?.id),
   });
   const sentQuery = useQuery({
-    queryKey: ["email", "campaigns", active?.id, "sent", page, deferredSearch],
+    queryKey: ["email", "campaigns", active?.id, "sent", page, appliedSearch],
     queryFn: () => emailApi.campaigns.list(active!.id, {
-      tab: "sent", page, limit: 25, search: deferredSearch,
+      tab: "sent", page, limit: 25, search: appliedSearch,
     }),
     enabled: Boolean(active?.id),
   });
@@ -1602,11 +1558,11 @@ function EmailDataSection() {
           <Box className="email-preview"><Box /><Box /><Box /></Box>
           <Box>
             <Stack direction="row" alignItems="center" gap={1}>
-              <Typography fontSize={12} fontWeight={800}>{row.name}</Typography>
+              <Typography fontSize={12} fontWeight={500}>{row.name}</Typography>
               <Chip label={row.status} size="small" className={row.status === "Sent" || row.status === "Delivered" ? "active-chip" : "neutral-chip"} />
             </Stack>
-            <Typography color="text.secondary" fontSize={10}>{row.detail}</Typography>
-            <Typography color="text.secondary" fontSize={10} sx={{ mt: 0.5 }}>{row.meta}</Typography>
+            <Typography color="text.secondary" fontSize={11}>{row.detail}</Typography>
+            <Typography color="text.secondary" fontSize={11} sx={{ mt: 0.5 }}>{row.meta}</Typography>
           </Box>
         </Stack>
       ),
@@ -1632,13 +1588,11 @@ function EmailDataSection() {
           <Button variant="outlined" startIcon={<GridViewRounded />}>Create email template</Button>
         </Stack>
       </Stack>
-      <Box className="workspace-tabs">
+      <Tabs value={tab} onChange={(_, value) => { setTab(value); setPage(1); }}>
         {emailTabs.map(({ id, label, count: tabCount, icon: Icon }) => (
-          <Button key={id} onClick={() => { setTab(id); setPage(1); }} className={`workspace-tab ${id}-tab ${tab === id ? "active" : ""}`} startIcon={<Icon />}>
-            <span>{label}</span><Chip label={tabCount} size="small" />
-          </Button>
+          <Tab key={id} value={id} icon={<Icon />} iconPosition="start" label={<>{label}<Chip label={tabCount} size="small" /></>} />
         ))}
-      </Box>
+      </Tabs>
       <Card className="saas-card data-panel email-data-panel">
         <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ sm: "center" }} gap={2}>
           <Box>
@@ -1646,7 +1600,7 @@ function EmailDataSection() {
             <Typography color="text.secondary" fontSize={12}>{tab === "templates" ? "Reusable content blocks ready for your next campaign." : tab === "drafts" ? "Continue editing saved email drafts." : "Track the latest email campaigns and their performance."}</Typography>
           </Box>
           <Stack direction="row" gap={1} className="data-toolbar email-toolbar">
-            <TextField size="small" placeholder={`Search ${tab === "templates" ? "templates" : tab === "drafts" ? "drafts" : "campaigns"}`} className="table-search" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchRounded fontSize="small" /></InputAdornment> }} />
+            <SearchField value={search} onChange={setSearch} onSearch={(value) => { setAppliedSearch(value); setPage(1); }} placeholder={`Search ${tab === "templates" ? "templates" : tab === "drafts" ? "drafts" : "campaigns"}`} />
             <Select size="small" defaultValue="recent" className="filter-select"><MenuItem value="recent">Recently updated</MenuItem><MenuItem value="name">Name</MenuItem></Select>
           </Stack>
         </Stack>
@@ -1656,7 +1610,7 @@ function EmailDataSection() {
           totalCount={String(activeQuery.data?.total ?? 0)}
           noun={tab === "templates" ? "templates" : tab === "drafts" ? "drafts" : "campaigns"}
           showMenu={false}
-          loading={activeQuery.isLoading || (activeQuery.isFetching && !activeQuery.data)}
+          loading={activeQuery.isLoading || (activeQuery.isFetching && !activeQuery.data) || search.trim() !== appliedSearch}
           page={page}
           serverPageSize={25}
           hasPreviousPage={page > 1}
@@ -1756,7 +1710,7 @@ function EmailSection() {
           </Box>
           <Box>
             <Stack direction="row" alignItems="center" gap={1}>
-              <Typography fontSize={12} fontWeight={800}>
+              <Typography fontSize={12} fontWeight={500}>
                 {row.name}
               </Typography>
               <Chip
@@ -1767,10 +1721,10 @@ function EmailSection() {
                 }
               />
             </Stack>
-            <Typography color="text.secondary" fontSize={10}>
+            <Typography color="text.secondary" fontSize={11}>
               {row.detail}
             </Typography>
-            <Typography color="text.secondary" fontSize={10} sx={{ mt: 0.5 }}>
+            <Typography color="text.secondary" fontSize={11} sx={{ mt: 0.5 }}>
               {row.meta}
             </Typography>
           </Box>
@@ -1844,19 +1798,11 @@ function EmailSection() {
           </Button>
         </Stack>
       </Stack>
-      <Box className="workspace-tabs">
+      <Tabs value={tab} onChange={(_, value) => { setTab(value); }}>
         {emailTabs.map(({ id, label, count, icon: Icon }) => (
-          <Button
-            key={id}
-            onClick={() => setTab(id)}
-            className={`workspace-tab ${id}-tab ${tab === id ? "active" : ""}`}
-            startIcon={<Icon />}
-          >
-            <span>{label}</span>
-            <Chip label={count} size="small" />
-          </Button>
+          <Tab key={id} value={id} icon={<Icon />} iconPosition="start" label={<>{label}<Chip label={count} size="small" /></>} />
         ))}
-      </Box>
+      </Tabs>
       <Card className="saas-card data-panel email-data-panel">
         <Stack
           direction={{ xs: "column", sm: "row" }}
@@ -1881,18 +1827,7 @@ function EmailSection() {
             </Typography>
           </Box>
           <Stack direction="row" gap={1} className="data-toolbar email-toolbar">
-            <TextField
-              size="small"
-              placeholder={`Search ${tab === "templates" ? "templates" : tab === "drafts" ? "drafts" : "campaigns"}`}
-              className="table-search"
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchRounded fontSize="small" />
-                  </InputAdornment>
-                ),
-              }}
-            />
+            <SearchField placeholder={`Search ${tab === "templates" ? "templates" : tab === "drafts" ? "drafts" : "campaigns"}`} />
             <Select
               size="small"
               defaultValue="recent"
@@ -1938,37 +1873,37 @@ function PushSection() {
     message: string;
     severity: "success" | "error";
   } | null>(null);
-  const deferredSearch = useDeferredValue(search);
+  const [appliedSearch, setAppliedSearch] = useState("");
   const templatesQuery = useQuery({
-    queryKey: ["push", "templates", active?.id, page, deferredSearch],
+    queryKey: ["push", "templates", active?.id, page, appliedSearch],
     queryFn: () =>
       pushApi.templates.list(active!.id, {
         page,
         limit: 25,
-        search: deferredSearch,
+        search: appliedSearch,
         category: "template",
       }),
     enabled: Boolean(active?.id),
   });
   const draftsQuery = useQuery({
-    queryKey: ["push", "campaigns", active?.id, "draft", page, deferredSearch],
+    queryKey: ["push", "campaigns", active?.id, "draft", page, appliedSearch],
     queryFn: () =>
       pushApi.campaigns.list(active!.id, {
         tab: "draft",
         page,
         limit: 25,
-        search: deferredSearch,
+        search: appliedSearch,
       }),
     enabled: Boolean(active?.id),
   });
   const sentQuery = useQuery({
-    queryKey: ["push", "campaigns", active?.id, "sent", page, deferredSearch],
+    queryKey: ["push", "campaigns", active?.id, "sent", page, appliedSearch],
     queryFn: () =>
       pushApi.campaigns.list(active!.id, {
         tab: "sent",
         page,
         limit: 25,
-        search: deferredSearch,
+        search: appliedSearch,
       }),
     enabled: Boolean(active?.id),
   });
@@ -2091,10 +2026,10 @@ function PushSection() {
       label: "Notification name",
       render: (row) => (
         <Box>
-          <Typography fontSize={12} fontWeight={800}>
+          <Typography fontSize={12} fontWeight={500}>
             {row.name}
           </Typography>
-          <Typography color="text.secondary" fontSize={10}>
+          <Typography color="text.secondary" fontSize={11}>
             {row.category}
           </Typography>
         </Box>
@@ -2160,7 +2095,7 @@ function PushSection() {
         <Typography
           color={row.sends === "—" ? "text.secondary" : "#168c5b"}
           fontSize={11}
-          fontWeight={800}
+          fontWeight={500}
         >
           {row.sends}
         </Typography>
@@ -2265,22 +2200,11 @@ function PushSection() {
           </Button>
         </Stack>
       </Stack>
-      <Box className="workspace-tabs">
+      <Tabs value={tab} onChange={(_, value) => { setTab(value); setPage(1); }}>
         {pushTabs.map(({ id, label, count, icon: Icon }) => (
-          <Button
-            key={id}
-            onClick={() => {
-              setTab(id);
-              setPage(1);
-            }}
-            className={`workspace-tab ${id}-tab ${tab === id ? "active" : ""}`}
-            startIcon={<Icon />}
-          >
-            <span>{label}</span>
-            <Chip label={count} size="small" />
-          </Button>
+          <Tab key={id} value={id} icon={<Icon />} iconPosition="start" label={<>{label}<Chip label={count} size="small" /></>} />
         ))}
-      </Box>
+      </Tabs>
       <Card className="saas-card data-panel email-data-panel">
         <Stack
           direction={{ xs: "column", sm: "row" }}
@@ -2305,23 +2229,7 @@ function PushSection() {
             </Typography>
           </Box>
           <Stack direction="row" gap={1} className="data-toolbar email-toolbar">
-            <TextField
-              size="small"
-              placeholder="Search by name, title, or message ..."
-              value={search}
-              onChange={(event) => {
-                setSearch(event.target.value);
-                setPage(1);
-              }}
-              className="table-search"
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchRounded fontSize="small" />
-                  </InputAdornment>
-                ),
-              }}
-            />
+            <SearchField value={search} onChange={setSearch} onSearch={(value) => { setAppliedSearch(value); setPage(1); }} placeholder="Search by name, title or message" />
             <Select
               size="small"
               defaultValue="recent"
@@ -2354,7 +2262,8 @@ function PushSection() {
           showMenu={false}
           loading={
             activeQuery.isLoading ||
-            (activeQuery.isFetching && !activeQuery.data)
+            (activeQuery.isFetching && !activeQuery.data) ||
+            search.trim() !== appliedSearch
           }
           hasPreviousPage={page > 1}
           hasNextPage={Boolean(
@@ -2423,7 +2332,7 @@ export function IntegrationsSection() {
               <Box className="integration-icon">
                 <StorageRounded />
               </Box>
-              <Typography fontWeight={900} sx={{ mt: 2 }}>
+              <Typography fontWeight={600} sx={{ mt: 2 }}>
                 {name}
               </Typography>
               <Typography color="text.secondary" fontSize={12} sx={{ mt: 0.5 }}>
@@ -2432,7 +2341,7 @@ export function IntegrationsSection() {
               <Divider sx={{ my: 2 }} />
               <Stack direction="row" gap={1} alignItems="center">
                 <CheckCircleRounded sx={{ color: "#15965e", fontSize: 18 }} />
-                <Typography fontSize={12} fontWeight={800} color="#15965e">
+                <Typography fontSize={12} fontWeight={500} color="#15965e">
                   {status}
                 </Typography>
               </Stack>
@@ -2480,7 +2389,7 @@ export function IntegrationsSection() {
                 {row.map((x, i) => (
                   <TableCell
                     key={x}
-                    sx={{ fontSize: 12, fontWeight: i === 0 ? 800 : 400 }}
+                    sx={{ fontSize: 12, fontWeight: i === 0 ? 500 : 400 }}
                   >
                     {i === 3 ? (
                       <Chip label={x} size="small" className="active-chip" />
@@ -2532,7 +2441,7 @@ export function SettingsSection() {
             <SettingsRounded />
           </Box>
           <Box sx={{ flex: 1 }}>
-            <Typography fontWeight={900}>{title}</Typography>
+            <Typography fontWeight={600}>{title}</Typography>
             <Typography fontSize={13} sx={{ mt: 0.4 }}>
               {value}
             </Typography>

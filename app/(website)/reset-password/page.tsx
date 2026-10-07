@@ -4,7 +4,7 @@ import ResetPasswordView from '@/components/auth/ResetPasswordView';
 
 export default function ResetPasswordPage() {
   return (
-    <AuthShell mode="login">
+    <AuthShell mode="security">
       <Suspense>
         <ResetPasswordView />
       </Suspense>

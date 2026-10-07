@@ -11,9 +11,10 @@ import type { SavedCard } from "@/types/project";
 const brandLabel = (brand: string | null) =>
   ({ visa: "VISA", mastercard: "Mastercard", amex: "AMEX", discover: "Discover", unionpay: "UnionPay", jcb: "JCB", diners: "Diners" } as Record<string, string>)[brand ?? ""] ?? "Card";
 const expiry = (card: SavedCard) => card.expMonth ? `${String(card.expMonth).padStart(2, "0")}/${String(card.expYear).slice(-2)}` : "—";
+// The default card wears the same navy-to-violet surface as the other accent blocks; the rest are a quieter slate.
 const cardBackground = (card: SavedCard) => card.isDefault
-  ? "linear-gradient(116deg,#201747 0%,#33206d 48%,#673b82 100%)"
-  : "linear-gradient(116deg,#141832 0%,#222953 52%,#35406e 100%)";
+  ? "var(--pp-hero)"
+  : "linear-gradient(135deg, #2B2740 0%, #4B4168 100%)";
 
 /**
  * The project's saved cards, managed in the app. Stripe holds the cards: PixlPush only ever sees brand, last four,
@@ -57,7 +58,7 @@ export default function SavedCards({ projectId, adding, onAdd, onChanged }: {
       ) : !cards.data?.length ? (
         <Box className="saas-card" sx={{ p: 4, textAlign: "center", borderRadius: 2, border: "1px dashed #d9cdea", backgroundColor: "#fff" }}>
           <CreditCardRounded sx={{ fontSize: 40, color: "#9874c9" }} />
-          <Typography fontWeight={800} sx={{ mt: 1 }}>No saved card</Typography>
+          <Typography fontWeight={600} sx={{ mt: 1 }}>No saved card</Typography>
           <Typography color="text.secondary" fontSize={13}>Add a card securely through Stripe. Renewals are charged to it.</Typography>
           <Button variant="outlined" onClick={onAdd} disabled={adding} sx={{ mt: 2, textTransform: "none" }}>{adding ? "Opening…" : "Add a card"}</Button>
         </Box>
@@ -76,17 +77,17 @@ export default function SavedCards({ projectId, adding, onAdd, onChanged }: {
                             <Box sx={{ position: "absolute", left: 1, width: 14, height: 14, borderRadius: "50%", backgroundColor: "#ef3e44" }} />
                             <Box sx={{ position: "absolute", right: 1, width: 14, height: 14, borderRadius: "50%", backgroundColor: "#ffbf2f", opacity: 0.95 }} />
                           </Box>
-                        ) : <Typography fontSize={card.brand === "visa" ? 13 : 10} fontWeight={900} sx={{ fontStyle: card.brand === "visa" ? "italic" : "normal", letterSpacing: card.brand === "visa" ? 0.5 : 0.2 }}>{brandLabel(card.brand)}</Typography>}
+                        ) : <Typography fontSize={card.brand === "visa" ? 13 : 10} fontWeight={650} sx={{ fontStyle: card.brand === "visa" ? "italic" : "normal", letterSpacing: card.brand === "visa" ? 0.5 : 0.2 }}>{brandLabel(card.brand)}</Typography>}
                       </Box>
-                      <Typography fontWeight={900} fontSize={card.brand === "visa" ? 18 : 14} sx={{ fontStyle: card.brand === "visa" ? "italic" : "normal", letterSpacing: card.brand === "visa" ? 1 : 0.3 }}>{brandLabel(card.brand)}</Typography>
+                      <Typography fontWeight={650} fontSize={card.brand === "visa" ? 18 : 14} sx={{ fontStyle: card.brand === "visa" ? "italic" : "normal", letterSpacing: card.brand === "visa" ? 1 : 0.3 }}>{brandLabel(card.brand)}</Typography>
                     </Stack>
-                    {card.isDefault && <Chip icon={<CheckCircleRounded />} label="Default" size="small" sx={{ height: 23, color: "#f6fff9", backgroundColor: "rgba(71,217,137,.16)", border: "1px solid rgba(129,255,179,.35)", fontSize: 11, fontWeight: 800, "& .MuiChip-icon": { color: "#7df2ad", fontSize: 15 } }} />}
+                    {card.isDefault && <Chip icon={<CheckCircleRounded />} label="Default" size="small" sx={{ height: 23, color: "#f6fff9", backgroundColor: "rgba(71,217,137,.16)", border: "1px solid rgba(129,255,179,.35)", fontSize: 11, fontWeight: 600, "& .MuiChip-icon": { color: "#7df2ad", fontSize: 15 } }} />}
                   </Stack>
                   <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mt: "auto" }}>
                     <Box aria-label="EMV chip" sx={{ width: 48, height: 32, borderRadius: 1.15, background: "linear-gradient(135deg,#fff2b2 0%,#dfbd61 52%,#b99035 100%)", boxShadow: "inset 0 0 0 1px rgba(104,68,20,.24), inset 2px 2px 4px rgba(255,255,255,.45)", overflow: "hidden", position: "relative", backgroundImage: "linear-gradient(90deg, transparent 44%, rgba(104,68,20,.25) 45% 55%, transparent 56%), linear-gradient(0deg, transparent 42%, rgba(104,68,20,.25) 43% 57%, transparent 58%), linear-gradient(135deg,#fff2b2 0%,#dfbd61 52%,#b99035 100%)" }} />
                     <ContactlessRounded sx={{ fontSize: 24, opacity: 0.72, transform: "rotate(90deg)" }} />
                   </Stack>
-                  <Typography sx={{ mt: 1.3, fontSize: { xs: 16, sm: 17 }, fontWeight: 650, letterSpacing: 2.7, fontFamily: "SFMono-Regular, Menlo, monospace", whiteSpace: "nowrap" }}>**** **** **** {card.last4 ?? "****"}</Typography>
+                  <Typography sx={{ mt: 1.3, fontSize: { xs: 16, sm: 17 }, fontWeight: 650, letterSpacing: 2.7, fontFamily: "var(--pp-mono)", whiteSpace: "nowrap" }}>**** **** **** {card.last4 ?? "****"}</Typography>
                   <Stack direction="row" justifyContent="flex-end" sx={{ mt: 1.1 }}>
                     <Box sx={{ textAlign: "right" }}>
                       <Typography fontSize={9} sx={{ opacity: 0.62, letterSpacing: 1.2 }}>EXPIRES</Typography>
@@ -97,10 +98,10 @@ export default function SavedCards({ projectId, adding, onAdd, onChanged }: {
                 <Stack direction="row" gap={1} alignItems="center" sx={{ px: 1.6, py: 0.6, minHeight: 46 }}>
                   <Stack direction="row" gap={0.7} alignItems="center">
                     {card.isDefault ? <CheckCircleRounded sx={{ fontSize: 16, color: "#1fa463" }} /> : <ShieldRounded sx={{ fontSize: 16, color: "#9ba6b8" }} />}
-                    <Typography fontSize={12} fontWeight={700} color={card.isDefault ? "#256b4a" : "#667085"}>{card.isDefault ? "Default payment method" : "Securely stored card"}</Typography>
+                    <Typography fontSize={12} fontWeight={500} color={card.isDefault ? "#256b4a" : "#667085"}>{card.isDefault ? "Default payment method" : "Securely stored card"}</Typography>
                   </Stack>
                   {!card.isDefault && (
-                    <Button size="small" startIcon={<StarRounded />} disabled={Boolean(busy)} onClick={() => act(`default-${card.id}`, () => billingApi.savePaymentMethod(projectId, card.id), `Renewals will now be charged to •••• ${card.last4}.`)} sx={{ textTransform: "none", fontWeight: 800 }}>
+                    <Button size="small" startIcon={<StarRounded />} disabled={Boolean(busy)} onClick={() => act(`default-${card.id}`, () => billingApi.savePaymentMethod(projectId, card.id), `Renewals will now be charged to •••• ${card.last4}.`)} sx={{ textTransform: "none" }}>
                       {busy === `default-${card.id}` ? "Saving…" : "Make default"}
                     </Button>
                   )}
@@ -127,13 +128,13 @@ export default function SavedCards({ projectId, adding, onAdd, onChanged }: {
       )}
 
       <Dialog open={Boolean(removing)} onClose={() => setRemoving(null)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 2.5 } }}>
-        <DialogTitle sx={{ fontWeight: 900 }}>Remove card •••• {removing?.last4}?</DialogTitle>
+        <DialogTitle>Remove card •••• {removing?.last4}?</DialogTitle>
         <DialogContent>
           <Typography color="text.secondary" fontSize={14}>The card is removed from Stripe and can no longer be charged. Your default card is not affected.</Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5 }}>
           <Button onClick={() => setRemoving(null)} sx={{ textTransform: "none" }}>Keep card</Button>
-          <Button color="error" variant="contained" disabled={Boolean(busy)} sx={{ textTransform: "none", fontWeight: 800 }}
+          <Button color="error" variant="contained" disabled={Boolean(busy)} sx={{ textTransform: "none" }}
             onClick={async () => { const card = removing!; setRemoving(null); await act("remove", () => billingApi.removePaymentMethod(projectId, card.id), `Card •••• ${card.last4} removed.`); }}>
             Remove card
           </Button>

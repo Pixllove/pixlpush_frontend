@@ -1,7 +1,8 @@
 'use client';
 
 import { forwardRef, useState } from 'react';
-import { IconButton, InputAdornment, TextField, type TextFieldProps } from '@mui/material';
+import { IconButton, InputAdornment, TextField, Typography, type TextFieldProps } from '@mui/material';
+import CheckCircleRounded from '@mui/icons-material/CheckCircleRounded';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
@@ -33,6 +34,7 @@ const PasswordField = forwardRef<HTMLDivElement, Omit<TextFieldProps, 'type'>>(
                 onMouseDown={(event) => event.preventDefault()}
                 tabIndex={-1}
                 disabled={disabled}
+                size="small"
                 edge="end"
               >
                 {visible ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
@@ -44,5 +46,16 @@ const PasswordField = forwardRef<HTMLDivElement, Omit<TextFieldProps, 'type'>>(
     );
   },
 );
+
+/** The password rule the forms enforce, ticking itself off as it is met. */
+export function PasswordRule({ value }: { value: string }) {
+  const met = value.length >= 12;
+  return (
+    <Typography className={`auth-rule${met ? ' met' : ''}`}>
+      <CheckCircleRounded />
+      At least 12 characters
+    </Typography>
+  );
+}
 
 export default PasswordField;

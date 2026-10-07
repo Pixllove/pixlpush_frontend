@@ -145,9 +145,9 @@ export default function TeamAccessPanel() {
                 {members.data.map((m) => (
                   <TableRow key={m.id} data-testid={`member-${m.account.email}`}>
                     <TableCell>
-                      <Typography fontWeight={800} fontSize={12}>
+                      <Typography fontWeight={500} fontSize={12}>
                         {m.account.name ?? m.account.email}
-                        {m.account.id === me && <Chip size="small" label="You" sx={{ ml: 1, height: 18, fontSize: 10 }} />}
+                        {m.account.id === me && <Chip size="small" label="You" sx={{ ml: 1, height: 18, fontSize: 11 }} />}
                       </Typography>
                       <Typography color="text.secondary" fontSize={11}>{m.account.email}</Typography>
                     </TableCell>

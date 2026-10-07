@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { ArrowDownwardRounded, ChevronRightRounded, CloseRounded, SearchRounded } from '@mui/icons-material';
+import { ArrowDownwardRounded, ChevronRightRounded, CloseRounded } from '@mui/icons-material';
 import {
   Alert,
   Box,
@@ -11,24 +11,24 @@ import {
   Divider,
   Drawer,
   IconButton,
-  InputAdornment,
   MenuItem,
   Skeleton,
   Stack,
+  Tab,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableRow,
+  Tabs,
   TextField,
-  ToggleButton,
-  ToggleButtonGroup,
   Tooltip,
   Typography,
 } from '@mui/material';
 import { auditApi } from '@/lib/projects/api';
 import type { ApiError } from '@/types/auth';
 import type { AuditCategory, AuditLogEntry, AuditLogQuery } from '@/types/project';
+import SearchField from '../SearchField';
 
 export const CATEGORY_LABEL: Record<AuditCategory, string> = {
   team: 'Team & access',
@@ -49,7 +49,7 @@ const CATEGORY_COLOR: Record<AuditCategory, { color: string; bg: string }> = {
 };
 
 const border = '1px solid #e7e5ec';
-const headCell = { fontSize: 11, fontWeight: 700, letterSpacing: 0.6, textTransform: 'uppercase', color: '#6b6577', py: 1.2, bgcolor: '#fafafb' } as const;
+const headCell = { fontSize: 11, fontWeight: 500, letterSpacing: 0.6, textTransform: 'uppercase', color: '#6b6577', py: 1.2, bgcolor: '#fafafb' } as const;
 
 const errorText = (e: unknown) =>
   (e as ApiError)?.code === 'NETWORK_ERROR' ? 'Cannot reach the server. Check your connection.' : 'Audit logs could not be loaded. Please try again.';
@@ -70,7 +70,7 @@ const actorName = (e: AuditLogEntry) => (e.actor ? e.actor.name ?? e.actor.email
 
 function CategoryChip({ category }: { category: AuditCategory }) {
   const c = CATEGORY_COLOR[category] ?? CATEGORY_COLOR.auth;
-  return <Chip size="small" label={CATEGORY_LABEL[category] ?? category} sx={{ color: c.color, bgcolor: c.bg, fontWeight: 600, fontSize: 11, height: 22 }} />;
+  return <Chip size="small" label={CATEGORY_LABEL[category] ?? category} sx={{ color: c.color, bgcolor: c.bg, fontWeight: 500, fontSize: 11, height: 22 }} />;
 }
 
 /** Event code as a small badge, e.g. "resource_deleted". */
@@ -79,20 +79,17 @@ export function EventBadge({ action }: { action: string }) {
     <Chip
       size="small"
       label={action.toLowerCase()}
-      sx={{ height: 20, fontSize: 11, fontFamily: 'monospace', color: '#4a4556', bgcolor: '#f0eef3', borderRadius: 1 }}
+      sx={{ height: 20, fontSize: 11, fontFamily: 'var(--pp-mono)', color: '#4a4556', bgcolor: '#f0eef3', borderRadius: 1 }}
     />
   );
 }
 
 /** Who did what, where and when, across the projects you manage. */
-const fieldSx = {
-  '& .MuiInputBase-root': { height: 40, bgcolor: '#fff', borderRadius: '10px', fontSize: 13 },
-  '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e2dfe9' },
-  '& .MuiInputLabel-root': { fontSize: 13 },
-};
 
 export default function AuditLogsPanel() {
   const [search, setSearch] = useState('');
+  // What the server was last asked for: set once the user pauses typing.
+  const [term, setTerm] = useState('');
   const [category, setCategory] = useState<AuditCategory | 'all'>('all');
   const [filters, setFilters] = useState<AuditLogQuery>({});
   const [dates, setDates] = useState({ from: '', to: '' });
@@ -102,7 +99,7 @@ export default function AuditLogsPanel() {
   const query: AuditLogQuery = {
     ...filters,
     ...(category !== 'all' ? { category } : {}),
-    ...(search.trim() ? { q: search.trim() } : {}),
+    ...(term ? { q: term } : {}),
     // Date inputs are whole days: "to" includes the chosen day.
     ...(dates.from ? { from: new Date(`${dates.from}T00:00:00`).toISOString() } : {}),
     ...(dates.to ? { to: new Date(`${dates.to}T23:59:59.999`).toISOString() } : {}),
@@ -118,6 +115,7 @@ export default function AuditLogsPanel() {
 
   const clear = () => {
     setSearch('');
+    setTerm('');
     setCategory('all');
     setFilters({});
     setDates({ from: '', to: '' });
@@ -125,50 +123,27 @@ export default function AuditLogsPanel() {
 
   return (
     <Stack gap={2}>
-      <Box sx={{ p: 1.5, border: '1px solid #ece9f2', borderRadius: '12px', bgcolor: '#fff', display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+      <Tabs value={category} onChange={(_, v) => setCategory(v)} aria-label="Activity type" sx={{ mb: 0 }}>
+        <Tab value="all" label="All" />
+        {(Object.keys(CATEGORY_LABEL) as AuditCategory[]).map((c) => <Tab key={c} value={c} label={CATEGORY_LABEL[c]} />)}
+      </Tabs>
+      <Box sx={{ p: 1.5, border: '1px solid #ece9f2', borderRadius: '8px', bgcolor: '#fff', display: 'flex', flexDirection: 'column', gap: 1.5 }}>
         <Stack direction={{ xs: 'column', lg: 'row' }} gap={1.5} alignItems={{ lg: 'center' }}>
-          <ToggleButtonGroup
-            exclusive
-            size="small"
-            value={category}
-            onChange={(_, v) => v && setCategory(v)}
-            aria-label="Activity type"
-            sx={{
-              bgcolor: '#f3f2f6',
-              p: 0.4,
-              borderRadius: '10px',
-              flexWrap: 'wrap',
-              flexShrink: 0,
-              '& .MuiToggleButton-root': { border: 0, borderRadius: '7px !important', px: 1.5, height: 32, fontSize: 12.5, fontWeight: 600, textTransform: 'none', color: '#6b6577' },
-              '& .Mui-selected': { bgcolor: '#fff !important', color: '#1d1a26 !important', boxShadow: '0 1px 2px rgba(0,0,0,.08)' },
-            }}
-          >
-            <ToggleButton value="all">All</ToggleButton>
-            {(Object.keys(CATEGORY_LABEL) as AuditCategory[]).map((c) => <ToggleButton key={c} value={c}>{CATEGORY_LABEL[c]}</ToggleButton>)}
-          </ToggleButtonGroup>
-          <TextField
-            size="small"
-            placeholder="Search activity, user or project…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            inputProps={{ 'aria-label': 'Search' }}
-            InputProps={{ startAdornment: <InputAdornment position="start"><SearchRounded fontSize="small" /></InputAdornment> }}
-            sx={{ ...fieldSx, flex: 1, minWidth: 240 }}
-          />
+          <SearchField value={search} onChange={setSearch} onSearch={setTerm} placeholder="Search activity, user or project" aria-label="Search" sx={{ flex: 1, minWidth: 240 }} />
         </Stack>
 
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, minmax(0, 1fr)) auto' }, gap: 1.2, alignItems: 'center' }}>
-          <TextField size="small" select label="Project" value={filters.projectId ?? ''} onChange={(e) => setFilters((f) => ({ ...f, projectId: e.target.value || undefined }))} SelectProps={{ displayEmpty: true }} InputLabelProps={{ shrink: true }} sx={fieldSx}>
+          <TextField size="small" select label="Project" value={filters.projectId ?? ''} onChange={(e) => setFilters((f) => ({ ...f, projectId: e.target.value || undefined }))} SelectProps={{ displayEmpty: true }} InputLabelProps={{ shrink: true }}>
             <MenuItem value="">All projects</MenuItem>
             {options.data?.projects.map((p) => <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>)}
           </TextField>
-          <TextField size="small" select label="User" value={filters.actorAccountId ?? ''} onChange={(e) => setFilters((f) => ({ ...f, actorAccountId: e.target.value || undefined }))} SelectProps={{ displayEmpty: true }} InputLabelProps={{ shrink: true }} sx={fieldSx}>
+          <TextField size="small" select label="User" value={filters.actorAccountId ?? ''} onChange={(e) => setFilters((f) => ({ ...f, actorAccountId: e.target.value || undefined }))} SelectProps={{ displayEmpty: true }} InputLabelProps={{ shrink: true }}>
             <MenuItem value="">All users</MenuItem>
             {options.data?.actors.map((a) => <MenuItem key={a.id} value={a.id}>{a.name ?? a.email}</MenuItem>)}
           </TextField>
-          <TextField size="small" type="date" label="From" value={dates.from} onChange={(e) => setDates((d) => ({ ...d, from: e.target.value }))} InputLabelProps={{ shrink: true }} sx={fieldSx} />
-          <TextField size="small" type="date" label="To" value={dates.to} onChange={(e) => setDates((d) => ({ ...d, to: e.target.value }))} InputLabelProps={{ shrink: true }} sx={fieldSx} />
-          {filtered ? <Button size="small" onClick={clear} sx={{ height: 40, textTransform: 'none', fontWeight: 600 }}>Clear filters</Button> : <span />}
+          <TextField size="small" type="date" label="From" value={dates.from} onChange={(e) => setDates((d) => ({ ...d, from: e.target.value }))} InputLabelProps={{ shrink: true }} />
+          <TextField size="small" type="date" label="To" value={dates.to} onChange={(e) => setDates((d) => ({ ...d, to: e.target.value }))} InputLabelProps={{ shrink: true }} />
+          {filtered ? <Button size="small" onClick={clear} sx={{ height: 40, textTransform: 'none' }}>Clear filters</Button> : <span />}
         </Box>
       </Box>
 
@@ -176,7 +151,7 @@ export default function AuditLogsPanel() {
         <Alert severity="error" action={<Button color="inherit" size="small" onClick={() => feed.refetch()}>Retry</Button>}>{errorText(feed.error)}</Alert>
       )}
 
-      <Box sx={{ border, borderRadius: '12px', bgcolor: '#fff', overflowX: 'auto' }}>
+      <Box sx={{ border, borderRadius: '8px', bgcolor: '#fff', overflowX: 'auto' }}>
         <Table size="small" sx={{ minWidth: 820 }}>
           <TableHead>
             <TableRow>
@@ -200,7 +175,7 @@ export default function AuditLogsPanel() {
             {feed.isSuccess && items.length === 0 && (
               <TableRow>
                 <TableCell colSpan={6} sx={{ py: 6, textAlign: 'center', borderBottom: 0 }}>
-                  <Typography fontWeight={700} fontSize={14}>No activity found</Typography>
+                  <Typography fontWeight={600} fontSize={14}>No activity found</Typography>
                   <Typography color="text.secondary" fontSize={12}>
                     {filtered ? 'Try other filters.' : 'Changes made in projects you own or administer, and your own sign-ins, appear here.'}
                   </Typography>
@@ -277,8 +252,8 @@ function DetailsDrawer({ entry, onClose }: { entry: AuditLogEntry | null; onClos
         <Stack sx={{ p: 3 }} gap={2} role="dialog" aria-label="Activity details">
           <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap={1}>
             <Box>
-              <Typography fontSize={11} fontWeight={700} letterSpacing={1} color="text.secondary">ACTIVITY DETAILS</Typography>
-              <Typography fontSize={17} fontWeight={700} sx={{ mt: 0.5 }}>{entry.description}</Typography>
+              <Typography fontSize={11} fontWeight={500} letterSpacing={1} color="text.secondary">ACTIVITY DETAILS</Typography>
+              <Typography fontSize={16} fontWeight={600} sx={{ mt: 0.5 }}>{entry.description}</Typography>
             </Box>
             <IconButton aria-label="Close details" onClick={onClose}><CloseRounded /></IconButton>
           </Stack>
@@ -293,7 +268,7 @@ function DetailsDrawer({ entry, onClose }: { entry: AuditLogEntry | null; onClos
 
           {changeKeys.length > 0 && (
             <Box>
-              <Typography fontWeight={700} fontSize={13} sx={{ mb: 1 }}>Changes</Typography>
+              <Typography fontWeight={600} fontSize={13} sx={{ mb: 1 }}>Changes</Typography>
               <Box sx={{ border, borderRadius: '8px' }}>
                 <Table size="small">
                   <TableHead>
@@ -319,7 +294,7 @@ function DetailsDrawer({ entry, onClose }: { entry: AuditLogEntry | null; onClos
 
           {changedFields.length > 0 && (
             <Box>
-              <Typography fontWeight={700} fontSize={13} sx={{ mb: 1 }}>Fields changed</Typography>
+              <Typography fontWeight={600} fontSize={13} sx={{ mb: 1 }}>Fields changed</Typography>
               <Stack direction="row" gap={0.8} flexWrap="wrap">
                 {changedFields.map((f) => <Chip key={f} size="small" variant="outlined" label={label(f)} />)}
               </Stack>
@@ -329,7 +304,7 @@ function DetailsDrawer({ entry, onClose }: { entry: AuditLogEntry | null; onClos
 
           {extra.length > 0 && (
             <Box>
-              <Typography fontWeight={700} fontSize={13} sx={{ mb: 0.5 }}>More information</Typography>
+              <Typography fontWeight={600} fontSize={13} sx={{ mb: 0.5 }}>More information</Typography>
               {extra.map(([k, v]) => <DetailRow key={k} k={label(k)} v={pretty(v)} />)}
             </Box>
           )}

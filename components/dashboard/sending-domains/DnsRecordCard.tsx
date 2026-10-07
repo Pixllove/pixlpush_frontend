@@ -19,9 +19,9 @@ function CopyField({ label, value }: { label: string; value: string }) {
   };
   return (
     <Box>
-      <Typography color="text.secondary" fontSize={11} fontWeight={700}>{label}</Typography>
+      <Typography color="text.secondary" fontSize={11} fontWeight={500}>{label}</Typography>
       <Stack direction="row" alignItems="center" gap={1}>
-        <Typography component="code" fontSize={13} sx={{ wordBreak: 'break-all', fontFamily: 'monospace', flex: 1 }}>{value}</Typography>
+        <Typography component="code" fontSize={13} sx={{ wordBreak: 'break-all', fontFamily: 'var(--pp-mono)', flex: 1 }}>{value}</Typography>
         <Tooltip title={copied ? 'Copied' : `Copy ${label.toLowerCase()}`}>
           <IconButton size="small" aria-label={`Copy ${label.toLowerCase()}`} onClick={copy}><ContentCopyRounded fontSize="small" /></IconButton>
         </Tooltip>
@@ -39,7 +39,7 @@ export default function DnsRecordCard({ record }: { record: DnsRecord }) {
       <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1} sx={{ mb: 1.5 }}>
         <Stack direction="row" gap={1} alignItems="center">
           <Chip size="small" label={record.type} />
-          <Typography fontWeight={800}>{PURPOSE[record.purpose] ?? record.purpose}</Typography>
+          <Typography fontWeight={600}>{PURPOSE[record.purpose] ?? record.purpose}</Typography>
           {!record.required && <Typography color="text.secondary" fontSize={12}>Optional</Typography>}
         </Stack>
         <Chip size="small" label={status.label} color={status.tone} variant={status.tone === 'default' ? 'outlined' : 'filled'} />

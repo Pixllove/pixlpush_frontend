@@ -1,521 +1,378 @@
----
-version: alpha
-name: Voltagent-Inspired-design-analysis
-description: An inspired interpretation of Voltagent's design language — a developer-focused AI agent engineering platform whose surface is an unrelenting near-black canvas broken only by a single electric-green brand accent, code-editor mockups inside the hero, and a precise grid of dark feature cards that read like a documentation site dressed as marketing.
+# PixlPush Design System
 
-colors:
-  primary: "#00d992"
-  primary-soft: "#2fd6a1"
-  primary-deep: "#10b981"
-  on-primary: "#101010"
-  ink: "#f2f2f2"
-  ink-strong: "#ffffff"
-  body: "#bdbdbd"
-  mute: "#8b949e"
-  hairline: "#3d3a39"
-  hairline-soft: "#b8b3b0"
-  canvas: "#101010"
-  canvas-soft: "#1a1a1a"
-  canvas-text-soft: "#f5f6f7"
+How PixlPush looks and behaves. Read this before any UI work and follow it over personal taste. If a screen
+needs something that is not here, change the screen or extend this file and the theme together; never
+solve it with one-off styling on the screen.
 
-typography:
-  display-xl:
-    fontFamily: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif
-    fontSize: 60px
-    fontWeight: 400
-    lineHeight: 60px
-    letterSpacing: -0.65px
-  display-lg:
-    fontFamily: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif
-    fontSize: 36px
-    fontWeight: 400
-    lineHeight: 40px
-    letterSpacing: -0.9px
-  display-md:
-    fontFamily: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif
-    fontSize: 24px
-    fontWeight: 700
-    lineHeight: 32px
-    letterSpacing: -0.6px
-  display-sm:
-    fontFamily: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif
-    fontSize: 20px
-    fontWeight: 600
-    lineHeight: 28px
-  eyebrow-mono:
-    fontFamily: Inter, system-ui, -apple-system, sans-serif
-    fontSize: 14px
-    fontWeight: 600
-    lineHeight: 20px
-    letterSpacing: 2.52px
-  eyebrow-uppercase:
-    fontFamily: Inter, system-ui, -apple-system, sans-serif
-    fontSize: 18px
-    fontWeight: 600
-    lineHeight: 28px
-    letterSpacing: 0.45px
-  body-lg:
-    fontFamily: Inter, system-ui, -apple-system, sans-serif
-    fontSize: 18px
-    fontWeight: 400
-    lineHeight: 28px
-  body-md:
-    fontFamily: Inter, system-ui, -apple-system, sans-serif
-    fontSize: 16px
-    fontWeight: 400
-    lineHeight: 26px
-  body-md-strong:
-    fontFamily: Inter, system-ui, -apple-system, sans-serif
-    fontSize: 16px
-    fontWeight: 600
-    lineHeight: 24px
-  body-sm:
-    fontFamily: Inter, system-ui, -apple-system, sans-serif
-    fontSize: 14px
-    fontWeight: 400
-    lineHeight: 20px
-  body-sm-strong:
-    fontFamily: Inter, system-ui, -apple-system, sans-serif
-    fontSize: 14px
-    fontWeight: 600
-    lineHeight: 23px
-  caption:
-    fontFamily: Inter, system-ui, -apple-system, sans-serif
-    fontSize: 12px
-    fontWeight: 400
-    lineHeight: 16px
-  caption-strong:
-    fontFamily: Inter, system-ui, -apple-system, sans-serif
-    fontSize: 12px
-    fontWeight: 500
-    lineHeight: 16px
-  code:
-    fontFamily: SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace
-    fontSize: 13px
-    fontWeight: 400
-    lineHeight: 18px
-  code-strong:
-    fontFamily: SFMono-Regular, Menlo, Monaco, Consolas, monospace
-    fontSize: 13px
-    fontWeight: 550
-    lineHeight: 16px
-  button-md:
-    fontFamily: Inter, system-ui, -apple-system, sans-serif
-    fontSize: 16px
-    fontWeight: 600
-    lineHeight: 24px
+## 1. Where the design lives
 
-rounded:
-  none: 0px
-  xs: 4px
-  sm: 6px
-  md: 8px
-  pill: 9999px
-  full: 9999px
+| Place | What it holds |
+|---|---|
+| `lib/theme.ts` | The MUI theme: the exported `tokens` and every component override. **The source of truth.** |
+| `app/globals.css` | The same tokens as `--pp-*` variables on `:root`, and the "PixlPush design layer" at the end of the file for class-based surfaces (shell, cards, tables, auth, campaign review) |
+| `app/layout.tsx` | Loads Inter once (`--font-inter`) |
+| `components/dashboard/SearchField.tsx` | The one search box |
+| `components/website/AuthShell.tsx` | The one frame for every auth page |
+| `components/auth/AuthFeedback.tsx` | `FormError`, `AuthStatus` (icon tile + title + action), `Toast` |
+| `components/auth/PasswordField.tsx` | Password field with show/hide, and `PasswordRule` |
+| `components/dashboard/ReusableDataTable.tsx` | The shared list table with loading, empty and paging |
 
-spacing:
-  xxs: 2px
-  xs: 4px
-  sm: 8px
-  md: 12px
-  lg: 16px
-  xl: 20px
-  2xl: 24px
-  3xl: 32px
-  4xl: 40px
-  5xl: 48px
-  6xl: 64px
+**Rules of use**
 
-components:
-  nav-bar:
-    backgroundColor: "{colors.canvas}"
-    textColor: "{colors.ink}"
-    typography: "{typography.body-sm}"
-    padding: "{spacing.md} {spacing.3xl}"
-  nav-link:
-    textColor: "{colors.body}"
-    typography: "{typography.body-sm}"
-  button-primary:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.on-primary}"
-    typography: "{typography.button-md}"
-    rounded: "{rounded.sm}"
-    padding: "{spacing.md} {spacing.lg}"
-  button-outline-on-dark:
-    backgroundColor: "{colors.canvas}"
-    textColor: "{colors.ink}"
-    borderColor: "{colors.hairline}"
-    typography: "{typography.button-md}"
-    rounded: "{rounded.sm}"
-    padding: "{spacing.md} {spacing.lg}"
-  button-ghost-green:
-    backgroundColor: "{colors.canvas}"
-    textColor: "{colors.primary-soft}"
-    typography: "{typography.button-md}"
-    rounded: "{rounded.sm}"
-    padding: "{spacing.md} {spacing.lg}"
-  button-pill-tag:
-    backgroundColor: "{colors.canvas}"
-    textColor: "{colors.ink}"
-    borderColor: "{colors.hairline}"
-    typography: "{typography.body-sm}"
-    rounded: "{rounded.pill}"
-    padding: "{spacing.xs} {spacing.md}"
-  text-input:
-    backgroundColor: "{colors.canvas-soft}"
-    textColor: "{colors.ink}"
-    borderColor: "{colors.hairline}"
-    typography: "{typography.body-sm}"
-    rounded: "{rounded.sm}"
-    padding: "{spacing.md} {spacing.lg}"
-  card-feature:
-    backgroundColor: "{colors.canvas}"
-    textColor: "{colors.ink}"
-    borderColor: "{colors.hairline}"
-    typography: "{typography.body-md}"
-    rounded: "{rounded.md}"
-    padding: "{spacing.2xl}"
-  card-feature-emphasized:
-    backgroundColor: "{colors.canvas}"
-    textColor: "{colors.ink}"
-    borderColor: "{colors.hairline}"
-    typography: "{typography.body-md}"
-    rounded: "{rounded.md}"
-    padding: "{spacing.xl}"
-  code-mockup:
-    backgroundColor: "{colors.canvas}"
-    textColor: "{colors.ink}"
-    borderColor: "{colors.hairline}"
-    typography: "{typography.code}"
-    rounded: "{rounded.md}"
-    padding: "{spacing.xl}"
-  code-inline-chip:
-    backgroundColor: "{colors.canvas-soft}"
-    textColor: "{colors.canvas-text-soft}"
-    typography: "{typography.code}"
-    rounded: "{rounded.sm}"
-    padding: "{spacing.xxs} {spacing.sm}"
-  hero-band:
-    backgroundColor: "{colors.canvas}"
-    textColor: "{colors.ink}"
-    typography: "{typography.display-xl}"
-    padding: "{spacing.5xl} {spacing.3xl}"
-  content-band:
-    backgroundColor: "{colors.canvas}"
-    textColor: "{colors.ink}"
-    typography: "{typography.display-lg}"
-    padding: "{spacing.5xl} {spacing.3xl}"
-  green-divider-band:
-    backgroundColor: "{colors.canvas}"
-    borderColor: "{colors.primary}"
-  footer:
-    backgroundColor: "{colors.canvas}"
-    textColor: "{colors.body}"
-    typography: "{typography.body-sm}"
-    padding: "{spacing.4xl} {spacing.3xl}"
+1. A component gets its look from the theme. A screen writes `<Button>`, `<TextField>`, `<Select>`,
+   `<Tabs>`, `<Chip>` with no styling and gets the design.
+2. `sx`, `style` and `className` at a call site are for **layout only**: width, flex, grid, margin, gap,
+   alignment. Never colour, background, border, radius, height, padding, font size or weight.
+3. When a raw value is unavoidable, use `tokens.*` in TypeScript or `var(--pp-*)` in CSS. No hex colours in
+   screens.
+4. No new styling system, font, accent colour, or dependency for UI.
 
-  # ─── Examples (illustrative) — auto-derived; resolve any TO_FILL markers below ───
-  ex-pricing-tier:
-    description: "Default Pricing tier card. Re-uses feature-card chrome with brand canvas-soft surface."
-    backgroundColor: "{colors.canvas-soft}"
-    textColor: "{colors.ink}"
-    borderColor: "{colors.hairline}"
-    rounded: "{rounded.md}"
-    padding: "{spacing.2xl}"
-  ex-pricing-tier-featured:
-    description: "Featured/highlighted tier — polarity-flipped surface (dark fill + light text in light mode, light fill + dark text in dark mode)."
-    backgroundColor: "{colors.ink}"
-    textColor: "{colors.on-primary}"
-    rounded: "{rounded.md}"
-    padding: "{spacing.2xl}"
-  ex-product-selector:
-    description: "What's Included summary card — re-purposed for SaaS / B2B verticals (NOT a literal product gallery)."
-    backgroundColor: "{colors.canvas-soft}"
-    rounded: "{rounded.md}"
-    padding: "{spacing.2xl}"
-  ex-cart-drawer:
-    description: "Subscription summary — re-purposed for SaaS / B2B (line items per add-on, not literal cart)."
-    backgroundColor: "{colors.canvas}"
-    rounded: "{rounded.md}"
-    padding: "{spacing.2xl}"
-    item-divider: "{colors.hairline}"
-  ex-app-shell-row:
-    description: "Sidebar nav row inside the App Shell example. Active state uses brand primary as the indicator."
-    backgroundColor: "{colors.canvas}"
-    activeIndicator: "{colors.primary}"
-    rounded: "{rounded.sm}"
-    padding: "{spacing.md} {spacing.lg}"
-  ex-data-table-cell:
-    description: "Default data-table th + td chrome. Header uses mono-caps eyebrow typography; body uses body-sm."
-    headerBackground: "{colors.canvas-soft}"
-    headerTypography: "{typography.caption}"
-    bodyTypography: "{typography.body-sm}"
-    cellPadding: "{spacing.md} {spacing.lg}"
-    rowBorder: "{colors.hairline}"
-  ex-auth-form-card:
-    description: "Sign-in / sign-up card. Re-uses feature-card chrome with text-input primitives inside."
-    backgroundColor: "{colors.canvas-soft}"
-    rounded: "{rounded.md}"
-    padding: "{spacing.2xl}"
-  ex-modal-card:
-    description: "Modal dialog surface — same chrome as feature-card with elevated shadow."
-    backgroundColor: "{colors.canvas}"
-    rounded: "{rounded.md}"
-    padding: "{spacing.2xl}"
-  ex-empty-state-card:
-    description: "Empty-state illustration frame."
-    backgroundColor: "{colors.canvas-soft}"
-    rounded: "{rounded.md}"
-    padding: "{spacing.3xl}"
-    captionTypography: "{typography.body-md}"
-  ex-toast:
-    description: "Toast notification surface — feature-card shape + medium shadow."
-    backgroundColor: "{colors.canvas}"
-    rounded: "{rounded.md}"
-    padding: "{spacing.md} {spacing.lg}"
-    typography: "{typography.body-sm}"
+## 2. Principles
 
----
+PixlPush is a work tool for retention teams. It should read as a mature, funded product: calm, exact and
+dense enough to work in.
 
+- **Neutral first.** About 85–90% of a screen is neutral. The accent marks what is interactive or active;
+  semantic colours mark status. Nothing is coloured for decoration.
+- **Structure from type, space and hairlines**, not from boxes and shadows.
+- **Three weights, a short size list.** Hierarchy comes from size and colour, never from heavier type.
+- **Small corners.** 4–10px; pills only for badges, chips, avatars and switches.
+- **One of each.** One field, one tab bar, one search box, one table, one auth frame. If two screens show
+  the same kind of control, it is the same component.
+- **Light workspace, plum sidebar.** The app is never dark.
+- **Loading is never "disabled".** Waiting is shown with skeletons or loading rows, not greyed-out controls.
 
-## Overview
+## 3. Colour
 
-Voltagent is an AI agent engineering platform built for developers, and the brand wears that audience proudly: a near-black `{colors.canvas}` (`#101010`) page background that runs edge-to-edge with no light-mode counterpart, a single electric-green accent (`{colors.primary}` `#00d992`) reserved for CTAs, status pills, and the brand lightning glyph, and a typography system that pairs sentence-case Inter with SF Mono for inline code and command snippets. The whole page reads like polished documentation that decided to also sell something.
+| Token | CSS variable | Value | Use |
+|---|---|---|---|
+| `accent` | `--pp-accent` | `#5517B8` | Primary buttons, links, focused field outline, active states |
+| `accentHover` | `--pp-accent-hover` | `#4712A0` | Hover and pressed |
+| `accentSoft` | `--pp-accent-soft` | `#F3EEFC` | Icon tiles, selected menu item, active count chip |
+| `accentLine` | `--pp-accent-line` | `#DCCDF6` | Border of an accent-tinted surface |
+| `secondary` | — | `#FF5A2C` | Sparingly: the logo, a chart series. Never a second button colour |
+| `canvas` | `--pp-canvas` | `#FAF9FB` | Page background in the app |
+| `surface` | `--pp-surface` | `#FFFFFF` | Cards, tables, fields, dialogs, top bar, the auth form column |
+| `subtle` | `--pp-subtle` | `#F5F3F7` | Tab track, hover, neutral chips, disabled fill, quiet info tiles |
+| `border` | `--pp-border` | `#EAE6EF` | Default hairline |
+| `borderStrong` | `--pp-border-strong` | `#D9D3E1` | Field and secondary-button outlines |
+| `text` | `--pp-text` | `#1E1429` | Primary text |
+| `textSecondary` | `--pp-text-2` | `#625A6E` | Supporting text, labels |
+| `textMuted` | `--pp-text-3` | `#8E879A` | Table headers, placeholders, adornment icons, footnotes |
+| `plum` | `--pp-plum` | `#1B1025` | Sidebar, tooltips, toasts |
+| `plumSoft` | `--pp-plum-soft` | `#281838` | Active sidebar row, sidebar project card |
+| `plumLine` | `--pp-plum-line` | `#3B2A4F` | Hairlines on plum |
 
-The decorative system is restrained. There is no gradient mesh, no atmospheric backdrop, no illustration suite. Instead, the brand uses small typographic moments — a green code chip (`npx voltagent ...`), a 3-px outlined feature card sitting against the same near-black canvas, a green hairline divider between section bands — to mark its identity. The result is a page that feels engineered: every card has a hairline border, every snippet has a copy-to-clipboard button, every metric is rendered in a numeric monospace.
+On plum: text `#F6F1FB`, body `#C7BACE`, muted `#8D7899`, accent `#A67BF5` (the `--sb-*` variables on
+`.dashboard-sidebar`). The sidebar is flat plum: no gradient.
 
-Type stays calm. Hero display sits at 60 px in regular weight with `-0.65 px` tracking — not a billboard headline, more like a documentation H1. Section headings step down to 36 px / 24 px in similar weights. Body copy is 16 px Inter at line-height 1.65 for the kind of legibility long-form devs expect. Uppercase eyebrows are common — `EVERYTHING YOU NEED` style mono-cap labels above section headlines — and they use Inter at weight 600 with wide positive tracking (`2.52 px` at 14 px).
+**Semantic** (status only):
 
-**Key Characteristics:**
-- A single electric-green accent `{colors.primary}` (`#00d992`) carries every CTA, every status pill, and the brand's lightning logo. No second accent.
-- Dark canvas (`{colors.canvas}` `#101010`) is the only page surface — there is no light-mode rhythm; the entire site reads as one continuous dark surface broken by feature-card boundaries.
-- Hairline-bordered feature cards (`{colors.hairline}` `#3d3a39`, 1 px solid) are the brand's primary chrome — no shadows, no fills, just precise hairline rectangles.
-- A signature dashed-border accent (`1px dashed rgba(79, 93, 117, 0.4)`) appears between sections as a quiet rhythm cue — the brand's only ornamental line.
-- Inter + SF Mono pair carries every typographic role. SF Mono is reserved for code blocks, inline command snippets, and metric counters.
-- Buttons are tight 6 px rounded rectangles (not pills); only inline status tags use the 9999 px full pill.
+| Meaning | Text | Soft fill | Variables |
+|---|---|---|---|
+| Success: running, active, paid, sent, verified | `#12805C` | `#E7F6EF` | `--pp-success`, `--pp-success-soft` |
+| Warning: draft, attention, expired link | `#A15C07` | `#FDF3DC` | `--pp-warning`, `--pp-warning-soft` |
+| Error: failed, destructive | `#C0352B` | `#FDECEA` | `--pp-error`, `--pp-error-soft` |
+| Info: scheduled | `#1F5FBF` | `#E8F0FD` | `--pp-info`, `--pp-info-soft` |
 
-## Colors
+**The accent surface: `var(--pp-hero)`.** One navy-to-violet surface with soft glows, defined in
+`app/globals.css`. It is the only gradient in the product and is used for a small set of feature blocks:
+the Overview health block, the current-plan block in Billing, the Integrations intro, the default saved
+payment card, and the brand panel of the auth pages. Text on it is white; secondary text is white at
+72–82% opacity. Do not invent other gradients, and do not use it for ordinary cards.
 
-### Brand & Accent
-- **Electric Green** (`{colors.primary}` — `#00d992`): The single brand accent. Every primary CTA, every status pill, every "live" indicator, the brand's lightning glyph itself. Reserved.
-- **Primary Soft** (`{colors.primary-soft}` — `#2fd6a1`): A slightly more muted green used inside button-ghost variants and tooltip / focus indicators.
-- **Primary Deep** (`{colors.primary-deep}` — `#10b981`): The darker green used for inline link colour in body copy.
+**Left alone on purpose**
+- The email editors keep their own charcoal chrome and green accent (`--ed-*` variables, `.email-fullscreen`).
+  They take the shared shapes and sizes, in their own colours.
+- Email content that users design is content, not UI. It is never restyled and keeps email-safe fonts.
+- The marketing pages keep their warm gradient hero sections.
 
-### Surface
-- **Canvas** (`{colors.canvas}` — `#101010`): The default near-black page background. The only surface mode in the brand's marketing system.
-- **Canvas Soft** (`{colors.canvas-soft}` — `#1a1a1a`): A slightly lighter dark fill used inside code blocks and form inputs to mark them visually distinct against the canvas.
-- **Hairline** (`{colors.hairline}` — `#3d3a39`): 1 px solid borders — feature cards, buttons, dividers between rows. The brand's universal "edge" colour.
-- **Hairline Soft** (`{colors.hairline-soft}` — `#b8b3b0`): A lighter divider tint used in rare on-light secondary contexts.
+## 4. Typography
 
-### Text
-- **Ink** (`{colors.ink}` — `#f2f2f2`): Default text colour on the dark canvas — slightly off-white to reduce contrast strain.
-- **Ink Strong** (`{colors.ink-strong}` — `#ffffff`): Pure-white text for hero headlines and high-emphasis copy.
-- **Body** (`{colors.body}` — `#bdbdbd`): Secondary text — supporting copy, body paragraphs in long-form sections.
-- **Mute** (`{colors.mute}` — `#8b949e`): Lowest-priority on-dark text — captions, fine print, footer secondary lines.
-- **Canvas Text Soft** (`{colors.canvas-text-soft}` — `#f5f6f7`): Used inside code mockups to keep code colour just slightly cooler than the surrounding body text.
+Inter, loaded once in `app/layout.tsx`, with `calt`, `cv11`, `ss01` and antialiasing. A monospace stack
+(`var(--pp-mono)`) for code, ids, keys and DNS records only. No other font in the UI.
 
-### Semantic
-The brand doesn't surface a separate error / warning palette in its public marketing pages — the underlying Docusaurus default semantic palette exists in the design system but is reserved for in-product / docs contexts. Validation cues on the marketing surface use the primary green for success and a muted body grey for missing states.
+**Weights: three and nothing else**
 
-## Typography
+| Weight | Use |
+|---|---|
+| 400 | Body text, table cells, descriptions, helper text, field values |
+| 500 | UI text: labels, nav items, tabs, table headers, chips, links, subtitles |
+| 600 | Headings, buttons, metric numbers, the active tab, the one value in a row that must stand out |
 
-### Font Family
-Two faces carry the system:
-1. **Inter** for every display, body, button, and link role. Weights 400 / 500 / 600 / 700 are the working set. Used with OpenType features `"calt"` and `"rlig"` enabled across the page so the geometric Inter ligatures and contextual alternates render correctly.
-2. **SF Mono** (`SFMono-Regular` with Menlo / Monaco / Consolas / Liberation Mono fallbacks) for inline code, command snippets, terminal mockups, and the brand's numeric counters. Weights 400 / 549 / 550 / 700 are present — the unusual 549 / 550 sub-bold weight gives the mono a "slightly heavier than regular" voice for emphasis.
+Nothing is heavier than 600 or lighter than 400. `b` and `strong` render at 600. Never use `bold`.
 
-### Hierarchy
+**Sizes**
 
-| Token | Size | Weight | Line Height | Letter Spacing | Use |
-|---|---|---|---|---|---|
-| `{typography.display-xl}` | 60px | 400 | 60px | -0.65px | Hero headline ("AI Agent Engineering Platform"). |
-| `{typography.display-lg}` | 36px | 400 | 40px | -0.9px | Section headlines. |
-| `{typography.display-md}` | 24px | 700 | 32px | -0.6px | Sub-section / card-title displays. |
-| `{typography.display-sm}` | 20px | 600 | 28px | 0 | Card titles in dense grids. |
-| `{typography.eyebrow-mono}` | 14px | 600 | 20px | 2.52px | UPPERCASE eyebrow tags ("EVERYTHING YOU NEED"). |
-| `{typography.eyebrow-uppercase}` | 18px | 600 | 28px | 0.45px | Larger uppercase eyebrows above hero subsections. |
-| `{typography.body-lg}` | 18px | 400 | 28px | 0 | Lead paragraphs. |
-| `{typography.body-md}` | 16px | 400 | 26px | 0 | Default body paragraph. |
-| `{typography.body-md-strong}` | 16px | 600 | 24px | 0 | Bolded inline body. |
-| `{typography.body-sm}` | 14px | 400 | 20px | 0 | Secondary body. |
-| `{typography.body-sm-strong}` | 14px | 600 | 23px | 0 | Bold caption / pill-tag labels. |
-| `{typography.caption}` | 12px | 400 | 16px | 0 | Fine print. |
-| `{typography.caption-strong}` | 12px | 500 | 16px | 0 | Bold caption. |
-| `{typography.code}` | 13px | 400 | 18px | 0 | Code blocks, inline command snippets. |
-| `{typography.code-strong}` | 13px | 550 | 16px | 0 | Emphasised inline code (the SF Mono "almost-bold" weight). |
-| `{typography.button-md}` | 16px | 600 | 24px | 0 | Button labels. |
-
-### Principles
-- **Inter regular at 60 px display** is the brand's calming counter to AI marketing's tendency to shout. The light tracking and modest weight read like documentation.
-- **Two-face contrast carries the technical voice.** Inter for narrative; SF Mono for anything that could be typed at a terminal.
-- **Uppercase eyebrow with tracking is the brand's signature label style.** `2.52 px` at 14 px is the documented value.
-
-### Note on Font Substitutes
-- **Sans** — *Inter* is the brand's actual face; substitute is the brand itself when self-hosting is not available.
-- **Mono** — *SF Mono* is Apple-system; *JetBrains Mono* or *Geist Mono* are the best free substitutes.
-
-## Layout
-
-### Spacing System
-- **Base unit**: 4 px; small 5 / 6.4 px values appear inside code-mockup line-height compensation.
-- **Tokens**: `{spacing.xxs}` 2 px · `{spacing.xs}` 4 px · `{spacing.sm}` 8 px · `{spacing.md}` 12 px · `{spacing.lg}` 16 px · `{spacing.xl}` 20 px · `{spacing.2xl}` 24 px · `{spacing.3xl}` 32 px · `{spacing.4xl}` 40 px · `{spacing.5xl}` 48 px · `{spacing.6xl}` 64 px.
-- **Section padding**: hero + content bands use `{spacing.5xl}` 48 px top/bottom.
-- **Card interior padding**: feature cards sit at `{spacing.2xl}` 24 px.
-
-### Grid & Container
-- Marketing container centres at roughly 1200 – 1400 px; content stays edge-to-edge in colour with horizontal gutters of `{spacing.3xl}` on desktop.
-- Feature-card grids: 2-up to 3-up at desktop, 1-up at mobile.
-
-### Responsive Strategy
-
-#### Breakpoints
-
-| Name | Width | Key Changes |
+| Size | Use | Variant |
 |---|---|---|
-| Mobile | < 768px | Hero 60→32 px; cards 1-up; nav hamburger. |
-| Tablet | 768–1023px | Cards 2-up; nav stays horizontal. |
-| Desktop | ≥ 1024px | Full 3-up card grids. |
+| 11 | Overline, small badge, tiny meta | `overline` |
+| 12 | Caption, table header, helper text, chip, footnote | `caption`, `h6` |
+| 13 | Secondary body, table cells, small buttons, compact controls | `body2`, `subtitle2` |
+| 14 | Body, fields, buttons, tabs, menu items (the base) | `body1`, `h5`, `subtitle1` |
+| 16 | Card title, dialog title | `h3`, `h4` |
+| 20 | Section title | `h2` |
+| 24 | Page title | `h1` |
+| 28, 32 | Metric numbers only, with tabular figures | — |
 
-#### Touch Targets
-Buttons render at ~44 px tall (12 px vertical padding + 24 px line-height). Meet WCAG AAA at all breakpoints.
+- Nothing inside the app is larger than the 24px page title except a metric.
+- Marketing pages may also use 32, 40, 48 and 56 for display headings, at 600 with negative tracking. The
+  auth brand panel headline is 32px.
+- Minimum text size is 11px.
+- Labels are sentence case. Uppercase only for the 11px overline.
+- Supporting text is `textSecondary`, never a lighter weight.
+- Prefer a Typography `variant` over inline `fontSize` / `fontWeight`.
 
-#### Collapsing Strategy
-Nav collapses to hamburger at mobile; the menu overlay keeps the same green CTA pinned at the bottom. Feature-card grids drop to 1-up; hero typography scales fluidly.
+**Outside the scale on purpose:** email content, the phone mocks (`.ios-*`, `.push-phone-*`, `.push-lock-*`,
+`.push-screen-*`), the miniature illustrations (`.hero-*`, `.art-*`, `BlockDesign.tsx`), the face of the
+saved payment card, and icon sizes (a `fontSize` on an icon sets the icon's size, not text).
 
-#### Image Behavior
-Code-editor mockups render as image-like cards with copy-to-clipboard affordances. No photography in the brand's marketing surface.
+## 5. Spacing, radius, elevation
 
-## Elevation & Depth
+**Spacing:** 4px scale: 4, 8, 12, 16, 20, 24, 32, 40, 56. Content max-width 1320px with 28px gutters, 32px
+above the page title, 24px between sections. Inside a card or form: 16px between fields that have no
+floating label, **20–24px between fields with floating labels** (the label sits on the outline and needs
+the room), 24px between groups.
 
-| Level | Treatment | Use |
-|---|---|---|
-| Level 0 — Flat | No shadow, no border. | Full-bleed bands. |
-| Level 1 — Hairline | 1 px solid `{colors.hairline}` border on `{colors.canvas}`. | Default for every feature card and button. |
-| Level 2 — Inset Glow | `0 0 15px rgba(92, 88, 85, 0.2)` subtle outer glow. | Hovering / featured cards. |
-| Level 3 — Modal Stack | `0 20px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(148,163,184,0.1) inset` heavy drop + inset ring. | Modal / dialog surfaces in-product. |
-
-### Decorative Depth
-- Hairline cards on dark canvas — the brand's only true elevation mode.
-- A 2 px solid `{colors.primary}` green border occasionally marks "featured" or "active" status on a card.
-- A 1 px dashed `rgba(79, 93, 117, 0.4)` divider sits between section bands as a quiet rhythm cue.
-
-## Shapes
-
-### Border Radius Scale
+**Radius**
 
 | Token | Value | Use |
 |---|---|---|
-| `{rounded.none}` | 0px | Full-bleed bands. |
-| `{rounded.xs}` | 4px | Smallest inline pills, code inline chips. |
-| `{rounded.sm}` | 6px | Default button and input radius. |
-| `{rounded.md}` | 8px | Card chrome, code-block chrome. |
-| `{rounded.pill}` | 9999px | Inline status tags ("Live", "Beta"). |
-| `{rounded.full}` | 9999px | Circular icon containers. |
+| `dense` | 4px | Menu items, checkboxes, tooltips |
+| `control` | 6px | Buttons, fields, selects, alerts |
+| `card` | 8px | Cards, panels, table containers, icon tiles, the pill inside a tab bar |
+| `overlay` | 10px | Dialogs, menus, popovers, the tab track |
+| `pill` | 9999px | Status badges, count chips, avatars, switches only |
 
-## Components
+The theme base is 4px, so `sx={{ borderRadius: 2 }}` is 8px. The auth brand panel is the one 16px surface.
+
+**Elevation: three levels**
+
+1. **Flat**: no border, no shadow. The default.
+2. **Subtle**: white, 1px `border`, 8px radius. A real group: a table, a plan, a form.
+3. **Elevated**: hairline plus shadow, only for things that float. Menu/popover
+   `0 8px 24px rgba(30,20,41,.10), 0 2px 6px rgba(30,20,41,.05)`; dialog `0 24px 64px rgba(30,20,41,.20)`.
+
+Cards never have a shadow. No bordered card inside a bordered card: use a hairline row or a `subtle` tile.
+
+## 6. Components
 
 ### Buttons
+40px tall (32 `size="small"`, 44 `size="large"`), 16px side padding, 6px radius, 14px/600, no ripple, no
+uppercase, no elevation.
+- **Primary** (`contained`): accent fill. One per view.
+- **Secondary** (`outlined`): white, `borderStrong` hairline, dark label.
+- **Tertiary** (`text`): label only.
+- **Destructive**: outlined error; contained error only inside a confirmation dialog.
+- Pressed moves 0.5px; keyboard focus shows a 3px accent ring.
+- Submit buttons use `SubmitButton` (`components/auth/SubmitButton.tsx`): it keeps its width and shows a
+  spinner while pending.
+- Round icon-only actions that sit on a connector (the journey builder's plus) are 30px white circles with a
+  `borderStrong` hairline; they must set a fixed width so a narrow parent cannot collapse them.
 
-**`button-primary`** — the electric-green CTA.
-- Background `{colors.primary}`, text `{colors.on-primary}` (near-black), label `{typography.button-md}`, padding `{spacing.md} {spacing.lg}`, shape `{rounded.sm}` 6 px.
+### Fields and dropdowns
+One box for every text field, select and autocomplete, defined only in the theme.
+- **40px tall** (the button height), 6px radius, white, `borderStrong` outline, 14px text, 12px side padding.
+  All of them are this size by default; never pass a size to make one bigger.
+- **Compact**: `className="compact"` gives 32px / 13px. Only for table footers (rows-per-page) and dense
+  toolbars.
+- **Multiline** starts at three rows (88px) and grows.
+- **Labels are floating labels** (`label="…"`): 14px `textSecondary`, centred when empty, 12px on the outline
+  when filled or focused. Do not put a separate text label above a field.
+- **Focus is a 2px accent outline, shown instantly.** No glow ring (a ring is a box-shadow and cuts through
+  the floating label) and no fade.
+- Error: error outline with 12px error text under the field. Disabled: `subtle` fill, muted text.
+- Helper text 12px, 4px below. Adornment icons 18px `textMuted`; the dropdown chevron 20px.
+- **Dropdown menu**: opens 4px below the trigger, 10px radius, 6px padding, items 36px tall with 8px/10px
+  padding and a 2px gap, hover `subtle`, selected item `accentSoft` at weight 500, at most 320px tall.
+- A dropdown never offers an empty "-" option as a real choice.
+- **Width**: a field fills its column. Toolbar controls keep a set width: search 320px, filters 160–220px,
+  rows-per-page 72px.
+- A field is `disabled` only when the user may not edit it, it is read-only by nature, or its own form is
+  being submitted. See Loading.
 
-**`button-outline-on-dark`** — the hairline-on-dark secondary button.
-- Background `{colors.canvas}`, text `{colors.ink}`, 1 px solid `{colors.hairline}` border, same typography / padding / shape.
+### Search
+Always `SearchField`. Never hand-build a search box.
+- The standard field with a magnifier on the left and a clear (×) button on the right once there is text.
+- Escape clears; Enter searches at once. 320px wide in a toolbar unless told otherwise.
+- `value` / `onChange` are the text as typed. For lists answered by the server, drive the request from
+  `onSearch`, which fires 200ms after the user stops typing. Never send a request on every key.
+- The list shows loading rows from the first key typed, so the screen reacts immediately.
+- Placeholders say what can be searched, in sentence case, without trailing dots: "Search journeys",
+  "Search by user ID, email or country".
 
-**`button-ghost-green`** — text-only with green label, for tertiary actions.
-- Background `{colors.canvas}`, text `{colors.primary-soft}`, no border.
+### Tabs
+One design everywhere: **sliding pill tabs**, defined only in the theme.
+- A soft track (`subtle`, 1px `border`, 10px radius, 4px padding) holds the tabs. A white 8px pill with a
+  faint shadow slides behind the active tab over 200ms. **No underline and no divider under the row.**
+- Tabs are 36px tall, 14px side padding, 14px/500 `textSecondary`; the active tab is `text`/600.
+- The track is as wide as its tabs, never full width, with 16px of space below it. It scrolls sideways
+  when it does not fit.
+- Icons are optional, 16px, left of the label, in the label's colour (no coloured tab icons).
+- Counts are 20px chips after the label: neutral, turning accent-soft on the active tab. A chip with its own
+  colour (for example a green "Save 17%") keeps it.
+- Use MUI **`Tabs` / `Tab`** for switching a section or a view, including small either/or choices such as
+  Monthly / Yearly. Use **`ToggleButtonGroup` / `ToggleButton`** only where a control sets a value inside a
+  form or toolbar (preview size, editor options); it has the same look, and `size="small"` gives 30px / 13px.
+- Tab rows have `role="tab"`; tests look them up by that role.
 
-**`button-pill-tag`** — the inline pill for category tags / status labels.
-- Background `{colors.canvas}`, text `{colors.ink}`, hairline border, body in `{typography.body-sm}`, padding `{spacing.xs} {spacing.md}`, shape `{rounded.pill}` 9999 px.
+### Cards
+8px radius, hairline, no shadow, 16–24px padding, an `h3` title. Content inside a card is spaced with a gap
+(20px), not with margins on each child. Icon tiles are 36px (48px on status screens), 8px radius,
+`accentSoft` with an accent icon; other colours only when they carry meaning.
 
-### Cards & Containers
+### Tables
+The most important surface in the app; use `ReusableDataTable` for lists.
+- Header: 12px/500 `textMuted`, sentence case, no fill, a hairline below.
+- Rows: 13px, 12×16px cell padding, a hairline between rows, hover `#FAF8FC`, selected `accentSoft`.
+- Numbers right-aligned with tabular figures. Dates in one format, `textSecondary`.
+- Row actions are quiet icon buttons that darken on hover; delete turns red on hover only.
+- Tabs sit above the table; search and filters share one toolbar row.
+- Every table handles loading (skeleton rows), empty (one sentence, one action) and error.
 
-**`card-feature`** — the default feature card.
-- Background `{colors.canvas}`, text `{colors.ink}`, 1 px solid `{colors.hairline}` border, padding `{spacing.2xl}`, shape `{rounded.md}` 8 px. The brand's most-repeated card chrome.
+### Badges and chips
+20–22px pills, 11–12px/500, soft fill with matching text by meaning: Running/Active/Paid green, Draft amber,
+Scheduled blue, Paused orange, Failed red, Archived grey. Use `<Chip color="success | warning | error |
+info | primary">` for a coloured chip; a chip with no colour is neutral. A pill is never a control.
 
-**`card-feature-emphasized`** — the same card with a 3 px hairline border for emphasis.
-- Same chrome as `card-feature` with 3 px solid `{colors.hairline}`.
+### Plan label and upgrade
+The plan beside a project name is just the plan: "Free", "Starter", "Pro", "Enterprise" (`planLabel`).
+"Upgrade to Pro" is hidden when the project is already on Pro or Enterprise.
 
-**`code-mockup`** — the dark code-editor card with copy-to-clipboard affordance.
-- Background `{colors.canvas}`, text `{colors.ink}`, 1 px solid `{colors.hairline}`, body in `{typography.code}` (SF Mono 13 px), padding `{spacing.xl}`, shape `{rounded.md}`.
+### Dialogs, menus, toasts, alerts
+- Dialog: 10px radius, 24px padding, 16px/600 title, actions right-aligned (tertiary, then primary), backdrop
+  `rgba(30,20,41,.45)`.
+- Menu / popover: 10px radius, hairline and the menu shadow.
+- Tooltip and toast: plum, white text.
+- Alert: 6px radius, soft semantic fill with a matching hairline. Form errors appear as an alert above the
+  first field (`FormError`), never clearing what the user typed.
 
-**`code-inline-chip`** — the inline command snippet pill.
-- Background `{colors.canvas-soft}`, text `{colors.canvas-text-soft}`, body in `{typography.code}`, padding `{spacing.xxs} {spacing.sm}`, shape `{rounded.sm}`.
+### Switch
+The themed MUI `Switch` (accent when on). Do not hand-build toggles.
 
-### Inputs & Forms
+### Empty state
+An accent-soft icon tile, a 20px title, one sentence, one primary button. No dark or gradient hero cards.
 
-**`text-input`** — the standard text input on dark.
-- Background `{colors.canvas-soft}`, text `{colors.ink}`, 1 px solid `{colors.hairline}`, body in `{typography.body-sm}`, padding `{spacing.md} {spacing.lg}`, shape `{rounded.sm}` 6 px.
+## 7. Loading and data states
 
-### Navigation
+- **Loading is not disabled.** A query's loading state must never disable a field or a form. While a form's
+  first data loads, render `Skeleton`s of the fields' size (40px tall, 88px for multiline, same width), then
+  swap in the real fields without the layout moving.
+- A field may be disabled only for permission, read-only data, or its own submit in flight.
+- **Never show the previous view's data as if it were current.** When a tab, search term or page changes,
+  show loading rows until the new data arrives (`isPlaceholderData` → loading). Keeping the old result is
+  allowed only to stop counts and totals from blinking.
+- **No page-wide dimming.** Nothing fades or greys the whole page on load or reload. A fade for switching
+  projects runs only when moving between two real projects.
+- Lists use skeleton rows shaped like the data; no full-page spinners for lists.
+- A typed-into field never loses its text because data arrived late.
 
-**`nav-bar`** — the sticky top nav on dark.
-- Background `{colors.canvas}`, text `{colors.ink}`, padding `{spacing.md} {spacing.3xl}`.
+## 8. Layout and navigation
 
-**`nav-link`** — link items in nav.
-- Text `{colors.body}`, set in `{typography.body-sm}`.
+- **Sidebar**: 212px, flat plum, a brand row the height of the top bar, 12px/500 group labels, 40px rows with
+  16px outlined icons; the active row is `plumSoft` with a 2px `#A67BF5` indicator. Navigation highlights
+  instantly on click.
+- **Top bar**: 60px, white, a bottom hairline, no shadow. Project switcher and search on the left, actions on
+  the right.
+- **Page header**: title (`h1`) and one line on the left, the primary action on the right, identical on every
+  screen.
+- **Page body**: sections separated by 24px. Reserve cards for real objects; do not wrap every section in one.
+- **Forms**: a single column of fields with floating labels; related fields may share a row equally. The
+  primary button is left-aligned under the form in the app and full width on auth pages.
 
-**`footer`** — the dark footer band.
-- Background `{colors.canvas}`, text `{colors.body}`, padding `{spacing.4xl} {spacing.3xl}`. Body in `{typography.body-sm}`.
+## 9. Auth pages
 
-### Signature Components
+Every auth route (`/login`, `/get-started`, `/reset-password`, `/verify-email`, `/invitations/accept`,
+`/auth/google`) uses `AuthShell`. No marketing header.
 
-**`hero-band`** — the dark hero band with the 60-px Inter headline.
-- Background `{colors.canvas}`, text `{colors.ink}` (with the headline at `{colors.ink-strong}` white), padding `{spacing.5xl} {spacing.3xl}`. Headline in `{typography.display-xl}` (60 px / weight 400 / `-0.65 px` tracking). Eyebrow above headline in `{typography.eyebrow-mono}` (uppercase, tracked).
+- **Frame**: a white form column on the left (about 46%) with the mark and "PixlPush" top-left (the mark has
+  a fixed 32px height and its own width; never force both) a quiet "Back to home" text button
+  top-right of the column, and a quiet footer line. On the right, a brand
+  panel on `var(--pp-hero)`, inset 12px with a 16px radius. Below 1024px the panel is hidden and the form is
+  the whole page.
+- **Brand panel**: an overline, a 32px headline, one sentence, a white "product glimpse" card built from
+  real UI (a three-step journey with a status chip), and three short points. Copy is chosen by `mode`
+  (`login`, `signup`, `invite`, `security`). Facts only: never invent testimonials, customer names, logos,
+  ratings or usage numbers.
+- **Form block** (`.auth-block`, 400px wide): a 24px `h1`, one line of secondary text, the Google button
+  first, an "or" divider, floating-label fields 16px apart, a full-width 44px primary button whose label is
+  the action ("Log in", "Create account", "Send reset link", "Set new password"), then the switch link.
+- **Password**: `PasswordField` with show/hide; where a password is being chosen, `PasswordRule` shows the
+  rule ("At least 12 characters") and turns green when met.
+- **Status screens** use `AuthStatus`: a 48px icon tile (accent, success, warning or error), the title, a
+  line of text and one action. Used for check-your-inbox, verified, invalid or expired link, password
+  updated and ended invitations.
+- **Signing in** (`GoogleCallback`): centred in the column, the mark inside a ring that fills with the three
+  steps and turns green at the end, a live step label, and a three-row checklist joined by a connector.
+- First field is autofocused; every field has the right `autocomplete`.
 
-**`content-band`** — the standard content band hosting feature grids.
-- Background `{colors.canvas}`, text `{colors.ink}`, padding `{spacing.5xl} {spacing.3xl}`. Section headline in `{typography.display-lg}`.
+## 10. Motion
 
-**`green-divider-band`** — a thin green-glow band that occasionally separates major sections.
-- Background `{colors.canvas}`, 2 px solid `{colors.primary}` top/bottom border. The brand's only chromatic divider.
+- 150ms `cubic-bezier(.2,.6,.2,1)` (`--pp-ease`) on colour, border, shadow and small transforms: hover,
+  press, row hover, switch, chip colour.
+- The tab pill slides in 200ms. Auth blocks rise 8px in 300ms on load.
+- **Field focus has no transition**: it must look active the instant it is clicked.
+- Looping animation is allowed only where something is genuinely in progress (the signing-in ring and its
+  current-step halo, a spinner). Nothing else loops, floats or bounces.
+- Animate transform and opacity only for anything that loops.
+- `prefers-reduced-motion` turns animations and slides off.
 
-### Examples (illustrative)
+## 11. Responsive
 
-> Auto-derived kit-mirror demonstration surfaces (`scripts/derive-examples-block.mjs`). Each `ex-*` entry references brand-native primitives so downstream consumers (`/preview-design`, `/generate-kit`) re-skin the same 10 surfaces consistently. `TO_FILL` markers indicate missing primitives — resolve in the LLM judgment pass.
+- ≥ 1024px: auth brand panel visible.
+- ≥ 900px: fixed sidebar, grids, full-width tables.
+- 600–899px: grids drop to two columns; tables scroll inside their surface.
+- < 600px: one column, sidebar as an overlay, 16px gutters, primary actions full width.
+- No horizontal page scroll at any width. Tab tracks and tables scroll inside themselves.
 
-**`ex-pricing-tier`** — Default Pricing tier card. Re-uses feature-card chrome with brand canvas-soft surface.
-- Properties: `backgroundColor`, `textColor`, `borderColor`, `rounded`, `padding`
+## 12. Do and don't
 
-**`ex-pricing-tier-featured`** — Featured/highlighted tier — polarity-flipped surface (dark fill + light text in light mode, light fill + dark text in dark mode).
-- Properties: `backgroundColor`, `textColor`, `rounded`, `padding`
+**Do**
+- Start from the theme; add to the theme when something is missing.
+- Use floating labels, `SearchField`, MUI `Tabs`, `ReusableDataTable`, `AuthShell`, `AuthStatus`.
+- Keep one primary action per view.
+- Show loading with skeletons and loading rows.
+- Check a new screen at 1440px and 390px, with real and empty data.
 
-**`ex-product-selector`** — What's Included summary card — re-purposed for SaaS / B2B verticals (NOT a literal product gallery).
-- Properties: `backgroundColor`, `rounded`, `padding`
+**Don't**
+- Style a control at its call site, or write a hex colour in a screen.
+- Use weights above 600, text under 11px, or app headings above 24px.
+- Add underlined tabs, boxed tab buttons, pill-shaped buttons or fields, or a second tab look.
+- Add shadows to cards, glow rings to fields, or any gradient other than `var(--pp-hero)`.
+- Disable or grey out controls because data is loading.
+- Show the last tab's or last search's rows while the next loads.
+- Hand-build a search box, toggle, switch or status screen that already exists.
+- Restyle email content, or change the email editors' colours.
 
-**`ex-cart-drawer`** — Subscription summary — re-purposed for SaaS / B2B (line items per add-on, not literal cart).
-- Properties: `backgroundColor`, `rounded`, `padding`, `item-divider`
+## 13. Working on the UI
 
-**`ex-app-shell-row`** — Sidebar nav row inside the App Shell example. Active state uses brand primary as the indicator.
-- Properties: `backgroundColor`, `activeIndicator`, `rounded`, `padding`
+1. Read this file, then `lib/theme.ts`.
+2. This repo has a knowledge graph: run `graphify query "<question>"` before grepping, and
+   `graphify update .` after changing code.
+3. Change order: tokens → theme overrides → the design layer in `app/globals.css` → the screen. If the same
+   value appears in two screens, it belongs in the theme.
+4. Visual work does not touch APIs, routes, state or business logic, and adds no dependencies.
+5. Keep labels, roles and aria-labels that tests rely on, or update the tests in the same change.
+6. Before finishing: `npx tsc --noEmit` passes, the tests pass, and the screen has been looked at.
 
-**`ex-data-table-cell`** — Default data-table th + td chrome. Header uses mono-caps eyebrow typography; body uses body-sm.
-- Properties: `headerBackground`, `headerTypography`, `bodyTypography`, `cellPadding`, `rowBorder`
+**Checklist for any screen**
 
-**`ex-auth-form-card`** — Sign-in / sign-up card. Re-uses feature-card chrome with text-input primitives inside.
-- Properties: `backgroundColor`, `rounded`, `padding`
+- [ ] Fields and dropdowns are 40px with floating labels; nothing is sized at the call site.
+- [ ] Tabs are the sliding pill bar; search is `SearchField`.
+- [ ] Only weights 400/500/600 and sizes from the scale.
+- [ ] No hex colours, shadows on cards, or new gradients.
+- [ ] Loading, empty and error states exist; nothing is disabled because of loading.
+- [ ] One primary action; header matches the other screens.
+- [ ] Works at 1440px and 390px with no sideways page scroll.
 
-**`ex-modal-card`** — Modal dialog surface — same chrome as feature-card with elevated shadow.
-- Properties: `backgroundColor`, `rounded`, `padding`
+## 14. Known gaps
 
-**`ex-empty-state-card`** — Empty-state illustration frame.
-- Properties: `backgroundColor`, `rounded`, `padding`, `captionTypography`
-
-**`ex-toast`** — Toast notification surface — feature-card shape + medium shadow.
-- Properties: `backgroundColor`, `rounded`, `padding`, `typography`
-
-
-## Do's and Don'ts
-
-### Do
-- Reserve `{colors.primary}` (`#00d992`) for every primary CTA, the lightning logo glyph, and live-status indicators. The green is the brand's centre of gravity.
-- Use the dark `{colors.canvas}` (`#101010`) as the only page surface. There is no light-mode rhythm.
-- Build cards with 1 px `{colors.hairline}` borders, not shadows. Hairlines on dark IS the brand's elevation system.
-- Pair Inter (sentence-case) with SF Mono (inline code, command snippets). Every uppercase moment uses Inter at weight 600 with `2.52 px` tracking — not a separate mono.
-- Use `{rounded.sm}` 6 px for buttons, `{rounded.md}` 8 px for cards, `{rounded.pill}` 9999 px only for inline status tags.
-
-### Don't
-- Don't introduce a light-mode counterpart. The brand is dark-canvas only.
-- Don't use the primary green as a body-text fill. It's CTA-only.
-- Don't drop a soft drop-shadow on cards. The brand uses hairlines + occasional glow, never material shadows.
-- Don't render the hero headline in heavy weight (700+). The brand's display is intentionally calm at weight 400.
-- Don't replace Inter or SF Mono with a different family — both faces are part of the brand's voice and pairing.
+- Some screens still carry older inline colours (purple-tinted borders and fills, coloured icon tiles) in
+  `DashboardSections.tsx`, `EmailWorkspace.tsx`, `PushComposer.tsx`, the Billing screens and the marketing
+  pages. Replace them with tokens when touching those files.
+- Forms are not yet capped to a readable width; settings forms fill their card.
+- The top-bar search and the second Email list search are not connected to data.
+- The campaign review screen's sender, recipient count and "Send campaign" are placeholders, and its
+  preheader is not saved.
+- Tabs built from plain buttons do not exist any more; if arrow-key navigation is needed, use MUI `Tabs`.
+- Not yet reviewed on screen at phone width: most dashboard screens.

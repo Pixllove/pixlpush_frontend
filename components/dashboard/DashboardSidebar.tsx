@@ -6,12 +6,8 @@ import {
 } from '@mui/icons-material';
 import { Button } from '@mui/material';
 import { useState } from 'react';
-import { Inter } from 'next/font/google';
 import Link from 'next/link';
 import { useActiveProject, planLabel } from '@/hooks/projects/use-active-project';
-
-// DESIGN.md: Inter carries every interface role. Loaded here because the sidebar is the only part built on it so far.
-const inter = Inter({ subsets: ['latin'], display: 'swap' });
 
 const groups = [
   {
@@ -44,7 +40,7 @@ export default function DashboardSidebar({ active, setActive, mobileOpen }: { ac
   const projectName = activeProject?.name ?? (isPending ? 'Loading…' : 'No project');
 
   return (
-    <aside className={`dashboard-sidebar ${inter.className} ${mobileOpen ? 'is-open' : ''}`}>
+    <aside className={`dashboard-sidebar ${mobileOpen ? 'is-open' : ''}`}>
       <div className="sidebar-brand">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/assets/logo.png" alt="PixlPush" />

@@ -68,11 +68,11 @@ export default function EmailPreviewDialog({
       fullWidth
       aria-labelledby="email-preview-title"
       sx={{ zIndex: 1400 }}
-      PaperProps={{ sx: { m: { xs: 1.5, sm: 3 }, width: { xs: 'calc(100% - 24px)', sm: undefined }, maxHeight: { xs: 'calc(100% - 24px)', sm: 'calc(100% - 48px)' }, borderRadius: '16px', bgcolor: '#fff', color: '#11131a', backgroundImage: 'none', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 32px 80px rgba(10,12,20,.45)' } }}
+      PaperProps={{ sx: { m: { xs: 1.5, sm: 3 }, width: { xs: 'calc(100% - 24px)', sm: undefined }, maxHeight: { xs: 'calc(100% - 24px)', sm: 'calc(100% - 48px)' }, borderRadius: '8px', bgcolor: '#fff', color: '#11131a', backgroundImage: 'none', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 32px 80px rgba(10,12,20,.45)' } }}
     >
       <Stack direction="row" alignItems="center" gap={1.5} sx={{ px: { xs: 2, sm: 3 }, py: 1.75, borderBottom: '1px solid #e6eaf1' }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography id="email-preview-title" sx={{ fontSize: 17, fontWeight: 800, color: '#11131a', lineHeight: 1.3 }}>Preview and test</Typography>
+          <Typography id="email-preview-title" sx={{ fontSize: 16, fontWeight: 600, color: '#11131a', lineHeight: 1.3 }}>Preview and test</Typography>
           <Typography noWrap sx={{ fontSize: 12, color: '#64748b', mt: 0.25 }}>{subject ? `Subject: ${subject}` : title}</Typography>
         </Box>
         <ToggleButtonGroup
@@ -81,7 +81,6 @@ export default function EmailPreviewDialog({
           value={device}
           onChange={(_, value) => value && setDevice(value)}
           aria-label="Preview size"
-          sx={{ bgcolor: '#f1f4f9', borderRadius: '10px', p: '3px', '& .MuiToggleButton-root': { border: 0, borderRadius: '8px !important', px: 1.25, py: 0.5, color: '#64748b', '&.Mui-selected': { bgcolor: '#fff', color: '#11131a', boxShadow: '0 1px 3px rgba(15,23,42,.16)' }, '&.Mui-selected:hover': { bgcolor: '#fff' } } }}
         >
           <ToggleButton value="desktop" aria-label="Desktop"><LaptopMacRounded fontSize="small" /></ToggleButton>
           <ToggleButton value="mobile" aria-label="Mobile"><PhoneIphoneRounded fontSize="small" /></ToggleButton>
@@ -92,7 +91,7 @@ export default function EmailPreviewDialog({
         <Box
           // the class hides editor-only controls (the footer's delete button) inside the email
           className="recipient-preview"
-          sx={{ width: '100%', maxWidth: device === 'mobile' ? 390 : '100%', m: '0 auto !important', p: device === 'mobile' ? '12px !important' : { xs: '12px !important', sm: '26px !important' }, minHeight: 200, overflowWrap: 'anywhere', ...(device === 'mobile' ? narrow : { '@media (max-width:600px)': narrow }), overflowX: 'auto', bgcolor: '#fff', borderRadius: '12px', border: '1px solid #e6eaf1', boxShadow: '0 8px 24px rgba(15,23,42,.06)', transition: 'max-width .2s ease', '& img': { maxWidth: '100%' } }}
+          sx={{ width: '100%', maxWidth: device === 'mobile' ? 390 : '100%', m: '0 auto !important', p: device === 'mobile' ? '12px !important' : { xs: '12px !important', sm: '26px !important' }, minHeight: 200, overflowWrap: 'anywhere', ...(device === 'mobile' ? narrow : { '@media (max-width:600px)': narrow }), overflowX: 'auto', bgcolor: '#fff', borderRadius: '8px', border: '1px solid #e6eaf1', boxShadow: '0 8px 24px rgba(15,23,42,.06)', transition: 'max-width .2s ease', '& img': { maxWidth: '100%' } }}
           dangerouslySetInnerHTML={{ __html: html }}
         />
       </Box>
@@ -104,7 +103,7 @@ export default function EmailPreviewDialog({
         onSubmit={(event: React.FormEvent) => { event.preventDefault(); void sendTest(); }}
         sx={{ px: { xs: 2, sm: 3 }, py: 1.75, borderTop: '1px solid #e6eaf1', bgcolor: '#fff' }}
       >
-        <Typography role="status" sx={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 700, color: !result ? '#64748b' : result.ok ? '#0d7a48' : '#c0352b' }}>
+        <Typography role="status" sx={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: 500, color: !result ? '#64748b' : result.ok ? '#0d7a48' : '#c0352b' }}>
           {result ? result.message : "Send this email to yourself to see it in a real inbox."}
         </Typography>
         <TextField
@@ -115,14 +114,14 @@ export default function EmailPreviewDialog({
           value={to}
           onChange={(event) => setTo(event.target.value)}
           disabled={sending}
-          sx={{ width: { xs: '100%', sm: 280 }, '& .MuiOutlinedInput-root': { height: 42, borderRadius: '10px', bgcolor: '#fff', color: '#11131a', '& fieldset': { borderColor: '#cbd3e1' }, '&:hover fieldset': { borderColor: '#94a3b8' }, '&.Mui-focused fieldset': { borderColor: '#1d9854' } }, '& .MuiInputBase-input': { color: '#11131a', WebkitTextFillColor: '#11131a', fontSize: 14, '&::placeholder': { color: '#7a869a', WebkitTextFillColor: '#7a869a', opacity: 1 } } }}
+          sx={{ width: { xs: '100%', sm: 280 } }}
         />
         <Button
           type="submit"
           variant="contained"
           startIcon={<SendRounded />}
           disabled={sending}
-          sx={{ height: 42, minHeight: 42, px: 2.5, borderRadius: '10px', flexShrink: 0, fontSize: 13, fontWeight: 800, textTransform: 'none', whiteSpace: 'nowrap', color: '#fff', bgcolor: '#1d9854', boxShadow: 'none', '&:hover': { bgcolor: '#178047', boxShadow: 'none' }, '&.Mui-disabled': { color: '#7a869a', bgcolor: '#e8ecf3' } }}
+          sx={{ flexShrink: 0, whiteSpace: 'nowrap', color: '#fff', bgcolor: '#1d9854', boxShadow: 'none', '&:hover': { bgcolor: '#178047', boxShadow: 'none' }, '&.Mui-disabled': { color: '#7a869a', bgcolor: '#e8ecf3' } }}
         >
           {sending ? "Sending…" : "Send test"}
         </Button>

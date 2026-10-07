@@ -151,7 +151,7 @@ function CheckoutForm({ projectId, plan, interval, onInterval, unitAmount, curre
     <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "minmax(0,1.35fr) minmax(320px,.85fr)" }, gap: 2.5, alignItems: "start" }}>
       <Stack gap={2.5}>
         <Card sx={sectionSx}>
-          <Typography fontSize={20} fontWeight={900}>Billing information</Typography>
+          <Typography fontSize={20} fontWeight={600}>Billing information</Typography>
           <Typography color="text.secondary" fontSize={12} sx={{ mb: 2 }}>Tax is calculated from this address. Use your company&apos;s own billing address.</Typography>
           <Grid container spacing={2}>
             <Grid item xs={12}><TextField fullWidth size="small" label="Full name or company" placeholder="e.g. Acme Trading LLC" required {...field("name")} /></Grid>
@@ -168,7 +168,7 @@ function CheckoutForm({ projectId, plan, interval, onInterval, unitAmount, curre
           </Grid>
         </Card>
         <Card sx={sectionSx}>
-          <Typography fontSize={20} fontWeight={900}>Payment method</Typography>
+          <Typography fontSize={20} fontWeight={600}>Payment method</Typography>
           <Typography color="text.secondary" fontSize={12} sx={{ mb: 2 }}>Card details are sent directly to Stripe and never stored by PixlPush.</Typography>
           {!ready.payment && <Skeleton variant="rounded" height={160} />}
           <PaymentElement options={{ layout: "tabs" }} onReady={() => setReady((r) => ({ ...r, payment: true }))} />
@@ -176,17 +176,17 @@ function CheckoutForm({ projectId, plan, interval, onInterval, unitAmount, curre
       </Stack>
 
       <Card sx={{ ...sectionSx, position: { lg: "sticky" }, top: { lg: 96 } }}>
-        <Typography fontSize={11} fontWeight={900} sx={{ letterSpacing: 1.3, color: "#8e8798" }}>ORDER SUMMARY</Typography>
+        <Typography fontSize={11} fontWeight={500} sx={{ letterSpacing: 1.3, color: "#8e8798" }}>ORDER SUMMARY</Typography>
         <Stack direction="row" justifyContent="space-between" alignItems="baseline" sx={{ mt: 1 }}>
-          <Typography fontSize={24} fontWeight={900}>PixlPush {info.label}</Typography>
-          <Typography fontWeight={900} fontSize={18}>{formatMoney(unitAmount, currency)}<Typography component="span" fontSize={12} color="text.secondary"> / {interval}</Typography></Typography>
+          <Typography fontSize={24} fontWeight={600}>PixlPush {info.label}</Typography>
+          <Typography fontWeight={600} fontSize={16}>{formatMoney(unitAmount, currency)}<Typography component="span" fontSize={12} color="text.secondary"> / {interval}</Typography></Typography>
         </Stack>
         <Typography color="text.secondary" fontSize={12}>{info.description}</Typography>
         <ToggleButtonGroup exclusive fullWidth size="small" value={interval} disabled={paying} onChange={(_, value: BillingInterval | null) => value && onInterval(value)} aria-label="Billing interval" sx={{ mt: 2 }}>
-          <ToggleButton value="month" sx={{ textTransform: "none" }}>Monthly</ToggleButton>
-          <ToggleButton value="year" sx={{ textTransform: "none" }}>Yearly · 2 months free</ToggleButton>
+          <ToggleButton value="month">Monthly</ToggleButton>
+          <ToggleButton value="year">Yearly · 2 months free</ToggleButton>
         </ToggleButtonGroup>
-        {interval === "year" && <Typography fontSize={12} fontWeight={800} sx={{ mt: 1, color: "#18a677" }}>You save {formatMoney(saving, currency)} against paying monthly.</Typography>}
+        {interval === "year" && <Typography fontSize={12} fontWeight={500} sx={{ mt: 1, color: "#18a677" }}>You save {formatMoney(saving, currency)} against paying monthly.</Typography>}
         <Stack gap={0.75} sx={{ mt: 2 }}>
           {info.features.map((feature) => (
             <Stack direction="row" gap={1} alignItems="center" key={feature}><CheckRounded sx={{ fontSize: 16, color: "#5517B8" }} /><Typography fontSize={12}>{feature}</Typography></Stack>
@@ -202,7 +202,7 @@ function CheckoutForm({ projectId, plan, interval, onInterval, unitAmount, curre
           <Typography color="text.secondary" fontSize={11}>Then {totals ? formatMoney(totals.total, currency) : formatMoney(unitAmount, currency) + " plus tax"} every {interval} until you cancel. Cancel any time; access runs to the end of the paid period.</Typography>
         </Stack>
         {(taxError || error) && <Alert severity="error" sx={{ mt: 2, borderRadius: 1.5 }}>{taxError ?? error}</Alert>}
-        <Button variant="contained" fullWidth size="large" startIcon={<LockRounded />} disabled={!canPay} onClick={pay} sx={{ mt: 2, textTransform: "none", fontWeight: 900, borderRadius: 1.5 }}>
+        <Button variant="contained" fullWidth size="large" startIcon={<LockRounded />} disabled={!canPay} onClick={pay} sx={{ mt: 2, textTransform: "none", borderRadius: 1.5 }}>
           {paying ? "Processing payment…" : totals ? `Pay ${formatMoney(totals.total, currency)}` : "Pay securely"}
         </Button>
         <Stack direction="row" gap={1} alignItems="center" justifyContent="center" sx={{ mt: 1.5 }}>
@@ -217,8 +217,8 @@ function CheckoutForm({ projectId, plan, interval, onInterval, unitAmount, curre
 function Row({ label, value, muted, strong }: { label: string; value: string; muted?: boolean; strong?: boolean }) {
   return (
     <Stack direction="row" justifyContent="space-between" gap={2}>
-      <Typography fontSize={strong ? 14 : 13} fontWeight={strong ? 900 : 600}>{label}</Typography>
-      <Typography fontSize={strong ? 16 : 13} fontWeight={strong ? 900 : 700} color={muted ? "text.secondary" : undefined} sx={{ textAlign: "right" }}>{value}</Typography>
+      <Typography fontSize={strong ? 14 : 13} fontWeight={strong ? 600 : 600}>{label}</Typography>
+      <Typography fontSize={strong ? 16 : 13} fontWeight={strong ? 600 : 600} color={muted ? "text.secondary" : undefined} sx={{ textAlign: "right" }}>{value}</Typography>
     </Stack>
   );
 }

@@ -153,7 +153,7 @@ export default function SendingDomainsPanel() {
 
       {list.data && list.data.length === 0 && (
         <Card sx={{ p: 4, textAlign: 'center' }}>
-          <Typography fontWeight={800}>No sending domains yet</Typography>
+          <Typography fontWeight={600}>No sending domains yet</Typography>
           <Typography color="text.secondary" fontSize={13} sx={{ mb: 2 }}>Add the email address you want to send from to get started.</Typography>
           {canManage && <Button variant="outlined" onClick={() => setDialog({ kind: 'add' })}>Add domain</Button>}
         </Card>
@@ -175,7 +175,7 @@ export default function SendingDomainsPanel() {
             <TableBody>
               {list.data.map((domain) => (
                 <TableRow key={domain.id} data-testid={`domain-row-${domain.domain}`}>
-                  <TableCell><Typography fontWeight={800}>{domain.domain}</Typography></TableCell>
+                  <TableCell><Typography fontWeight={600}>{domain.domain}</Typography></TableCell>
                   <TableCell>{domain.senderEmail ?? '—'}</TableCell>
                   <TableCell>{domain.providerName ?? (domain.connectionMethod === 'manual' && domain.dnsRecords.length ? 'Manual DNS' : '—')}</TableCell>
                   <TableCell><DomainStatusBadge status={domain.status} /></TableCell>

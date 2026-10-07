@@ -2,33 +2,18 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  CircularProgress,
-  Stack,
-  TextField,
-  Typography,
-} from '@mui/material';
+import { Alert, Box, Button, CircularProgress, Link as MuiLink, Stack, TextField, Typography } from '@mui/material';
+import CheckCircleRounded from '@mui/icons-material/CheckCircleRounded';
+import ErrorOutlineRounded from '@mui/icons-material/ErrorOutlineRounded';
 import MarkEmailReadRounded from '@mui/icons-material/MarkEmailReadRounded';
 import { useResendVerification, useVerifyEmail } from '@/hooks/auth/use-email-verification';
 import { useCurrentUser } from '@/hooks/auth/use-current-user';
-import { Toast } from './AuthFeedback';
+import { AuthStatus, Toast } from './AuthFeedback';
 import SubmitButton from './SubmitButton';
 import type { ApiError } from '@/types/auth';
 
 const VERIFIED_KEY = 'pixlpush:email-verified';
 
-const cardSx = {
-  maxWidth: 620,
-  mx: 'auto',
-  border: '1px solid #eee7f1',
-  borderRadius: 4,
-  boxShadow: '0 22px 70px rgba(44,16,58,.08)',
-} as const;
 
 export default function VerifyEmailView() {
   const router = useRouter();
@@ -99,63 +84,40 @@ export default function VerifyEmailView() {
   if (token) {
     return (
       <>
-        <Card className="auth-card" sx={cardSx}>
-          <CardContent sx={{ p: { xs: 3, md: 5 }, textAlign: 'center' }}>
-            {verifyEmail.isPending && (
-              <>
-                <CircularProgress />
-                <Typography sx={{ mt: 3 }}>Verifying your email…</Typography>
-              </>
-            )}
+        {verifyEmail.isPending && (
+          <Stack className="auth-block" alignItems="flex-start" role="status">
+            <CircularProgress size={24} />
+            <Typography component="h1" variant="h1">Verifying your email…</Typography>
+          </Stack>
+        )}
 
-            {verifyEmail.isSuccess && (
-              <>
-                <Typography variant="h3" sx={{ fontSize: { xs: 32, md: 42 } }}>
-                  Email verified.
-                </Typography>
-                <Alert severity="success" sx={{ mt: 3, textAlign: 'left' }}>
-                  Your account is active. You can now sign in.
-                </Alert>
-                <Button href="/login" variant="contained" sx={{ mt: 3 }}>
-                  Continue to login
-                </Button>
-              </>
-            )}
+        {verifyEmail.isSuccess && (
+          <AuthStatus tone="success" icon={<CheckCircleRounded />} title="Email verified">
+            <Typography color="text.secondary">Your account is active. You can now log in.</Typography>
+            <Button href="/login" variant="contained" size="large" fullWidth>Continue to login</Button>
+          </AuthStatus>
+        )}
 
-            {verifyEmail.isError && (
-              <>
-                <Typography variant="h3" sx={{ fontSize: { xs: 32, md: 42 } }}>
-                  Link not valid.
-                </Typography>
-                <Alert severity="error" sx={{ mt: 3, textAlign: 'left' }}>
-                  {(verifyEmail.error as ApiError).message}
-                </Alert>
-                <Typography color="text.secondary" fontSize={13} sx={{ mt: 2 }}>
-                  Verification links expire after 24 hours and can be used once. Request a new one below.
-                </Typography>
-                <Stack gap={1.5} sx={{ mt: 3 }}>
-                  <TextField
-                    label="Work email"
-                    type="email"
-                    autoComplete="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={resend.isPending}
-                    fullWidth
-                  />
-                  <SubmitButton
-                    variant="contained"
-                    onClick={handleResend}
-                    pending={resend.isPending}
-                    disabled={resend.isPending || !email}
-                  >
-                    Send a new link
-                  </SubmitButton>
-                </Stack>
-              </>
-            )}
-          </CardContent>
-        </Card>
+        {verifyEmail.isError && (
+          <AuthStatus tone="warning" icon={<ErrorOutlineRounded />} title="This link is not valid">
+            <Alert severity="error" sx={{ width: '100%' }}>{(verifyEmail.error as ApiError).message}</Alert>
+            <Typography color="text.secondary">
+              Verification links expire after 24 hours and can be used once. Request a new one below.
+            </Typography>
+            <TextField
+              label="Work email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={resend.isPending}
+              fullWidth
+            />
+            <SubmitButton variant="contained" size="large" fullWidth onClick={handleResend} pending={resend.isPending} disabled={resend.isPending || !email}>
+              Send a new link
+            </SubmitButton>
+          </AuthStatus>
+        )}
         <Toast message={toast} severity={toastSeverity} onClose={() => setToast(null)} />
       </>
     );
@@ -164,60 +126,33 @@ export default function VerifyEmailView() {
   // --- Arrived straight after signup: tell them to check their inbox. -------
   return (
     <>
-      <Card className="auth-card" sx={cardSx}>
-        <CardContent sx={{ p: { xs: 3, md: 5 }, textAlign: 'center' }}>
-          <Box
-            sx={{
-              width: 64,
-              height: 64,
-              mx: 'auto',
-              display: 'grid',
-              placeItems: 'center',
-              borderRadius: '18px',
-              color: '#7132d3',
-              bgcolor: '#f0e8ff',
-            }}
-          >
-            <MarkEmailReadRounded />
-          </Box>
-          <Typography variant="h3" sx={{ mt: 3, fontSize: { xs: 32, md: 42 } }}>
-            Verify your email.
-          </Typography>
-          <Typography color="text.secondary" sx={{ mt: 1, lineHeight: 1.6 }}>
-            We sent a verification link to {emailHint || 'your work email'}. Verify it to activate your
-            Account and continue to Project setup.
-          </Typography>
-
-          <Stack gap={1.5} sx={{ mt: 4 }}>
-            {!emailHint && (
-              <TextField
-                label="Work email"
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={resend.isPending}
-                fullWidth
-              />
-            )}
-            <Button variant="contained" href="/login">
-              I have verified my email
-            </Button>
-            <SubmitButton
-              variant="text"
-              onClick={handleResend}
-              pending={resend.isPending}
-              disabled={resend.isPending || !email}
-            >
-              Resend verification email
-            </SubmitButton>
-          </Stack>
-
-          <Typography color="text.secondary" fontSize={12} sx={{ mt: 3 }}>
-            The link expires in 24 hours.
-          </Typography>
-        </CardContent>
-      </Card>
+      <AuthStatus icon={<MarkEmailReadRounded />} title="Check your inbox">
+        <Typography color="text.secondary">
+          We sent a verification link to{' '}
+          <Box component="span" sx={{ color: 'text.primary', fontWeight: 500 }}>{emailHint || 'your work email'}</Box>.
+          Open it to activate your account. The link expires in 24 hours.
+        </Typography>
+        {!emailHint && (
+          <TextField
+            label="Work email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={resend.isPending}
+            fullWidth
+          />
+        )}
+        <Button variant="contained" size="large" fullWidth href="/login">
+          I have verified my email
+        </Button>
+        <SubmitButton variant="outlined" size="large" fullWidth onClick={handleResend} pending={resend.isPending} disabled={resend.isPending || !email}>
+          Resend email
+        </SubmitButton>
+        <Typography color="text.secondary">
+          Wrong address? <MuiLink href="/get-started">Use a different email</MuiLink>
+        </Typography>
+      </AuthStatus>
       <Toast message={toast} severity={toastSeverity} onClose={() => setToast(null)} />
     </>
   );

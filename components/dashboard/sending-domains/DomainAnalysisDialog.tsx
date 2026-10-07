@@ -137,7 +137,7 @@ function Result({
       <Stack gap={1.5}>
         <Alert severity="success">Provider detected: {analysis.providerName}. Automatic connection available.</Alert>
         <Box>
-          <Typography fontWeight={800}>{analysis.providerName}</Typography>
+          <Typography fontWeight={600}>{analysis.providerName}</Typography>
           <Typography color="text.secondary" fontSize={12}>You approve the DNS changes at {analysis.providerName}; we never see your password.</Typography>
         </Box>
         <Stack direction={{ xs: 'column', sm: 'row' }} gap={1}>

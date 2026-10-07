@@ -17,7 +17,7 @@ export default function AccountMenu() {
     <>
       <Stack direction="row" alignItems="center" gap={0.5}>
         <Badge overlap="circular" anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} badgeContent={account?.emailVerified ? <Tooltip title="Email verified"><CheckRounded sx={{ fontSize: 11, color: '#fff' }} /></Tooltip> : null} sx={{ '& .MuiBadge-badge': { width: 16, height: 16, minWidth: 16, borderRadius: '50%', bgcolor: '#1976d2', border: '2px solid #fff', p: 0 } }}>
-          <Avatar sx={{ width: 34, height: 34, background: 'linear-gradient(135deg,#ff5d6c,#7928ef)' }}>{initial}</Avatar>
+          <Avatar sx={{ width: 34, height: 34, bgcolor: '#5517B8' }}>{initial}</Avatar>
         </Badge>
         <IconButton size="small" onClick={(e) => setAnchor(e.currentTarget)} aria-label="Account menu">
           <KeyboardArrowDownRounded />
@@ -25,8 +25,8 @@ export default function AccountMenu() {
       </Stack>
 
       <Menu anchorEl={anchor} open={Boolean(anchor)} onClose={() => setAnchor(null)} PaperProps={{ sx: { mt: 1, minWidth: 245, borderRadius: 2, overflow: 'hidden', border: '1px solid rgba(113,50,211,.12)', boxShadow: '0 18px 42px rgba(35,16,55,.2)' } }}>
-        <Stack sx={{ px: 2.2, py: 1.8, background: 'linear-gradient(135deg, #f5edff 0%, #fff5f1 100%)' }}>
-          <Typography fontSize={13} fontWeight={700}>
+        <Stack sx={{ px: 2.2, py: 1.8, bgcolor: '#FAF9FB' }}>
+          <Typography fontSize={13} fontWeight={600}>
             {account?.name ?? 'Signed in'}
           </Typography>
           <Typography fontSize={12} color="text.secondary">

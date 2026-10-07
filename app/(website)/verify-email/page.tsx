@@ -4,7 +4,7 @@ import VerifyEmailView from '@/components/auth/VerifyEmailView';
 
 export default function VerifyEmailPage() {
   return (
-    <AuthShell mode="signup">
+    <AuthShell mode="security">
       <Suspense>
         <VerifyEmailView />
       </Suspense>

@@ -453,7 +453,7 @@ export default function UserImportDialog({
                   <Box className="import-source-icon">
                     <Icon />
                   </Box>
-                  <Typography fontWeight={900}>{label}</Typography>
+                  <Typography fontWeight={600}>{label}</Typography>
                   <Typography color="text.secondary" fontSize={11}>
                     {description}
                   </Typography>
@@ -474,7 +474,7 @@ export default function UserImportDialog({
                 onChange={parseCsv}
               />
               <CloudUploadRounded />
-              <Typography fontWeight={900}>
+              <Typography fontWeight={600}>
                 {isUploading
                   ? "Uploading and reading your CSV…"
                   : fileName || "Upload a CSV file"}
@@ -515,7 +515,7 @@ export default function UserImportDialog({
                     <FileUploadRounded />
                   </Box>
                   <Box>
-                    <Typography fontWeight={900}>{fileName}</Typography>
+                    <Typography fontWeight={600}>{fileName}</Typography>
                     <Typography color="text.secondary" fontSize={12}>
                       {fileSize} · {totalRows} records detected
                     </Typography>
@@ -533,7 +533,7 @@ export default function UserImportDialog({
                   }
                   label={
                     <Box>
-                      <Typography fontWeight={900}>
+                      <Typography fontWeight={600}>
                         Create and update users
                       </Typography>
                       <Typography color="text.secondary" fontSize={12}>
@@ -548,7 +548,7 @@ export default function UserImportDialog({
                   }
                 />
                 <Stack gap={0.8}>
-                  <Typography fontWeight={900}>
+                  <Typography fontWeight={600}>
                     Select the language of column headers in your file
                   </Typography>
                   <Typography color="text.secondary" fontSize={12}>
@@ -616,7 +616,7 @@ export default function UserImportDialog({
                         importHistory.map((record) => (
                           <TableRow key={record.id}>
                             <TableCell>
-                              <Typography fontWeight={800}>
+                              <Typography fontWeight={600}>
                                 {record.fileName}
                               </Typography>
                             </TableCell>
@@ -701,7 +701,7 @@ export default function UserImportDialog({
               </Typography>
             </Box>
             <Box className="import-map-toolbar">
-              <Typography fontWeight={800}>{fileName}</Typography>
+              <Typography fontWeight={600}>{fileName}</Typography>
               <Typography color="text.secondary" fontSize={12}>
                 {totalRows} rows · {headers.length} columns
               </Typography>
@@ -746,7 +746,7 @@ export default function UserImportDialog({
                 }
                 label={
                   <Box>
-                    <Typography fontWeight={900}>
+                    <Typography fontWeight={600}>
                       Use this field as the unique identifier for future imports
                     </Typography>
                     <Typography color="text.secondary" fontSize={12}>
@@ -773,7 +773,7 @@ export default function UserImportDialog({
                   {headers.map((header, index) => (
                     <TableRow key={header}>
                       <TableCell>
-                        <Typography fontWeight={800}>{header}</Typography>
+                        <Typography fontWeight={600}>{header}</Typography>
                       </TableCell>
                       <TableCell>
                         <Stack>
@@ -851,7 +851,7 @@ export default function UserImportDialog({
               </Table>
             </Box>
             {!canContinue && !busy && (
-              <Typography color="#d95b63" fontSize={12} fontWeight={800}>
+              <Typography color="#d95b63" fontSize={12} fontWeight={500}>
                 Select a unique identifier column that is mapped to a field
                 before continuing.
               </Typography>
@@ -875,13 +875,13 @@ export default function UserImportDialog({
                 <Typography color="text.secondary" fontSize={12}>
                   File
                 </Typography>
-                <Typography fontWeight={900}>{fileName}</Typography>
+                <Typography fontWeight={600}>{fileName}</Typography>
               </Box>
               <Box>
                 <Typography color="text.secondary" fontSize={12}>
                   Users to import
                 </Typography>
-                <Typography fontSize={24} fontWeight={900}>
+                <Typography fontSize={24} fontWeight={600}>
                   {summary?.total ?? totalRows}
                 </Typography>
               </Box>
@@ -889,7 +889,7 @@ export default function UserImportDialog({
                 <Typography color="text.secondary" fontSize={12}>
                   Mapped fields
                 </Typography>
-                <Typography fontSize={24} fontWeight={900}>
+                <Typography fontSize={24} fontWeight={600}>
                   {
                     Object.values(mapping).filter((value) => value !== "ignore")
                       .length
@@ -916,7 +916,7 @@ export default function UserImportDialog({
                 }
                 label={
                   <Box>
-                    <Typography fontWeight={900}>
+                    <Typography fontWeight={600}>
                       Add all imported users to a new audience group
                     </Typography>
                     <Typography color="text.secondary" fontSize={12}>
@@ -943,12 +943,12 @@ export default function UserImportDialog({
               />
             </Box>
             {addToAudienceGroup && !audienceGroupName.trim() && (
-              <Typography color="#d95b63" fontSize={12} fontWeight={800}>
+              <Typography color="#d95b63" fontSize={12} fontWeight={500}>
                 Enter an audience group name to continue.
               </Typography>
             )}
             <Box className="import-review-card">
-              <Typography fontWeight={900}>Mapped fields</Typography>
+              <Typography fontWeight={600}>Mapped fields</Typography>
               <Typography color="text.secondary" fontSize={12}>
                 Column header language:{" "}
                 {headerLanguages.find(([, code]) => code === headerLanguage)?.[0] ?? headerLanguage}
@@ -1032,7 +1032,7 @@ export default function UserImportDialog({
           </Stack>
         )}
         {error && (
-          <Typography color="#d95b63" fontSize={12} fontWeight={800}>
+          <Typography color="#d95b63" fontSize={12} fontWeight={500}>
             {error}
           </Typography>
         )}

@@ -75,7 +75,7 @@ export default function EmailLanguageSettings({
     <Stack className="email-language-settings" gap={1.2}>
       <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
         <div>
-          <Typography fontWeight={800} color={textColor}>Default creation language</Typography>
+          <Typography fontWeight={600} color={textColor}>Default creation language</Typography>
           <Typography fontSize={12} color={secondaryColor} sx={{ mt: 0.5 }}>
             Skip the language chooser for new emails when this is on.
           </Typography>
@@ -86,7 +86,7 @@ export default function EmailLanguageSettings({
       </Stack>
       <Stack direction="row" justifyContent="space-between" className="email-language-saved-row">
         <Typography fontSize={12} color={secondaryColor}>Saved language</Typography>
-        {languagesQuery.isLoading ? <Skeleton width={70} /> : <Typography fontWeight={800} color={textColor}>{languageName(settings?.defaultLanguage)}</Typography>}
+        {languagesQuery.isLoading ? <Skeleton width={70} /> : <Typography fontWeight={600} color={textColor}>{languageName(settings?.defaultLanguage)}</Typography>}
       </Stack>
       <Typography fontSize={11} color={secondaryColor}>
         {settings?.defaultLanguageEnabled
