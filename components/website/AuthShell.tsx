@@ -1,3 +1,6 @@
+'use client';
+
+import { Children, cloneElement, isValidElement, useEffect, useRef, useState } from 'react';
 import { Box, Button, Chip, Link, Typography } from '@mui/material';
 import ArrowBackRounded from '@mui/icons-material/ArrowBackRounded';
 import CheckRounded from '@mui/icons-material/CheckRounded';
@@ -45,10 +48,60 @@ const STEPS = [
  * The one frame for every auth page: the form on a white column, and beside it (from 1024px up) a brand
  * panel on the app's own accent surface with a small glimpse of the product built from real UI.
  */
+type SwitchableAuthProps = { active?: boolean; onSwitch?: (mode: 'login' | 'signup') => void };
+
 export default function AuthShell({ children, mode, back = true }: { children: React.ReactNode; mode: Mode; /** Off where leaving makes no sense, such as mid sign-in. */ back?: boolean }) {
-  const panel = PANEL[mode];
+  const switchable = mode === 'login' || mode === 'signup';
+  const [activeMode, setActiveMode] = useState<'login' | 'signup'>(switchable ? mode : 'login');
+  const [transitioning, setTransitioning] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
+  const transitionTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  useEffect(() => {
+    if (switchable) setActiveMode(mode);
+  }, [mode, switchable]);
+
+  useEffect(() => () => {
+    if (transitionTimer.current) clearTimeout(transitionTimer.current);
+  }, []);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const updateMotionPreference = () => setReducedMotion(mediaQuery.matches);
+    updateMotionPreference();
+    mediaQuery.addEventListener('change', updateMotionPreference);
+    return () => mediaQuery.removeEventListener('change', updateMotionPreference);
+  }, []);
+
+  const switchMode = (nextMode: 'login' | 'signup') => {
+    if (!switchable || nextMode === activeMode || transitioning) return;
+
+    setTransitioning(true);
+    setActiveMode(nextMode);
+    transitionTimer.current = setTimeout(() => {
+      window.history.replaceState(null, '', nextMode === 'signup' ? '/get-started' : '/login');
+      setTransitioning(false);
+    }, reducedMotion ? 0 : 760);
+  };
+
+  const formChildren = switchable
+    ? Children.map(children, (child, index) => {
+        if (!isValidElement<SwitchableAuthProps>(child)) return child;
+        const childMode = index === 1 ? 'signup' : 'login';
+        return (
+          <Box
+            key={child.key ?? childMode}
+            className={`auth-form-view${activeMode === childMode ? ' is-active' : ''}`}
+            aria-hidden={activeMode !== childMode}
+          >
+            {cloneElement(child, { active: activeMode === childMode, onSwitch: switchMode })}
+          </Box>
+        );
+      })
+    : children;
+  const panel = PANEL[switchable ? activeMode : mode];
   return (
-    <Box className="auth-shell">
+    <Box className={`auth-shell${switchable ? ` auth-shell-switcher is-${activeMode}${transitioning ? ' is-transitioning' : ''}` : ''}`}>
       <Box className="auth-main">
         <Box className="auth-head">
           <Link href="/" className="auth-brand" underline="none" aria-label="PixlPush home">
@@ -57,16 +110,29 @@ export default function AuthShell({ children, mode, back = true }: { children: R
             PixlPush
           </Link>
           {/* The way out: quiet, opposite the brand, where people look for it. */}
-          {back && <Button href="/" size="small" startIcon={<ArrowBackRounded />} className="auth-back">Back to home</Button>}
+          {back && (
+            <Button
+              href="/"
+              onClick={(event) => {
+                event.preventDefault();
+                window.location.assign('/');
+              }}
+              size="small"
+              startIcon={<ArrowBackRounded />}
+              className="auth-back"
+            >
+              Back to home
+            </Button>
+          )}
         </Box>
-        <Box className="auth-form-wrap">{children}</Box>
+        <Box className="auth-form-wrap">{formChildren}</Box>
         <Typography className="auth-foot">
           © {new Date().getFullYear()} PixlPush · <Link href="#" color="inherit">Privacy</Link> · <Link href="#" color="inherit">Terms</Link>
         </Typography>
       </Box>
 
       {/* Decorative: everything a visitor needs is in the form column. */}
-      <Box className="auth-panel" aria-hidden>
+      <Box className="auth-panel" aria-hidden={switchable ? undefined : true}>
         <Box className="auth-panel-inner">
           <Typography variant="overline" className="auth-panel-overline">{panel.overline}</Typography>
           <Typography component="h2" className="auth-panel-headline">{panel.headline}</Typography>

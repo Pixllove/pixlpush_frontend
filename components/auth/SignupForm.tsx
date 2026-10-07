@@ -20,7 +20,7 @@ import GoogleButton from './GoogleButton';
 import PasswordField, { PasswordRule } from './PasswordField';
 import SubmitButton from './SubmitButton';
 
-export default function SignupForm() {
+export default function SignupForm({ active = true, onSwitch }: { active?: boolean; onSwitch?: (mode: 'login' | 'signup') => void }) {
   const router = useRouter();
   const signup = useSignup();
   const [formError, setFormError] = useState<string>();
@@ -60,7 +60,7 @@ export default function SignupForm() {
   const pending = isSubmitting || signup.isPending;
 
   return (
-    <Box className="auth-block">
+    <Box className={`auth-block${active ? ' is-active' : ''}`}>
       <Box>
         <Typography component="h1" variant="h1">Create your workspace</Typography>
         <Typography color="text.secondary" sx={{ mt: 0.5 }}>Set up your account and build your first retention journey.</Typography>
@@ -75,7 +75,7 @@ export default function SignupForm() {
         <TextField
           label="Full name"
           autoComplete="name"
-          autoFocus
+          autoFocus={active}
           fullWidth
           disabled={pending}
           error={Boolean(errors.name)}
@@ -127,7 +127,7 @@ export default function SignupForm() {
         By creating an account, you agree to our terms and privacy policy. No credit card required.
       </Typography>
       <Typography color="text.secondary">
-        Already have an account? <MuiLink href="/login">Log in</MuiLink>
+        Already have an account?         <MuiLink href="/login" onClick={(event) => { if (onSwitch) { event.preventDefault(); onSwitch('login'); } }}>Log in</MuiLink>
       </Typography>
     </Box>
   );

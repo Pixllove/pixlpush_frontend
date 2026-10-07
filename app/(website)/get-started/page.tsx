@@ -1,13 +1,15 @@
 import { Suspense } from 'react';
 import AuthShell from '@/components/website/AuthShell';
 import SignupForm from '@/components/auth/SignupForm';
+import LoginForm from '@/components/auth/LoginForm';
 
 export default function GetStartedPage() {
   return (
-    <AuthShell mode="signup">
-      <Suspense>
+    <Suspense>
+      <AuthShell mode="signup">
+        <LoginForm />
         <SignupForm />
-      </Suspense>
-    </AuthShell>
+      </AuthShell>
+    </Suspense>
   );
 }

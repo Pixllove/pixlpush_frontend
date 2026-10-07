@@ -21,7 +21,7 @@ import GoogleButton from './GoogleButton';
 import PasswordField from './PasswordField';
 import SubmitButton from './SubmitButton';
 
-export default function LoginForm() {
+export default function LoginForm({ active = true, onSwitch }: { active?: boolean; onSwitch?: (mode: 'login' | 'signup') => void }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const login = useLogin();
@@ -56,7 +56,7 @@ export default function LoginForm() {
   const pending = isSubmitting || login.isPending;
 
   return (
-    <Box className="auth-block">
+    <Box className={`auth-block${active ? ' is-active' : ''}`}>
       <Box>
         <Typography component="h1" variant="h1">Welcome back</Typography>
         <Typography color="text.secondary" sx={{ mt: 0.5 }}>Log in to your PixlPush workspace.</Typography>
@@ -72,7 +72,7 @@ export default function LoginForm() {
           label="Work email"
           type="email"
           autoComplete="email"
-          autoFocus
+          autoFocus={active}
           fullWidth
           disabled={pending}
           error={Boolean(errors.email)}
@@ -99,7 +99,7 @@ export default function LoginForm() {
       </Box>
 
       <Typography color="text.secondary">
-        New to PixlPush? <MuiLink href="/get-started">Create an account</MuiLink>
+        New to PixlPush?         <MuiLink href="/get-started" onClick={(event) => { if (onSwitch) { event.preventDefault(); onSwitch('signup'); } }}>Create an account</MuiLink>
       </Typography>
     </Box>
   );

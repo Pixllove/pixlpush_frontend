@@ -1404,6 +1404,16 @@ b, strong { font-weight: 600; }
 /* ---- Auth: one frame for every auth page. The form sits on a white column; from 1024px a brand panel
         on the app's accent surface floats beside it with a glimpse of the product. ---- */
 .auth-shell { display: grid; grid-template-columns: minmax(0, 46fr) minmax(0, 54fr); min-height: 100vh; color: var(--pp-text); background: var(--pp-surface); }
+.auth-shell-switcher { position: relative; display: block; overflow: hidden; }
+.auth-shell-switcher .auth-main, .auth-shell-switcher .auth-panel { position: absolute; top: 0; bottom: 0; transition: transform 760ms cubic-bezier(.76,0,.24,1); will-change: transform; }
+.auth-shell-switcher .auth-main { left: 0; width: 46%; }
+.auth-shell-switcher .auth-panel { right: 0; width: calc(54% - 12px); }
+.auth-shell-switcher.is-signup .auth-main { transform: translateX(117.4%); }
+.auth-shell-switcher.is-signup .auth-panel { transform: translateX(-85.2%); }
+.auth-shell-switcher .auth-form-wrap { position: relative; display: block; }
+.auth-form-view { position: absolute; inset: 0; display: grid; place-items: center; padding: 32px 0; visibility: hidden; opacity: 0; transition: opacity 180ms ease; }
+.auth-form-view.is-active { visibility: visible; opacity: 1; }
+.auth-shell-switcher .auth-form-view[aria-hidden="true"] { pointer-events: none; }
 .auth-main { display: flex; flex-direction: column; min-width: 0; min-height: 100vh; padding: 32px; }
 .auth-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .auth-shell .auth-back { color: var(--pp-text-2); font-weight: 500; }
@@ -1484,8 +1494,15 @@ b, strong { font-weight: 600; }
   .auth-shell { grid-template-columns: minmax(0, 1fr); }
   .auth-panel { display: none; }
   .auth-main { padding: 20px; }
+  .auth-shell-switcher .auth-main { position: relative; width: 100%; transform: none !important; }
+  .auth-shell-switcher .auth-panel { display: none; }
+  .auth-shell-switcher .auth-form-view { position: relative; inset: auto; min-height: calc(100vh - 40px); padding: 20px 0; }
+  .auth-shell-switcher .auth-form-view[aria-hidden="true"] { display: none; }
 }
-@media (prefers-reduced-motion: reduce) { .auth-block, .auth-glimpse { animation: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .auth-block, .auth-glimpse { animation: none; }
+  .auth-shell-switcher .auth-main, .auth-shell-switcher .auth-panel, .auth-form-view { transition: none; }
+}
 
 /* ---- No layout jumps ----
    The page always keeps room for its scrollbar, so content does not slide sideways when a page grows past
