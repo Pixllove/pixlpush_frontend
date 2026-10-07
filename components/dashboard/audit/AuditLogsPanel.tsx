@@ -168,13 +168,13 @@ export default function AuditLogsPanel() {
           <TableBody>
             {feed.isPending &&
               [0, 1, 2, 3, 4].map((i) => (
-                <TableRow key={i} aria-label={i === 0 ? 'Loading audit logs' : undefined} role={i === 0 ? 'status' : undefined}>
+                <TableRow key={i} aria-label={i === 0 ? 'Loading audit logs' : undefined} role={i === 0 ? 'status' : undefined} sx={{ height: 58 }}>
                   {[0, 1, 2, 3, 4, 5].map((c) => <TableCell key={c}><Skeleton height={22} /></TableCell>)}
                 </TableRow>
               ))}
             {feed.isSuccess && items.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} sx={{ py: 6, textAlign: 'center', borderBottom: 0 }}>
+                <TableCell colSpan={6} sx={{ height: 290, textAlign: 'center', borderBottom: 0 }}>
                   <Typography fontWeight={600} fontSize={14}>No activity found</Typography>
                   <Typography color="text.secondary" fontSize={12}>
                     {filtered ? 'Try other filters.' : 'Changes made in projects you own or administer, and your own sign-ins, appear here.'}

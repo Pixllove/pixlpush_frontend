@@ -1209,7 +1209,7 @@ export function UsersSection() {
                 totalCount={users.length}
                 noun="users"
                 showMenu={false}
-                loading={usersQuery.isLoading || usersQuery.isFetching || userSearch.trim() !== appliedUserSearch}
+                loading={usersQuery.isPending || usersQuery.isFetching || userSearch.trim() !== appliedUserSearch}
                 hasNextPage={Boolean(usersQuery.data?.nextCursor)}
                 hasPreviousPage={userCursors.length > 0}
                 onNextPage={() =>
@@ -1380,7 +1380,7 @@ export function UsersSection() {
                 totalCount={segments.length}
                 noun="segments"
                 showMenu={false}
-                loading={segmentsQuery.isLoading || segmentsQuery.isFetching}
+                loading={segmentsQuery.isPending || segmentsQuery.isFetching}
               />
             )}
           </Card>
@@ -1439,7 +1439,7 @@ export function UsersSection() {
               totalCount={groups.length}
               noun="groups"
               showMenu={false}
-              loading={groupsQuery.isLoading || groupsQuery.isFetching}
+              loading={groupsQuery.isPending || groupsQuery.isFetching}
             />
           )}
         </Card>
@@ -1610,7 +1610,7 @@ function EmailDataSection() {
           totalCount={String(activeQuery.data?.total ?? 0)}
           noun={tab === "templates" ? "templates" : tab === "drafts" ? "drafts" : "campaigns"}
           showMenu={false}
-          loading={activeQuery.isLoading || (activeQuery.isFetching && !activeQuery.data) || search.trim() !== appliedSearch}
+          loading={activeQuery.isPending || (activeQuery.isFetching && !activeQuery.data) || search.trim() !== appliedSearch}
           page={page}
           serverPageSize={25}
           hasPreviousPage={page > 1}
@@ -2261,7 +2261,7 @@ function PushSection() {
           }
           showMenu={false}
           loading={
-            activeQuery.isLoading ||
+            activeQuery.isPending ||
             (activeQuery.isFetching && !activeQuery.data) ||
             search.trim() !== appliedSearch
           }

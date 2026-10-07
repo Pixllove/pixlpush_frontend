@@ -646,7 +646,12 @@ export default function EmailWorkspace() {
     [items, tab, query],
   );
   const activeListQuery = tab === "templates" ? templatesQuery : tab === "drafts" ? draftsQuery : sentQuery;
-  const isListLoading = activeListQuery.isLoading || (activeListQuery.isFetching && !activeListQuery.data);
+  // isPending, not isLoading: before the Project is known the query has not started, and that is still loading,
+  // not an empty list.
+  const isListLoading = activeListQuery.isPending || (activeListQuery.isFetching && !activeListQuery.data);
+  // Loading rows stand in for the rows that were there (two on a first load, the height of the empty state).
+  const placeholders = useRef(2);
+  if (!isListLoading) placeholders.current = Math.min(Math.max(visible.length, 2), 10);
   const tabCounts = sentQuery.data?.tabCounts;
   const start = (nextKind: "drafts" | "templates") => {
     setKind(nextKind);
@@ -916,11 +921,11 @@ export default function EmailWorkspace() {
             </TableHead>
             <TableBody>
               {isListLoading
-                ? Array.from({ length: 4 }, (_, index) => (
-                    <TableRow key={`email-skeleton-${index}`}>
+                ? Array.from({ length: placeholders.current }, (_, index) => (
+                    <TableRow key={`email-skeleton-${index}`} sx={{ height: 55 }}>
                       {Array.from({ length: 9 }, (_, cell) => (
                         <TableCell key={cell}>
-                          <Skeleton variant="rounded" height={cell === 0 ? 34 : 22} />
+                          <Skeleton variant="rounded" height={cell === 0 ? 30 : 20} />
                         </TableCell>
                       ))}
                     </TableRow>

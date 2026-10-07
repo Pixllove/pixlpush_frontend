@@ -131,7 +131,9 @@ a { color: inherit; text-decoration: none; }
 .group-view-button { min-height: 36px; border-color: #d8c9f2 !important; color: #6426c2 !important; border-radius: 9px !important; text-transform: none !important; font-weight: 600 !important; }
 .group-delete-button { width: 36px; height: 36px; color: #df5a62 !important; border: 1px solid transparent !important; border-radius: 9px !important; }
 .group-delete-button:hover { background: #fff0f1 !important; border-color: #f4cdd1 !important; }
-.filter-select { min-width: 190px; }.reusable-table-wrap { overflow-x: auto; }.rows-select { min-width: 72px; }.table-empty { padding: 26px; text-align: center; }
+.filter-select { min-width: 190px; }.reusable-table-wrap { overflow-x: auto; }.rows-select { min-width: 72px; }.table-empty { display: grid; place-items: center; min-height: 110px; text-align: center; }
+/* the row's height is set inline from the remembered body height; cells must not force it taller */
+.table-skeleton-row > td { padding-top: 0 !important; padding-bottom: 0 !important; }
 .journey-guide-card { padding:20px; border:1px solid #ebe8f2 !important; border-radius: 8px !important; box-shadow:0 8px 24px rgba(69,45,104,.04) !important; background:rgba(255,255,255,.9) !important; }
 .journey-guide-card .MuiButton-root { color:#7132d3; border-color:#d9cbf4; text-transform:none; font-size:11.0px; font-weight: 500; }
 .journey-sparkle { color:#7132d3; font-size:16px; vertical-align:middle; }
@@ -1484,3 +1486,14 @@ b, strong { font-weight: 600; }
   .auth-main { padding: 20px; }
 }
 @media (prefers-reduced-motion: reduce) { .auth-block, .auth-glimpse { animation: none; } }
+
+/* ---- No layout jumps ----
+   The page always keeps room for its scrollbar, so content does not slide sideways when a page grows past
+   the window (loading rows) or shrinks back (an empty list). MUI adds padding to <body> when a dialog or
+   menu locks scrolling; with the room already reserved that padding would itself move the page. */
+html { scrollbar-gutter: stable; }
+/* Inside the app the scrollbar track is always shown. A page that is a little taller while it loads than
+   once loaded would otherwise flash a scrollbar and take it away again; a permanent track cannot do that.
+   (Only visible where the system shows scrollbars all the time; overlay scrollbars are unaffected.) */
+html:has(.dashboard-app) { overflow-y: scroll; }
+body { padding-right: 0 !important; }

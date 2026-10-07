@@ -29,6 +29,7 @@ import {
   Grid,
   LinearProgress,
   Link,
+  Skeleton,
   Stack,
   Table,
   TableBody,
@@ -145,7 +146,10 @@ export function BillingSection() {
 
   useEffect(() => { polls.current = 0; setError(null); setNotice(null); setBusy(null); }, [projectId]);
   useEffect(() => { setProfile(subscriptionQuery.data?.billingContact ?? { email: "" }); }, [subscriptionQuery.data]);
-  useEffect(() => { if (wantedPlan) plansRef.current?.scrollIntoView?.({ block: "center" }); }, [wantedPlan]);
+  // The overview is drawn once, when everything it lays out has arrived. Showing it early made the plan block,
+  // the usage grid and the plan options push each other around as each request landed.
+  const overviewLoading = !projectId || subscriptionQuery.isLoading || usageQuery.isPending || pricesQuery.isPending || plansQuery.isPending || paymentMethodQuery.isLoading;
+  useEffect(() => { if (wantedPlan && !overviewLoading) plansRef.current?.scrollIntoView?.({ block: "center" }); }, [wantedPlan, overviewLoading]);
 
   const refresh = () => Promise.all([
     queryClient.invalidateQueries({ queryKey: ["projects", "billing", projectId, "subscription"] }),
@@ -305,7 +309,48 @@ export function BillingSection() {
       {error && <Alert severity="error" onClose={() => setError(null)} sx={{ borderRadius: 2 }}>{error}</Alert>}
       {notice && <Alert severity="success" onClose={() => setNotice(null)} sx={{ borderRadius: 2 }}>{notice}</Alert>}
 
-      {tab === "overview" && (
+      {tab === "overview" && overviewLoading && (
+        <Stack gap={2.5} role="status" aria-label="Loading billing">
+          {/* Current plan: the accent block on the left, the price and actions on the right. */}
+          <Card className="saas-card" sx={{ p: 0, overflow: "hidden", display: "grid", gridTemplateColumns: { xs: "1fr", md: "1.8fr 1fr" }, minHeight: 320 }}>
+            <Skeleton variant="rectangular" sx={{ height: "100%", minHeight: { xs: 180, md: 320 } }} />
+            <Stack gap={1.5} sx={{ p: 3 }}>
+              <Skeleton variant="text" width={140} sx={{ fontSize: 11 }} />
+              <Skeleton variant="text" width={170} sx={{ fontSize: 32 }} />
+              <Skeleton variant="text" width="90%" sx={{ fontSize: 12 }} />
+              <Divider sx={{ my: 0.5 }} />
+              <Stack direction="row" justifyContent="space-between"><Skeleton variant="text" width={90} /><Skeleton variant="text" width={90} /></Stack>
+              <Skeleton variant="rounded" height={40} />
+              <Skeleton variant="text" width={150} sx={{ alignSelf: "center" }} />
+            </Stack>
+          </Card>
+          {/* Subscription, payment method, billing address. */}
+          <Card className="saas-card" sx={{ p: 2.5, display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(3, 1fr)" }, gap: 3, minHeight: 138 }}>
+            {[0, 1, 2].map((column) => (
+              <Stack key={column} gap={0.5}>
+                <Skeleton variant="text" width={110} sx={{ fontSize: 11 }} />
+                <Skeleton variant="text" width={140} />
+                <Skeleton variant="text" width={170} sx={{ fontSize: 12 }} />
+              </Stack>
+            ))}
+          </Card>
+          <Box>
+            <Skeleton variant="text" width={200} sx={{ fontSize: 16 }} />
+            <Skeleton variant="text" width={300} sx={{ fontSize: 12 }} />
+          </Box>
+          {/* Usage: one tile per limit. */}
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", lg: "repeat(5, 1fr)" }, gap: 2 }}>
+            {[0, 1, 2, 3, 4].map((tile) => (
+              <Card key={tile} className="saas-card" sx={{ p: 2, display: "flex", alignItems: "center", gap: 1.5, minHeight: 76 }}>
+                <Skeleton variant="rounded" width={36} height={36} />
+                <Skeleton variant="text" sx={{ flex: 1 }} />
+                <Skeleton variant="circular" width={40} height={40} />
+              </Card>
+            ))}
+          </Box>
+        </Stack>
+      )}
+      {tab === "overview" && !overviewLoading && (
         <Stack gap={2.5}>
           {checkoutBanner && <Alert severity={checkoutBanner.severity} sx={{ borderRadius: 2 }}>{checkoutBanner.text}</Alert>}
           {canManage && state.message && state.label !== "Active" && (
@@ -663,12 +708,23 @@ export function BillingSection() {
           <Divider sx={{ my: 2 }} />
           {invoicesQuery.isError ? (
             <Alert severity="error" sx={{ borderRadius: 2 }}>We could not load your invoices. Please try again.</Alert>
+          ) : invoicesQuery.isPending ? (
+            <Table size="small" role="status" aria-label="Loading invoices">
+              <TableHead>
+                <TableRow>{["Date", "Invoice", "Subtotal", "Tax", "Total", "Status", "Documents"].map((label, index) => <TableCell key={label} align={index === 6 ? "right" : "left"}>{label}</TableCell>)}</TableRow>
+              </TableHead>
+              <TableBody>
+                {[0, 1, 2].map((row) => (
+                  <TableRow key={row} sx={{ height: 45 }}>
+                    {[0, 1, 2, 3, 4, 5, 6].map((cell) => <TableCell key={cell}><Skeleton variant="text" width={cell === 5 ? 48 : "70%"} sx={cell === 6 ? { ml: "auto" } : undefined} /></TableCell>)}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           ) : !invoicesQuery.data?.length ? (
             <Stack direction="row" alignItems="center" gap={1}>
               <ReceiptLongRounded sx={{ fontSize: 18, color: "#9874c9" }} />
-              <Typography color="text.secondary" fontSize={12}>
-                {invoicesQuery.isPending ? "Loading invoices…" : "Your invoices will appear here after your first successful payment."}
-              </Typography>
+              <Typography color="text.secondary" fontSize={12}>Your invoices will appear here after your first successful payment.</Typography>
             </Stack>
           ) : (
             <Box sx={{ overflowX: "auto" }}>
@@ -733,10 +789,15 @@ export function BillingSection() {
               )}
             </Stack>
           </Card>
-          {hasBillingAccount && projectId && (
+          {subscriptionQuery.isLoading && (
+            <Grid container spacing={2} role="status" aria-label="Loading payment methods">
+              <Grid item xs={12} md={6}><Skeleton variant="rounded" sx={{ height: { xs: 266, sm: 281, md: 296 }, maxWidth: { md: 540 } }} /></Grid>
+            </Grid>
+          )}
+          {!subscriptionQuery.isLoading && hasBillingAccount && projectId && (
             <SavedCards projectId={projectId} adding={busy === "card"} onAdd={updateCard} onChanged={async (message) => { await refresh(); setNotice(message); }} />
           )}
-          {!hasBillingAccount && (
+          {!subscriptionQuery.isLoading && !hasBillingAccount && (
             <Card className="saas-card" sx={{ p: 5, textAlign: "center" }}>
               <CreditCardRounded sx={{ fontSize: 48, color: "#9874c9" }} />
               <Typography variant="h3" sx={{ mt: 1 }}>No payment method yet</Typography>
@@ -759,7 +820,9 @@ export function BillingSection() {
           <Grid container spacing={2} sx={{ mt: 0.5 }}>
             {profileFields.map(([key, label]) => (
               <Grid item xs={12} sm={key === "addressLine1" || key === "addressLine2" || key === "company" ? 6 : 4} key={key}>
-                <TextField
+                {subscriptionQuery.isLoading ? (
+                  <Box sx={{ height: key === "country" || key === "vatId" ? 63 : 40 }}><Skeleton variant="rounded" height={40} /></Box>
+                ) : <TextField
                   fullWidth
                   size="small"
                   label={label}
@@ -769,7 +832,7 @@ export function BillingSection() {
                   required={key === "email"}
                   helperText={key === "country" ? "Two letters, e.g. AE, DE, GB, US" : key === "vatId" ? "Confirmed with Stripe at checkout" : undefined}
                   inputProps={key === "country" ? { maxLength: 2, style: { textTransform: "uppercase" } } : undefined}
-                />
+                />}
               </Grid>
             ))}
           </Grid>

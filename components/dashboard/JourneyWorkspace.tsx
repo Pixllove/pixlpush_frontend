@@ -66,7 +66,7 @@ export default function JourneyWorkspace() {
   });
   // True while the rows on hand belong to another tab, search or page.
   // Also true from the first key typed, so the list reacts at once rather than after the pause and the request.
-  const listLoading = Boolean(projectId) && (list.isPending || list.isPlaceholderData || search.trim() !== term);
+  const listLoading = list.isPending || list.isPlaceholderData || search.trim() !== term;
   const counts = list.data?.counts ?? {};
   const rows = useMemo(() => {
     const mapped = (list.isPlaceholderData ? [] : list.data?.items ?? []).map(toRow);

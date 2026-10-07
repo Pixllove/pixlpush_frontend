@@ -93,7 +93,7 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
       </DialogTitle>
       <DialogContent>
         {query.isPending && (
-          <Stack alignItems="center" sx={{ py: 4 }} role="status"><CircularProgress size={28} /></Stack>
+          <Stack alignItems="center" justifyContent="center" sx={{ minHeight: 240 }} role="status"><CircularProgress size={28} /></Stack>
         )}
         {query.isError && (
           <Stack gap={1.5}>

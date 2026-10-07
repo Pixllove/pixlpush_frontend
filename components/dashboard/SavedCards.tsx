@@ -54,7 +54,9 @@ export default function SavedCards({ projectId, adding, onAdd, onChanged }: {
     <Stack gap={2}>
       {error && <Alert severity="error" onClose={() => setError(null)} sx={{ borderRadius: 2 }}>{error}</Alert>}
       {cards.isPending ? (
-        <Skeleton variant="rounded" height={170} sx={{ borderRadius: 2 }} />
+        <Grid container spacing={2} role="status" aria-label="Loading cards">
+          <Grid item xs={12} md={6}><Skeleton variant="rounded" sx={{ height: { xs: 266, sm: 281, md: 296 }, maxWidth: { md: 540 } }} /></Grid>
+        </Grid>
       ) : !cards.data?.length ? (
         <Box className="saas-card" sx={{ p: 4, textAlign: "center", borderRadius: 2, border: "1px dashed #d9cdea", backgroundColor: "#fff" }}>
           <CreditCardRounded sx={{ fontSize: 40, color: "#9874c9" }} />

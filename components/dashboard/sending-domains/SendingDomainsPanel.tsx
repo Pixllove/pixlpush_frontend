@@ -121,7 +121,8 @@ export default function SendingDomainsPanel() {
     }
   };
 
-  if (!projectId) return <Skeleton height={40} />;
+  // Shaped like the page it stands in for, so nothing jumps when the Project arrives.
+  if (!projectId) return <Stack gap={2.5}><Skeleton variant="rounded" height={44} /><Skeleton variant="rounded" height={172} /></Stack>;
 
   return (
     <Stack gap={2.5}>
@@ -140,7 +141,7 @@ export default function SendingDomainsPanel() {
       {!canManage && <Alert severity="info">Only project owners and admins can add or change sending domains.</Alert>}
 
       {list.isPending && (
-        <Card sx={{ p: 2 }} role="status" aria-label="Loading sending domains">
+        <Card sx={{ p: 2, minHeight: 172 }} role="status" aria-label="Loading sending domains">
           {[0, 1, 2].map((i) => <Skeleton key={i} height={40} />)}
         </Card>
       )}
@@ -152,7 +153,7 @@ export default function SendingDomainsPanel() {
       )}
 
       {list.data && list.data.length === 0 && (
-        <Card sx={{ p: 4, textAlign: 'center' }}>
+        <Card sx={{ p: 4, minHeight: 172, textAlign: 'center' }}>
           <Typography fontWeight={600}>No sending domains yet</Typography>
           <Typography color="text.secondary" fontSize={13} sx={{ mb: 2 }}>Add the email address you want to send from to get started.</Typography>
           {canManage && <Button variant="outlined" onClick={() => setDialog({ kind: 'add' })}>Add domain</Button>}

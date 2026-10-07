@@ -105,11 +105,12 @@ export default function TeamAccessPanel() {
   const canEdit = (m: ProjectMember) => canManage && Boolean(me) && m.account.id !== me && (isOwner || m.role !== 'owner');
   const pending = (invitations.data ?? []).filter((i) => i.status === 'pending' || i.status === 'expired');
 
-  if (!projectId) return <Skeleton height={40} />;
+  // Shaped like the page it stands in for, so nothing jumps when the Project arrives.
+  if (!projectId) return <Stack gap={2.5}><Skeleton variant="rounded" height={40} /><Skeleton variant="rounded" height={150} /></Stack>;
 
   return (
     <Stack gap={2.5}>
-      <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} gap={1.5}>
+      <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} gap={1.5} sx={{ minHeight: 40 }}>
         <Typography color="text.secondary" fontSize={13}>
           Access is granted per project. Members only see the projects they were added to.
         </Typography>
@@ -122,13 +123,12 @@ export default function TeamAccessPanel() {
 
       <Card className="saas-card">
         <Typography variant="h3">Project members</Typography>
-        {members.isPending && <Stack sx={{ mt: 1 }} role="status" aria-label="Loading members">{[0, 1, 2].map((i) => <Skeleton key={i} height={36} />)}</Stack>}
         {members.isError && (
           <Alert severity="error" sx={{ mt: 1 }} action={<Button color="inherit" size="small" onClick={() => members.refetch()}>Retry</Button>}>
             {teamError(members.error)}
           </Alert>
         )}
-        {members.data && (
+        {!members.isError && (
           <Box sx={{ overflowX: 'auto' }}>
             <Table size="small" sx={{ mt: 1 }}>
               <TableHead>
@@ -142,7 +142,12 @@ export default function TeamAccessPanel() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {members.data.map((m) => (
+                {members.isPending && [0].map((i) => (
+                  <TableRow key={i} role="status" aria-label="Loading members" sx={{ height: 61 }}>
+                    {[0, 1, 2, 3, 4, 5].map((c) => <TableCell key={c}><Skeleton variant="text" /></TableCell>)}
+                  </TableRow>
+                ))}
+                {(members.data ?? []).map((m) => (
                   <TableRow key={m.id} data-testid={`member-${m.account.email}`}>
                     <TableCell>
                       <Typography fontWeight={500} fontSize={12}>
@@ -193,6 +198,7 @@ export default function TeamAccessPanel() {
         <Card className="saas-card">
           <Typography variant="h3">Pending invitations</Typography>
           {invitations.isError && <Alert severity="error" sx={{ mt: 1 }}>{teamError(invitations.error)}</Alert>}
+          {invitations.isPending && <Skeleton variant="text" width={360} sx={{ mt: 1, fontSize: 12, lineHeight: '19px' }} />}
           {invitations.data && pending.length === 0 && (
             <Typography color="text.secondary" fontSize={12} sx={{ mt: 1 }}>No pending invitations. Invitees join once they accept the emailed invitation.</Typography>
           )}

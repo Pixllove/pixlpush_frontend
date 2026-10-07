@@ -265,6 +265,18 @@ An accent-soft icon tile, a 20px title, one sentence, one primary button. No dar
 - **No page-wide dimming.** Nothing fades or greys the whole page on load or reload. A fade for switching
   projects runs only when moving between two real projects.
 - Lists use skeleton rows shaped like the data; no full-page spinners for lists.
+- **MUI styles are sent in the document head** (`EmotionRegistry` in `components/AppProviders.tsx`). Do not
+  remove it: without it the server writes style tags into the body, and `:first-child` / sibling rules in
+  `globals.css` match those tags until hydration, which makes pages jump on reload.
+- A list is "loading" from its first render: use a query's `isPending`, not `isLoading`, so a query that has
+  not started yet does not show the empty state.
+- **Nothing moves when data arrives.** The page reserves its scrollbar's space (`scrollbar-gutter: stable` on
+  `html`), so content never slides sideways when the scrollbar comes or goes. A loading placeholder takes
+  the height of what replaces it: the shared table remembers the height its rows had last time (across reloads) and loads at exactly
+  that height (three rows, the height of the empty state, the first time). Inside the dashboard the
+  scrollbar track is always shown (`html:has(.dashboard-app) { overflow-y: scroll }`), so a scrollbar can
+  never flash in and out while a page loads. Reserve the space for anything that arrives
+  late (buttons, avatars, counts) instead of inserting it.
 - A typed-into field never loses its text because data arrived late.
 
 ## 8. Layout and navigation

@@ -141,7 +141,7 @@ export default function DashboardFrame({
             sx={{ ml: "auto" }}
           >
             {/* Nothing to upgrade to once the Project is on Pro or Enterprise. */}
-            {!['pro', 'enterprise'].includes(activeProject?.subscription?.plan ?? '') && <Button
+            {activeProject && !['pro', 'enterprise'].includes(activeProject.subscription?.plan ?? '') && <Button
               component="a"
               href="/pricing"
               startIcon={<WorkspacePremiumRounded fontSize="small" />}
