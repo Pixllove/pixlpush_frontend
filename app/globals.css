@@ -1312,6 +1312,7 @@ code, pre, kbd { font-family: var(--pp-mono); }
 
 .dashboard-content { max-width: 1320px; padding: 32px 28px 56px; }
 .dashboard-title { font-size: 24.0px !important; line-height: 32px !important; font-weight: 600 !important; letter-spacing: -.02em !important; color: var(--pp-text); }
+.dashboard-content > .MuiStack-root:has(+ .project-empty) { margin-bottom: 12px !important; }
 
 /* ---- Surfaces: a card is a hairline on white, 8px, no shadow ---- */
 .saas-card, .saas-stat, .integration-card, .settings-row, .usage-card, .journey-card, .plan-card, .panel, .campaign-card,
@@ -1362,7 +1363,7 @@ code, pre, kbd { font-family: var(--pp-mono); }
 .panel h3, .saas-card h3 { font-size: 16.0px; font-weight: 600; letter-spacing: -.01em; }
 
 /* ---- Empty state for a page that needs a Project: flat, one action ---- */
-.project-empty { display: grid; justify-items: start; max-width: 560px; padding: 56px 0 24px; }
+.project-empty { display: grid; justify-items: start; max-width: 560px; padding: 16px 0 24px; }
 .project-empty-badge { color: var(--pp-text-3); font-size: 12.0px; font-weight: 500; }
 .project-empty-icon { width: 40px; height: 40px; margin-top: 16px; display: grid; place-items: center; border-radius: var(--pp-r); color: var(--pp-accent); background: var(--pp-accent-soft); }
 .project-empty-icon svg { font-size: 20px; }

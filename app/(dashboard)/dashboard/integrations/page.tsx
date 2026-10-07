@@ -4,10 +4,10 @@ import IntegrationDocumentation from "@/components/dashboard/IntegrationDocument
 export default function IntegrationsPage() {
   return (
     <DashboardFrame
+      requiresProject
       active="Integrations"
       title="Integrations"
       description="Connect your product to PixlPush with the React SDK and start turning behavior into retention."
-      hideHeader
     >
       <IntegrationDocumentation />
     </DashboardFrame>
