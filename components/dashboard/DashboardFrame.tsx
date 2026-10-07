@@ -1,9 +1,8 @@
 "use client";
 
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useState } from "react";
 import {
   AddRounded,
-  ChevronLeftRounded,
   MenuRounded,
   RocketLaunchRounded,
   WorkspacePremiumRounded,
@@ -15,7 +14,6 @@ import {
   MenuItem,
   Select,
   Stack,
-  Tooltip,
   Typography,
 } from "@mui/material";
 import { useDispatch } from "react-redux";
@@ -76,27 +74,8 @@ export default function DashboardFrame({
         setActive={() => setMobileOpen(false)}
         mobileOpen={mobileOpen}
         collapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed(value => !value)}
       />
-      <Tooltip
-        title={mobileOpen ? "Close navigation" : sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-        placement="right"
-      >
-        <IconButton
-          className="dashboard-sidebar-toggle"
-          onClick={() => {
-            if (window.matchMedia("(max-width: 760px)").matches) {
-              setMobileOpen(false);
-            } else {
-              setSidebarCollapsed((value) => !value);
-            }
-          }}
-          aria-label={mobileOpen ? "Close navigation" : sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          aria-expanded={mobileOpen ? true : !sidebarCollapsed}
-          size="small"
-        >
-          <ChevronLeftRounded className="dashboard-sidebar-toggle-icon" />
-        </IconButton>
-      </Tooltip>
       {mobileOpen && (
         <Box
           className="dashboard-backdrop"

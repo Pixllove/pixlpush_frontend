@@ -1,11 +1,11 @@
 'use client';
 
 import {
-  BarChartOutlined, BoltOutlined, EmailOutlined, GroupsOutlined,
+  BarChartOutlined, BoltOutlined, ChevronLeftRounded, ChevronRightRounded, EmailOutlined, GroupsOutlined,
   HistoryOutlined, InsightsOutlined, PeopleAltOutlined, SettingsOutlined, SpaceDashboardOutlined, TuneOutlined,
 } from '@mui/icons-material';
 import {
-  Avatar, List, ListItemButton, ListItemIcon, ListItemText, Tooltip,
+  Avatar, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Tooltip,
 } from '@mui/material';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -35,11 +35,12 @@ const groups = [
   },
 ];
 
-export default function DashboardSidebar({ active, setActive, mobileOpen, collapsed }: {
+export default function DashboardSidebar({ active, setActive, mobileOpen, collapsed, onToggleCollapse }: {
   active: string;
   setActive: (value: string) => void;
   mobileOpen: boolean;
   collapsed: boolean;
+  onToggleCollapse: () => void;
 }) {
   const { active: activeProject, isPending } = useActiveProject();
   const [clicked, setClicked] = useState<string | null>(null);
@@ -54,9 +55,20 @@ export default function DashboardSidebar({ active, setActive, mobileOpen, collap
           <Image className="sidebar-brand-mark" src="/assets/site-icon.png" alt="" aria-hidden="true" width={21} height={31} priority />
           <Image className="sidebar-brand-wordmark" src="/assets/logo.png" alt="PixlPush" width={104} height={37} priority />
         </Link>
+        <IconButton
+          className="sidebar-collapse-toggle"
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-expanded={!collapsed}
+          aria-controls="dashboard-sidebar-navigation"
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          onClick={onToggleCollapse}
+          size="small"
+        >
+          {collapsed ? <ChevronRightRounded /> : <ChevronLeftRounded />}
+        </IconButton>
       </header>
 
-      <nav className="sidebar-navigation" aria-label="Primary navigation">
+      <nav id="dashboard-sidebar-navigation" className="sidebar-navigation" aria-label="Primary navigation">
         {groups.map((group) => (
           <section className="sidebar-group" key={group.label} aria-label={group.label}>
             <p className="sidebar-kicker">{group.label}</p>
