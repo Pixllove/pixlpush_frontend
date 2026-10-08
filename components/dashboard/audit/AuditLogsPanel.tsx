@@ -24,6 +24,9 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
+import HistoryRounded from '@mui/icons-material/HistoryRounded';
+import SearchOffRounded from '@mui/icons-material/SearchOffRounded';
+import EmptyState from '../EmptyState';
 import { auditApi } from '@/lib/projects/api';
 import type { ApiError } from '@/types/auth';
 import type { AuditCategory, AuditLogEntry, AuditLogQuery } from '@/types/project';
@@ -173,11 +176,13 @@ export default function AuditLogsPanel() {
               ))}
             {feed.isSuccess && items.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} sx={{ height: 290, textAlign: 'center', borderBottom: 0 }}>
-                  <Typography fontWeight={600} fontSize={14}>No activity found</Typography>
-                  <Typography color="text.secondary" fontSize={12}>
-                    {filtered ? 'Try other filters.' : 'Changes made in projects you own or administer, and your own sign-ins, appear here.'}
-                  </Typography>
+                <TableCell colSpan={6} sx={{ height: 290, borderBottom: 0 }}>
+                  <EmptyState
+                    size="compact"
+                    icon={filtered ? <SearchOffRounded /> : <HistoryRounded />}
+                    title="No activity found"
+                    description={filtered ? 'No activity matches these filters. Clear them above to see everything.' : 'Changes made in projects you own or administer, and your own sign-ins, appear here.'}
+                  />
                 </TableCell>
               </TableRow>
             )}

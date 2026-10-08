@@ -25,6 +25,9 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import MailOutlineRounded from '@mui/icons-material/MailOutlineRounded';
+import EmptyState from '../EmptyState';
+import UserAvatar from '@/components/auth/UserAvatar';
 import { Toast } from '@/components/auth/AuthFeedback';
 import { useCurrentUser } from '@/hooks/auth/use-current-user';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
@@ -150,11 +153,16 @@ export default function TeamAccessPanel() {
                 {(members.data ?? []).map((m) => (
                   <TableRow key={m.id} data-testid={`member-${m.account.email}`}>
                     <TableCell>
-                      <Typography fontWeight={500} fontSize={12}>
-                        {m.account.name ?? m.account.email}
-                        {m.account.id === me && <Chip size="small" label="You" sx={{ ml: 1, height: 18, fontSize: 11 }} />}
-                      </Typography>
-                      <Typography color="text.secondary" fontSize={11}>{m.account.email}</Typography>
+                      <Stack direction="row" alignItems="center" gap={1.25}>
+                        <UserAvatar account={m.account} />
+                        <Box sx={{ minWidth: 0 }}>
+                          <Typography fontWeight={500} fontSize={12}>
+                            {m.account.name ?? m.account.email}
+                            {m.account.id === me && <Chip size="small" label="You" sx={{ ml: 1, height: 18, fontSize: 11 }} />}
+                          </Typography>
+                          <Typography color="text.secondary" fontSize={11}>{m.account.email}</Typography>
+                        </Box>
+                      </Stack>
                     </TableCell>
                     <TableCell>
                       {canEdit(m) ? (
@@ -200,7 +208,7 @@ export default function TeamAccessPanel() {
           {invitations.isError && <Alert severity="error" sx={{ mt: 1 }}>{teamError(invitations.error)}</Alert>}
           {invitations.isPending && <Skeleton variant="text" width={360} sx={{ mt: 1, fontSize: 12, lineHeight: '19px' }} />}
           {invitations.data && pending.length === 0 && (
-            <Typography color="text.secondary" fontSize={12} sx={{ mt: 1 }}>No pending invitations. Invitees join once they accept the emailed invitation.</Typography>
+            <EmptyState size="compact" icon={<MailOutlineRounded />} title="No pending invitations" description="Invitees join once they accept the emailed invitation." />
           )}
           {pending.length > 0 && (
             <Box sx={{ overflowX: 'auto' }}>

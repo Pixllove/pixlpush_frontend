@@ -26,7 +26,6 @@ import CreateProjectDialog from "./CreateProjectDialog";
 import DashboardSidebar from "./DashboardSidebar";
 import AccountMenu from "@/components/auth/AccountMenu";
 import NotificationMenu from "@/components/dashboard/NotificationMenu";
-import SearchField from "./SearchField";
 
 export default function DashboardFrame({
   active,
@@ -137,7 +136,7 @@ export default function DashboardFrame({
             ))}
             <MenuItem value="create">＋ Create project</MenuItem>
           </Select>
-          <SearchField placeholder="Search users, events, campaigns" sx={{ width: { xs: "42vw", sm: "min(330px, 42vw)" } }} />
+          {/* <SearchField placeholder="Search users, events, campaigns" sx={{ width: { xs: "42vw", sm: "min(330px, 42vw)" } }} /> */}
           <Stack
             direction="row"
             alignItems="center"

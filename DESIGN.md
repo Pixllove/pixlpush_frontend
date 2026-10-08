@@ -16,6 +16,8 @@ solve it with one-off styling on the screen.
 | `components/auth/AuthFeedback.tsx` | `FormError`, `AuthStatus` (icon tile + title + action), `Toast` |
 | `components/auth/PasswordField.tsx` | Password field with show/hide, and `PasswordRule` |
 | `components/dashboard/ReusableDataTable.tsx` | The shared list table with loading, empty and paging |
+| `components/auth/UserAvatar.tsx` | The one avatar for a person: Google photo, or initials on their identity colour |
+| `components/dashboard/EmptyState.tsx` | The one empty state, and `listEmpty` for the three reasons a list is empty |
 
 **Rules of use**
 
@@ -235,6 +237,18 @@ The most important surface in the app; use `ReusableDataTable` for lists.
 Scheduled blue, Paused orange, Failed red, Archived grey. Use `<Chip color="success | warning | error |
 info | primary">` for a coloured chip; a chip with no colour is neutral. A pill is never a control.
 
+### Avatars
+Always `UserAvatar` (`components/auth/UserAvatar.tsx`) for a person. Never hand-build one.
+- Shows the person's Google profile photo when the account has one; otherwise two initials on a soft fill
+  with darker text of the same hue. If the photo fails to load, the initials show instead.
+- Three sizes: 32px (top bar, table rows), 40px (menus), 56px (profile header). The box has a fixed size,
+  so nothing moves when a photo arrives or fails.
+- The colour comes from `tokens.avatar` (eight pairs, mirrored as `--pp-avatar-1..8-fill` / `-text`) and is
+  picked from the account id, so one person has one colour on every screen and for every viewer.
+- The colour is identity, not status: the palette avoids the semantic colours, and an avatar colour never
+  carries meaning.
+- Projects and domains are not people and keep their own marks.
+
 ### Plan label and upgrade
 The plan beside a project name is just the plan: "Free", "Starter", "Pro", "Enterprise" (`planLabel`).
 "Upgrade to Pro" is hidden when the project is already on Pro or Enterprise.
@@ -251,7 +265,15 @@ The plan beside a project name is just the plan: "Free", "Starter", "Pro", "Ente
 The themed MUI `Switch` (accent when on). Do not hand-build toggles.
 
 ### Empty state
-An accent-soft icon tile, a 20px title, one sentence, one primary button. No dark or gradient hero cards.
+Always `EmptyState`. Never hand-build one.
+- An accent-soft icon tile, a title, one sentence, at most one button. No dark or gradient hero cards.
+- `size="default"` (48px tile, 20px title, primary button) fills a page area. `size="compact"` (36px tile,
+  14px/600 title, small secondary button) sits inside a table, tab or card.
+- A list is empty for one of three reasons, and says which. Build the props with `listEmpty`:
+  **could not load** (`tone="error"`, "Try again"), **nothing matches** the search or filter ("Clear search",
+  never "Create"), or **nothing yet** (names the thing, may offer to create the first one).
+- Loading is none of these: while a query is pending the list shows skeleton rows, never the empty state.
+- `ReusableDataTable` takes these as its `empty` prop.
 
 ## 7. Loading and data states
 

@@ -1,56 +1,80 @@
 'use client';
 
 import { useState } from 'react';
-import { Avatar, Badge, Divider, IconButton, ListItemIcon, Menu, MenuItem, Stack, Tooltip, Typography } from '@mui/material';
-import { CheckRounded, KeyboardArrowDownRounded, PersonOutlineRounded, LogoutRounded } from '@mui/icons-material';
+import { Box, ButtonBase, Chip, Divider, ListItemIcon, Menu, MenuItem, Skeleton, Stack, Typography } from '@mui/material';
+import { KeyboardArrowDownRounded, LogoutRounded, PersonOutlineRounded } from '@mui/icons-material';
 import { useCurrentUser } from '@/hooks/auth/use-current-user';
 import { useLogout } from '@/hooks/auth/use-logout';
+import { planLabel, useActiveProject } from '@/hooks/projects/use-active-project';
+import type { Account } from '@/types/auth';
+import UserAvatar from './UserAvatar';
+
+/** Who is signed in. Not a menu item: MUI skips it for focus and arrow keys. */
+function Identity({ account, plan }: { account?: Account; plan?: string }) {
+  const name = account?.name?.trim();
+  return (
+    <Box className="pp-account-identity">
+      <Stack direction="row" alignItems="center" gap={1.5}>
+        <UserAvatar account={account} size={40} />
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="h5" noWrap title={name || account?.email}>{name || account?.email || 'Signed in'}</Typography>
+          {name && <Typography variant="body2" color="text.secondary" noWrap title={account?.email}>{account?.email}</Typography>}
+        </Box>
+      </Stack>
+      {account && (
+        <Stack direction="row" gap={0.75} sx={{ mt: 1.5 }}>
+          <Chip size="small" color={account.emailVerified ? 'success' : 'default'} label={account.emailVerified ? 'Verified' : 'Not verified'} />
+          {plan && <Chip size="small" color="primary" label={plan} />}
+        </Stack>
+      )}
+    </Box>
+  );
+}
+Identity.muiSkipListHighlight = true;
 
 export default function AccountMenu() {
   const [anchor, setAnchor] = useState<null | HTMLElement>(null);
-  const { account } = useCurrentUser();
+  const { account, isLoading } = useCurrentUser();
+  const { active } = useActiveProject();
   const logout = useLogout();
+  const open = Boolean(anchor);
 
-  const initial = (account?.name ?? account?.email ?? '?').charAt(0).toUpperCase();
+  // The same size as the avatar, so the top bar does not shift when the account arrives.
+  if (isLoading) return <Skeleton variant="circular" width={32} height={32} />;
 
   return (
     <>
-      <Stack direction="row" alignItems="center" gap={0.5}>
-        <Badge overlap="circular" anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} badgeContent={account?.emailVerified ? <Tooltip title="Email verified"><CheckRounded sx={{ fontSize: 11, color: '#fff' }} /></Tooltip> : null} sx={{ '& .MuiBadge-badge': { width: 16, height: 16, minWidth: 16, borderRadius: '50%', bgcolor: '#1976d2', border: '2px solid #fff', p: 0 } }}>
-          <Avatar sx={{ width: 34, height: 34, bgcolor: '#5517B8' }}>{initial}</Avatar>
-        </Badge>
-        <IconButton size="small" onClick={(e) => setAnchor(e.currentTarget)} aria-label="Account menu">
-          <KeyboardArrowDownRounded />
-        </IconButton>
-      </Stack>
+      <ButtonBase className="pp-account-trigger" onClick={(event) => setAnchor(event.currentTarget)} aria-label="Account menu" aria-haspopup="menu" aria-expanded={open} aria-controls={open ? 'account-menu' : undefined}>
+        <UserAvatar account={account} />
+        <KeyboardArrowDownRounded className="pp-account-chevron" />
+      </ButtonBase>
 
-      <Menu anchorEl={anchor} open={Boolean(anchor)} onClose={() => setAnchor(null)} PaperProps={{ sx: { mt: 1, minWidth: 245, borderRadius: 2, overflow: 'hidden', border: '1px solid rgba(113,50,211,.12)', boxShadow: '0 18px 42px rgba(35,16,55,.2)' } }}>
-        <Stack sx={{ px: 2.2, py: 1.8, bgcolor: '#FAF9FB' }}>
-          <Typography fontSize={13} fontWeight={600}>
-            {account?.name ?? 'Signed in'}
-          </Typography>
-          <Typography fontSize={12} color="text.secondary">
-            {account?.email ?? '—'}
-          </Typography>
-        </Stack>
+      <Menu
+        id="account-menu"
+        className="pp-account-menu"
+        anchorEl={anchor}
+        open={open}
+        onClose={() => setAnchor(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        slotProps={{ paper: { sx: { width: 280 } } }}
+      >
+        <Identity account={account} plan={active ? planLabel(active) : undefined} />
         <Divider />
-        <MenuItem component="a" href="/dashboard/account" onClick={() => setAnchor(null)} sx={{ px: 2.2, py: 1.25, gap: 1, '&:hover': { bgcolor: '#f5edff', color: 'primary.main' } }}>
-          <ListItemIcon>
-            <PersonOutlineRounded fontSize="small" />
-          </ListItemIcon>
+        <MenuItem href="/dashboard/account" onClick={() => setAnchor(null)}>
+          <ListItemIcon><PersonOutlineRounded /></ListItemIcon>
           My profile
         </MenuItem>
+        <Divider />
         <MenuItem
-          sx={{ px: 2.2, py: 1.25, gap: 1, '&:hover': { bgcolor: '#fff1ef', color: '#d94841' } }}
+          className="pp-account-signout"
           disabled={logout.isPending}
           onClick={() => {
             setAnchor(null);
             logout.mutate();
           }}
         >
-          <ListItemIcon>
-            <LogoutRounded fontSize="small" />
-          </ListItemIcon>
+          <ListItemIcon><LogoutRounded /></ListItemIcon>
           {logout.isPending ? 'Signing out…' : 'Sign out'}
         </MenuItem>
       </Menu>

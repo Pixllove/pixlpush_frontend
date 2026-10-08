@@ -1,18 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Alert, Avatar, Box, Button, Card, Chip, MenuItem, Skeleton, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Card, Chip, MenuItem, Skeleton, Stack, TextField, Typography } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCurrentUser } from '@/hooks/auth/use-current-user';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
 import { billingApi, teamApi } from '@/lib/projects/api';
 import type { ProjectRole } from '@/types/project';
 import ChangePasswordForm from './ChangePasswordForm';
+import UserAvatar from './UserAvatar';
 
 const display = (value: string | null | undefined) => value?.trim() || '-';
 // A fixed locale and time zone: the server and the browser must print the same text.
 const memberSince = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeZone: 'UTC' });
-const initials = (name: string | null | undefined) => (name?.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join('') || '?').toUpperCase();
 // While a value loads, the real field is drawn with a shimmer line where the value will appear, so the
 // section looks the same before and after and nothing moves. It is read-only, not disabled, for that moment.
 const loadingField = { InputLabelProps: { shrink: true }, InputProps: { readOnly: true, startAdornment: <Skeleton width={96} /> } };
@@ -65,7 +65,7 @@ export default function AccountProfile() {
   return <Stack gap={3} sx={{ maxWidth: 960 }}>
     <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ md: 'center' }} gap={3}>
       <Stack direction="row" alignItems="center" gap={2} sx={{ minWidth: 0 }}>
-        {isLoading ? <Skeleton variant="circular" width={56} height={56} /> : <Avatar className="pp-profile-avatar">{initials(account?.name)}</Avatar>}
+        {isLoading ? <Skeleton variant="circular" width={56} height={56} /> : <UserAvatar account={account} size={56} />}
         <Box sx={{ minWidth: 0 }}>
           <Typography variant="h2" noWrap>{isLoading ? <Skeleton width={180} /> : display(account?.name)}</Typography>
           <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap">

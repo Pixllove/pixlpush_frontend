@@ -43,6 +43,7 @@ import {
   Tab,
   Tabs,
 } from "@mui/material";
+import EmptyState from "./EmptyState";
 import { billingApi, projectKeys } from "@/lib/projects/api";
 import {
   billingErrorMessage,
@@ -707,7 +708,7 @@ export function BillingSection() {
           </Stack>
           <Divider sx={{ my: 2 }} />
           {invoicesQuery.isError ? (
-            <Alert severity="error" sx={{ borderRadius: 2 }}>We could not load your invoices. Please try again.</Alert>
+            <EmptyState size="compact" tone="error" title="We could not load your invoices" action={{ label: "Try again", onClick: () => invoicesQuery.refetch() }} />
           ) : invoicesQuery.isPending ? (
             <Table size="small" role="status" aria-label="Loading invoices">
               <TableHead>
@@ -722,10 +723,7 @@ export function BillingSection() {
               </TableBody>
             </Table>
           ) : !invoicesQuery.data?.length ? (
-            <Stack direction="row" alignItems="center" gap={1}>
-              <ReceiptLongRounded sx={{ fontSize: 18, color: "#9874c9" }} />
-              <Typography color="text.secondary" fontSize={12}>Your invoices will appear here after your first successful payment.</Typography>
-            </Stack>
+            <EmptyState size="compact" icon={<ReceiptLongRounded />} title="No invoices yet" description="Your invoices will appear here after your first successful payment." />
           ) : (
             <Box sx={{ overflowX: "auto" }}>
               <Table size="small">
@@ -798,11 +796,8 @@ export function BillingSection() {
             <SavedCards projectId={projectId} adding={busy === "card"} onAdd={updateCard} onChanged={async (message) => { await refresh(); setNotice(message); }} />
           )}
           {!subscriptionQuery.isLoading && !hasBillingAccount && (
-            <Card className="saas-card" sx={{ p: 5, textAlign: "center" }}>
-              <CreditCardRounded sx={{ fontSize: 48, color: "#9874c9" }} />
-              <Typography variant="h3" sx={{ mt: 1 }}>No payment method yet</Typography>
-              <Typography color="text.secondary" fontSize={13} sx={{ mt: 0.5 }}>Add a payment method securely through Stripe when you choose a plan.</Typography>
-              <Button variant="outlined" onClick={() => setTab("overview")} sx={{ mt: 2, textTransform: "none" }}>View plan options</Button>
+            <Card className="saas-card">
+              <EmptyState size="compact" icon={<CreditCardRounded />} title="No payment method yet" description="Add a payment method securely through Stripe when you choose a plan." action={{ label: "View plan options", onClick: () => setTab("overview") }} />
             </Card>
           )}
           <Alert severity="info" icon={<ShieldRounded />} sx={{ borderRadius: 2 }}>

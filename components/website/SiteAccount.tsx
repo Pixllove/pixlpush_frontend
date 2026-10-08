@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useState } from 'react';
-import { Avatar, Box, Button, ButtonBase, Divider, Link, ListItemIcon, Menu, MenuItem, Stack, Typography } from '@mui/material';
+import { Box, Button, ButtonBase, Divider, Link, ListItemIcon, Menu, MenuItem, Stack, Typography } from '@mui/material';
 import ArrowOutwardRounded from '@mui/icons-material/ArrowOutwardRounded';
 import DashboardRounded from '@mui/icons-material/DashboardRounded';
 import KeyboardArrowDownRounded from '@mui/icons-material/KeyboardArrowDownRounded';
 import LogoutRounded from '@mui/icons-material/LogoutRounded';
 import PersonOutlineRounded from '@mui/icons-material/PersonOutlineRounded';
 import { useCurrentUser } from '@/hooks/auth/use-current-user';
+import UserAvatar from '@/components/auth/UserAvatar';
 import { useLogout } from '@/hooks/auth/use-logout';
 
 // Whether this browser was signed in last time. Only a hint for the first paint; the server still decides.
@@ -61,7 +62,6 @@ export function SiteAccount() {
   }
 
   const name = account.name?.trim() || account.email.split('@')[0];
-  const initial = name.charAt(0).toUpperCase();
   const close = () => setAnchor(null);
 
   return (
@@ -84,7 +84,7 @@ export function SiteAccount() {
           '&:focus-visible': { outline: '2px solid #ffab8e', outlineOffset: 2 },
         }}
       >
-        <Avatar sx={{ width: 32, height: 32, fontSize: 14, fontWeight: 600, background: 'linear-gradient(135deg,#ff5d6c,#7928ef)' }}>{initial}</Avatar>
+        <UserAvatar account={account} />
         <KeyboardArrowDownRounded sx={{ fontSize: 18, transition: 'transform .15s', transform: anchor ? 'rotate(180deg)' : 'none' }} />
       </ButtonBase>
 
@@ -97,7 +97,7 @@ export function SiteAccount() {
         PaperProps={{ sx: { mt: 1.25, minWidth: 260, borderRadius: 2, overflow: 'hidden', border: '1px solid rgba(113,50,211,.12)', boxShadow: '0 18px 42px rgba(35,16,55,.28)' } }}
       >
         <Stack direction="row" alignItems="center" gap={1.5} sx={{ px: 2.2, py: 1.8, background: 'linear-gradient(135deg, #f5edff 0%, #fff5f1 100%)' }}>
-          <Avatar sx={{ width: 38, height: 38, fontWeight: 600, background: 'linear-gradient(135deg,#ff5d6c,#7928ef)' }}>{initial}</Avatar>
+          <UserAvatar account={account} size={40} />
           <Box sx={{ minWidth: 0 }}>
             <Typography fontSize={13} fontWeight={600} noWrap>{name}</Typography>
             <Typography fontSize={12} color="text.secondary" noWrap>{account.email}</Typography>
@@ -140,7 +140,7 @@ export function SiteAccountDrawer({ onNavigate }: { onNavigate: () => void }) {
   return (
     <>
       <Stack direction="row" alignItems="center" gap={1.5} sx={{ pt: 2, borderTop: '1px solid rgba(255,255,255,.14)' }}>
-        <Avatar sx={{ width: 36, height: 36, fontWeight: 600, background: 'linear-gradient(135deg,#ff5d6c,#7928ef)' }}>{name.charAt(0).toUpperCase()}</Avatar>
+        <UserAvatar account={account} size={40} />
         <Box sx={{ minWidth: 0 }}>
           <Typography fontSize={13} fontWeight={600} noWrap>{name}</Typography>
           <Typography fontSize={12} noWrap sx={{ color: 'rgba(255,255,255,.6)' }}>{account.email}</Typography>

@@ -87,6 +87,8 @@ import {
   DialogContent,
   DialogTitle,
 } from "@mui/material";
+import MailOutlineRounded from "@mui/icons-material/MailOutlineRounded";
+import EmptyState, { listEmpty } from "./EmptyState";
 import { renderToStaticMarkup } from "react-dom/server";
 import { BlockDesign, SocialLink, sectionTextFeatures, socialNetworks } from "./BlockDesign";
 import { reorderByInsertionIndex } from "./dragEmailOrdering";
@@ -942,9 +944,7 @@ export default function EmailWorkspace() {
             </TableBody>
           </Table>
           {!isListLoading && !visible.length && (
-            <Typography className="table-empty" color="text.secondary">
-              No emails match your search.
-            </Typography>
+            <EmptyState size="compact" {...listEmpty({ icon: <MailOutlineRounded />, noun: "emails", description: "Emails you create appear here.", search: appliedQuery, onClear: () => { setQuery(""); setAppliedQuery(""); } })} />
           )}
         </Box>
         <Stack

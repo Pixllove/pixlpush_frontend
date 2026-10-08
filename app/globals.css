@@ -161,7 +161,7 @@ a { color: inherit; text-decoration: none; }
 .group-view-button { min-height: 36px; border-color: #d8c9f2 !important; color: #6426c2 !important; border-radius: 9px !important; text-transform: none !important; font-weight: 600 !important; }
 .group-delete-button { width: 36px; height: 36px; color: #df5a62 !important; border: 1px solid transparent !important; border-radius: 9px !important; }
 .group-delete-button:hover { background: #fff0f1 !important; border-color: #f4cdd1 !important; }
-.filter-select { min-width: 190px; }.reusable-table-wrap { overflow-x: auto; }.rows-select { min-width: 72px; }.table-empty { display: grid; place-items: center; min-height: 110px; text-align: center; }
+.filter-select { min-width: 190px; }.reusable-table-wrap { overflow-x: auto; }.rows-select { min-width: 72px; }
 /* the row's height is set inline from the remembered body height; cells must not force it taller */
 .table-skeleton-row > td { padding-top: 0 !important; padding-bottom: 0 !important; }
 .journey-guide-card { padding:20px; border:1px solid #ebe8f2 !important; border-radius: 8px !important; box-shadow:0 8px 24px rgba(69,45,104,.04) !important; background:rgba(255,255,255,.9) !important; }
@@ -1332,12 +1332,50 @@ code, pre, kbd { font-family: var(--pp-mono); }
 }
 
 /* ---- My profile (components/auth/AccountProfile.tsx, ChangePasswordForm.tsx) ---- */
-.pp-profile-avatar.MuiAvatar-root { width: 56px; height: 56px; color: var(--pp-accent); background: var(--pp-accent-soft); font-size: 20px; }
 .pp-profile-label.MuiTypography-root { display: block; margin-bottom: 4px; color: var(--pp-text-3); }
 .pp-profile-date.MuiTypography-root { font-variant-numeric: tabular-nums; }
 .pp-profile-section { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 24px 48px; padding: 32px; }
 .pp-profile-section + .pp-profile-section { border-top: 1px solid var(--pp-border); }
 @media (max-width: 899px) { .pp-profile-section { grid-template-columns: minmax(0, 1fr); padding: 20px; } }
+
+/* ---- Empty state (components/dashboard/EmptyState.tsx) ---- */
+.pp-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 56px 24px; text-align: center; }
+.pp-empty.is-compact { gap: 6px; padding: 32px 16px; }
+.pp-empty-tile { display: grid; width: 48px; height: 48px; margin-bottom: 8px; place-items: center; border-radius: var(--pp-r-card); color: var(--pp-accent); background: var(--pp-accent-soft); }
+.pp-empty-tile svg { font-size: 24px; }
+.pp-empty.is-compact .pp-empty-tile { width: 36px; height: 36px; margin-bottom: 4px; }
+.pp-empty.is-compact .pp-empty-tile svg { font-size: 18px; }
+.pp-empty.is-error .pp-empty-tile { color: var(--pp-error); background: var(--pp-error-soft); }
+.pp-empty .pp-empty-title { color: var(--pp-text); font-size: 20px; line-height: 1.4; font-weight: 600; letter-spacing: -.015em; }
+.pp-empty.is-compact .pp-empty-title { font-size: 14px; line-height: 1.57; letter-spacing: 0; }
+.pp-empty .pp-empty-text { max-width: 360px; }
+
+/* ---- Account menu (components/auth/AccountMenu.tsx) ---- */
+.pp-account-trigger.MuiButtonBase-root { gap: 2px; padding: 4px; border-radius: var(--pp-r); transition: background-color var(--pp-ease), box-shadow var(--pp-ease); }
+.pp-account-trigger.MuiButtonBase-root:hover, .pp-account-trigger[aria-expanded="true"] { background: var(--pp-subtle); }
+.pp-account-trigger.Mui-focusVisible { box-shadow: 0 0 0 3px rgba(85,23,184,.2); }
+.pp-account-chevron.MuiSvgIcon-root { color: var(--pp-text-3); font-size: 20px; transition: transform var(--pp-ease); }
+.pp-account-trigger[aria-expanded="true"] .pp-account-chevron { transform: rotate(180deg); }
+.pp-account-identity { padding: 10px 10px 12px; }
+.pp-account-menu .MuiDivider-root { margin: 6px 0 !important; }
+.pp-account-menu .MuiListItemIcon-root { min-width: 0; color: var(--pp-text-3); transition: color var(--pp-ease); }
+.pp-account-menu .MuiListItemIcon-root svg { font-size: 18px; }
+.pp-account-menu .MuiMenuItem-root { transition: background-color var(--pp-ease), color var(--pp-ease); }
+.pp-account-signout:hover, .pp-account-signout.Mui-focusVisible, .pp-account-signout:hover .MuiListItemIcon-root, .pp-account-signout.Mui-focusVisible .MuiListItemIcon-root { color: var(--pp-error); }
+
+/* ---- User avatar (components/auth/UserAvatar.tsx) ---- */
+:root { --pp-avatar-1-fill: #F3EEFC; --pp-avatar-1-text: #5517B8; --pp-avatar-2-fill: #E8EBFD; --pp-avatar-2-text: #3440B5; --pp-avatar-3-fill: #E1F2FB; --pp-avatar-3-text: #0C5F8A; --pp-avatar-4-fill: #DFF5F3; --pp-avatar-4-text: #0B6B66; --pp-avatar-5-fill: #EEF4DA; --pp-avatar-5-text: #55650F; --pp-avatar-6-fill: #F6ECDD; --pp-avatar-6-text: #7A5210; --pp-avatar-7-fill: #FCE7EF; --pp-avatar-7-text: #A82259; --pp-avatar-8-fill: #F8E6F9; --pp-avatar-8-text: #86238F; }
+.pp-avatar.MuiAvatar-root { width: 32px; height: 32px; color: var(--av-text); background: var(--av-fill); font-size: 13px; font-weight: 600; }
+.pp-avatar.is-40 { width: 40px; height: 40px; font-size: 14px; }
+.pp-avatar.is-56 { width: 56px; height: 56px; font-size: 20px; }
+.pp-avatar-1 { --av-fill: var(--pp-avatar-1-fill); --av-text: var(--pp-avatar-1-text); }
+.pp-avatar-2 { --av-fill: var(--pp-avatar-2-fill); --av-text: var(--pp-avatar-2-text); }
+.pp-avatar-3 { --av-fill: var(--pp-avatar-3-fill); --av-text: var(--pp-avatar-3-text); }
+.pp-avatar-4 { --av-fill: var(--pp-avatar-4-fill); --av-text: var(--pp-avatar-4-text); }
+.pp-avatar-5 { --av-fill: var(--pp-avatar-5-fill); --av-text: var(--pp-avatar-5-text); }
+.pp-avatar-6 { --av-fill: var(--pp-avatar-6-fill); --av-text: var(--pp-avatar-6-text); }
+.pp-avatar-7 { --av-fill: var(--pp-avatar-7-fill); --av-text: var(--pp-avatar-7-text); }
+.pp-avatar-8 { --av-fill: var(--pp-avatar-8-fill); --av-text: var(--pp-avatar-8-text); }
 
 /* ---- Shell ---- */
 .dashboard-app { background: var(--pp-canvas) !important; color: var(--pp-text); }

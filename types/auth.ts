@@ -10,6 +10,8 @@ export interface Account {
   /** False for Google-only accounts: they can set a first password without a current one. */
   hasPassword?: boolean;
   googleLinked?: boolean;
+  /** Google profile photo; null or absent for accounts that never signed in with Google. */
+  avatarUrl?: string | null;
   createdAt: string;
 }
 

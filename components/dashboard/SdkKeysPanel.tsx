@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ContentCopyRounded, KeyRounded } from '@mui/icons-material';
 import { Alert, Box, Button, Card, Stack, TextField, Typography } from '@mui/material';
+import EmptyState from './EmptyState';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
 import { useSdkKeys } from '@/hooks/projects/use-project-settings';
 import SettingsStatus from './SettingsStatus';
@@ -70,7 +71,7 @@ export default function SdkKeysPanel() {
         </Alert>
       )}
 
-      {canManage && query.data?.length === 0 && <Card className="saas-card"><Typography color="text.secondary" fontSize={13}>No SDK keys yet. Create one below to connect your app.</Typography></Card>}
+      {canManage && query.data?.length === 0 && <Card className="saas-card"><EmptyState size="compact" icon={<KeyRounded />} title="No SDK keys yet" description="Create one below to connect your app." /></Card>}
 
       {query.data?.map((key) => (
         <Card className="saas-card" key={key.id}>

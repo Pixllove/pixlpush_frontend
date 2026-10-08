@@ -36,6 +36,8 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
+import UploadFileOutlined from "@mui/icons-material/UploadFileOutlined";
+import EmptyState from "./EmptyState";
 import { useActiveProject } from "@/hooks/projects/use-active-project";
 import { userImportApi } from "@/lib/projects/api";
 import type { ApiError } from "@/types/auth";
@@ -663,14 +665,8 @@ export default function UserImportDialog({
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={6} align="center">
-                            <Typography
-                              color="text.secondary"
-                              fontSize={12}
-                              sx={{ py: 2 }}
-                            >
-                              No previous imports yet.
-                            </Typography>
+                          <TableCell colSpan={6}>
+                            <EmptyState size="compact" icon={<UploadFileOutlined />} title="No previous imports yet" description="Files you import are listed here with their results." />
                           </TableCell>
                         </TableRow>
                       )}

@@ -131,7 +131,7 @@ export interface ProjectMember {
   role: ProjectRole;
   joinedAt?: string;
   state?: string;
-  account: { id: string; email: string; name: string | null };
+  account: { id: string; email: string; name: string | null; avatarUrl?: string | null };
   invitedBy?: { id: string; email: string; name: string | null } | null;
 }
 

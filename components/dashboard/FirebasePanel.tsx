@@ -17,7 +17,7 @@ export default function FirebasePanel() {
   const config = query.data;
 
   const [open, setOpen] = useState(false);
-  const [file, setFile] = useState<{ name: string; text: string; projectId?: string }>();
+  const [file, setFile] = useState<{ name: string; text: string; projectId?: string; adminKey?: boolean }>();
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState<string>();
 
@@ -35,9 +35,15 @@ export default function FirebasePanel() {
     if (!picked) return setFile(undefined);
     const text = await picked.text();
     let projectId: string | undefined;
+    let adminKey = false;
     // Preview only; the backend does the real validation.
-    try { projectId = JSON.parse(text).project_id; } catch { setError('This file is not valid JSON.'); }
-    setFile({ name: picked.name, text, projectId });
+    try {
+      const parsed = JSON.parse(text);
+      projectId = parsed.project_id;
+      // Firebase's default Admin SDK account can do far more than send push.
+      adminKey = typeof parsed.client_email === 'string' && parsed.client_email.startsWith('firebase-adminsdk');
+    } catch { setError('This file is not valid JSON.'); }
+    setFile({ name: picked.name, text, projectId, adminKey });
   };
 
   const submit = async () => {
@@ -126,12 +132,17 @@ export default function FirebasePanel() {
         <DialogTitle>{configured ? 'Replace Firebase credentials' : 'Connect Firebase / FCM'}</DialogTitle>
         <DialogContent>
           <Stack gap={2} sx={{ mt: 1 }}>
-            <Alert severity="info">In Firebase Console open Project settings → Service accounts → Generate new private key, then upload that JSON file here. PixlPush checks it with Google before saving.</Alert>
+            <Alert severity="info">
+              Use a service account that can only send push. In Google Cloud Console open IAM &amp; Admin → Service accounts → Create service account, give it only the role <b>Firebase Cloud Messaging API Admin</b>, then under Keys choose Add key → JSON and upload that file here. PixlPush checks it with Google before saving.
+            </Alert>
             <Button component="label" variant="outlined" startIcon={<CloudUploadRounded />}>
               {file ? file.name : 'Choose JSON file'}
               <input type="file" accept="application/json,.json" hidden onChange={(e) => pick(e.target.files?.[0])} />
             </Button>
             {file?.projectId && <Typography fontSize={12} color="text.secondary">Firebase project in this file: <b>{file.projectId}</b></Typography>}
+            {file?.adminKey && (
+              <Alert severity="warning">This is Firebase’s default Admin key. It works, but it also gives access to your database, users and storage. A key that can only send push is safer.</Alert>
+            )}
             {isSwitch && (
               <>
                 <Alert severity="warning">This moves {appName} from <b>{config?.firebaseProjectId}</b> to <b>{file?.projectId}</b>. Existing device push tokens may stop working until users reopen the app.</Alert>

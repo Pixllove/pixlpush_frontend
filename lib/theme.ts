@@ -33,6 +33,17 @@ export const tokens = {
   errorSoft: '#FDECEA',
   info: '#1F5FBF',
   infoSoft: '#E8F0FD',
+  // identity colours for initials avatars (UserAvatar): never used for status
+  avatar: [
+    { fill: '#F3EEFC', text: '#5517B8' },
+    { fill: '#E8EBFD', text: '#3440B5' },
+    { fill: '#E1F2FB', text: '#0C5F8A' },
+    { fill: '#DFF5F3', text: '#0B6B66' },
+    { fill: '#EEF4DA', text: '#55650F' },
+    { fill: '#F6ECDD', text: '#7A5210' },
+    { fill: '#FCE7EF', text: '#A82259' },
+    { fill: '#F8E6F9', text: '#86238F' },
+  ],
   radius: { dense: 4, control: 6, card: 8, overlay: 10, pill: 9999 },
   font: 'var(--font-inter), Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
   mono: 'SFMono-Regular, Menlo, Consolas, monospace',

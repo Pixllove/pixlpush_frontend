@@ -6,6 +6,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useSelector } from "react-redux";
 import {
   AddRounded,
+  DonutLargeOutlined,
+  GroupsOutlined,
+  MailOutlineRounded,
+  NotificationsNoneRounded,
+  PeopleAltOutlined,
   AccountBalanceWalletRounded,
   ArrowForwardRounded,
   AutoGraphRounded,
@@ -106,6 +111,7 @@ import UserImportDialog from "./UserImportDialog";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
 import { Toast } from "@/components/auth/AuthFeedback";
 import SearchField from "./SearchField";
+import EmptyState, { listEmpty } from "./EmptyState";
 
 export function StatCard({
   label,
@@ -1199,15 +1205,14 @@ export function UsersSection() {
               </Select>
             </Stack>
             {usersQuery.isError ? (
-              <Typography color="error" fontSize={12} sx={{ p: 2 }}>
-                Could not load users. Please try again.
-              </Typography>
+              <EmptyState size="compact" {...listEmpty({ noun: "users", error: "Could not load users", onRetry: () => usersQuery.refetch() })} />
             ) : (
               <ReusableDataTable
                 columns={userColumns}
                 rows={users}
                 totalCount={users.length}
                 noun="users"
+                empty={listEmpty({ icon: <PeopleAltOutlined />, noun: "users", description: "Users appear here once your app sends them through the SDK or you import them.", search: appliedUserSearch, onClear: () => { setUserSearch(""); setAppliedUserSearch(""); } })}
                 showMenu={false}
                 loading={usersQuery.isPending || usersQuery.isFetching || userSearch.trim() !== appliedUserSearch}
                 hasNextPage={Boolean(usersQuery.data?.nextCursor)}
@@ -1370,15 +1375,14 @@ export function UsersSection() {
               </Select>
             </Stack>
             {segmentsQuery.isError ? (
-              <Typography color="error" fontSize={12} sx={{ p: 2 }}>
-                Could not load lifecycle segments. Please try again.
-              </Typography>
+              <EmptyState size="compact" {...listEmpty({ noun: "segments", error: "Could not load lifecycle segments", onRetry: () => segmentsQuery.refetch() })} />
             ) : (
               <ReusableDataTable
                 columns={segmentColumns}
                 rows={segments}
                 totalCount={segments.length}
                 noun="segments"
+                empty={listEmpty({ icon: <DonutLargeOutlined />, noun: "segments", description: "Segments group users by where they are in their lifecycle.", search: segmentSearch, onClear: () => setSegmentSearch(""), create: { label: "Create segment", onClick: () => setCreateSegmentOpen(true) } })}
                 showMenu={false}
                 loading={segmentsQuery.isPending || segmentsQuery.isFetching}
               />
@@ -1429,15 +1433,14 @@ export function UsersSection() {
             </Select>
           </Stack>
           {groupsQuery.isError ? (
-            <Typography color="error" fontSize={12} sx={{ p: 2 }}>
-              Could not load audience groups. Please try again.
-            </Typography>
+            <EmptyState size="compact" {...listEmpty({ noun: "audience groups", error: "Could not load audience groups", onRetry: () => groupsQuery.refetch() })} />
           ) : (
             <ReusableDataTable
               columns={groupColumns}
               rows={groups}
               totalCount={groups.length}
               noun="groups"
+              empty={listEmpty({ icon: <GroupsOutlined />, noun: "audience groups", description: "Groups are saved audiences you can target in campaigns and journeys.", search: groupSearch, onClear: () => setGroupSearch(""), create: { label: "Create group", onClick: () => setCreateGroupOpen(true) } })}
               showMenu={false}
               loading={groupsQuery.isPending || groupsQuery.isFetching}
             />
@@ -1609,6 +1612,15 @@ function EmailDataSection() {
           rows={rows}
           totalCount={String(activeQuery.data?.total ?? 0)}
           noun={tab === "templates" ? "templates" : tab === "drafts" ? "drafts" : "campaigns"}
+          empty={listEmpty({
+            icon: <MailOutlineRounded />,
+            noun: tab === "templates" ? "templates" : tab === "drafts" ? "drafts" : "sent campaigns",
+            description: tab === "templates" ? "Templates you save are kept here to reuse in campaigns and journeys." : tab === "drafts" ? "Emails you start and save appear here until they are sent." : "Campaigns appear here once they have been sent.",
+            search: appliedSearch,
+            onClear: () => { setSearch(""); setAppliedSearch(""); setPage(1); },
+            error: activeQuery.isError && "Could not load emails",
+            onRetry: () => activeQuery.refetch(),
+          })}
           showMenu={false}
           loading={activeQuery.isPending || (activeQuery.isFetching && !activeQuery.data) || search.trim() !== appliedSearch}
           page={page}
@@ -2261,6 +2273,15 @@ function PushSection() {
                 ? "drafts"
                 : "campaigns"
           }
+          empty={listEmpty({
+            icon: <NotificationsNoneRounded />,
+            noun: tab === "templates" ? "templates" : tab === "drafts" ? "drafts" : "sent notifications",
+            description: tab === "templates" ? "Templates you save are kept here to reuse in campaigns and journeys." : tab === "drafts" ? "Notifications you start and save appear here until they are sent." : "Notifications appear here once they have been sent.",
+            search: appliedSearch,
+            onClear: () => { setSearch(""); setAppliedSearch(""); setPage(1); },
+            error: activeQuery.isError && "Could not load push notifications",
+            onRetry: () => activeQuery.refetch(),
+          })}
           showMenu={false}
           loading={
             activeQuery.isPending ||

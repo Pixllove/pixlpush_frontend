@@ -24,6 +24,8 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import SearchOffRounded from "@mui/icons-material/SearchOffRounded";
+import EmptyState from "./EmptyState";
 import { useEffect, useMemo, useState } from "react";
 import type { LifecycleSegmentSchema } from "@/types/project";
 import SearchField from "./SearchField";
@@ -251,13 +253,7 @@ export default function LifecycleSegmentCreateDialog({
                   })}
                 </Box>
               ) : (
-                <Typography
-                  color="text.secondary"
-                  fontSize={13}
-                  sx={{ p: 3, textAlign: "center" }}
-                >
-                  No matching events found.
-                </Typography>
+                <EmptyState size="compact" icon={<SearchOffRounded />} title="No matching events found" description="Check the spelling or try a different search." />
               )}
             </Box>
             <Stack

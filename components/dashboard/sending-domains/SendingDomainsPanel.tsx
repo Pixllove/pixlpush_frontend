@@ -22,6 +22,8 @@ import {
   TableRow,
   Typography,
 } from '@mui/material';
+import DnsOutlined from '@mui/icons-material/DnsOutlined';
+import EmptyState from '../EmptyState';
 import { Toast } from '@/components/auth/AuthFeedback';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
 import { checkDns, completeProviderConnection, deleteSendingDomain, listSendingDomains } from '@/lib/sending-domains/api';
@@ -153,10 +155,8 @@ export default function SendingDomainsPanel() {
       )}
 
       {list.data && list.data.length === 0 && (
-        <Card sx={{ p: 4, minHeight: 172, textAlign: 'center' }}>
-          <Typography fontWeight={600}>No sending domains yet</Typography>
-          <Typography color="text.secondary" fontSize={13} sx={{ mb: 2 }}>Add the email address you want to send from to get started.</Typography>
-          {canManage && <Button variant="outlined" onClick={() => setDialog({ kind: 'add' })}>Add domain</Button>}
+        <Card>
+          <EmptyState size="compact" icon={<DnsOutlined />} title="No sending domains yet" description="Add the email address you want to send from to get started." action={canManage ? { label: 'Add domain', onClick: () => setDialog({ kind: 'add' }) } : undefined} />
         </Card>
       )}
 
