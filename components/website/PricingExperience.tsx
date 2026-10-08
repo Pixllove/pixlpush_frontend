@@ -540,7 +540,8 @@ function ComparisonTable({ interval, currency, authenticated, onSales }: { inter
   const planPrice = (plan: PlanKey) => {
     if (plan === 'free') return `${money(0, currency)}/mo`;
     if (plan === 'enterprise') return 'Custom';
-    return interval === 'year' ? `${money(prices[currency][plan].year, currency)}/yr` : `${money(prices[currency][plan].month, currency)}/mo`;
+    const monthlyPrice = `${money(prices[currency][plan].month, currency)}/mo`;
+    return interval === 'year' ? `${monthlyPrice} · ${money(prices[currency][plan].year, currency)}/yr` : monthlyPrice;
   };
   return (
     <Box sx={{ mt: 4 }}>
