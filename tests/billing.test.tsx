@@ -11,7 +11,7 @@ import type { BillingSubscription, SubscriptionState } from '@/types/project';
 vi.mock('@/lib/projects/api', () => ({
   projectKeys: { list: () => ['projects', 'list'], detail: (id: string) => ['projects', 'detail', id] },
   billingApi: {
-    subscription: vi.fn(), usage: vi.fn(), prices: vi.fn(), plans: vi.fn(), invoices: vi.fn(), updateContact: vi.fn(),
+    subscription: vi.fn(), usage: vi.fn(), prices: vi.fn(), plans: vi.fn(), invoices: vi.fn(), updateContact: vi.fn(), aiCredits: vi.fn(), aiCreditPurchases: vi.fn(), createAiCreditCheckout: vi.fn(),
     createCheckoutSubscription: vi.fn(), previewCheckout: vi.fn(), paymentMethod: vi.fn(), setupPaymentMethod: vi.fn(), paymentMethods: vi.fn(), updatePaymentMethod: vi.fn(), removePaymentMethod: vi.fn(), savePaymentMethod: vi.fn(), confirmOpenPayment: vi.fn(), changeSubscription: vi.fn(), cancelSubscription: vi.fn(), resumeSubscription: vi.fn(),
   },
 }));
@@ -57,6 +57,17 @@ beforeEach(() => {
   api.prices.mockResolvedValue(PUBLIC_PRICES);
   api.plans.mockResolvedValue({} as never);
   api.invoices.mockResolvedValue([]);
+  api.paymentMethod.mockResolvedValue(null);
+  api.aiCredits.mockResolvedValue({ balance: 0, packages: [
+    { package: 'starter', credits: 500, unitAmount: 1500, currency: 'usd', taxExclusive: true },
+    { package: 'growth', credits: 1000, unitAmount: 2900, currency: 'usd', taxExclusive: true },
+    { package: 'scale', credits: 5000, unitAmount: 12500, currency: 'usd', taxExclusive: true },
+    { package: 'starter', credits: 500, unitAmount: 5500, currency: 'aed', taxExclusive: true },
+    { package: 'growth', credits: 1000, unitAmount: 10600, currency: 'aed', taxExclusive: true },
+    { package: 'scale', credits: 5000, unitAmount: 45900, currency: 'aed', taxExclusive: true },
+  ] });
+  api.aiCreditPurchases.mockResolvedValue([]);
+  api.createAiCreditCheckout.mockResolvedValue({ url: 'https://checkout.stripe.com/test' });
 });
 afterEach(() => vi.unstubAllGlobals());
 
@@ -113,6 +124,35 @@ describe('billing state', () => {
 });
 
 describe('BillingSection', () => {
+  it('shows the project AI Credit balance and purchases fixed packages through the backend checkout', async () => {
+    api.aiCredits.mockResolvedValueOnce({ balance: 240, packages: [
+      { package: 'starter', credits: 500, unitAmount: 1500, currency: 'usd', taxExclusive: true },
+      { package: 'growth', credits: 1000, unitAmount: 2900, currency: 'usd', taxExclusive: true },
+      { package: 'scale', credits: 5000, unitAmount: 12500, currency: 'usd', taxExclusive: true },
+      { package: 'starter', credits: 500, unitAmount: 5500, currency: 'aed', taxExclusive: true },
+      { package: 'growth', credits: 1000, unitAmount: 10600, currency: 'aed', taxExclusive: true },
+      { package: 'scale', credits: 5000, unitAmount: 45900, currency: 'aed', taxExclusive: true },
+    ] });
+    wrap();
+    expect(await screen.findByText('240')).toBeInTheDocument();
+    expect(screen.queryByText('Recent AI Credit purchases')).not.toBeInTheDocument();
+    expect(screen.queryByText(/AI Credit balances and one-time purchases are connected/)).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'USD' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByText('credits · $15')).toBeInTheDocument();
+    const locationTab = within(screen.getByRole('tablist', { name: 'AI Credit package currency' })).getAllByRole('tab')[1];
+    const detectedCurrency = locationTab.textContent?.trim().toLowerCase();
+    const locationPackageCurrency = detectedCurrency === 'aed' ? 'aed' : 'usd';
+    await userEvent.click(locationTab);
+    const expectedPrice = detectedCurrency === 'aed' ? 'credits · AED 55' : detectedCurrency === 'pkr' ? 'credits · PKR 4,175' : 'credits · $15';
+    expect(await screen.findByText(expectedPrice)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /How AI Credits work/i }));
+    expect(screen.getByText('AI Email Creator')).toBeInTheDocument();
+    const buyButtons = await screen.findAllByRole('button', { name: /Buy once/ });
+    await userEvent.click(buyButtons[0]);
+    await waitFor(() => expect(api.createAiCreditCheckout).toHaveBeenCalledWith('p1', { package: 'starter', currency: locationPackageCurrency }));
+    await waitFor(() => expect(assign).toHaveBeenCalledWith('https://checkout.stripe.com/test'));
+  });
+
   it('Choose plan goes straight to the in-app checkout, creating nothing in Stripe', async () => {
     wrap();
     await userEvent.click(await screen.findByRole('button', { name: 'Yearly' }));

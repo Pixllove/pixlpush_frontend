@@ -22,6 +22,10 @@ import type {
   BillingPrice,
   BillingSubscription,
   BillingUsage,
+  AiCreditBalance,
+  AiCreditPackageName,
+  AiCreditPurchase,
+  BillingCurrency,
   PaidPlan,
   PlanLimits,
   PlanName,
@@ -499,6 +503,12 @@ export const billingApi = {
     authRequest<BillingPrice[]>(at(projectId, "/billing/prices"), undefined, BASE),
   invoices: (projectId: string) =>
     authRequest<BillingInvoice[]>(at(projectId, "/billing/invoices"), undefined, BASE),
+  aiCredits: (projectId: string) =>
+    authRequest<AiCreditBalance>(at(projectId, "/billing/credits"), undefined, BASE),
+  aiCreditPurchases: (projectId: string) =>
+    authRequest<AiCreditPurchase[]>(at(projectId, "/billing/credits/purchases"), undefined, BASE),
+  createAiCreditCheckout: (projectId: string, input: { package: AiCreditPackageName; currency: BillingCurrency }) =>
+    authRequest<{ url: string }>(at(projectId, "/billing/credits/checkout-session"), input, BASE, "POST"),
   /** Subtotal, tax and total Stripe calculates for a plan at this billing address. */
   previewCheckout: (projectId: string, input: CheckoutInput) =>
     authRequest<CheckoutTotals>(at(projectId, "/billing/checkout/preview"), input, BASE, "POST"),
