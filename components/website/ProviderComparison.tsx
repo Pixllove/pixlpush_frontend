@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import ArrowForwardRounded from '@mui/icons-material/ArrowForwardRounded';
 import BusinessRounded from '@mui/icons-material/BusinessRounded';
 import CheckRounded from '@mui/icons-material/CheckRounded';
@@ -10,6 +10,7 @@ import {
   Box,
   Button,
   Card,
+  Chip,
   FormControl,
   InputLabel,
   MenuItem,
@@ -111,6 +112,29 @@ function Brand({ name, logo, site }: { name: string; logo?: string; site?: strin
   );
 }
 
+// Counts to the new amount in 200ms; jumps straight there when the user prefers reduced motion.
+function Amount({ value }: { value: number }) {
+  const [shown, setShown] = useState(value);
+  const current = useRef(value);
+  useEffect(() => {
+    const origin = current.current;
+    if (origin === value || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      current.current = value;
+      setShown(value);
+      return;
+    }
+    const start = performance.now();
+    let frame = requestAnimationFrame(function tick(now) {
+      const progress = Math.min(1, (now - start) / 200);
+      current.current = origin + (value - origin) * (1 - (1 - progress) ** 3);
+      setShown(current.current);
+      if (progress < 1) frame = requestAnimationFrame(tick);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [value]);
+  return <>{money(shown === value ? value : Math.round(shown))}</>;
+}
+
 export function ProviderComparison() {
   const [users, setUsers] = useState(10000);
   const [emailSends, setEmailSends] = useState(10000);
@@ -121,132 +145,84 @@ export function ProviderComparison() {
   const pixl = useMemo(() => pixlEstimate(users, emailOn ? emailSends : 0), [users, emailSends, emailOn]);
   const competitor = useMemo(() => providerEstimate(provider, users, emailSends, pushUsers, emailOn, pushOn), [provider, users, emailSends, pushUsers, emailOn, pushOn]);
   const saving = competitor.comparable && competitor.cost !== null ? competitor.cost - pixl.total : null;
+  const percentLess = saving !== null && saving > 0 && competitor.cost ? Math.round((saving / competitor.cost) * 100) : 0;
 
   const updateNumber = (setter: (value: number) => void, value: string, minimum = 0, maximum = 3000000) => {
     setter(Math.min(maximum, Math.max(minimum, Number(value) || 0)));
   };
 
-  const cardSx = {
-    minWidth: 0,
-    p: 2,
-    border: '1px solid var(--pp-border)',
-    borderRadius: 'var(--pp-radius-card, 8px)',
-    backgroundColor: 'var(--pp-surface)',
-  };
-
   return (
-    <Box component="section" aria-labelledby="provider-comparison-title" sx={{ mt: 5 }}>
-      <Stack gap={{ xs: 3, md: 4 }}>
+    <Box component="section" className="pp-compare" aria-labelledby="provider-comparison-title" sx={{ mt: 5 }}>
+      <Stack gap={{ xs: 3, md: 5 }}>
         <Box sx={{ maxWidth: 850, mx: 'auto', textAlign: 'center' }}>
-          <Typography variant="overline" sx={{ color: 'var(--pp-accent)', letterSpacing: '.14em' }}>MAKE MORE OF YOUR USERS</Typography>
-          <Typography id="provider-comparison-title" variant="h1" sx={{ mt: 1, fontSize: { xs: 38, md: 60 }, lineHeight: 1.04, letterSpacing: '-.045em' }}>
-            What does your<br /><Box component="span" sx={{ color: 'var(--pp-accent)' }}>communication cost?</Box>
+          <Typography variant="overline" color="primary">MAKE MORE OF YOUR USERS</Typography>
+          <Typography id="provider-comparison-title" variant="h1" className="pp-compare-title" sx={{ mt: 1 }}>
+            What does your<br /><span>communication cost?</span>
           </Typography>
-          <Typography color="text.secondary" sx={{ mt: 1.5, mx: 'auto', maxWidth: 640, fontSize: { xs: 14, md: 16 }, lineHeight: 1.6 }}>
+          <Typography color="text.secondary" className="pp-compare-lede" sx={{ mt: 2, mx: 'auto', maxWidth: 640 }}>
             Compare the cost of the same communication setup across providers — with email, push, or both.
           </Typography>
         </Box>
 
-        <Card variant="outlined" sx={{ p: { xs: 2, md: 4 }, borderColor: 'var(--pp-border)', borderRadius: '10px', boxShadow: 'none', backgroundColor: 'var(--pp-surface)' }}>
-          <Stack gap={{ xs: 2.5, md: 3 }}>
+        <Card sx={{ p: { xs: 2, md: 5 } }}>
+          <Stack gap={{ xs: 3, md: 4 }}>
             <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'flex-start' }} gap={2}>
               <Box>
-                <Typography variant="overline" sx={{ color: 'var(--pp-accent)' }}>Your scenario</Typography>
-                <Typography variant="h3" sx={{ mt: .5, fontSize: { xs: 18, md: 24 }, lineHeight: 1.25 }}>How many users do you want to reach each month?</Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: .5 }}>We compare the same reach and send volume for every provider.</Typography>
+                <Typography variant="overline" color="primary">Your scenario</Typography>
+                <Typography variant="h1" component="h3" sx={{ mt: .5 }}>How many users do you want to reach each month?</Typography>
+                <Typography color="text.secondary" sx={{ mt: .5 }}>We compare the same reach and send volume for every provider.</Typography>
               </Box>
               <TextField label="Users / subscribers" type="number" inputProps={{ min: 250, max: 200000, step: 250 }} value={users} onChange={(event) => updateNumber(setUsers, event.target.value, 250, 200000)} sx={{ width: { xs: '100%', sm: 205 }, flexShrink: 0 }} />
             </Stack>
 
-            <Box sx={{ px: 1, pt: .5 }}>
-              <Slider aria-label="Reachable users per month" min={250} max={200000} step={250} value={users} onChange={(_, value) => setUsers(value as number)} sx={{ color: 'var(--pp-accent)' }} />
-              <Stack direction="row" justifyContent="space-between" sx={{ mt: -.4 }}>
-                {[250, 50000, 100000, 150000, 200000].map((value) => <Typography key={value} variant="caption" color="text.secondary">{value === 200000 ? '200,000+' : count(value)}</Typography>)}
+            <Box sx={{ px: 1.5 }}>
+              <Slider aria-label="Reachable users per month" min={250} max={200000} step={250} value={users} onChange={(_, value) => setUsers(value as number)} />
+              <Stack direction="row" justifyContent="space-between" sx={{ mx: -1.5 }}>
+                {[250, 50000, 100000, 150000, 200000].map((value) => <Typography key={value} variant="caption" className="pp-compare-tick">{value === 200000 ? '200,000+' : count(value)}</Typography>)}
               </Stack>
             </Box>
 
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3, py: 2.2, borderTop: '1px solid var(--pp-border)', borderBottom: '1px solid var(--pp-border)' }}>
+            <Box className="pp-compare-rules" sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3, py: { xs: 3, md: 4 } }}>
               <Box>
-                <Typography variant="caption" color="text.secondary">Which channels do you use?</Typography>
-                <Stack direction="row" gap={1} flexWrap="wrap" sx={{ mt: .8 }}>
-                  <Button
-                    aria-pressed={emailOn}
-                    variant="outlined"
-                    startIcon={<MailOutlineRounded />}
-                    endIcon={emailOn ? <CheckRounded /> : undefined}
-                    onClick={() => setEmailOn((selected) => !selected)}
-                    sx={{
-                      minHeight: 48,
-                      px: 2,
-                      borderRadius: '8px',
-                      borderColor: emailOn ? 'var(--pp-accent-line)' : 'var(--pp-border-strong)',
-                      color: emailOn ? 'var(--pp-text)' : 'var(--pp-text-2)',
-                      backgroundColor: emailOn ? 'var(--pp-accent-soft)' : 'var(--pp-surface)',
-                      textTransform: 'none',
-                      '& .MuiButton-startIcon, & .MuiButton-endIcon': { color: emailOn ? 'var(--pp-accent)' : 'var(--pp-text-2)' },
-                      '&:hover': {
-                        borderColor: emailOn ? 'var(--pp-accent-line)' : 'var(--pp-border-strong)',
-                        color: emailOn ? 'var(--pp-text)' : 'var(--pp-accent)',
-                        backgroundColor: emailOn ? 'var(--pp-accent-soft)' : 'var(--pp-subtle)',
-                      },
-                    }}
-                  >Email</Button>
-                  <Button
-                    aria-pressed={pushOn}
-                    variant="outlined"
-                    startIcon={<NotificationsActiveOutlined />}
-                    endIcon={pushOn ? <CheckRounded /> : undefined}
-                    onClick={() => setPushOn((selected) => !selected)}
-                    sx={{
-                      minHeight: 48,
-                      px: 2,
-                      borderRadius: '8px',
-                      borderColor: pushOn ? 'var(--pp-accent-line)' : 'var(--pp-border-strong)',
-                      color: pushOn ? 'var(--pp-text)' : 'var(--pp-text-2)',
-                      backgroundColor: pushOn ? 'var(--pp-accent-soft)' : 'var(--pp-surface)',
-                      textTransform: 'none',
-                      '& .MuiButton-startIcon, & .MuiButton-endIcon': { color: pushOn ? 'var(--pp-accent)' : 'var(--pp-text-2)' },
-                      '&:hover': {
-                        borderColor: pushOn ? 'var(--pp-accent-line)' : 'var(--pp-border-strong)',
-                        color: pushOn ? 'var(--pp-text)' : 'var(--pp-accent)',
-                        backgroundColor: pushOn ? 'var(--pp-accent-soft)' : 'var(--pp-subtle)',
-                      },
-                    }}
-                  >Push notifications</Button>
+                <Typography variant="subtitle2" color="text.secondary">Which channels do you use?</Typography>
+                <Stack direction="row" gap={1.5} flexWrap="wrap" sx={{ mt: 1.5 }}>
+                  <Button aria-pressed={emailOn} variant="outlined" size="large" className={emailOn ? 'pp-compare-channel is-on' : 'pp-compare-channel'} startIcon={<MailOutlineRounded />} endIcon={emailOn ? <CheckRounded /> : undefined} onClick={() => setEmailOn((selected) => !selected)}>Email</Button>
+                  <Button aria-pressed={pushOn} variant="outlined" size="large" className={pushOn ? 'pp-compare-channel is-on' : 'pp-compare-channel'} startIcon={<NotificationsActiveOutlined />} endIcon={pushOn ? <CheckRounded /> : undefined} onClick={() => setPushOn((selected) => !selected)}>Push notifications</Button>
                 </Stack>
               </Box>
               <Box>
-                <Typography variant="caption" color="text.secondary">Your usage</Typography>
-                <Stack gap={1} sx={{ mt: .8 }}>
-                  <Stack direction="row" alignItems="center" gap={1}>
-                    <TextField aria-label="Email sends per month" type="number" disabled={!emailOn} value={emailSends} onChange={(event) => updateNumber(setEmailSends, event.target.value)} />
-                    <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>Email sends / month</Typography>
-                  </Stack>
-                  <Stack direction="row" alignItems="center" gap={1}>
-                    <TextField aria-label="Push subscribers" type="number" disabled={!pushOn} value={pushUsers} onChange={(event) => updateNumber(setPushUsers, event.target.value, 0, 600000)} />
-                    <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>Push subscribers</Typography>
-                  </Stack>
-                </Stack>
+                <Typography variant="subtitle2" color="text.secondary">Your usage</Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2.5, mt: 2 }}>
+                  <TextField label="Email sends / month" type="number" inputProps={{ 'aria-label': 'Email sends per month' }} disabled={!emailOn} value={emailSends} onChange={(event) => updateNumber(setEmailSends, event.target.value)} />
+                  <TextField label="Push subscribers" type="number" disabled={!pushOn} value={pushUsers} onChange={(event) => updateNumber(setPushUsers, event.target.value, 0, 600000)} />
+                </Box>
               </Box>
             </Box>
 
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1.08fr' }, gap: 1.5 }}>
-              <Card variant="outlined" sx={cardSx}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1.08fr' }, gap: 2 }}>
+              <div className="pp-compare-tile">
                 <Brand name={providerInfo[provider].name} logo={providerInfo[provider].logo} site={providerInfo[provider].site} />
-                <Typography variant="h2" sx={{ mt: 2.2, fontVariantNumeric: 'tabular-nums' }}>{competitor.cost === null ? 'Custom' : money(competitor.cost)}<Typography component="span" color="text.secondary" variant="caption"> / month</Typography></Typography>
-                <Typography variant="caption" color="text.secondary">{competitor.plan} · {competitor.detail}</Typography>
-              </Card>
-              <Card variant="outlined" sx={{ ...cardSx, borderColor: 'var(--pp-accent-line)', backgroundColor: 'var(--pp-accent-soft)' }}>
+                <div className="pp-compare-price">{competitor.cost === null ? 'Custom' : <><Amount value={competitor.cost} /><small> / month</small></>}</div>
+                <Typography variant="body2" color="text.secondary">{competitor.plan} · {competitor.detail}</Typography>
+              </div>
+              <div className="pp-compare-tile is-own">
                 <Brand name="PixlPush" />
-                <Typography variant="h2" sx={{ mt: 2.2, fontVariantNumeric: 'tabular-nums' }}>{money(pixl.total)}<Typography component="span" color="text.secondary" variant="caption"> / month</Typography></Typography>
-                <Typography variant="caption" color="text.secondary">{pixl.plan} · {count(pixl.allowance)} Reachable Users included</Typography>
-                <Typography variant="caption" display="block" sx={{ mt: .5, color: 'var(--pp-text-2)' }}>{emailOn ? pixl.note : 'Unlimited push within the Reachable User allowance'}</Typography>
-              </Card>
-              <Card variant="outlined" sx={{ ...cardSx, display: 'flex', flexDirection: 'column', justifyContent: 'center', backgroundColor: 'var(--pp-success-soft)', borderColor: 'var(--pp-success-soft)' }}>
-                <Typography variant="body2" fontWeight={600}>Direct savings</Typography>
-                <Typography variant="h2" sx={{ mt: .5, color: 'var(--pp-success)', fontVariantNumeric: 'tabular-nums' }}>{saving === null ? 'Not comparable' : `${saving < 0 ? '−' : ''}${money(Math.abs(saving))}`}<Typography component="span" color="text.secondary" variant="caption">{saving === null ? '' : ' / month'}</Typography></Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ mt: .5 }}>{saving === null ? 'Choose a like-for-like channel setup to estimate savings.' : `${saving < 0 ? 'Estimated additional cost' : 'Estimated annual difference'} · ${money(Math.abs(saving) * 12)} / year`}</Typography>
-              </Card>
+                <div className="pp-compare-price"><Amount value={pixl.total} /><small> / month</small></div>
+                <Typography variant="body2" color="text.secondary">
+                  {pixl.plan} · {count(pixl.allowance)} Reachable Users included<br />
+                  {emailOn ? pixl.note : 'Unlimited push within the Reachable User allowance'}
+                </Typography>
+              </div>
+              <div className="pp-compare-tile is-saving" aria-live="polite">
+                <Stack direction="row" alignItems="center" gap={1}>
+                  <Typography variant="overline">{saving !== null && saving < 0 ? 'Additional cost' : 'Direct savings'}</Typography>
+                  {percentLess > 0 && <Chip size="small" color="success" label={`${percentLess}% less`} />}
+                </Stack>
+                <div className={saving === null ? 'pp-compare-price is-text' : 'pp-compare-price'}>
+                  {saving === null ? 'Not comparable' : <><Amount value={Math.abs(saving)} /><small> / month</small></>}
+                </div>
+                <Typography variant="body2">{saving === null ? 'Choose a like-for-like channel setup to estimate savings.' : `${saving < 0 ? 'Estimated additional cost' : 'Estimated annual difference'} · ${money(Math.abs(saving) * 12)} / year`}</Typography>
+              </div>
             </Box>
 
             <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} gap={2}>
@@ -261,7 +237,7 @@ export function ProviderComparison() {
                     <Stack direction="row" alignItems="center" gap={1}>
                       {providerInfo[value as Provider].logo
                         ? <Box component="img" src={providerInfo[value as Provider].logo} alt="" sx={{ width: 24, height: 24, objectFit: 'contain' }} />
-                        : <BusinessRounded sx={{ color: 'var(--pp-text-2)' }} />}
+                        : <BusinessRounded sx={{ fontSize: 20 }} />}
                       {providerInfo[value as Provider].name}
                     </Stack>
                   )}
@@ -270,19 +246,17 @@ export function ProviderComparison() {
                     <Stack direction="row" alignItems="center" gap={1.2}>
                       {providerInfo[key].logo
                         ? <Box component="img" src={providerInfo[key].logo} alt="" sx={{ width: 28, height: 28, objectFit: 'contain' }} />
-                        : <BusinessRounded sx={{ color: 'var(--pp-text-2)' }} />}
+                        : <BusinessRounded sx={{ fontSize: 20 }} />}
                       <Typography variant="body2">{providerInfo[key].name}</Typography>
                     </Stack>
                   </MenuItem>)}
                 </Select>
               </FormControl>
-              <Box component="a" href="/get-started?plan=free" sx={{ display: 'inline-flex', justifyContent: 'center', alignItems: 'center', gap: 1, minHeight: 40, px: 2, borderRadius: '6px', color: 'var(--pp-surface)', backgroundColor: 'var(--pp-plum)', textDecoration: 'none', fontSize: 14, fontWeight: 600, '&:hover': { backgroundColor: 'var(--pp-accent-hover)' } }}>
-                Try PixlPush for free <ArrowForwardRounded fontSize="small" />
-              </Box>
+              <Button href="/get-started?plan=free" variant="contained" size="large" endIcon={<ArrowForwardRounded />}>Try PixlPush for free</Button>
             </Stack>
 
-            <Typography variant="caption" color="text.secondary">
-              Provider totals are estimates based on the selected plan and usage assumptions, not a quote. Email-only plans do not include push; actual prices vary by region, plan, and provider updates. Brevo logo: <Box component="a" href="https://commons.wikimedia.org/wiki/File:Brevo-Logo.png" target="_blank" rel="noreferrer" sx={{ color: 'inherit' }}>Brevo, via Wikimedia Commons</Box> under <Box component="a" href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noreferrer" sx={{ color: 'inherit' }}>CC BY-SA 4.0</Box>.
+            <Typography variant="caption" className="pp-compare-note">
+              Provider totals are estimates based on the selected plan and usage assumptions, not a quote. Email-only plans do not include push; actual prices vary by region, plan, and provider updates. Brevo logo: <a href="https://commons.wikimedia.org/wiki/File:Brevo-Logo.png" target="_blank" rel="noreferrer">Brevo, via Wikimedia Commons</a> under <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noreferrer">CC BY-SA 4.0</a>.
             </Typography>
           </Stack>
         </Card>

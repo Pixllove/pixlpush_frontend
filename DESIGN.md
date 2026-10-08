@@ -78,7 +78,7 @@ On plum: text `#F6F1FB`, body `#C7BACE`, muted `#8D7899`, accent `#A67BF5` (the 
 **The accent surface: `var(--pp-hero)`.** One navy-to-violet surface with soft glows, defined in
 `app/globals.css`. It is the only gradient in the product and is used for a small set of feature blocks:
 the Overview health block, the current-plan block in Billing, the Integrations intro, the default saved
-payment card, and the brand panel of the auth pages. Text on it is white; secondary text is white at
+payment card, the brand panel of the auth pages, and the savings tile of the pricing calculator. Text on it is white; secondary text is white at
 72–82% opacity. Do not invent other gradients, and do not use it for ordinary cards.
 
 **Left alone on purpose**
