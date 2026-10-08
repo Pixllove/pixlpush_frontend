@@ -39,6 +39,7 @@ import {
   Tabs,
 } from '@mui/material';
 import { SiteShell } from './SiteShell';
+import { ProviderComparison } from './ProviderComparison';
 import { useCurrentUser } from '@/hooks/auth/use-current-user';
 import type { BillingInterval, PaidPlan } from '@/types/project';
 
@@ -431,6 +432,8 @@ export default function PricingExperience() {
             </Card>
           </Box>
         </Box>
+
+        <ProviderComparison />
 
         <Stack direction={{ xs: 'column', md: 'row' }} gap={2} sx={{ mt: 5 }}><Card sx={{ flex: 1, p: 2.2, borderRadius: 2, backgroundColor: '#fffaf6', border: '1px solid #f2dfd6', boxShadow: 'none' }}><Stack direction="row" gap={1.4} alignItems="flex-start"><Box sx={{ width: 34, height: 34, display: 'grid', placeItems: 'center', flexShrink: 0, borderRadius: 1.2, color: '#d16a3e', backgroundColor: '#ffeadf' }}><AutoAwesomeRounded fontSize="small" /></Box><Box><Typography fontWeight={600}>AI Credits are action-based</Typography><Typography color="text.secondary" fontSize={12} sx={{ mt: 0.6, lineHeight: 1.55 }}>AI Email Creator uses 10 credits per generation, Smart Translation uses 10 per target language, AI Journey Analysis uses 100, Journey Optimization uses 50, and AI Customized Journey uses 50.</Typography></Box></Stack></Card><Card sx={{ flex: 1, p: 2.2, borderRadius: 2, backgroundColor: '#f7f4ff', border: '1px solid #e4dafa', boxShadow: 'none' }}><Stack direction="row" gap={1.4} alignItems="flex-start"><Box sx={{ width: 34, height: 34, display: 'grid', placeItems: 'center', flexShrink: 0, borderRadius: 1.2, color: '#6422c5', backgroundColor: '#eee6ff' }}><ShieldRounded fontSize="small" /></Box><Box><Typography fontWeight={600}>Billing is Project-level</Typography><Typography color="text.secondary" fontSize={12} sx={{ mt: 0.6, lineHeight: 1.55 }}>Each Project has its own plan, usage, billing contact, invoices, and payment method. Payments are handled securely by Stripe.</Typography></Box></Stack></Card></Stack>
         <Box sx={{ mt: 7 }}><Typography fontSize={12} fontWeight={500} letterSpacing=".13em" color="primary.main">QUESTIONS, ANSWERED</Typography><Typography variant="h2" sx={{ fontSize: { xs: 32, md: 40 }, mt: 0.5, mb: 2.5 }}>Pricing without surprises.</Typography><Box sx={{ border: '1px solid #ded5e8', borderRadius: 2, overflow: 'hidden', backgroundColor: '#fff' }}>{faq.map(([question, answer]) => <Accordion key={question} disableGutters elevation={0} sx={{ border: 0, borderBottom: '1px solid #eee8f3', borderRadius: 0, '&:last-child': { borderBottom: 0 }, '&:before': { display: 'none' } }}><AccordionSummary expandIcon={<ExpandMoreRounded />} sx={{ minHeight: 52, '& .MuiAccordionSummary-content': { my: 1.4 } }}><Typography fontWeight={600}>{question}</Typography></AccordionSummary><AccordionDetails sx={{ pt: 0, pb: 2.2 }}><Typography color="text.secondary" fontSize={14} lineHeight={1.6}>{answer}</Typography></AccordionDetails></Accordion>)}</Box></Box>
