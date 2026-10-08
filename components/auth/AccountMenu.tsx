@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import NextLink from 'next/link';
 import { Box, ButtonBase, Chip, Divider, ListItemIcon, Menu, MenuItem, Skeleton, Stack, Typography } from '@mui/material';
 import { KeyboardArrowDownRounded, LogoutRounded, PersonOutlineRounded } from '@mui/icons-material';
 import { useCurrentUser } from '@/hooks/auth/use-current-user';
@@ -61,7 +62,8 @@ export default function AccountMenu() {
       >
         <Identity account={account} plan={active ? planLabel(active) : undefined} />
         <Divider />
-        <MenuItem href="/dashboard/account" onClick={() => setAnchor(null)}>
+        {/* A MenuItem is an <li>, which ignores href: it has to be told to render as a link. */}
+        <MenuItem component={NextLink} href="/dashboard/account" onClick={() => setAnchor(null)}>
           <ListItemIcon><PersonOutlineRounded /></ListItemIcon>
           My profile
         </MenuItem>

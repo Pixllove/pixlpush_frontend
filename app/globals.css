@@ -1358,7 +1358,7 @@ code, pre, kbd { font-family: var(--pp-mono); }
 .pp-account-trigger[aria-expanded="true"] .pp-account-chevron { transform: rotate(180deg); }
 .pp-account-identity { padding: 10px 10px 12px; }
 .pp-account-menu .MuiDivider-root { margin: 6px 0 !important; }
-.pp-account-menu .MuiListItemIcon-root { min-width: 0; color: var(--pp-text-3); transition: color var(--pp-ease); }
+.pp-account-menu .MuiMenuItem-root .MuiListItemIcon-root { min-width: 0; color: var(--pp-text-3); transition: color var(--pp-ease); }
 .pp-account-menu .MuiListItemIcon-root svg { font-size: 18px; }
 .pp-account-menu .MuiMenuItem-root { transition: background-color var(--pp-ease), color var(--pp-ease); }
 .pp-account-signout:hover, .pp-account-signout.Mui-focusVisible, .pp-account-signout:hover .MuiListItemIcon-root, .pp-account-signout.Mui-focusVisible .MuiListItemIcon-root { color: var(--pp-error); }

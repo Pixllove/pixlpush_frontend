@@ -26,6 +26,8 @@ describe('AccountMenu', () => {
     // The identity block is not an item: only the two actions are, and focus lands on the first.
     expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['My profile', 'Sign out']);
     await waitFor(() => expect(screen.getByRole('menuitem', { name: 'My profile' })).toHaveFocus());
+    // A real link, not an <li> carrying an href nobody follows.
+    expect(screen.getByRole('menuitem', { name: 'My profile' }).tagName).toBe('A');
     expect(screen.getByRole('menuitem', { name: 'My profile' })).toHaveAttribute('href', '/dashboard/account');
 
     await userEvent.click(screen.getByRole('menuitem', { name: 'Sign out' }));
