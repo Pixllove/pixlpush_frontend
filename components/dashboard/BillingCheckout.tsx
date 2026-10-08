@@ -13,8 +13,8 @@ import { useActiveProject } from "@/hooks/projects/use-active-project";
 import type { BillingInterval, CheckoutInput, CheckoutTotals, PaidPlan } from "@/types/project";
 
 const plans: Record<PaidPlan, { label: string; description: string; features: string[] }> = {
-  starter: { label: "Starter", description: "For growing teams sending their first campaigns.", features: ["5,000 reachable users", "50,000 emails / month", "100,000 pushes / month", "5 active journeys", "500 AI credits / month"] },
-  pro: { label: "Pro", description: "For teams running serious retention programs.", features: ["25,000 reachable users", "250,000 emails / month", "500,000 pushes / month", "20 active journeys", "2,000 AI credits / month"] },
+  starter: { label: "Starter", description: "For growing teams sending their first campaigns.", features: ["5,000 reachable users", "20,000 emails / month", "Unlimited push notifications", "5 active journeys", "500 AI credits / month"] },
+  pro: { label: "Pro", description: "For teams running serious retention programs.", features: ["10,000 reachable users", "Unlimited emails", "Unlimited push notifications", "20 active journeys", "2,000 AI credits / month"] },
 };
 
 // ISO 3166 country codes; the names come from the browser in the user's language.
