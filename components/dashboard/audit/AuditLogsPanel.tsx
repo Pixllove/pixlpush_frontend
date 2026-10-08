@@ -8,7 +8,6 @@ import {
   Box,
   Button,
   Chip,
-  Divider,
   Drawer,
   IconButton,
   MenuItem,
@@ -307,15 +306,6 @@ function DetailsDrawer({ entry, onClose }: { entry: AuditLogEntry | null; onClos
               <Typography fontWeight={600} fontSize={13} sx={{ mb: 0.5 }}>More information</Typography>
               {extra.map(([k, v]) => <DetailRow key={k} k={label(k)} v={pretty(v)} />)}
             </Box>
-          )}
-
-          {typeof meta.route === 'string' && (
-            <>
-              <Divider />
-              <Typography fontSize={11} color="text.secondary">
-                Request: <code>{String(meta.method ?? '')} {meta.route}</code>
-              </Typography>
-            </>
           )}
         </Stack>
       )}

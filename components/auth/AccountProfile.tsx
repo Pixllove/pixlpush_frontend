@@ -1,19 +1,26 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { CheckCircleRounded, EmailRounded, PersonRounded, ScheduleRounded, VpnKeyRounded } from '@mui/icons-material';
-import { Alert, Box, Button, Card, CardContent, Chip, Grid, MenuItem, Select, Skeleton, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Avatar, Box, Button, Card, Chip, MenuItem, Skeleton, Stack, TextField, Typography } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCurrentUser } from '@/hooks/auth/use-current-user';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
 import { billingApi, teamApi } from '@/lib/projects/api';
 import type { ProjectRole } from '@/types/project';
+import ChangePasswordForm from './ChangePasswordForm';
 
 const display = (value: string | null | undefined) => value?.trim() || '-';
+// A fixed locale and time zone: the server and the browser must print the same text.
+const memberSince = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeZone: 'UTC' });
+const initials = (name: string | null | undefined) => (name?.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join('') || '?').toUpperCase();
+// While a value loads, the real field is drawn with a shimmer line where the value will appear, so the
+// section looks the same before and after and nothing moves. It is read-only, not disabled, for that moment.
+const loadingField = { InputLabelProps: { shrink: true }, InputProps: { readOnly: true, startAdornment: <Skeleton width={96} /> } };
+const roleLabel = (role: string) => role.charAt(0).toUpperCase() + role.slice(1).replace('_', ' ');
 
 export default function AccountProfile() {
   const { account, isLoading, isError } = useCurrentUser();
-  const { active, isPending: projectsPending } = useActiveProject();
+  const { active, isEmpty, isPending: projectsPending } = useActiveProject();
   const queryClient = useQueryClient();
   const billingQuery = useQuery({ queryKey: ['projects', 'billing', active?.id, 'subscription'], queryFn: () => billingApi.subscription(active!.id), enabled: Boolean(active?.id) });
   const membersQuery = useQuery({ queryKey: ['projects', 'members', active?.id], queryFn: () => teamApi.members(active!.id), enabled: Boolean(active?.id) });
@@ -48,33 +55,68 @@ export default function AccountProfile() {
     },
   });
   const canManageRoles = ['owner', 'admin'].includes(active?.role ?? '');
-  // Loading is shown as a placeholder of the field's size, never as a greyed-out field that ignores typing.
-  const companyLoading = projectsPending || billingQuery.isLoading;
-  const roleLoading = projectsPending || membersQuery.isLoading;
+  // The active Project is picked in an effect, so until it is known the fields are still loading: showing
+  // them empty and locked would tell an owner they lack permission.
+  const projectPending = projectsPending || (!active && !isEmpty);
+  const companyLoading = projectPending || billingQuery.isLoading;
+  const roleLoading = projectPending || membersQuery.isLoading;
+  const canEditCompany = ['owner', 'admin', 'billing'].includes(active?.role ?? '');
   if (isError) return <Alert severity="error">Could not load your profile. Please refresh and try again.</Alert>;
-  return <Card className="saas-card" sx={{ maxWidth: 900, mb: 2.5 }}>
-    <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-      <Typography variant="h3">Profile details</Typography>
-      <Typography color="text.secondary" fontSize={12} sx={{ mt: .5 }}>Your PixlPush account information.</Typography>
-      <Grid container spacing={2} sx={{ mt: 1 }}>
-        <Grid item xs={12} md={6}><ProfileItem icon={<PersonRounded />} label="Full name" value={isLoading ? undefined : display(account?.name)} /></Grid>
-        <Grid item xs={12} md={6}><ProfileItem icon={<EmailRounded />} label="Email address" value={isLoading ? undefined : display(account?.email)} end={account ? <Chip size="small" color={account.emailVerified ? 'primary' : 'default'} icon={account.emailVerified ? <CheckCircleRounded /> : undefined} label={account.emailVerified ? 'Verified' : 'Not verified'} /> : undefined} /></Grid>
-        <Grid item xs={12} md={6}><ProfileItem icon={<VpnKeyRounded />} label="Account ID" value={isLoading ? undefined : display(account?.id)} /></Grid>
-        <Grid item xs={12} md={6}><ProfileItem icon={<ScheduleRounded />} label="Account created" value={isLoading ? undefined : account?.createdAt ? new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(account.createdAt)) : '-'} /></Grid>
-      </Grid>
-      <Box sx={{ mt: 3, pt: 2.5, borderTop: '1px solid', borderColor: 'divider' }}>
-        <Typography fontWeight={600}>Company & workspace</Typography>
-        <Typography color="text.secondary" fontSize={12} sx={{ mt: .5 }}>Your current organization context in PixlPush.</Typography>
-        <Grid container spacing={2} sx={{ mt: 1 }}>
-          <Grid item xs={12} md={6}><Stack gap={.7}><Typography color="text.secondary" fontSize={11}>Company name</Typography>{companyLoading ? <Skeleton variant="rounded" height={40} /> : <TextField size="small" value={company} onChange={event => setCompany(event.target.value)} placeholder="Enter your company name" disabled={!active || saveCompany.isPending || !['owner', 'admin', 'billing'].includes(active.role)} helperText={!['owner', 'admin', 'billing'].includes(active?.role ?? '') ? 'Only owners, admins, and billing managers can update this.' : 'Used for billing and workspace identification.'} />}</Stack></Grid>
-          <Grid item xs={12} md={6}><Stack gap={.7}><Typography color="text.secondary" fontSize={11}>Workspace role</Typography>{roleLoading ? <Skeleton variant="rounded" height={40} /> : <Select size="small" value={role} displayEmpty onChange={event => saveRole.mutate(event.target.value as ProjectRole)} disabled={!canManageRoles || saveRole.isPending}>{['owner', 'admin', 'developer', 'analyst', 'read_only', 'billing'].map(item => <MenuItem key={item} value={item}>{item.replace('_', ' ')}</MenuItem>)}</Select>}<Typography color="text.secondary" fontSize={11}>{canManageRoles ? 'Changes are managed through Team & Access permissions.' : 'Only owners and admins can change workspace roles.'}</Typography>{saveRole.isError && <Typography color="error" fontSize={11}>Could not update workspace role.</Typography>}</Stack></Grid>
-          <Grid item xs={12}><Stack direction="row" alignItems="center" gap={1.5}><Button variant="contained" size="small" onClick={() => saveCompany.mutate()} disabled={billingQuery.isLoading || saveCompany.isPending || !['owner', 'admin', 'billing'].includes(active?.role ?? '')}>{saveCompany.isPending ? 'Saving…' : 'Save company name'}</Button>{saveCompany.isSuccess && <Typography color="success.main" fontSize={11}>Company name saved.</Typography>}{saveCompany.isError && <Typography color="error" fontSize={11}>Could not save company name.</Typography>}</Stack></Grid>
-        </Grid>
+  return <Stack gap={3} sx={{ maxWidth: 960 }}>
+    <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ md: 'center' }} gap={3}>
+      <Stack direction="row" alignItems="center" gap={2} sx={{ minWidth: 0 }}>
+        {isLoading ? <Skeleton variant="circular" width={56} height={56} /> : <Avatar className="pp-profile-avatar">{initials(account?.name)}</Avatar>}
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="h2" noWrap>{isLoading ? <Skeleton width={180} /> : display(account?.name)}</Typography>
+          <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap">
+            <Typography color="text.secondary" noWrap>{isLoading ? <Skeleton width={220} /> : display(account?.email)}</Typography>
+            {account && <Chip size="small" color={account.emailVerified ? 'success' : 'default'} label={account.emailVerified ? 'Verified' : 'Not verified'} />}
+          </Stack>
+        </Box>
+      </Stack>
+      <Box>
+        <Typography variant="caption" className="pp-profile-label">Member since</Typography>
+        <Typography className="pp-profile-date">{isLoading ? <Skeleton width={90} /> : account?.createdAt ? memberSince.format(new Date(account.createdAt)) : '-'}</Typography>
       </Box>
-    </CardContent>
-  </Card>;
-}
+    </Stack>
 
-function ProfileItem({ icon, label, value, end }: { icon: React.ReactNode; label: string; value?: string; end?: React.ReactNode }) {
-  return <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2.5, minHeight: 76 }}><Stack direction="row" alignItems="center" gap={1.2}><Box sx={{ color: 'primary.main', display: 'grid', placeItems: 'center' }}>{icon}</Box><Box sx={{ flex: 1, minWidth: 0 }}><Typography color="text.secondary" fontSize={11}>{label}</Typography>{value === undefined ? <Skeleton width="70%" /> : <Typography fontSize={14} fontWeight={600} sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</Typography>}</Box>{end}</Stack></Box>;
+    <Card>
+      <section className="pp-profile-section">
+        <div>
+          <Typography variant="h3">Profile</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: .5 }}>Your PixlPush account information.</Typography>
+        </div>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 3 }}>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="caption" className="pp-profile-label">Full name</Typography>
+            <Typography noWrap>{isLoading ? <Skeleton width="70%" /> : display(account?.name)}</Typography>
+          </Box>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="caption" className="pp-profile-label">Email address</Typography>
+            <Typography noWrap>{isLoading ? <Skeleton width="70%" /> : display(account?.email)}</Typography>
+          </Box>
+        </Box>
+      </section>
+
+      <section className="pp-profile-section">
+        <div>
+          <Typography variant="h3">Company & workspace</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: .5 }}>Your current organization context in PixlPush.</Typography>
+        </div>
+        <Stack gap={3}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 3, alignItems: 'start' }}>
+            <TextField label="Company name" value={companyLoading ? '' : company} onChange={event => setCompany(event.target.value)} {...(companyLoading ? loadingField : {})} disabled={!companyLoading && (!active || saveCompany.isPending || !canEditCompany)} helperText={companyLoading || canEditCompany ? 'Used for billing and workspace identification.' : 'Only owners, admins, and billing managers can update this.'} />
+            <TextField select label="Workspace role" value={roleLoading ? '' : role} onChange={event => saveRole.mutate(event.target.value as ProjectRole)} {...(roleLoading ? loadingField : {})} disabled={!roleLoading && (!canManageRoles || saveRole.isPending)} error={saveRole.isError} helperText={saveRole.isError ? 'Could not update workspace role.' : roleLoading || canManageRoles ? 'Changes are managed through Team & Access permissions.' : 'Only owners and admins can change workspace roles.'}>
+              {['owner', 'admin', 'developer', 'analyst', 'read_only', 'billing'].map(item => <MenuItem key={item} value={item}>{roleLabel(item)}</MenuItem>)}
+            </TextField>
+          </Box>
+          {saveCompany.isSuccess && <Alert severity="success">Company name saved.</Alert>}
+          {saveCompany.isError && <Alert severity="error">Could not save company name.</Alert>}
+          <Button variant="contained" onClick={() => !companyLoading && saveCompany.mutate()} disabled={!companyLoading && (saveCompany.isPending || !canEditCompany)} sx={{ alignSelf: 'flex-start' }}>{saveCompany.isPending ? 'Saving…' : 'Save company name'}</Button>
+        </Stack>
+      </section>
+
+      <ChangePasswordForm />
+    </Card>
+  </Stack>;
 }

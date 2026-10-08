@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Alert, Box, Card, CardContent, Skeleton, Typography } from '@mui/material';
+import { Alert, Box, Skeleton, Typography } from '@mui/material';
 import { changePasswordSchema, setPasswordSchema, type ChangePasswordInput } from '@/schemas/auth.schema';
 import { useChangePassword } from '@/hooks/auth/use-change-password';
 import { useCurrentUser } from '@/hooks/auth/use-current-user';
@@ -23,23 +23,25 @@ export default function ChangePasswordForm() {
 
   if (isLoading || !account) {
     return (
-      <Card className="saas-card" sx={{ maxWidth: 560 }}>
-        <CardContent sx={{ p: { xs: 3, md: 4 }, display: 'grid', gap: 2 }}>
-          <Skeleton width={180} height={32} />
-          <Skeleton variant="rounded" height={56} />
-          <Skeleton variant="rounded" height={56} />
-        </CardContent>
-      </Card>
+      <section className="pp-profile-section">
+        <Skeleton width={160} height={24} />
+        <Box sx={{ display: 'grid', gap: 3, maxWidth: 400 }}>
+          <Skeleton variant="rounded" height={40} />
+          <Skeleton variant="rounded" height={40} />
+          <Skeleton variant="rounded" height={44} />
+        </Box>
+      </section>
     );
   }
 
   // Remount when the account gains a password, so the form switches mode cleanly.
   const hasPassword = account.hasPassword !== false;
-  return <PasswordForm key={String(hasPassword)} hasPassword={hasPassword} done={done} setDone={setDone} />;
+  return <PasswordForm key={String(hasPassword)} hasPassword={hasPassword} email={account.email} done={done} setDone={setDone} />;
 }
 
-function PasswordForm({ hasPassword, done, setDone }: {
+function PasswordForm({ hasPassword, email, done, setDone }: {
   hasPassword: boolean;
+  email: string;
   done: 'changed' | 'set' | null;
   setDone: (value: 'changed' | 'set' | null) => void;
 }) {
@@ -76,57 +78,59 @@ function PasswordForm({ hasPassword, done, setDone }: {
   const pending = isSubmitting || changePassword.isPending;
 
   return (
-    <Card className="saas-card" sx={{ maxWidth: 560 }}>
-      <CardContent sx={{ p: { xs: 3, md: 4 } }}>
+    <section className="pp-profile-section">
+      <div>
         <Typography variant="h3">{hasPassword ? 'Change password' : 'Set a password'}</Typography>
-        <Typography color="text.secondary" fontSize={12} sx={{ mt: 0.5 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
           {hasPassword
             ? 'Changing your password signs you out of every other device.'
             : 'You sign in with Google. Add a password to also sign in with your email address.'}
         </Typography>
+      </div>
 
-        <Box component="form" onSubmit={onSubmit} noValidate sx={{ mt: 3, display: 'grid', gap: 2 }}>
-          <FormError message={formError} />
-          {done === 'changed' && <Alert severity="success">Password updated. Other sessions have been signed out.</Alert>}
-          {done === 'set' && <Alert severity="success">Password set. You can now sign in with Google or with your email and password.</Alert>}
+      <Box component="form" onSubmit={onSubmit} noValidate sx={{ display: 'grid', gap: 3, maxWidth: 400 }}>
+        {/* Tells password managers which account these passwords belong to. */}
+        <input type="text" name="username" autoComplete="username" value={email} readOnly hidden />
+        <FormError message={formError} />
+        {done === 'changed' && <Alert severity="success">Password updated. Other sessions have been signed out.</Alert>}
+        {done === 'set' && <Alert severity="success">Password set. You can now sign in with Google or with your email and password.</Alert>}
 
-          {hasPassword && (
-            <PasswordField
-              label="Current password"
-              autoComplete="current-password"
-              fullWidth
-              disabled={pending}
-              error={Boolean(errors.currentPassword)}
-              helperText={errors.currentPassword?.message}
-              {...register('currentPassword')}
-            />
-          )}
-
+        {hasPassword && (
           <PasswordField
-            label="New password"
-            autoComplete="new-password"
+            label="Current password"
+            autoComplete="current-password"
             fullWidth
             disabled={pending}
-            error={Boolean(errors.newPassword)}
-            helperText={errors.newPassword?.message ?? 'At least 12 characters.'}
-            {...register('newPassword')}
+            error={Boolean(errors.currentPassword)}
+            helperText={errors.currentPassword?.message}
+            {...register('currentPassword')}
           />
+        )}
 
-          <PasswordField
-            label="Confirm new password"
-            autoComplete="new-password"
-            fullWidth
-            disabled={pending}
-            error={Boolean(errors.confirmPassword)}
-            helperText={errors.confirmPassword?.message}
-            {...register('confirmPassword')}
-          />
+        <PasswordField
+          label="New password"
+          autoComplete="new-password"
+          fullWidth
+          disabled={pending}
+          error={Boolean(errors.newPassword)}
+          helperText={errors.newPassword?.message ?? 'At least 12 characters.'}
+          {...register('newPassword')}
+        />
 
-          <SubmitButton type="submit" variant="contained" size="large" pending={pending}>
-            {hasPassword ? 'Update password' : 'Set password'}
-          </SubmitButton>
-        </Box>
-      </CardContent>
-    </Card>
+        <PasswordField
+          label="Confirm new password"
+          autoComplete="new-password"
+          fullWidth
+          disabled={pending}
+          error={Boolean(errors.confirmPassword)}
+          helperText={errors.confirmPassword?.message}
+          {...register('confirmPassword')}
+        />
+
+        <SubmitButton type="submit" variant="contained" size="large" pending={pending}>
+          {hasPassword ? 'Update password' : 'Set password'}
+        </SubmitButton>
+      </Box>
+    </section>
   );
 }

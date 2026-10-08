@@ -1331,6 +1331,14 @@ code, pre, kbd { font-family: var(--pp-mono); }
   .pp-compare-tile.is-saving .pp-compare-price { font-size: 40px; }
 }
 
+/* ---- My profile (components/auth/AccountProfile.tsx, ChangePasswordForm.tsx) ---- */
+.pp-profile-avatar.MuiAvatar-root { width: 56px; height: 56px; color: var(--pp-accent); background: var(--pp-accent-soft); font-size: 20px; }
+.pp-profile-label.MuiTypography-root { display: block; margin-bottom: 4px; color: var(--pp-text-3); }
+.pp-profile-date.MuiTypography-root { font-variant-numeric: tabular-nums; }
+.pp-profile-section { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 24px 48px; padding: 32px; }
+.pp-profile-section + .pp-profile-section { border-top: 1px solid var(--pp-border); }
+@media (max-width: 899px) { .pp-profile-section { grid-template-columns: minmax(0, 1fr); padding: 20px; } }
+
 /* ---- Shell ---- */
 .dashboard-app { background: var(--pp-canvas) !important; color: var(--pp-text); }
 .dashboard-sidebar { font-family: var(--pp-font); }

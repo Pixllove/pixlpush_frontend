@@ -1,6 +1,5 @@
 import DashboardFrame from '@/components/dashboard/DashboardFrame';
 import AccountProfile from '@/components/auth/AccountProfile';
-import ChangePasswordForm from '@/components/auth/ChangePasswordForm';
 
 export default function AccountProfilePage() {
   return (
@@ -10,7 +9,6 @@ export default function AccountProfilePage() {
       description="Manage your PixlPush account details and security."
     >
       <AccountProfile />
-      <ChangePasswordForm />
     </DashboardFrame>
   );
 }
