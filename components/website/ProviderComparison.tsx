@@ -296,7 +296,7 @@ export function ProviderComparison({ onScenarioChange }: { onScenarioChange?: (u
             </Stack>
 
             <Typography variant="caption" className="pp-compare-note">
-              Provider totals are estimates based on the selected plan and usage assumptions, not a quote. Email-only plans do not include push; actual prices vary by region, plan, and provider updates. Brevo logo: <a href="https://commons.wikimedia.org/wiki/File:Brevo-Logo.png" target="_blank" rel="noreferrer">Brevo, via Wikimedia Commons</a> under <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noreferrer">CC BY-SA 4.0</a>.
+              Provider totals are estimates based on the selected plan and usage assumptions, not a quote. Email-only plans do not include push; actual prices vary by region, plan, and provider updates. Logo source: <a href={`https://${providerInfo[provider].site}`} target="_blank" rel="noreferrer">{providerInfo[provider].name} website</a>, loaded via Google’s favicon service.
             </Typography>
           </Stack>
         </Card>
