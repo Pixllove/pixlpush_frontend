@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { Alert, Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Typography } from '@mui/material';
+import { useCallback, useState } from 'react';
+import { LanguageRounded } from '@mui/icons-material';
+import { Alert, Avatar, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Typography } from '@mui/material';
 import { analyzeSendingDomain, startManualConnection, startProviderConnection } from '@/lib/sending-domains/api';
 import { domainErrorMessage } from '@/lib/sending-domains/errors';
 import type { DomainAnalysis, SendingDomain } from '@/types/sending-domain';
@@ -16,11 +17,14 @@ interface Props {
   onManual: (domain: SendingDomain) => void;
 }
 
-type Phase = { kind: 'analyzing' } | { kind: 'result'; analysis: DomainAnalysis } | { kind: 'error'; message: string } | { kind: 'redirecting' };
+type Phase = { kind: 'intro' } | { kind: 'analyzing' } | { kind: 'result'; analysis: DomainAnalysis } | { kind: 'error'; message: string } | { kind: 'redirecting' };
 
-/** Detects the domain's provider and offers automatic or manual connection. */
+/** Only https links to a DNS host are ever rendered. */
+export const safeDnsUrl = (url: string | null | undefined) => (url?.startsWith('https://') ? url : null);
+
+/** Starts the setup, detects the domain's DNS host and offers automatic or manual connection. */
 export default function DomainAnalysisDialog({ projectId, domain, onClose, onChanged, onManual }: Props) {
-  const [phase, setPhase] = useState<Phase>({ kind: 'analyzing' });
+  const [phase, setPhase] = useState<Phase>({ kind: 'intro' });
   const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -37,10 +41,6 @@ export default function DomainAnalysisDialog({ projectId, domain, onClose, onCha
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, domain.id]);
-
-  useEffect(() => {
-    void analyze();
-  }, [analyze]);
 
   const connectAutomatically = async (provider: string) => {
     setBusy(true);
@@ -72,16 +72,36 @@ export default function DomainAnalysisDialog({ projectId, domain, onClose, onCha
     }
   };
 
-  const manualButton = (label = 'Connect manually') => (
+  const manualButton = (label = 'Authenticate manually') => (
     <Button variant="outlined" onClick={connectManually} disabled={busy}>{label}</Button>
   );
+  const host = phase.kind === 'result' ? phase.analysis.providerName : null;
 
   return (
-    <Dialog open onClose={busy || phase.kind === 'redirecting' ? undefined : onClose} fullWidth maxWidth="sm">
-      <DialogTitle>Connect {domain.domain}</DialogTitle>
+    <Dialog open onClose={busy || phase.kind === 'redirecting' ? undefined : onClose} fullWidth maxWidth="xs">
+      <DialogTitle sx={{ textAlign: 'center' }}>
+        <Chip
+          variant="outlined"
+          label={domain.domain}
+          avatar={host ? <Avatar>{host[0]}</Avatar> : undefined}
+          icon={host ? undefined : <LanguageRounded fontSize="small" />}
+          sx={{ display: 'flex', width: 'fit-content', mx: 'auto', mb: 1.5 }}
+        />
+        Connect your {host ? `${host} ` : ''}domain to PixlPush
+      </DialogTitle>
       <DialogContent>
         <Stack gap={2} sx={{ pt: 1 }}>
           {actionError && <Alert severity="error">{actionError}</Alert>}
+
+          {phase.kind === 'intro' && (
+            <Stack gap={1.5}>
+              <Typography color="text.secondary" textAlign="center">
+                You’re a few steps away from setting up your domain. We look up where its DNS is hosted and connect it for you where we can.
+              </Typography>
+              <Button variant="contained" size="large" onClick={analyze}>Continue</Button>
+              {manualButton()}
+            </Stack>
+          )}
 
           {phase.kind === 'analyzing' && (
             <Stack alignItems="center" gap={1.5} sx={{ py: 3 }} role="status">
@@ -94,10 +114,8 @@ export default function DomainAnalysisDialog({ projectId, domain, onClose, onCha
           {phase.kind === 'error' && (
             <Stack gap={1.5}>
               <Alert severity="error">{phase.message}</Alert>
-              <Stack direction="row" gap={1}>
-                <Button variant="contained" onClick={analyze}>Retry</Button>
-                {manualButton()}
-              </Stack>
+              <Button variant="contained" onClick={analyze}>Retry</Button>
+              {manualButton()}
             </Stack>
           )}
 
@@ -109,7 +127,9 @@ export default function DomainAnalysisDialog({ projectId, domain, onClose, onCha
             </Stack>
           )}
 
-          {phase.kind === 'result' && <Result analysis={phase.analysis} busy={busy} onAuto={connectAutomatically} manualButton={manualButton} onRetry={analyze} />}
+          {phase.kind === 'result' && (
+            <Result analysis={phase.analysis} busy={busy} onAuto={connectAutomatically} onManual={connectManually} manualButton={manualButton} onRetry={analyze} />
+          )}
         </Stack>
       </DialogContent>
       <DialogActions>
@@ -123,44 +143,40 @@ function Result({
   analysis,
   busy,
   onAuto,
+  onManual,
   manualButton,
   onRetry,
 }: {
   analysis: DomainAnalysis;
   busy: boolean;
   onAuto: (provider: string) => void;
+  onManual: () => void;
   manualButton: (label?: string) => JSX.Element;
   onRetry: () => void;
 }) {
-  if (analysis.providerDetected && analysis.automaticConnectionAvailable && analysis.provider) {
+  const name = analysis.providerName;
+  const dnsUrl = safeDnsUrl(analysis.dnsSetupUrl);
+  if (name && analysis.automaticConnectionAvailable && analysis.provider) {
     return (
       <Stack gap={1.5}>
-        <Alert severity="success">Provider detected: {analysis.providerName}. Automatic connection available.</Alert>
-        <Box>
-          <Typography fontWeight={600}>{analysis.providerName}</Typography>
-          <Typography color="text.secondary" fontSize={12}>You approve the DNS changes at {analysis.providerName}; we never see your password.</Typography>
-        </Box>
-        <Stack direction={{ xs: 'column', sm: 'row' }} gap={1}>
-          <Button variant="contained" onClick={() => onAuto(analysis.provider!)} disabled={busy}>Continue with {analysis.providerName}</Button>
-          {manualButton('Connect a different way')}
-        </Stack>
-      </Stack>
-    );
-  }
-  if (analysis.providerDetected) {
-    return (
-      <Stack gap={1.5}>
-        <Alert severity="info">
-          Provider detected: {analysis.providerName}, but automatic connection is not configured. Manual connection required.
-        </Alert>
-        <Stack direction="row" gap={1}>{manualButton()}<Button onClick={onRetry} disabled={busy}>Retry</Button></Stack>
+        <Typography color="text.secondary" textAlign="center">
+          Automatic connection available. You approve the DNS changes at {name}; we never see your password.
+        </Typography>
+        <Button variant="contained" size="large" onClick={() => onAuto(analysis.provider!)} disabled={busy}>Continue with {name}</Button>
+        {manualButton('Connect a different way')}
       </Stack>
     );
   }
   return (
     <Stack gap={1.5}>
-      <Alert severity="info">No supported automatic provider found. Manual connection required.</Alert>
-      <Stack direction="row" gap={1}>{manualButton()}<Button onClick={onRetry} disabled={busy}>Retry</Button></Stack>
+      <Alert severity="info">
+        {name
+          ? `Your DNS is hosted at ${name}. Automatic connection is not available there yet, so add the records yourself.`
+          : 'We could not detect where your DNS is hosted. Add the records yourself at your DNS provider.'}
+      </Alert>
+      <Button variant="contained" size="large" onClick={onManual} disabled={busy}>Authenticate manually</Button>
+      {name && dnsUrl && <Button href={dnsUrl} target="_blank" rel="noopener noreferrer">Open {name} DNS settings</Button>}
+      <Button onClick={onRetry} disabled={busy}>Retry</Button>
     </Stack>
   );
 }

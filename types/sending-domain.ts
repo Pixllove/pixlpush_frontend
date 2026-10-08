@@ -35,6 +35,8 @@ export interface SendingDomain {
   replyTo: string | null;
   provider: string | null;
   providerName: string | null;
+  /** Link to the DNS settings at the domain's DNS host, when known. */
+  dnsSetupUrl?: string | null;
   connectionMethod: 'automatic' | 'manual';
   providerStatus: 'unknown' | 'detected' | 'connection_pending' | 'connected' | 'failed';
   automaticConnectionAvailable: boolean;
@@ -51,6 +53,7 @@ export interface DomainAnalysis {
   providerDetected: boolean;
   provider: string | null;
   providerName: string | null;
+  dnsSetupUrl?: string | null;
   automaticConnectionAvailable: boolean;
   manualConnectionRequired: boolean;
 }

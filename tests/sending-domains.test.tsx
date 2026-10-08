@@ -200,9 +200,15 @@ describe('Adding and analyzing a domain', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: 'Add domain' }));
     expect(m.createSendingDomain).toHaveBeenCalledWith('p1', { senderEmail: 'sender@example.com', senderName: 'Example Team' });
 
+    // Generic modal first; nothing is looked up until the user continues.
+    expect(await screen.findByText('Connect your domain to PixlPush')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Authenticate manually' })).toBeInTheDocument();
+    expect(m.analyzeSendingDomain).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'Continue' }));
     expect(await screen.findByText('Analyzing example.com…')).toBeInTheDocument();
     finish({ ...domain({ status: 'provider_selection', provider: 'ionos' }), analysis: analysis({ providerDetected: true, provider: 'ionos', providerName: 'IONOS', automaticConnectionAvailable: true, manualConnectionRequired: false }) });
     expect(await screen.findByText(/Automatic connection available/)).toBeInTheDocument();
+    expect(screen.getByText('Connect your IONOS domain to PixlPush')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Connect a different way' })).toBeInTheDocument();
 
     // IONOS redirect: backend URL, only ids remembered.
@@ -216,14 +222,19 @@ describe('Adding and analyzing a domain', () => {
 
   it('explains when automatic connection is not configured or no provider is found', async () => {
     m.listSendingDomains.mockResolvedValue([domain()]);
-    m.analyzeSendingDomain.mockResolvedValueOnce({ ...domain(), analysis: analysis({ providerDetected: true, provider: 'ionos', providerName: 'IONOS' }) });
+    m.analyzeSendingDomain.mockResolvedValueOnce({
+      ...domain(),
+      analysis: analysis({ providerDetected: true, providerName: 'Cloudflare', dnsSetupUrl: 'https://dash.cloudflare.com/dns' }),
+    });
     renderPanel();
     await userEvent.click(await screen.findByRole('button', { name: 'Resolve' }));
-    expect(await screen.findByText(/automatic connection is not configured. Manual connection required/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(await screen.findByText(/Your DNS is hosted at Cloudflare. Automatic connection is not available there yet/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open Cloudflare DNS settings' })).toHaveAttribute('href', 'https://dash.cloudflare.com/dns');
 
     m.analyzeSendingDomain.mockResolvedValueOnce({ ...domain(), analysis: analysis() });
     await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
-    expect(await screen.findByText(/No supported automatic provider found/)).toBeInTheDocument();
+    expect(await screen.findByText(/could not detect where your DNS is hosted/)).toBeInTheDocument();
   });
 
   it('retries a failed analysis and falls back to manual connection', async () => {
@@ -231,17 +242,31 @@ describe('Adding and analyzing a domain', () => {
     m.analyzeSendingDomain.mockRejectedValueOnce({ status: 0, code: 'NETWORK_ERROR', message: '' });
     renderPanel();
     await userEvent.click(await screen.findByRole('button', { name: 'Resolve' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Continue' }));
     expect(await screen.findByText('Cannot reach the server. Check your connection.')).toBeInTheDocument();
 
     m.analyzeSendingDomain.mockResolvedValueOnce({ ...domain(), analysis: analysis() });
     await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
-    expect(await screen.findByText(/No supported automatic provider found/)).toBeInTheDocument();
+    expect(await screen.findByText(/could not detect where your DNS is hosted/)).toBeInTheDocument();
 
     m.startManualConnection.mockResolvedValue(withRecords());
     m.getSendingDomain.mockResolvedValue(withRecords());
-    await userEvent.click(screen.getByRole('button', { name: 'Connect manually' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Authenticate manually' }));
     expect(await screen.findByText('Go to your DNS provider')).toBeInTheDocument();
     expect(m.startManualConnection).toHaveBeenCalledWith('p1', 'd1');
+  });
+
+  it('goes straight to the DNS records from the first step, without analyzing', async () => {
+    m.listSendingDomains.mockResolvedValue([domain()]);
+    m.startManualConnection.mockResolvedValue(withRecords());
+    m.getSendingDomain.mockResolvedValue(withRecords({ providerName: 'GoDaddy', dnsSetupUrl: 'javascript:alert(1)' }));
+    renderPanel();
+    await userEvent.click(await screen.findByRole('button', { name: 'Resolve' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Authenticate manually' }));
+    expect(await screen.findByText('Go to your DNS provider')).toBeInTheDocument();
+    expect(m.analyzeSendingDomain).not.toHaveBeenCalled();
+    // Only https links to the DNS host are rendered.
+    expect(screen.queryByRole('link', { name: 'Open DNS settings' })).not.toBeInTheDocument();
   });
 
   it('refuses a non-https authorization URL', async () => {
@@ -250,6 +275,7 @@ describe('Adding and analyzing a domain', () => {
     m.startProviderConnection.mockResolvedValue({ authorizationUrl: 'javascript:alert(1)', domain: domain() });
     renderPanel();
     await userEvent.click(await screen.findByRole('button', { name: 'Resolve' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Continue' }));
     await userEvent.click(await screen.findByRole('button', { name: 'Continue with IONOS' }));
     expect(await screen.findByText('The provider connection failed. Try again or connect manually.')).toBeInTheDocument();
     expect(assign).not.toHaveBeenCalled();
@@ -314,6 +340,13 @@ describe('Manual DNS setup', () => {
     expect(within(dialog).getByTestId('dns-record-dmarc')).toHaveTextContent('Verified');
   });
 
+  it('links to the DNS host when it is known', async () => {
+    const dialog = await openDns(withRecords({ providerName: 'GoDaddy', dnsSetupUrl: 'https://dcc.godaddy.com/dns' }));
+    expect(await within(dialog).findByText(/Your DNS is hosted at GoDaddy/)).toBeInTheDocument();
+    expect(within(dialog).getByRole('link', { name: 'Open DNS settings' })).toHaveAttribute('href', 'https://dcc.godaddy.com/dns');
+    expect(m.checkDns).not.toHaveBeenCalled();
+  });
+
   it('offers a retry when a check fails', async () => {
     const dialog = await openDns(withRecords());
     m.checkDns.mockRejectedValueOnce({ status: 0, code: 'NETWORK_ERROR', message: '' });
@@ -366,6 +399,19 @@ describe('Provider callback', () => {
     expect(document.URL).not.toContain('secret-code');
     expect(document.URL).not.toContain('state=');
     expect(sessionStorage.getItem('pixlpush.sendingDomainConnection')).toBeNull();
+  });
+
+  it('finishes a connection that returns no code and checks the records on its own', async () => {
+    returnFrom('?state=s1');
+    const connected = withRecords({ provider: 'domainconnect', providerName: 'GoDaddy', connectionMethod: 'automatic', providerStatus: 'connected' });
+    m.listSendingDomains.mockResolvedValue([connected]);
+    m.completeProviderConnection.mockResolvedValue(connected);
+    m.getSendingDomain.mockResolvedValue(connected);
+    m.checkDns.mockResolvedValue(connected);
+    renderPanel();
+    expect(await screen.findByText(/GoDaddy is publishing the records/)).toBeInTheDocument();
+    expect(m.completeProviderConnection).toHaveBeenCalledWith('p1', 'd1', 'ionos', { code: undefined, state: 's1', error: undefined });
+    await waitFor(() => expect(m.checkDns).toHaveBeenCalledWith('p1', 'd1'));
   });
 
   it('reports a cancelled connection', async () => {

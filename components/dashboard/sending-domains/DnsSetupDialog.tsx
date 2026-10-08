@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Alert,
@@ -21,7 +21,12 @@ import { domainErrorMessage, messageForCode } from '@/lib/sending-domains/errors
 import type { SendingDomain } from '@/types/sending-domain';
 import { redirectToProvider, rememberConnection } from './connection';
 import DnsRecordCard from './DnsRecordCard';
+import { safeDnsUrl } from './DomainAnalysisDialog';
 import DomainStatusBadge from './DomainStatusBadge';
+
+/** After an automatic connection: how often and how long the records are re-checked on their own. */
+const RECHECK_MS = 15_000;
+const RECHECK_LIMIT = 20;
 
 const STEPS = [
   'Go to your DNS provider',
@@ -78,6 +83,21 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
     }
   };
 
+  // The DNS host publishes the records after an automatic connection, so nobody has to press "Check status".
+  const waiting = domain?.connectionMethod === 'automatic' && (domain.status === 'dns_pending' || domain.status === 'partially_verified');
+  const rechecks = useRef(0);
+  useEffect(() => {
+    if (!waiting) return;
+    const tick = () => {
+      if (rechecks.current++ < RECHECK_LIMIT) void runCheck();
+    };
+    tick();
+    const timer = setInterval(tick, RECHECK_MS);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [waiting]);
+
+  const dnsUrl = safeDnsUrl(domain?.dnsSetupUrl);
   const records = domain?.dnsRecords ?? [];
   const required = records.filter((r) => r.required);
   const verifiedCount = required.filter((r) => r.verified).length;
@@ -107,6 +127,16 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
               {STEPS.map((label) => <Step key={label}><StepLabel>{label}</StepLabel></Step>)}
             </Stepper>
 
+            {waiting && (
+              <Alert severity="info">
+                {domain.providerName ?? 'Your DNS provider'} is publishing the records. We check again every few seconds; this can take a few minutes.
+              </Alert>
+            )}
+            {!waiting && domain.status !== 'verified' && domain.providerName && dnsUrl && (
+              <Alert severity="info" action={<Button color="inherit" size="small" href={dnsUrl} target="_blank" rel="noopener noreferrer">Open DNS settings</Button>}>
+                Your DNS is hosted at {domain.providerName}. Add the records below there.
+              </Alert>
+            )}
             {domain.status === 'verified' && <Alert severity="success">{domain.domain} is authenticated. You can send email from it.</Alert>}
             {domain.status === 'partially_verified' && (
               <Alert severity="warning">Partially verified: {verifiedCount} of {required.length} required records are correct. {statusMessage}</Alert>
