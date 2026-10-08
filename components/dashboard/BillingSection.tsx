@@ -6,17 +6,22 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AccountBalanceWalletRounded,
   AutoGraphRounded,
+  AutoAwesomeRounded,
   CheckCircleRounded,
   CreditCardRounded,
   EmailRounded,
   InsightsRounded,
   PeopleAltRounded,
   ReceiptLongRounded,
+  ExpandMoreRounded,
   SendRounded,
   ShieldRounded,
 } from "@mui/icons-material";
 import {
   Alert,
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
   Box,
   Button,
   Card,
@@ -29,6 +34,7 @@ import {
   Grid,
   LinearProgress,
   Link,
+  MenuItem,
   Skeleton,
   Stack,
   Table,
@@ -60,7 +66,7 @@ import { useActiveProject } from "@/hooks/projects/use-active-project";
 import { stripePromise } from "@/lib/stripe";
 import UpdatePaymentMethodDialog from "./UpdatePaymentMethodDialog";
 import SavedCards from "./SavedCards";
-import type { BillingContact, BillingInterval, PaidPlan, PlanName } from "@/types/project";
+import type { AiCreditPackageName, BillingContact, BillingCurrency, BillingInterval, PaidPlan, PlanName } from "@/types/project";
 
 type BillingTab = "overview" | "history" | "methods" | "profile";
 
@@ -77,6 +83,28 @@ const toneColor = { success: "#a6f2b4", info: "#bcd7ff", warning: "#ffd98a", err
 const MAX_POLLS = 20;
 
 const number = (value: number) => value.toLocaleString("en-US");
+// Display-only rate follows the localized PKR estimate already used on the public Pricing page.
+const usdToPkrDisplayRate = 278.34;
+const formatAiCreditPackagePrice = (amount: number, packageCurrency: BillingCurrency, displayCurrency: string) => {
+  if (displayCurrency === "pkr" && packageCurrency === "usd") {
+    const pkrAmount = Math.round((amount / 100) * usdToPkrDisplayRate);
+    return `PKR ${number(pkrAmount)}`;
+  }
+  return formatMoney(amount, packageCurrency);
+};
+const creditEuroCountries = new Set(["AT", "BE", "BG", "CY", "DE", "EE", "ES", "FI", "FR", "GR", "HR", "IE", "IT", "LT", "LU", "LV", "MT", "NL", "PT", "SI", "SK"]);
+
+function detectDeviceCreditCurrency(): string | null {
+  if (typeof window === "undefined") return null;
+  const locale = window.navigator.language || "";
+  let region = "";
+  try { region = new Intl.Locale(locale).region?.toUpperCase() ?? ""; } catch { /* Unknown locale; use the device timezone. */ }
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+  if (region === "AE" || timezone === "Asia/Dubai") return "aed";
+  if (region === "PK" || timezone === "Asia/Karachi") return "pkr";
+  if (creditEuroCountries.has(region)) return "eur";
+  return null;
+}
 
 export function BillingSection() {
   const { active } = useActiveProject();
@@ -88,6 +116,7 @@ export function BillingSection() {
   const searchParams = useSearchParams();
   // Stripe sends the browser back with ?checkout=…; the pricing page sends ?plan=…&interval=….
   const checkout = searchParams.get("checkout");
+  const creditCheckout = searchParams.get("credits");
   const wantedPlan = paidPlans.find((plan) => plan === searchParams.get("plan"));
 
   const [tab, setTab] = useState<BillingTab>("overview");
@@ -101,7 +130,10 @@ export function BillingSection() {
   const [change, setChange] = useState<{ plan: PaidPlan; interval: BillingInterval; upgrade: boolean } | null>(null);
   const [profile, setProfile] = useState<BillingContact>({ email: "" });
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [creditCurrencyMode, setCreditCurrencyMode] = useState<"usd" | "location">("usd");
+  const [creditCurrency, setCreditCurrency] = useState<BillingCurrency>("usd");
   const polls = useRef(0);
+  const creditPolls = useRef(0);
   const plansRef = useRef<HTMLDivElement>(null);
 
   // Every key carries the project id, so one Project's billing is never shown inside another.
@@ -124,6 +156,16 @@ export function BillingSection() {
     queryFn: () => billingApi.usage(projectId!),
     enabled: Boolean(projectId),
   });
+  const aiCreditsQuery = useQuery({
+    queryKey: ["projects", "billing", projectId, "ai-credits"],
+    queryFn: () => billingApi.aiCredits(projectId!),
+    enabled: Boolean(projectId),
+    refetchInterval: () => {
+      if (creditCheckout !== "success" || creditPolls.current >= MAX_POLLS) return false;
+      creditPolls.current += 1;
+      return 3000;
+    },
+  });
   const pricesQuery = useQuery({
     queryKey: ["projects", "billing", projectId, "prices"],
     queryFn: () => billingApi.prices(projectId!),
@@ -145,7 +187,11 @@ export function BillingSection() {
     enabled: Boolean(projectId) && canManage && tab === "history",
   });
 
-  useEffect(() => { polls.current = 0; setError(null); setNotice(null); setBusy(null); }, [projectId]);
+  useEffect(() => { polls.current = 0; creditPolls.current = 0; setCreditCurrencyMode("usd"); setCreditCurrency("usd"); setError(null); setNotice(null); setBusy(null); }, [projectId]);
+  useEffect(() => {
+    if (creditCheckout === "success") setNotice("Checkout completed. Credits will appear once Stripe confirms the payment; delayed payment methods may take longer.");
+    else if (creditCheckout === "cancelled") setNotice("AI Credit checkout was cancelled. No purchase was completed.");
+  }, [creditCheckout]);
   useEffect(() => { setProfile(subscriptionQuery.data?.billingContact ?? { email: "" }); }, [subscriptionQuery.data]);
   // The overview is drawn once, when everything it lays out has arrived. Showing it early made the plan block,
   // the usage grid and the plan options push each other around as each request landed.
@@ -264,6 +310,36 @@ export function BillingSection() {
     { label: "AI credits", value: usage.usage.ai_credits, limit: usage.limits.aiCreditsPerMonth, over: false, icon: InsightsRounded, color: "#ee9c35" },
   ] : [];
   const overCount = usageRows.filter((row) => row.over).length;
+  const creditPackages = aiCreditsQuery.data?.packages ?? [];
+  const creditCurrencies = Array.from(new Set(creditPackages.map((item) => item.currency)));
+  const creditCurrenciesKey = creditCurrencies.join(",");
+  const detectedCreditCurrency = detectDeviceCreditCurrency();
+  const preferredLocationCurrency = detectedCreditCurrency && creditCurrencies.includes(detectedCreditCurrency as BillingCurrency)
+    ? detectedCreditCurrency as BillingCurrency
+    : creditCurrencies.includes("usd") ? "usd" : creditCurrencies[0];
+  const preferredCreditCurrency = creditCurrencyMode === "usd"
+    ? creditCurrencies.includes("usd") ? "usd" : creditCurrencies[0]
+    : preferredLocationCurrency;
+  const displayCreditCurrency = creditCurrencyMode === "location"
+    ? detectedCreditCurrency ?? creditCurrency
+    : creditCurrency;
+  const pkrUsesUsdCheckout = displayCreditCurrency === "pkr" && creditCurrency === "usd";
+  const creditPackageNames: Record<AiCreditPackageName, string> = { starter: "Starter", growth: "Growth", scale: "Scale" };
+  const selectedCreditPackages = creditPackages.filter((item) => item.currency === creditCurrency);
+  const monthlyAiLimit = usage?.limits.aiCreditsPerMonth ?? 0;
+  const monthlyAiUsed = usage?.usage.ai_credits ?? 0;
+  const monthlyAiRemaining = Math.max(monthlyAiLimit - monthlyAiUsed, 0);
+  const creditCheckoutMutation = useMutation({
+    mutationFn: ({ pkg, currency }: { pkg: AiCreditPackageName; currency: BillingCurrency }) =>
+      billingApi.createAiCreditCheckout(projectId!, { package: pkg, currency }),
+    onSuccess: ({ url }) => { window.location.assign(url); },
+    onError: (failure) => setError(billingErrorMessage(failure, "We could not open AI Credit checkout. Please try again.")),
+  });
+  useEffect(() => {
+    const availableCurrencies = creditCurrenciesKey ? creditCurrenciesKey.split(",") as BillingCurrency[] : [];
+    if (!availableCurrencies.length || !aiCreditsQuery.isSuccess || !preferredCreditCurrency) return;
+    if (creditCurrency !== preferredCreditCurrency) setCreditCurrency(preferredCreditCurrency);
+  }, [creditCurrenciesKey, creditCurrency, aiCreditsQuery.isSuccess, preferredCreditCurrency]);
 
   const profileFields = [
     ["name", "Billing name"],
@@ -687,14 +763,151 @@ export function BillingSection() {
                   })}
                 </Grid>
 
-                <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" gap={0.75} sx={{ mt: 2, pt: 1.75, borderTop: "1px solid #e9e3f2" }}>
-                  <Typography color="text.secondary" fontSize={11}>Prices are in AED and exclude tax. VAT is calculated at checkout.</Typography>
-                  <Link href="/pricing" underline="hover" sx={{ fontSize: 11, fontWeight: 500, whiteSpace: "nowrap" }}>Contact sales for Enterprise</Link>
+                <Stack direction={{ xs: "column", sm: "row" }} justifyContent="flex-end" gap={0.75} sx={{ mt: 2, pt: 1.75, borderTop: "1px solid #e9e3f2" }}>
+                  <Button component="a" href="/pricing" variant="contained" sx={{ px: 2.5, minHeight: 42, borderRadius: 1.5, textTransform: "none", fontWeight: 650, color: "#fff", background: "linear-gradient(105deg, #5315b8 0%, #762be0 100%)", boxShadow: "0 5px 14px rgba(96, 35, 191, .22)", "&:hover": { background: "linear-gradient(105deg, #45109f 0%, #6420c5 100%)", boxShadow: "0 7px 18px rgba(96, 35, 191, .3)" } }}>Contact sales for Enterprise</Button>
                 </Stack>
                 {!canManage && <Typography color="text.secondary" fontSize={11} sx={{ mt: 0.75 }}>Ask an owner, admin or billing member of this project to change the plan.</Typography>}
               </Box>
             </Card>
           )}
+
+          <Card className="saas-card" id="ai-credit-usage" sx={{ p: { xs: 2, md: 2.75 }, borderRadius: 2, border: "1px solid #e4dafa", background: "linear-gradient(145deg, #fff 0%, #fcfaff 100%)" }}>
+            <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ sm: "center" }} gap={1.5}>
+              <Stack direction="row" gap={1.25} alignItems="center">
+                <Box>
+                  <Typography variant="h3">AI Credits</Typography>
+                  <Typography color="text.secondary" fontSize={12}>One shared pool for PixlPush AI features. Credits are actions, not raw AI-provider tokens.</Typography>
+                </Box>
+              </Stack>
+              {creditCurrencies.length > 0 && (
+                <Box sx={{ alignSelf: { xs: "stretch", sm: "auto" }, textAlign: { sm: "right" } }}>
+                  <Typography fontSize={11} color="text.secondary" sx={{ mb: 0.35 }}>Package currency</Typography>
+                  <Tabs
+                    value={creditCurrencyMode}
+                    onChange={(_, mode: "usd" | "location" | null) => {
+                      if (mode) setCreditCurrencyMode(mode);
+                    }}
+                    aria-label="AI Credit package currency"
+                    sx={{ minHeight: 40, "& .MuiTab-root": { minHeight: 40, px: 1.5, fontSize: 13 } }}
+                  >
+                    <Tab value="usd" label="USD" />
+                    <Tab value="location" label={(detectedCreditCurrency ?? preferredLocationCurrency ?? "USD").toUpperCase()} />
+                  </Tabs>
+                  {pkrUsesUsdCheckout && (
+                    <Typography fontSize={10} color="text.secondary" sx={{ mt: 0.4 }}>PKR prices are estimates; checkout is charged in USD.</Typography>
+                  )}
+                </Box>
+              )}
+            </Stack>
+
+            {creditCheckout === "success" && <Alert severity="info" sx={{ mt: 2, borderRadius: 1.5 }}>Stripe is confirming the purchase. The balance updates only after payment confirmation; delayed payment methods can take longer.</Alert>}
+            {aiCreditsQuery.isError && <Alert severity="error" sx={{ mt: 2, borderRadius: 1.5 }}>AI Credit details could not be loaded. Refresh the page to try again.</Alert>}
+
+            <Grid container spacing={1.5} sx={{ mt: 0.5 }}>
+              <Grid item xs={12} md={5}>
+                <Box sx={{ height: "100%", p: 2, border: "1px solid #ebe5f3", borderRadius: 1.75, backgroundColor: "#fff" }}>
+                  <Typography fontSize={11} fontWeight={500} letterSpacing=".08em" color="text.secondary">PURCHASED CREDITS · DO NOT EXPIRE</Typography>
+                  <Typography fontSize={30} fontWeight={600} sx={{ mt: 0.25, color: "#261735", lineHeight: 1.25 }}>
+                    {aiCreditsQuery.isPending ? "—" : number(aiCreditsQuery.data?.balance ?? 0)}
+                  </Typography>
+                  <Divider sx={{ my: 1.5 }} />
+                  <Stack direction="row" justifyContent="space-between" gap={1}>
+                    <Typography fontSize={12} color="text.secondary">Usage</Typography>
+                    <Typography fontSize={12} fontWeight={600}>{monthlyAiLimit ? `${number(monthlyAiRemaining)} credits left` : "—"}</Typography>
+                  </Stack>
+                  {monthlyAiLimit > 0 && <LinearProgress variant="determinate" value={Math.min((monthlyAiUsed / monthlyAiLimit) * 100, 100)} sx={{ mt: 1, height: 7, borderRadius: 9, backgroundColor: "#eeeaf5", "& .MuiLinearProgress-bar": { borderRadius: 9, backgroundColor: "#7a3be0" } }} />}
+                  {monthlyAiLimit > 0 && monthlyAiRemaining <= monthlyAiLimit * 0.2 && (
+                    <Alert severity={monthlyAiRemaining === 0 ? "warning" : "info"} sx={{ mt: 1.5, py: 0, borderRadius: 1.5 }}>
+                      {monthlyAiRemaining === 0
+                        ? "Your included monthly credits are used. Purchased credits remain separate and do not expire."
+                        : monthlyAiRemaining <= monthlyAiLimit * 0.1
+                          ? `Your included monthly credits are almost used (${number(monthlyAiRemaining)} left).`
+                          : `Your included monthly credits are running low (${number(monthlyAiRemaining)} left).`}
+                    </Alert>
+                  )}
+                </Box>
+              </Grid>
+              <Grid item xs={12} md={7}>
+                <Box sx={{ p: 2, border: "1px solid #ebe5f3", borderRadius: 1.75, backgroundColor: "#fff", height: "100%" }}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1}>
+                    <Box>
+                      <Typography fontSize={14} fontWeight={600}>Top up AI Credits</Typography>
+                      <Typography fontSize={11} color="text.secondary">One-time purchases. No auto-renewal or silent charges.</Typography>
+                    </Box>
+                  </Stack>
+                  {aiCreditsQuery.isPending ? (
+                    <Grid container spacing={1} sx={{ mt: 0.5 }}>{[0, 1, 2].map((item) => <Grid item xs={12} sm={4} key={item}><Skeleton variant="rounded" height={132} /></Grid>)}</Grid>
+                  ) : !selectedCreditPackages.length ? (
+                    <Alert severity="info" sx={{ mt: 1.5, borderRadius: 1.5 }}>Credit packages are not available in this currency right now. Check back later or contact support.</Alert>
+                  ) : (
+                    <Grid container spacing={1} sx={{ mt: 0.5 }}>
+                      {selectedCreditPackages.map((item) => (
+                        <Grid item xs={12} sm={4} key={item.package}>
+                          <Box sx={{ height: "100%", p: 1.5, border: "1px solid #e9e3f2", borderRadius: 1.5, backgroundColor: item.package === "growth" ? "#f8f4ff" : "#fff" }}>
+                            {item.package === "growth" && <Chip label="Popular" size="small" sx={{ mb: 0.5, height: 20, color: "#6422c5", backgroundColor: "#eee6ff", fontSize: 10 }} />}
+                            <Typography fontSize={12} fontWeight={600}>{creditPackageNames[item.package]}</Typography>
+                            <Typography fontSize={20} fontWeight={600} sx={{ mt: 0.5, color: "#261735" }}>{number(item.credits)}</Typography>
+                            <Typography fontSize={11} color="text.secondary">credits · {formatAiCreditPackagePrice(item.unitAmount, item.currency, displayCreditCurrency)}</Typography>
+                            {canManage ? (
+                              <Button fullWidth size="small" variant={item.package === "growth" ? "contained" : "outlined"} disabled={creditCheckoutMutation.isPending} onClick={() => creditCheckoutMutation.mutate({ pkg: item.package, currency: item.currency })} sx={{ mt: 1.25, textTransform: "none", whiteSpace: "nowrap" }}>
+                                {creditCheckoutMutation.isPending && creditCheckoutMutation.variables?.pkg === item.package ? "Opening…" : pkrUsesUsdCheckout ? "Buy once · USD" : "Buy once"}
+                              </Button>
+                            ) : <Typography fontSize={10} color="text.secondary" sx={{ mt: 1.25 }}>Ask a billing manager to purchase.</Typography>}
+                          </Box>
+                        </Grid>
+                      ))}
+                    </Grid>
+                  )}
+                </Box>
+              </Grid>
+            </Grid>
+
+            <Accordion
+              disableGutters
+              elevation={0}
+              sx={{
+                mt: 2,
+                overflow: "hidden",
+                border: "1px solid #e9e3f2",
+                borderRadius: "14px !important",
+                background: "linear-gradient(135deg, #fbf9ff 0%, #f7f4fc 100%)",
+                "&::before": { display: "none" },
+              }}
+            >
+              <AccordionSummary
+                expandIcon={<ExpandMoreRounded sx={{ color: "#6d42ad" }} />}
+                aria-controls="ai-credit-guide-content"
+                id="ai-credit-guide-header"
+                sx={{ px: { xs: 1.75, sm: 2.25 }, minHeight: 68, "& .MuiAccordionSummary-content": { my: 1.5 } }}
+              >
+                <Box>
+                  <Typography fontSize={14} fontWeight={600} sx={{ color: "#28183b" }}>How AI Credits work</Typography>
+                  <Typography fontSize={11} color="text.secondary" sx={{ mt: 0.25 }}>See the credit cost for each AI feature and how your balance is used.</Typography>
+                </Box>
+              </AccordionSummary>
+              <AccordionDetails id="ai-credit-guide-content" sx={{ px: { xs: 1.75, sm: 2.25 }, pt: 0, pb: 2.25 }}>
+                <Grid container spacing={1.25}>
+                  {[
+                    ["AI Email Creator", "10", "per generation"],
+                    ["Smart Translation", "10", "per target language"],
+                    ["AI Journey Analysis", "100", "per analysis"],
+                    ["Journey Optimization", "50", "per optimization"],
+                    ["AI Customized Journey", "50", "per generated journey"],
+                  ].map(([feature, amount, unit]) => (
+                    <Grid item xs={12} sm={6} md={4} key={feature}>
+                      <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1.5} sx={{ minHeight: 54, px: 1.5, py: 1, border: "1px solid #ebe5f3", borderRadius: 1.5, backgroundColor: "rgba(255,255,255,.82)" }}>
+                        <Typography fontSize={12} fontWeight={500} sx={{ color: "#51445f" }}>{feature}</Typography>
+                        <Typography fontSize={12} fontWeight={600} whiteSpace="nowrap" sx={{ color: "#382354" }}>{amount} <Box component="span" fontWeight={400} color="text.secondary">credits {unit}</Box></Typography>
+                      </Stack>
+                    </Grid>
+                  ))}
+                </Grid>
+                <Typography fontSize={11} color="text.secondary" sx={{ mt: 1.5, lineHeight: 1.6 }}>
+                  Your monthly included credits are used first and reset each month. Purchased credits are used afterward, do not expire, and stay with this project.
+                </Typography>
+              </AccordionDetails>
+            </Accordion>
+          </Card>
         </Stack>
       )}
 

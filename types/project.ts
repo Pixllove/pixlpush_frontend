@@ -112,6 +112,38 @@ export interface BillingUsage {
   overLimit: { reachableUsers: boolean; emailSends: boolean; pushSends: boolean; activeJourneys: boolean };
 }
 
+export type AiCreditPackageName = "starter" | "growth" | "scale";
+export type BillingCurrency = "aed" | "usd" | "eur";
+
+export interface AiCreditPackage {
+  package: AiCreditPackageName;
+  credits: number;
+  /** Amount in the currency's smallest unit, supplied by the billing backend. */
+  unitAmount: number;
+  currency: BillingCurrency;
+  taxExclusive: boolean;
+}
+
+export interface AiCreditBalance {
+  /** Unspent credits from confirmed one-time purchases; monthly included credits are reported separately in usage. */
+  balance: number;
+  packages: AiCreditPackage[];
+}
+
+export interface AiCreditPurchase {
+  id: string;
+  package: AiCreditPackageName;
+  credits: number;
+  currency: BillingCurrency;
+  amountSubtotal: number;
+  amountTax: number | null;
+  amountTotal: number | null;
+  paymentStatus: "pending" | "paid" | "failed" | "expired" | "refunded" | "partially_refunded" | "disputed" | "dispute_lost";
+  creditStatus: "pending" | "not_granted" | "granted";
+  grantedAt: string | null;
+  createdAt: string;
+}
+
 export interface BillingInvoice {
   id: string;
   number: string | null;
