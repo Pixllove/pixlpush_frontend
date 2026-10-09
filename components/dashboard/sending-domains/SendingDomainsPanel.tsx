@@ -8,6 +8,7 @@ import {
   Box,
   Button,
   Card,
+  Chip,
   CircularProgress,
   Dialog,
   DialogActions,
@@ -26,8 +27,10 @@ import DnsOutlined from '@mui/icons-material/DnsOutlined';
 import EmptyState from '../EmptyState';
 import { Toast } from '@/components/auth/AuthFeedback';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
-import { checkDns, completeProviderConnection, deleteSendingDomain, listSendingDomains } from '@/lib/sending-domains/api';
-import { domainErrorMessage, errorCode } from '@/lib/sending-domains/errors';
+import { useEmailSettings } from '@/hooks/projects/use-project-settings';
+import { projectKeys } from '@/lib/projects/api';
+import { activateSendingDomain, checkDns, completeProviderConnection, deleteSendingDomain, listSendingDomains } from '@/lib/sending-domains/api';
+import { domainErrorMessage, errorCode, isConnectionCode, messageForCode } from '@/lib/sending-domains/errors';
 import type { SendingDomain } from '@/types/sending-domain';
 import AddDomainDialog from './AddDomainDialog';
 import { consumeCallbackParams, takeConnection } from './connection';
@@ -49,7 +52,7 @@ type DialogState =
 type ToastState = { message: string; severity: 'success' | 'error' | 'info' } | null;
 
 /** Sending domains of the active Project (several per Project). */
-export default function SendingDomainsPanel() {
+export default function SendingDomainsPanel({ onNavigate }: { onNavigate?: (tab: string) => void }) {
   const { active } = useActiveProject();
   const projectId = active?.id;
   const canManage = Boolean(active && MANAGE_ROLES.includes(active.role));
@@ -62,7 +65,14 @@ export default function SendingDomainsPanel() {
   const [rowBusy, setRowBusy] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const reload = () => queryClient.invalidateQueries({ queryKey: ['projects', 'sending-domains', projectId] });
+  // The Project sends from one domain at a time: the one its sender address is on.
+  const activeDomain = useEmailSettings(projectId).query.data?.sendingDomain ?? null;
+
+  // The sender can change with any domain action (the first verified domain becomes it), so both reload.
+  const reload = () => {
+    if (projectId) void queryClient.invalidateQueries({ queryKey: projectKeys.setting(projectId, 'email') });
+    return queryClient.invalidateQueries({ queryKey: ['projects', 'sending-domains', projectId] });
+  };
 
   // Back from the provider: finish the connection once, for this Project only.
   const handledCallback = useRef(false);
@@ -94,9 +104,24 @@ export default function SendingDomainsPanel() {
       const updated = await checkDns(projectId!, domain.id);
       setToast(
         updated.status === 'verified'
-          ? { message: `${updated.domain} is authenticated.`, severity: 'success' }
-          : { message: `${updated.domain}: DNS checked. Open the records for details.`, severity: 'info' },
+          ? { message: `${updated.domain}: Domain authenticated and sending connection ready.`, severity: 'success' }
+          : isConnectionCode(updated.lastError)
+            ? { message: `${updated.domain}: ${messageForCode(updated.lastError)}`, severity: 'info' }
+            : { message: `${updated.domain}: DNS checked. Open the records for details.`, severity: 'info' },
       );
+    } catch (e) {
+      setToast({ message: domainErrorMessage(e), severity: 'error' });
+    } finally {
+      setRowBusy(null);
+      reload();
+    }
+  };
+
+  const sendFrom = async (domain: SendingDomain) => {
+    setRowBusy(domain.id);
+    try {
+      await activateSendingDomain(projectId!, domain.id);
+      setToast({ message: `Email is now sent from ${domain.senderEmail ?? domain.domain}.`, severity: 'success' });
     } catch (e) {
       setToast({ message: domainErrorMessage(e), severity: 'error' });
     } finally {
@@ -131,7 +156,7 @@ export default function SendingDomainsPanel() {
       <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" gap={1.5}>
         <Box>
           <Typography variant="h3">Sending domains</Typography>
-          <Typography color="text.secondary" fontSize={12}>Authenticate the domains you send email from. A domain can send once it is authenticated.</Typography>
+          <Typography color="text.secondary" fontSize={12}>Authenticate the domains you send email from. A domain can send once its DNS records, the sending connection and bounce handling are all verified.</Typography>
         </Box>
         {canManage && (
           <Button variant="contained" startIcon={<AddRounded />} onClick={() => setDialog({ kind: 'add' })} sx={{ alignSelf: 'flex-start' }}>
@@ -141,6 +166,12 @@ export default function SendingDomainsPanel() {
       </Stack>
 
       {!canManage && <Alert severity="info">Only project owners and admins can add or change sending domains.</Alert>}
+
+      {list.data?.some((d) => d.status === 'verification_failed' && isConnectionCode(d.lastError)) && (
+        <Alert severity="warning" action={onNavigate && <Button color="inherit" size="small" onClick={() => onNavigate('Email sending')}>Finish setup</Button>}>
+          Provider connection incomplete. Your DNS records are correct, but email cannot be sent until the sending connection is finished under Email sending.
+        </Alert>
+      )}
 
       {list.isPending && (
         <Card sx={{ p: 2, minHeight: 172 }} role="status" aria-label="Loading sending domains">
@@ -179,13 +210,21 @@ export default function SendingDomainsPanel() {
                   <TableCell><Typography fontWeight={600}>{domain.domain}</Typography></TableCell>
                   <TableCell>{domain.senderEmail ?? '—'}</TableCell>
                   <TableCell>{domain.providerName ?? (domain.connectionMethod === 'manual' && domain.dnsRecords.length ? 'Manual DNS' : '—')}</TableCell>
-                  <TableCell><DomainStatusBadge status={domain.status} /></TableCell>
+                  <TableCell>
+                    <Stack direction="row" gap={0.5} flexWrap="wrap">
+                      <DomainStatusBadge status={domain.status} lastError={domain.lastError} />
+                      {domain.status === 'verified' && domain.domain === activeDomain && <Chip size="small" variant="outlined" label="Sending from this domain" />}
+                    </Stack>
+                  </TableCell>
                   <TableCell>{domain.lastCheckedAt ? new Date(domain.lastCheckedAt).toLocaleString() : 'Never'}</TableCell>
                   <TableCell align="right">
                     <Stack direction="row" gap={0.5} justifyContent="flex-end" flexWrap="wrap">
                       {rowBusy === domain.id && <CircularProgress size={18} sx={{ alignSelf: 'center' }} />}
                       {canManage && domain.dnsRecords.length > 0 && (
                         <Button size="small" onClick={() => checkStatus(domain)} disabled={rowBusy !== null}>Check status</Button>
+                      )}
+                      {canManage && domain.status === 'verified' && domain.domain !== activeDomain && (
+                        <Button size="small" onClick={() => sendFrom(domain)} disabled={rowBusy !== null}>Use for sending</Button>
                       )}
                       {canManage && domain.status !== 'verified' && (
                         <Button size="small" onClick={() => resolve(domain)} disabled={rowBusy !== null}>Resolve</Button>

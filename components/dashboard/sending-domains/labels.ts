@@ -2,7 +2,7 @@ import type { DnsPurpose, DnsRecordStatus, SendingDomainStatus } from '@/types/s
 
 type Tone = 'default' | 'info' | 'warning' | 'error' | 'success';
 
-/** The six badges users see; backend statuses fold into them. */
+/** The badges users see; backend statuses fold into them. `verified` means every check passed, not DNS alone. */
 export const DOMAIN_STATUS: Record<SendingDomainStatus, { label: string; tone: Tone }> = {
   not_configured: { label: 'Not configured', tone: 'default' },
   analyzing: { label: 'Analyzing', tone: 'info' },
@@ -10,7 +10,7 @@ export const DOMAIN_STATUS: Record<SendingDomainStatus, { label: string; tone: T
   connection_pending: { label: 'Authentication pending', tone: 'warning' },
   dns_pending: { label: 'Authentication pending', tone: 'warning' },
   partially_verified: { label: 'Partially verified', tone: 'warning' },
-  verified: { label: 'Authenticated', tone: 'success' },
+  verified: { label: 'Ready to send', tone: 'success' },
   connection_failed: { label: 'Authentication failed', tone: 'error' },
   dns_check_failed: { label: 'Authentication failed', tone: 'error' },
   verification_failed: { label: 'Authentication failed', tone: 'error' },

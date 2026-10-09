@@ -18,6 +18,14 @@ vi.mock('@/lib/sending-domains/api', () => ({
   getDnsRecords: vi.fn(),
   checkDns: vi.fn(),
   verifySendingDomain: vi.fn(),
+  updateSendingDomain: vi.fn(),
+  activateSendingDomain: vi.fn(),
+}));
+
+/** The domain the Project currently sends from, as Email sending reports it. */
+let activeDomain: string | null = null;
+vi.mock('@/hooks/projects/use-project-settings', () => ({
+  useEmailSettings: () => ({ query: { data: { sendingDomain: activeDomain } } }),
 }));
 
 let role = 'owner';
@@ -362,13 +370,74 @@ describe('Manual DNS setup', () => {
     expect(await within(dialog).findByText(/Set up the SMTP relay under Email sending/)).toBeInTheDocument();
   });
 
+  it('does not call a domain ready while only its DNS is authenticated', async () => {
+    for (const lastError of ['SMTP_NOT_CONFIGURED', 'SMTP_VERIFICATION_FAILED', 'FEEDBACK_NOT_CONFIGURED']) {
+      m.listSendingDomains.mockResolvedValue([withRecords({ status: 'verification_failed', lastError })]);
+      const { unmount } = renderPanel();
+      const row = await screen.findByTestId('domain-row-example.com');
+      expect(within(row).getByText('Provider connection incomplete')).toBeInTheDocument();
+      expect(screen.getByRole('alert')).toHaveTextContent('email cannot be sent until the sending connection is finished');
+      expect(screen.queryByText('Ready to send')).not.toBeInTheDocument();
+      expect(screen.queryByText(/Authenticated/)).not.toBeInTheDocument();
+      unmount();
+    }
+  });
+
   it('shows a fully authenticated domain', async () => {
     const verified = withRecords({ status: 'verified', verifiedAt: '2026-09-29T12:00:00.000Z', dnsRecords: withRecords().dnsRecords.map((r) => ({ ...r, verified: true, status: 'verified' as const })) });
     const dialog = await openDns(verified);
-    expect(await within(dialog).findByText('example.com is authenticated. You can send email from it.')).toBeInTheDocument();
+    expect(await within(dialog).findByText(/example.com: Domain authenticated and sending connection ready\./)).toBeInTheDocument();
     const row = screen.getByTestId('domain-row-example.com');
-    expect(within(row).getByText('Authenticated')).toBeInTheDocument();
+    expect(within(row).getByText('Ready to send')).toBeInTheDocument();
     expect(within(row).queryByRole('button', { name: 'Resolve' })).not.toBeInTheDocument();
+  });
+
+  it('shows which domain sends and switches the sender to another ready domain', async () => {
+    activeDomain = 'example.com';
+    m.listSendingDomains.mockResolvedValue([
+      withRecords({ status: 'verified' }),
+      withRecords({ id: 'd2', domain: 'brand.org', senderEmail: 'hi@brand.org', status: 'verified' }),
+      withRecords({ id: 'd3', domain: 'pending.net', senderEmail: 'hi@pending.net' }),
+    ]);
+    m.activateSendingDomain.mockResolvedValue(withRecords({ id: 'd2', domain: 'brand.org', status: 'verified' }));
+    renderPanel();
+
+    const current = await screen.findByTestId('domain-row-example.com');
+    expect(within(current).getByText('Sending from this domain')).toBeInTheDocument();
+    expect(within(current).queryByRole('button', { name: 'Use for sending' })).not.toBeInTheDocument();
+    // A domain that is not ready can never be chosen.
+    expect(within(screen.getByTestId('domain-row-pending.net')).queryByRole('button', { name: 'Use for sending' })).not.toBeInTheDocument();
+
+    await userEvent.click(within(screen.getByTestId('domain-row-brand.org')).getByRole('button', { name: 'Use for sending' }));
+    expect(m.activateSendingDomain).toHaveBeenCalledWith('p1', 'd2');
+    expect(await screen.findByText('Email is now sent from hi@brand.org.')).toBeInTheDocument();
+    activeDomain = null;
+  });
+
+  it('lets the customer name the DKIM selector of their provider when the key is not found', async () => {
+    const dkim = record({ type: 'TXT', name: '<selector>._domainkey', value: 'Published by your email provider.', status: 'not_found' });
+    const d = withRecords({ dnsRecords: [dkim] });
+    m.updateSendingDomain.mockResolvedValue(d);
+    m.checkDns.mockResolvedValue(d);
+    const dialog = await openDns(d);
+
+    const save = within(dialog).getByRole('button', { name: 'Save and check' });
+    expect(save).toBeDisabled();
+    await userEvent.type(within(dialog).getByLabelText('DKIM selector'), 'bad selector!');
+    expect(within(dialog).getByText('Letters, numbers and hyphens only.')).toBeInTheDocument();
+    expect(save).toBeDisabled();
+
+    await userEvent.clear(within(dialog).getByLabelText('DKIM selector'));
+    await userEvent.type(within(dialog).getByLabelText('DKIM selector'), 'Custom9');
+    expect(within(dialog).getByText('Checked at Custom9._domainkey.example.com')).toBeInTheDocument();
+    await userEvent.click(save);
+    await waitFor(() => expect(m.updateSendingDomain).toHaveBeenCalledWith('p1', 'd1', { dkimSelector: 'custom9' }));
+    expect(m.checkDns).toHaveBeenCalledWith('p1', 'd1');
+  });
+
+  it('does not ask for a selector when we issue the DKIM record ourselves', async () => {
+    const dialog = await openDns(withRecords());
+    expect(within(dialog).queryByLabelText('DKIM selector')).not.toBeInTheDocument();
   });
 
   it('checks status from the list row', async () => {
@@ -376,7 +445,7 @@ describe('Manual DNS setup', () => {
     m.checkDns.mockResolvedValue(withRecords({ status: 'verified' }));
     renderPanel();
     await userEvent.click(await screen.findByRole('button', { name: 'Check status' }));
-    expect(await screen.findByText('example.com is authenticated.')).toBeInTheDocument();
+    expect(await screen.findByText('example.com: Domain authenticated and sending connection ready.')).toBeInTheDocument();
     expect(m.listSendingDomains).toHaveBeenCalledTimes(2);
   });
 });

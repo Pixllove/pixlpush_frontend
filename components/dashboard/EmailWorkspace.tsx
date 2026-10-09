@@ -97,6 +97,9 @@ import SimpleEmailEditor from "@/components/dashboard/SimpleEmailEditor";
 import DeleteConfirmDialog from "@/components/dashboard/DeleteConfirmDialog";
 import { Toast } from "@/components/auth/AuthFeedback";
 import { useActiveProject } from "@/hooks/projects/use-active-project";
+import { useEmailSettings } from "@/hooks/projects/use-project-settings";
+import DeliverabilityCheck from "./DeliverabilityCheck";
+import { analyzeEmail, blocksSending, fromBackend } from "@/lib/deliverability";
 import { emailApi } from "@/lib/projects/api";
 import type { EmailCampaign, EmailTemplate } from "@/lib/projects/api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -2548,6 +2551,29 @@ function CampaignReview({
   const [deliveryMode, setDeliveryMode] = useState<"immediately" | "specific">("immediately");
   // ponytail: the preheader is not stored or sent yet; it lives here until the campaign API has a field for it
   const [preheader, setPreheader] = useState("");
+  const { active } = useActiveProject();
+  const settings = useEmailSettings(active?.id).query;
+  const sender = {
+    loading: !active || settings.isPending,
+    ready: settings.data?.productionSendingEnabled === true,
+    blockers: settings.data?.sending?.blockers,
+  };
+  // The backend adds what needs a server (link lookups, payload size). It does not read the subject for
+  // those, so the query follows the content only and typing a subject sends nothing.
+  const backend = useQuery({
+    queryKey: ["projects", active?.id, "deliverability", html],
+    queryFn: () => emailApi.deliverabilityCheck(active!.id, { subject: subject.trim() || "Campaign", html }),
+    enabled: Boolean(active && html),
+    staleTime: Infinity,
+    retry: false,
+  });
+  const findings = useMemo(
+    () => [
+      ...analyzeEmail({ subject, html, ownHosts: [typeof window === "undefined" ? "" : window.location.hostname, settings.data?.sendingDomain ?? ""] }),
+      ...fromBackend(backend.data?.warnings ?? []),
+    ],
+    [subject, html, settings.data?.sendingDomain, backend.data],
+  );
   return (
     <Box className="campaign-review-screen">
       <Box className="campaign-review-inner">
@@ -2578,7 +2604,8 @@ function CampaignReview({
           </Stack>
           <Paper className="campaign-review-card campaign-review-preview"><Stack direction="row" justifyContent="space-between" alignItems="center"><Box><Typography variant="h3">Email preview</Typography><Typography color="text.secondary" fontSize={12}>This is how your campaign will look.</Typography></Box><Button variant="outlined" onClick={onBack}>Edit content</Button></Stack><Paper className="review-email-frame" dangerouslySetInnerHTML={{ __html: html || "<p>Your email content will appear here.</p>" }} /></Paper>
         </Box>
-        <Paper className="campaign-review-footer"><Box><Typography fontWeight={600}>Ready to send this campaign?</Typography><Typography color="text.secondary" fontSize={11}>The campaign is prepared locally and can be sent when you are ready.</Typography></Box><Button variant="contained" startIcon={<SendRounded />} onClick={() => onNotice("Campaign ready to send locally")}>Send campaign</Button></Paper>
+        <Box sx={{ mt: 3 }}><DeliverabilityCheck findings={findings} sender={sender} /></Box>
+        <Paper className="campaign-review-footer"><Box><Typography fontWeight={600}>Ready to send this campaign?</Typography><Typography color="text.secondary" fontSize={11}>The campaign is prepared locally and can be sent when you are ready.</Typography></Box><Button variant="contained" startIcon={<SendRounded />} disabled={!sender.ready || blocksSending(findings)} onClick={() => onNotice("Campaign ready to send locally")}>Send campaign</Button></Paper>
       </Box>
     </Box>
   );

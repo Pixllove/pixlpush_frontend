@@ -14,10 +14,11 @@ import {
   Step,
   StepLabel,
   Stepper,
+  TextField,
   Typography,
 } from '@mui/material';
-import { checkDns, getSendingDomain, startProviderConnection } from '@/lib/sending-domains/api';
-import { domainErrorMessage, messageForCode } from '@/lib/sending-domains/errors';
+import { checkDns, getSendingDomain, startProviderConnection, updateSendingDomain } from '@/lib/sending-domains/api';
+import { domainErrorMessage, isConnectionCode, messageForCode } from '@/lib/sending-domains/errors';
 import type { SendingDomain } from '@/types/sending-domain';
 import { redirectToProvider, rememberConnection } from './connection';
 import DnsRecordCard from './DnsRecordCard';
@@ -33,7 +34,7 @@ const STEPS = [
   'Create the required records',
   'Copy the records exactly',
   'Return to PixlPush',
-  'Check the records and wait for authentication',
+  'Check the records and the sending connection',
 ];
 
 interface Props {
@@ -52,6 +53,7 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
   const [checking, setChecking] = useState(false);
   const [checkError, setCheckError] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
+  const [selector, setSelector] = useState<string | null>(null);
 
   const domain = query.data;
 
@@ -64,6 +66,22 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
       setCheckError(domainErrorMessage(e));
     } finally {
       // Always reload from the backend (this also refreshes the dialog's query).
+      onChanged();
+      setChecking(false);
+    }
+  };
+
+  // Saving the selector resets the DKIM record, so it is checked again straight away.
+  const saveSelector = async () => {
+    setChecking(true);
+    setCheckError(null);
+    try {
+      await updateSendingDomain(projectId, domainId, { dkimSelector: selector?.trim().toLowerCase() || null });
+      setSelector(null);
+      await checkDns(projectId, domainId);
+    } catch (e) {
+      setCheckError(domainErrorMessage(e));
+    } finally {
       onChanged();
       setChecking(false);
     }
@@ -101,6 +119,10 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
   const records = domain?.dnsRecords ?? [];
   const required = records.filter((r) => r.required);
   const verifiedCount = required.filter((r) => r.verified).length;
+  // The key belongs to the customer's email provider (TXT) and has not been found yet.
+  const providerDkim = records.find((r) => r.purpose === 'DKIM' && r.type === 'TXT');
+  const selectorValue = selector ?? domain?.dkimSelector ?? '';
+  const selectorValid = /^[a-z0-9-]{0,63}$/i.test(selectorValue.trim());
   const statusMessage = domain && domain.status !== 'verified' ? messageForCode(domain.lastError) : null;
 
   return (
@@ -108,7 +130,7 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
       <DialogTitle>
         <Stack direction="row" alignItems="center" gap={1.5}>
           <span>DNS records for {domain?.domain ?? '…'}</span>
-          {domain && <DomainStatusBadge status={domain.status} />}
+          {domain && <DomainStatusBadge status={domain.status} lastError={domain.lastError} />}
         </Stack>
       </DialogTitle>
       <DialogContent>
@@ -137,11 +159,15 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
                 Your DNS is hosted at {domain.providerName}. Add the records below there.
               </Alert>
             )}
-            {domain.status === 'verified' && <Alert severity="success">{domain.domain} is authenticated. You can send email from it.</Alert>}
+            {domain.status === 'verified' && (
+              <Alert severity="success">{domain.domain}: Domain authenticated and sending connection ready. Send yourself a test email under Email sending.</Alert>
+            )}
             {domain.status === 'partially_verified' && (
               <Alert severity="warning">Partially verified: {verifiedCount} of {required.length} required records are correct. {statusMessage}</Alert>
             )}
-            {domain.status === 'verification_failed' && <Alert severity="error">Verification failed. {statusMessage}</Alert>}
+            {domain.status === 'verification_failed' && (isConnectionCode(domain.lastError)
+              ? <Alert severity="warning">Provider connection incomplete. {statusMessage} Email cannot be sent from this domain yet.</Alert>
+              : <Alert severity="error">Verification failed. {statusMessage}</Alert>)}
             {domain.status === 'dns_check_failed' && <Alert severity="error">{messageForCode('DNS_LOOKUP_FAILED')}</Alert>}
             {domain.status === 'dns_pending' && domain.lastCheckedAt && <Alert severity="info">{messageForCode('DNS_RECORD_NOT_FOUND')}</Alert>}
             {checkError && (
@@ -162,6 +188,27 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
               <Alert severity="info">No DNS records yet. Choose how to connect this domain first.</Alert>
             ) : (
               <Stack gap={1.5}>{records.map((record) => <DnsRecordCard key={record.id} record={record} />)}</Stack>
+            )}
+
+            {providerDkim && !providerDkim.verified && (
+              <Stack gap={1}>
+                <Typography fontSize={13} color="text.secondary">
+                  DKIM is enabled at your email provider, not here. We look for the key under the usual selectors. If your provider uses a different one, enter it.
+                </Typography>
+                <Stack direction="row" gap={1} alignItems="flex-start">
+                  <TextField
+                    size="small"
+                    label="DKIM selector"
+                    placeholder="s1"
+                    value={selectorValue}
+                    onChange={(e) => setSelector(e.target.value)}
+                    error={!selectorValid}
+                    helperText={selectorValid ? `Checked at ${selectorValue.trim() || 'selector'}._domainkey.${domain.domain}` : 'Letters, numbers and hyphens only.'}
+                    disabled={checking || connecting}
+                  />
+                  <Button variant="outlined" onClick={saveSelector} disabled={checking || connecting || !selectorValid || selector === null}>Save and check</Button>
+                </Stack>
+              </Stack>
             )}
 
             {domain.lastCheckedAt && (

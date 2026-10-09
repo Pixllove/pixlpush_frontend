@@ -1,121 +1,160 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { EmailRounded } from '@mui/icons-material';
-import { Alert, Box, Button, Card, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Card, Stack, TextField, Typography } from '@mui/material';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
 import { useEmailSettings } from '@/hooks/projects/use-project-settings';
 import SettingsStatus from './SettingsStatus';
 import type { ApiError } from '@/types/auth';
 
 const CONFIG_ROLES = ['owner', 'admin', 'developer'];
-const STATUS = {
-  not_configured: ['Not configured', 'neutral'],
-  pending_verification: ['Pending verification', 'warning'],
-  verified: ['Verified', 'success'],
-  error: ['Error', 'warning'],
-} as const;
+const EMPTY_SMTP = { host: '', port: '587', username: '', password: '' };
 
-/** Sending domain / sender identity of the active Project. */
-export default function EmailPanel() {
+/**
+ * Second half of the email setup. The domain itself is added and authenticated under Sending domains;
+ * here the Project gets what DNS cannot give it: the provider's sending connection, bounce and complaint
+ * handling, and a test email. "Ready to send" is the backend's answer, never derived here.
+ */
+export default function EmailPanel({ onNavigate }: { onNavigate?: (tab: string) => void }) {
   const { active } = useActiveProject();
-  const { query, configure, verify } = useEmailSettings(active?.id);
+  const { query, configureSmtp, createWebhookSecret, sendTest } = useEmailSettings(active?.id);
   const config = query.data;
   const canEdit = Boolean(active && CONFIG_ROLES.includes(active.role));
+  const ready = config?.productionSendingEnabled === true;
+  const blockers = config?.sending?.blockers ?? [];
 
-  const [form, setForm] = useState({ sendingDomain: '', senderEmail: '', senderName: '' });
+  const [smtp, setSmtp] = useState(EMPTY_SMTP);
+  const [testTo, setTestTo] = useState('');
+  const [secret, setSecret] = useState<{ secret: string; signing: string }>();
+  const [notice, setNotice] = useState<string>();
   const [error, setError] = useState<string>();
 
-  // Refill when the Project (or its saved config) changes.
-  useEffect(() => {
-    setForm({ sendingDomain: config?.sendingDomain ?? '', senderEmail: config?.senderEmail ?? '', senderName: config?.senderName ?? '' });
+  const run = async (action: () => Promise<string | void>) => {
     setError(undefined);
-  }, [config]);
+    setNotice(undefined);
+    try { setNotice((await action()) || undefined); } catch (cause) { setError((cause as ApiError).message ?? 'Something went wrong. Please try again.'); }
+  };
 
-  const field = (key: keyof typeof form) => ({
-    value: form[key],
-    onChange: (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [key]: e.target.value }),
+  const saveSmtp = (event: React.FormEvent) => {
+    event.preventDefault();
+    return run(async () => {
+      await configureSmtp.mutateAsync({ ...smtp, port: Number(smtp.port) });
+      setSmtp(EMPTY_SMTP);
+      return 'Sending connection saved. Run "Check status" on your domain under Sending domains to verify the login.';
+    });
+  };
+
+  const createSecret = () => run(async () => { setSecret(await createWebhookSecret.mutateAsync()); });
+
+  const sendTestEmail = (event: React.FormEvent) => {
+    event.preventDefault();
+    return run(async () => {
+      const { to } = await sendTest.mutateAsync(testTo);
+      return `Test email sent to ${to}. Check that it arrived.`;
+    });
+  };
+
+  const smtpField = (key: keyof typeof smtp) => ({
+    value: smtp[key],
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => setSmtp({ ...smtp, [key]: e.target.value }),
     disabled: !canEdit,
     fullWidth: true,
+    required: true,
   });
-
-  const submit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setError(undefined);
-    try { await configure.mutateAsync(form); } catch (cause) { setError((cause as ApiError).message ?? 'Could not save.'); }
-  };
-
-  const check = async () => {
-    setError(undefined);
-    try { await verify.mutateAsync(); } catch (cause) { setError((cause as ApiError).message); }
-  };
-
-  const [label, tone] = STATUS[config?.status ?? 'not_configured'];
 
   return (
     <Stack gap={2.5}>
       <Box>
         <Typography variant="h3">Email sending</Typography>
-        <Typography color="text.secondary" fontSize={12}>Verify a sending domain or sender identity before production email is enabled.</Typography>
+        <Typography color="text.secondary" fontSize={12}>Connect the email provider this project sends through. Email is enabled once every check below passes.</Typography>
       </Box>
 
       {query.isError && <Alert severity="error">{query.error.message}</Alert>}
       {error && <Alert severity="error">{error}</Alert>}
+      {notice && <Alert severity="success">{notice}</Alert>}
 
       <Card className="settings-hero-card">
         <Stack direction={{ xs: 'column', sm: 'row' }} gap={2} alignItems={{ sm: 'center' }}>
           <Box className="settings-large-icon email"><EmailRounded /></Box>
           <Box sx={{ flex: 1 }}>
-            <Stack direction="row" alignItems="center" gap={1}>
+            <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap">
               <Typography fontWeight={600}>{config?.sendingDomain ?? 'No sending domain yet'}</Typography>
-              {config && <SettingsStatus tone={tone}>{label}</SettingsStatus>}
+              {config && <SettingsStatus tone={ready ? 'success' : 'warning'}>{ready ? 'Ready to send' : 'Provider connection incomplete'}</SettingsStatus>}
             </Stack>
             <Typography color="text.secondary" fontSize={12} sx={{ mt: .6 }}>
-              {config?.senderEmail ? `Sender: ${config.senderName} <${config.senderEmail}>` : 'Add a domain below to get the DNS records to publish.'}
-              {config?.lastCheckedAt && ` · Last checked ${new Date(config.lastCheckedAt).toLocaleString()}`}
+              {config?.senderEmail ? `Sender: ${config.senderName ?? ''} <${config.senderEmail}>` : 'The sender is taken from your first authenticated sending domain.'}
             </Typography>
           </Box>
-          {config?.sendingDomain && <Button variant="outlined" disabled={!canEdit || verify.isPending} onClick={check}>{verify.isPending ? 'Checking…' : 'Check DNS'}</Button>}
+          {onNavigate && <Button variant="outlined" onClick={() => onNavigate('Sending domains')}>Sending domains</Button>}
         </Stack>
       </Card>
 
-      {config?.lastError && <Alert severity="warning">{config.lastError}</Alert>}
-
-      {Boolean(config?.dnsRecords.length) && (
-        <Card className="saas-card">
-          <Typography variant="h3">DNS records</Typography>
-          <Typography color="text.secondary" fontSize={12} sx={{ mt: .5 }}>Publish these at your DNS provider, then run Check DNS.</Typography>
-          <Box sx={{ overflowX: 'auto', mt: 1.5 }}>
-            <Table size="small">
-              <TableHead><TableRow><TableCell>Purpose</TableCell><TableCell>Type</TableCell><TableCell>Name</TableCell><TableCell>Value</TableCell><TableCell>Status</TableCell></TableRow></TableHead>
-              <TableBody>
-                {config!.dnsRecords.map((r) => (
-                  <TableRow key={r.purpose}>
-                    <TableCell>{r.purpose}</TableCell><TableCell>{r.type}</TableCell>
-                    <TableCell sx={{ fontFamily: 'var(--pp-mono)', wordBreak: 'break-all' }}>{r.name}</TableCell>
-                    <TableCell sx={{ fontFamily: 'var(--pp-mono)', wordBreak: 'break-all' }}>{r.value}</TableCell>
-                    <TableCell>{r.verified ? 'Verified' : 'Pending'}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+      {config && ready && <Alert severity="success">Domain authenticated and sending connection ready.</Alert>}
+      {config && !ready && (
+        <Alert severity="warning">
+          Email cannot be sent from this project yet. Still missing:
+          <Box component="ul" sx={{ m: 0, mt: .5, pl: 2.5 }}>
+            {blockers.map((b) => <li key={b.code}>{b.message}</li>)}
           </Box>
-        </Card>
+        </Alert>
       )}
 
-      <Card className="saas-card" component="form" onSubmit={submit}>
-        <Typography variant="h3">{config?.sendingDomain ? 'Change sending identity' : 'Add a sending identity'}</Typography>
+      <Card className="saas-card" component="form" onSubmit={saveSmtp} aria-label="Sending connection">
+        <Stack direction="row" alignItems="center" gap={1}>
+          <Typography variant="h3">Sending connection (SMTP)</Typography>
+          {config && <SettingsStatus tone={config.smtp ? 'success' : 'neutral'}>{config.smtp ? `${config.smtp.host}:${config.smtp.port}` : 'Not connected'}</SettingsStatus>}
+        </Stack>
+        <Typography color="text.secondary" fontSize={12} sx={{ mt: .5 }}>
+          Providers such as IONOS can publish your DNS records for us, but they do not hand out sending access to other apps. Enter the SMTP details of your email provider once. The password is stored encrypted and is never shown again.
+        </Typography>
         <Stack gap={1.5} sx={{ mt: 2 }}>
-          <TextField label="Sending domain" placeholder="mail.example.com" {...field('sendingDomain')} />
           <Stack direction={{ xs: 'column', sm: 'row' }} gap={1.5}>
-            <TextField label="Sender email" placeholder="hello@mail.example.com" type="email" {...field('senderEmail')} />
-            <TextField label="Sender name" placeholder={active?.name} {...field('senderName')} />
+            <TextField label="SMTP host" placeholder="smtp.ionos.com" {...smtpField('host')} />
+            <TextField label="Port" type="number" sx={{ maxWidth: { sm: 120 } }} {...smtpField('port')} />
+          </Stack>
+          <Stack direction={{ xs: 'column', sm: 'row' }} gap={1.5}>
+            <TextField label="Username" autoComplete="off" {...smtpField('username')} />
+            <TextField label="Password" type="password" autoComplete="new-password" {...smtpField('password')} />
           </Stack>
         </Stack>
-        <Typography color="text.secondary" fontSize={12} sx={{ mt: 1.5 }}>The sender email must be on the sending domain. Changing the domain resets verification. PixlPush never needs access to your inbox.</Typography>
-        <Button type="submit" variant="contained" sx={{ mt: 2 }} disabled={!canEdit || configure.isPending || !form.sendingDomain || !form.senderEmail || !form.senderName}>
-          {configure.isPending ? 'Saving…' : 'Save and get DNS records'}
+        <Button type="submit" variant="contained" sx={{ mt: 2 }} disabled={!canEdit || configureSmtp.isPending}>
+          {configureSmtp.isPending ? 'Saving…' : config?.smtp ? 'Replace sending connection' : 'Save sending connection'}
         </Button>
+      </Card>
+
+      <Card className="saas-card" aria-label="Bounce and complaint handling">
+        <Stack direction="row" alignItems="center" gap={1}>
+          <Typography variant="h3">Bounce and complaint handling</Typography>
+          {config && <SettingsStatus tone={config.webhook?.secretSet ? 'success' : 'neutral'}>{config.webhook?.secretSet ? 'Active' : 'Not set up'}</SettingsStatus>}
+        </Stack>
+        <Typography color="text.secondary" fontSize={12} sx={{ mt: .5 }}>
+          Your email provider reports bounces and spam complaints to this address, so those contacts are never emailed again. Add it as a webhook at your provider, signed with the secret.
+        </Typography>
+        {config?.webhook?.url && <Typography sx={{ mt: 1.5, fontFamily: 'var(--pp-mono)', wordBreak: 'break-all' }} fontSize={12}>{config.webhook.url}</Typography>}
+        {secret && (
+          <Alert severity="info" sx={{ mt: 1.5 }}>
+            Store this secret now. It cannot be shown again.
+            <Typography sx={{ fontFamily: 'var(--pp-mono)', wordBreak: 'break-all' }} fontSize={12}>{secret.secret}</Typography>
+            <Typography fontSize={12}>{secret.signing}</Typography>
+          </Alert>
+        )}
+        <Button variant="outlined" sx={{ mt: 2 }} disabled={!canEdit || createWebhookSecret.isPending} onClick={createSecret}>
+          {config?.webhook?.secretSet ? 'Rotate webhook secret' : 'Create webhook secret'}
+        </Button>
+      </Card>
+
+      <Card className="saas-card" component="form" onSubmit={sendTestEmail} aria-label="Test email">
+        <Typography variant="h3">Send a test email</Typography>
+        <Typography color="text.secondary" fontSize={12} sx={{ mt: .5 }}>
+          {ready ? 'Send one message through your sending connection to see it arrive.' : 'Available once every check above passes.'}
+        </Typography>
+        <Stack direction={{ xs: 'column', sm: 'row' }} gap={1.5} sx={{ mt: 2 }}>
+          <TextField label="Send to" type="email" required fullWidth value={testTo} onChange={(e) => setTestTo(e.target.value)} disabled={!canEdit || !ready} />
+          <Button type="submit" variant="contained" disabled={!canEdit || !ready || sendTest.isPending} sx={{ flexShrink: 0 }}>
+            {sendTest.isPending ? 'Sending…' : 'Send test email'}
+          </Button>
+        </Stack>
       </Card>
     </Stack>
   );

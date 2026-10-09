@@ -98,6 +98,27 @@ const sources: {
   },
 ];
 
+/** The import cannot be completed until the customer vouches for the consent of every contact in it. */
+export function ImportConsentConfirmation({ checked, disabled, onChange }: { checked: boolean; disabled?: boolean; onChange: (checked: boolean) => void }) {
+  return (
+    <Box className="import-review-card">
+      <FormControlLabel
+        control={<Checkbox checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} />}
+        label={
+          <Typography fontWeight={600}>
+            I confirm that all imported contacts have consented to receive email communication.
+          </Typography>
+        }
+      />
+      <Typography component="ul" color="text.secondary" fontSize={12} sx={{ m: 0, pl: 5.5 }}>
+        <li>This confirmation applies to every contact in this import.</li>
+        <li>Contacts who have unsubscribed or complained will not be contacted, even if they are in this file.</li>
+        <li>You are responsible for holding valid consent for these contacts.</li>
+      </Typography>
+    </Box>
+  );
+}
+
 export default function UserImportDialog({
   open,
   onClose,
@@ -110,6 +131,7 @@ export default function UserImportDialog({
   const queryClient = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState(0);
+  const [consentConfirmed, setConsentConfirmed] = useState(false);
   const [fileName, setFileName] = useState("");
   const [fileSize, setFileSize] = useState("");
   const [headers, setHeaders] = useState<string[]>([]);
@@ -232,6 +254,7 @@ export default function UserImportDialog({
     setIsUploading(false);
     setCreateAndUpdate(true);
     setAddToAudienceGroup(false);
+    setConsentConfirmed(false);
     setAudienceGroupName("");
     setHeaderLanguage("en");
     setImportJob(null);
@@ -380,6 +403,7 @@ export default function UserImportDialog({
           projectId,
           importJob!.id,
           addToAudienceGroup ? audienceGroupName.trim() : undefined,
+          consentConfirmed,
         ),
       );
       setStep(3);
@@ -393,6 +417,7 @@ export default function UserImportDialog({
         ? Boolean(uniqueField) &&
           (mapping[uniqueField] ?? "ignore") !== "ignore"
         : Boolean(preview) &&
+          consentConfirmed &&
           (!addToAudienceGroup || Boolean(audienceGroupName.trim()));
   const summary = preview?.summary;
   const results = importJob?.results;
@@ -1032,6 +1057,9 @@ export default function UserImportDialog({
           <Typography color="#d95b63" fontSize={12} fontWeight={500}>
             {error}
           </Typography>
+        )}
+        {step === 2 && (
+          <ImportConsentConfirmation checked={consentConfirmed} disabled={busy} onChange={setConsentConfirmed} />
         )}
         <Stack
           direction="row"

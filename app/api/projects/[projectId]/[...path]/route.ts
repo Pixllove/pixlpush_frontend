@@ -7,14 +7,17 @@ const ALLOWED = [
   "restore",
   "firebase",
   "sdk-keys",
+  // Includes /smtp, /webhook-secret, /test and /verify.
   "email-settings",
   "billing",
   "members",
   "users",
   "events",
   "lifecycle-segments",
+  // The commit carries `emailConsentConfirmed` in its JSON body.
   "user-imports",
   "audience-groups",
+  // Includes PATCH /:domainId (DKIM selector) and /:domainId/activate.
   "sending-domains",
   "invitations",
   "audit-logs",
@@ -22,8 +25,9 @@ const ALLOWED = [
   "push-deeplinks",
   "push-campaigns",
   "push-deliveries",
-  // Includes /languages, /default-language, /translate, /suggest, and the
-  // existing template CRUD routes under the same backend resource.
+  // Includes /languages, /default-language, /translate, /suggest,
+  // /deliverability-check, and the existing template CRUD routes under the
+  // same backend resource.
   "email-templates",
   "email-campaigns",
   "email-deliveries",

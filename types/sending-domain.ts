@@ -33,6 +33,8 @@ export interface SendingDomain {
   senderEmail: string | null;
   senderName: string | null;
   replyTo: string | null;
+  /** DKIM selector of the customer's email provider; only set when the key is not under a common one. */
+  dkimSelector?: string | null;
   provider: string | null;
   providerName: string | null;
   /** Link to the DNS settings at the domain's DNS host, when known. */

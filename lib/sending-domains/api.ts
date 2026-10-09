@@ -59,3 +59,11 @@ export const checkDns = (projectId: string, domainId: string) =>
 
 export const verifySendingDomain = (projectId: string, domainId: string) =>
   authRequest<SendingDomain>(one(projectId, domainId, '/verify'), {}, BASE);
+
+/** The DKIM selector of the customer's email provider, for keys we cannot find on our own. Null clears it. */
+export const updateSendingDomain = (projectId: string, domainId: string, input: { dkimSelector: string | null }) =>
+  authRequest<SendingDomain>(one(projectId, domainId), input, BASE, 'PATCH');
+
+/** Sends the Project's email from this verified domain's sender address. */
+export const activateSendingDomain = (projectId: string, domainId: string) =>
+  authRequest<SendingDomain>(one(projectId, domainId, '/activate'), {}, BASE);

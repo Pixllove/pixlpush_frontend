@@ -236,6 +236,40 @@ export const emailApi = {
       {},
       BASE,
     ),
+  /** The relay this project sends through. The password is stored encrypted and never returned. */
+  configureSmtp: (
+    projectId: string,
+    input: { host: string; port: number; username: string; password: string },
+  ) =>
+    authRequest<Pick<EmailSettings, "status" | "smtp">>(
+      at(projectId, "/email-settings/smtp"),
+      input,
+      BASE,
+      "PUT",
+    ),
+  /** Creates or rotates the bounce/complaint webhook secret. It is returned exactly once. */
+  createWebhookSecret: (projectId: string) =>
+    authRequest<{ secret: string; url: string; signing: string }>(
+      at(projectId, "/email-settings/webhook-secret"),
+      {},
+      BASE,
+    ),
+  sendTest: (projectId: string, to: string) =>
+    authRequest<{ sent: boolean; to: string }>(
+      at(projectId, "/email-settings/test"),
+      { to },
+      BASE,
+    ),
+  /** Advisory content review. Nothing it returns blocks sending. */
+  deliverabilityCheck: (
+    projectId: string,
+    input: { subject: string; html: string },
+  ) =>
+    authRequest<{ warnings: { code: string; message: string; detail?: string[] }[] }>(
+      at(projectId, "/email-templates/deliverability-check"),
+      input,
+      BASE,
+    ),
   languages: {
     get: (projectId: string) =>
       authRequest<EmailLanguages>(
@@ -804,13 +838,16 @@ export const userImportApi = {
       {},
       BASE,
     ),
-  /** `audienceGroupName` creates an Audience Group holding exactly this import's users. */
-  commit: (projectId: string, importId: string, audienceGroupName?: string) =>
+  /**
+   * `audienceGroupName` creates an Audience Group holding exactly this import's users.
+   * `emailConsentConfirmed` records that the customer vouched for every contact's email consent.
+   */
+  commit: (projectId: string, importId: string, audienceGroupName?: string, emailConsentConfirmed = false) =>
     authRequest<
       UserImport & { audienceGroup?: { id: string; name: string } | null }
     >(
       at(projectId, `/user-imports/${encodeURIComponent(importId)}/commit`),
-      audienceGroupName ? { audienceGroupName } : {},
+      { ...(audienceGroupName ? { audienceGroupName } : {}), ...(emailConsentConfirmed ? { emailConsentConfirmed } : {}) },
       BASE,
     ),
   /** Permanently deletes the users this import created (not the ones it only updated). */

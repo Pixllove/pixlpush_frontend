@@ -48,5 +48,8 @@ export function useEmailSettings(projectId: string | undefined) {
     query: useArea(projectId, 'email', emailApi.get),
     configure: useAreaMutation(projectId, 'email', emailApi.configure),
     verify: useAreaMutation(projectId, 'email', (id, _: void) => emailApi.verify(id)),
+    configureSmtp: useAreaMutation(projectId, 'email', emailApi.configureSmtp),
+    createWebhookSecret: useAreaMutation(projectId, 'email', (id, _: void) => emailApi.createWebhookSecret(id)),
+    sendTest: useAreaMutation(projectId, 'email', emailApi.sendTest),
   };
 }
