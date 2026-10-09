@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { CloseRounded } from '@mui/icons-material';
+import { AccessTimeRounded, CloseRounded } from '@mui/icons-material';
 import {
   Alert,
   Button,
@@ -105,8 +105,6 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
   const dnsUrl = safeDnsUrl(domain?.dnsSetupUrl);
   const records = domain?.dnsRecords ?? [];
   const automaticProvider = domain?.provider ?? (domain?.providerName?.toLowerCase() === 'ionos' ? 'ionos' : null);
-  const required = records.filter((r) => r.required);
-  const verifiedCount = required.filter((r) => r.verified).length;
   // The key belongs to the customer's email provider (TXT) and has not been found yet.
   const providerDkim = records.find((r) => r.purpose === 'DKIM' && r.type === 'TXT');
   const selectorValue = selector ?? domain?.dkimSelector ?? '';
@@ -114,7 +112,14 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
   const statusMessage = domain && domain.status !== 'verified' ? messageForCode(domain.lastError) : null;
 
   return (
-    <Dialog open onClose={checking ? undefined : onClose} fullWidth maxWidth="md">
+    <Dialog
+      open
+      onClose={checking ? undefined : onClose}
+      fullWidth
+      maxWidth="md"
+      scroll="paper"
+      PaperProps={{ sx: { display: 'flex', flexDirection: 'column', maxHeight: 'calc(100dvh - 32px)' } }}
+    >
       <DialogTitle>
         <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1.5}>
           <Stack direction="row" alignItems="center" gap={1.5}>
@@ -126,7 +131,7 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
           </IconButton>
         </Stack>
       </DialogTitle>
-      <DialogContent>
+      <DialogContent sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
         {query.isPending && (
           <Stack alignItems="center" justifyContent="center" sx={{ minHeight: 240 }} role="status"><CircularProgress size={28} /></Stack>
         )}
@@ -154,9 +159,6 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
             )}
             {domain.status === 'verified' && (
               <Alert severity="success">{domain.domain}: Domain authenticated and sending connection ready. Send yourself a test email under Domain.</Alert>
-            )}
-            {domain.status === 'partially_verified' && (
-              <Alert severity="warning">Partially verified: {verifiedCount} of {required.length} required records are correct. {statusMessage}</Alert>
             )}
             {domain.status === 'verification_failed' && (isConnectionCode(domain.lastError)
               ? <Alert severity="warning">Provider connection incomplete. {statusMessage} Email cannot be sent from this domain yet.</Alert>
@@ -204,13 +206,26 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
               </Stack>
             )}
 
+            {domain.status !== 'verified' && records.length > 0 && (
+              <Stack gap={0.75} sx={{ pt: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
+                <Typography fontWeight={600}>Wait for the records to become active</Typography>
+                <Typography color="text.secondary" fontSize={13}>
+                  It can take up to 24 hours, but usually takes only a couple of hours. We will let you know when your domain is ready.
+                </Typography>
+                <Stack direction="row" alignItems="center" gap={1} sx={{ bgcolor: '#eef0f3', color: 'text.secondary', px: 1.25, py: 0.85, borderRadius: 0.5, fontSize: 13 }}>
+                  <AccessTimeRounded sx={{ fontSize: 16 }} />
+                  <Typography fontSize={13}>Your records haven’t been authenticated yet.</Typography>
+                </Stack>
+              </Stack>
+            )}
+
             {domain.lastCheckedAt && (
               <Typography color="text.secondary" fontSize={12}>Last checked {new Date(domain.lastCheckedAt).toLocaleString()}</Typography>
             )}
           </Stack>
         )}
       </DialogContent>
-      <DialogActions>
+      <DialogActions sx={{ position: 'sticky', bottom: 0, zIndex: 1, bgcolor: 'background.paper', borderTop: '1px solid', borderColor: 'divider' }}>
         {automaticProvider && domain?.status !== 'verified' && (
           <Button onClick={() => onRetryAutomatic?.({ ...domain!, provider: automaticProvider! })} disabled={checking}>
             Try automatic connection

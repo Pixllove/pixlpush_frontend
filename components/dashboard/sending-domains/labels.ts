@@ -9,7 +9,7 @@ export const DOMAIN_STATUS: Record<SendingDomainStatus, { label: string; tone: T
   provider_selection: { label: 'Authentication pending', tone: 'warning' },
   connection_pending: { label: 'Authentication pending', tone: 'warning' },
   dns_pending: { label: 'Authentication pending', tone: 'warning' },
-  partially_verified: { label: 'Partially verified', tone: 'warning' },
+  partially_verified: { label: 'Authentication failed', tone: 'error' },
   verified: { label: 'Ready to send', tone: 'success' },
   connection_failed: { label: 'Authentication failed', tone: 'error' },
   dns_check_failed: { label: 'Authentication failed', tone: 'error' },
@@ -18,11 +18,11 @@ export const DOMAIN_STATUS: Record<SendingDomainStatus, { label: string; tone: T
 
 export const RECORD_STATUS: Record<DnsRecordStatus, { label: string; tone: Tone }> = {
   pending: { label: 'Not checked yet', tone: 'default' },
-  not_found: { label: 'Not found', tone: 'error' },
-  mismatch: { label: 'Value mismatch', tone: 'error' },
-  lookup_failed: { label: 'DNS lookup failed', tone: 'error' },
-  propagating: { label: 'Waiting for propagation', tone: 'warning' },
-  verified: { label: 'Verified', tone: 'success' },
+  not_found: { label: 'Still needed', tone: 'error' },
+  mismatch: { label: 'Needs fixing', tone: 'error' },
+  lookup_failed: { label: 'Could not check', tone: 'error' },
+  propagating: { label: 'Waiting for DNS update', tone: 'warning' },
+  verified: { label: 'Correct', tone: 'success' },
 };
 
 export const PURPOSE: Record<DnsPurpose, string> = {
