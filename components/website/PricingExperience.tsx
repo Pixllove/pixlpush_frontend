@@ -372,7 +372,7 @@ export default function PricingExperience() {
         <Box ref={calculatorRef} sx={{ mt: 6, scrollMarginTop: 28, order: 5 }}>
           <Box sx={{ position: 'relative', mb: 2.5 }}>
             <Stack alignItems="center" textAlign="center">
-              <Typography variant="h2" sx={{ fontSize: { xs: 32, md: 48 }, mt: .8, letterSpacing: '-.045em' }}>Estimate your cost.</Typography>
+              <Typography variant="h2" sx={{ fontSize: { xs: 32, md: 48 }, mt: .8, letterSpacing: '-.045em' }}>Your cost breakdown</Typography>
               <Typography color="text.secondary" sx={{ mt: 1, maxWidth: 720, fontSize: { xs: 14, md: 16 } }}>Use your mobile audience and monthly email volume to find the right plan.</Typography>
             </Stack>
           </Box>
@@ -415,7 +415,7 @@ export default function PricingExperience() {
                 <Grid item xs={12} md={7} sx={{ p: { xs: 2, md: 3 } }}>
                   <Stack gap={1.7}>
                     <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} gap={1}>
-                      <Typography fontSize={20} fontWeight={600} sx={{ color: '#102235' }}>Your cost breakdown</Typography>
+                      <Typography fontSize={20} fontWeight={600} sx={{ color: '#102235' }}>Cost details</Typography>
                     </Stack>
                     <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap">
                       <Typography fontSize={13} fontWeight={600} fontStyle="italic" sx={{ color: '#253342' }}>{planDetails[recommendedPlan].label} plan</Typography>

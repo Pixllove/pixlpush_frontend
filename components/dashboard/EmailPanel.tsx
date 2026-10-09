@@ -1,28 +1,26 @@
 'use client';
 
 import { useState } from 'react';
-import { EmailRounded } from '@mui/icons-material';
 import { Alert, Box, Button, Card, Stack, TextField, Typography } from '@mui/material';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
 import { useEmailSettings } from '@/hooks/projects/use-project-settings';
 import SettingsStatus from './SettingsStatus';
+import SendingDomainsPanel from './sending-domains/SendingDomainsPanel';
 import type { ApiError } from '@/types/auth';
 
 const CONFIG_ROLES = ['owner', 'admin', 'developer'];
 const EMPTY_SMTP = { host: '', port: '587', username: '', password: '' };
 
 /**
- * Second half of the email setup. The domain itself is added and authenticated under Sending domains;
- * here the Project gets what DNS cannot give it: the provider's sending connection, bounce and complaint
- * handling, and a test email. "Ready to send" is the backend's answer, never derived here.
+ * Complete email setup for the Project: sending domains, the provider connection,
+ * bounce and complaint handling, and a test email.
  */
-export default function EmailPanel({ onNavigate }: { onNavigate?: (tab: string) => void }) {
+export default function EmailPanel() {
   const { active } = useActiveProject();
   const { query, configureSmtp, createWebhookSecret, sendTest } = useEmailSettings(active?.id);
   const config = query.data;
   const canEdit = Boolean(active && CONFIG_ROLES.includes(active.role));
   const ready = config?.productionSendingEnabled === true;
-  const blockers = config?.sending?.blockers ?? [];
 
   const [smtp, setSmtp] = useState(EMPTY_SMTP);
   const [testTo, setTestTo] = useState('');
@@ -41,7 +39,7 @@ export default function EmailPanel({ onNavigate }: { onNavigate?: (tab: string) 
     return run(async () => {
       await configureSmtp.mutateAsync({ ...smtp, port: Number(smtp.port) });
       setSmtp(EMPTY_SMTP);
-      return 'Sending connection saved. Run "Check status" on your domain under Sending domains to verify the login.';
+      return 'Sending connection saved. Run "Check status" on your domain above to verify the login.';
     });
   };
 
@@ -65,40 +63,11 @@ export default function EmailPanel({ onNavigate }: { onNavigate?: (tab: string) 
 
   return (
     <Stack gap={2.5}>
-      <Box>
-        <Typography variant="h3">Email sending</Typography>
-        <Typography color="text.secondary" fontSize={12}>Connect the email provider this project sends through. Email is enabled once every check below passes.</Typography>
-      </Box>
-
       {query.isError && <Alert severity="error">{query.error.message}</Alert>}
       {error && <Alert severity="error">{error}</Alert>}
       {notice && <Alert severity="success">{notice}</Alert>}
 
-      <Card className="settings-hero-card">
-        <Stack direction={{ xs: 'column', sm: 'row' }} gap={2} alignItems={{ sm: 'center' }}>
-          <Box className="settings-large-icon email"><EmailRounded /></Box>
-          <Box sx={{ flex: 1 }}>
-            <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap">
-              <Typography fontWeight={600}>{config?.sendingDomain ?? 'No sending domain yet'}</Typography>
-              {config && <SettingsStatus tone={ready ? 'success' : 'warning'}>{ready ? 'Ready to send' : 'Provider connection incomplete'}</SettingsStatus>}
-            </Stack>
-            <Typography color="text.secondary" fontSize={12} sx={{ mt: .6 }}>
-              {config?.senderEmail ? `Sender: ${config.senderName ?? ''} <${config.senderEmail}>` : 'The sender is taken from your first authenticated sending domain.'}
-            </Typography>
-          </Box>
-          {onNavigate && <Button variant="outlined" onClick={() => onNavigate('Sending domains')}>Sending domains</Button>}
-        </Stack>
-      </Card>
-
-      {config && ready && <Alert severity="success">Domain authenticated and sending connection ready.</Alert>}
-      {config && !ready && (
-        <Alert severity="warning">
-          Email cannot be sent from this project yet. Still missing:
-          <Box component="ul" sx={{ m: 0, mt: .5, pl: 2.5 }}>
-            {blockers.map((b) => <li key={b.code}>{b.message}</li>)}
-          </Box>
-        </Alert>
-      )}
+      <SendingDomainsPanel />
 
       <Card className="saas-card" component="form" onSubmit={saveSmtp} aria-label="Sending connection">
         <Stack direction="row" alignItems="center" gap={1}>

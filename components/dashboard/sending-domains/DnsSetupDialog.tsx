@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { CloseRounded } from '@mui/icons-material';
 import {
   Alert,
   Button,
@@ -10,6 +11,7 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  IconButton,
   Stack,
   Step,
   StepLabel,
@@ -17,10 +19,9 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { checkDns, getSendingDomain, startProviderConnection, updateSendingDomain } from '@/lib/sending-domains/api';
+import { checkDns, getSendingDomain, updateSendingDomain } from '@/lib/sending-domains/api';
 import { domainErrorMessage, isConnectionCode, messageForCode } from '@/lib/sending-domains/errors';
 import type { SendingDomain } from '@/types/sending-domain';
-import { redirectToProvider, rememberConnection } from './connection';
 import DnsRecordCard from './DnsRecordCard';
 import { safeDnsUrl } from './DomainAnalysisDialog';
 import DomainStatusBadge from './DomainStatusBadge';
@@ -42,17 +43,17 @@ interface Props {
   domainId: string;
   onClose: () => void;
   onChanged: () => void;
+  onRetryAutomatic?: (domain: SendingDomain) => void;
 }
 
 /** Guided manual setup: records come from the backend, checks reload from it. */
-export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged }: Props) {
+export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged, onRetryAutomatic }: Props) {
   const query = useQuery({
     queryKey: ['projects', 'sending-domains', projectId, domainId],
     queryFn: () => getSendingDomain(projectId, domainId),
   });
   const [checking, setChecking] = useState(false);
   const [checkError, setCheckError] = useState<string | null>(null);
-  const [connecting, setConnecting] = useState(false);
   const [selector, setSelector] = useState<string | null>(null);
 
   const domain = query.data;
@@ -87,20 +88,6 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
     }
   };
 
-  const connectAutomatically = async (d: SendingDomain) => {
-    setConnecting(true);
-    setCheckError(null);
-    try {
-      const { authorizationUrl } = await startProviderConnection(projectId, d.id, d.provider!);
-      rememberConnection({ projectId, domainId: d.id, provider: d.provider! });
-      redirectToProvider(authorizationUrl);
-    } catch (e) {
-      setCheckError(domainErrorMessage(e));
-      setConnecting(false);
-      onChanged();
-    }
-  };
-
   // The DNS host publishes the records after an automatic connection, so nobody has to press "Check status".
   const waiting = domain?.connectionMethod === 'automatic' && (domain.status === 'dns_pending' || domain.status === 'partially_verified');
   const rechecks = useRef(0);
@@ -117,6 +104,7 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
 
   const dnsUrl = safeDnsUrl(domain?.dnsSetupUrl);
   const records = domain?.dnsRecords ?? [];
+  const automaticProvider = domain?.provider ?? (domain?.providerName?.toLowerCase() === 'ionos' ? 'ionos' : null);
   const required = records.filter((r) => r.required);
   const verifiedCount = required.filter((r) => r.verified).length;
   // The key belongs to the customer's email provider (TXT) and has not been found yet.
@@ -126,11 +114,16 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
   const statusMessage = domain && domain.status !== 'verified' ? messageForCode(domain.lastError) : null;
 
   return (
-    <Dialog open onClose={checking || connecting ? undefined : onClose} fullWidth maxWidth="md">
+    <Dialog open onClose={checking ? undefined : onClose} fullWidth maxWidth="md">
       <DialogTitle>
-        <Stack direction="row" alignItems="center" gap={1.5}>
-          <span>DNS records for {domain?.domain ?? '…'}</span>
-          {domain && <DomainStatusBadge status={domain.status} lastError={domain.lastError} />}
+        <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1.5}>
+          <Stack direction="row" alignItems="center" gap={1.5}>
+            <span>DNS records for {domain?.domain ?? '…'}</span>
+            {domain && <DomainStatusBadge status={domain.status} lastError={domain.lastError} />}
+          </Stack>
+          <IconButton aria-label="Close" onClick={onClose} disabled={checking} size="small">
+            <CloseRounded />
+          </IconButton>
         </Stack>
       </DialogTitle>
       <DialogContent>
@@ -160,7 +153,7 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
               </Alert>
             )}
             {domain.status === 'verified' && (
-              <Alert severity="success">{domain.domain}: Domain authenticated and sending connection ready. Send yourself a test email under Email sending.</Alert>
+              <Alert severity="success">{domain.domain}: Domain authenticated and sending connection ready. Send yourself a test email under Domain.</Alert>
             )}
             {domain.status === 'partially_verified' && (
               <Alert severity="warning">Partially verified: {verifiedCount} of {required.length} required records are correct. {statusMessage}</Alert>
@@ -204,9 +197,9 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
                     onChange={(e) => setSelector(e.target.value)}
                     error={!selectorValid}
                     helperText={selectorValid ? `Checked at ${selectorValue.trim() || 'selector'}._domainkey.${domain.domain}` : 'Letters, numbers and hyphens only.'}
-                    disabled={checking || connecting}
+                    disabled={checking}
                   />
-                  <Button variant="outlined" onClick={saveSelector} disabled={checking || connecting || !selectorValid || selector === null}>Save and check</Button>
+                  <Button variant="outlined" onClick={saveSelector} disabled={checking || !selectorValid || selector === null}>Save and check</Button>
                 </Stack>
               </Stack>
             )}
@@ -218,15 +211,17 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
         )}
       </DialogContent>
       <DialogActions>
-        {domain?.automaticConnectionAvailable && domain.provider && domain.status !== 'verified' && (
-          <Button onClick={() => connectAutomatically(domain)} disabled={checking || connecting}>Connect automatically</Button>
+        {automaticProvider && domain?.status !== 'verified' && (
+          <Button onClick={() => onRetryAutomatic?.({ ...domain!, provider: automaticProvider! })} disabled={checking}>
+            Try automatic connection
+          </Button>
         )}
         {domain && records.length > 0 && (
-          <Button variant="outlined" onClick={runCheck} disabled={checking || connecting}>
+          <Button variant="outlined" onClick={runCheck} disabled={checking}>
             {checking ? 'Checking DNS…' : 'Check status'}
           </Button>
         )}
-        <Button variant="contained" onClick={onClose} disabled={checking || connecting}>Done</Button>
+        <Button variant="contained" onClick={onClose} disabled={checking}>Done</Button>
       </DialogActions>
     </Dialog>
   );

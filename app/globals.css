@@ -1702,7 +1702,7 @@ html { scrollbar-gutter: stable; }
   font-size: 9px !important;
   font-weight: 700 !important;
 }
-.domain-connect-provider-avatar.ionos { background: #12367f !important; }
+.domain-connect-provider-avatar.ionos { width: 38px !important; background: #12367f !important; font-size: 7px !important; letter-spacing: -.02em; }
 .domain-connect-heading {
   max-width: 360px;
   margin: 0 auto !important;

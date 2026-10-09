@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import { ArrowForwardRounded, CloseRounded, LanguageRounded } from '@mui/icons-material';
-import { Alert, Avatar, Button, CircularProgress, Dialog, DialogContent, DialogTitle, IconButton, Stack, Typography } from '@mui/material';
+import { Alert, Avatar, Box, Button, CircularProgress, Dialog, DialogContent, DialogTitle, IconButton, Stack, Typography } from '@mui/material';
 import { analyzeSendingDomain, startManualConnection, startProviderConnection } from '@/lib/sending-domains/api';
 import { domainErrorMessage } from '@/lib/sending-domains/errors';
 import type { DomainAnalysis, SendingDomain } from '@/types/sending-domain';
@@ -83,15 +83,17 @@ export default function DomainAnalysisDialog({ projectId, domain, onClose, onCha
         <IconButton className="domain-connect-close" aria-label="Close" onClick={onClose} disabled={busy || phase.kind === 'redirecting'}>
           <CloseRounded />
         </IconButton>
-        <Stack className="domain-connect-domain-pill" direction="row" alignItems="center" gap={1}>
-          <Avatar className={host?.toLowerCase() === 'ionos' ? 'domain-connect-provider-avatar ionos' : 'domain-connect-provider-avatar'}>
-            {host ? host.slice(0, 4).toUpperCase() : <LanguageRounded fontSize="small" />}
-          </Avatar>
-          <Typography component="span">{domain.domain}</Typography>
-        </Stack>
-        <Typography component="div" className="domain-connect-heading">
-          Connect your {host ? <><span className="domain-connect-brand">{host}</span> </> : ''}domain to PixlPush
-        </Typography>
+        {phase.kind !== 'analyzing' && <>
+          <Stack className="domain-connect-domain-pill" direction="row" alignItems="center" gap={1}>
+            <Avatar className={host?.toLowerCase() === 'ionos' ? 'domain-connect-provider-avatar ionos' : 'domain-connect-provider-avatar'}>
+              {host?.toLowerCase() === 'ionos' ? 'IONOS' : host ? host.slice(0, 4).toUpperCase() : <LanguageRounded fontSize="small" />}
+            </Avatar>
+            <Typography component="span">{domain.domain}</Typography>
+          </Stack>
+          <Typography component="div" className="domain-connect-heading">
+            Connect your {host ? <><span className="domain-connect-brand">{host}</span> </> : ''}domain to PixlPush
+          </Typography>
+        </>}
       </DialogTitle>
       <DialogContent>
         <Stack gap={2} sx={{ pt: 1 }}>
@@ -108,10 +110,11 @@ export default function DomainAnalysisDialog({ projectId, domain, onClose, onCha
           )}
 
           {phase.kind === 'analyzing' && (
-            <Stack alignItems="center" gap={1.5} sx={{ py: 3 }} role="status">
-              <CircularProgress size={28} />
-              <Typography>Analyzing {domain.domain}…</Typography>
-              <Typography color="text.secondary" fontSize={12}>Looking up where this domain’s DNS and email are hosted.</Typography>
+            <Stack alignItems="center" gap={1.25} sx={{ py: 2.5 }} role="status">
+              <AnalysisPulse />
+              <Typography fontSize={25} fontWeight={500} sx={{ mt: 1 }}>Analyzing…</Typography>
+              <Typography fontSize={23} fontWeight={500}>{domain.domain}</Typography>
+              <Typography color="text.secondary" fontSize={13}>This usually takes a few seconds</Typography>
             </Stack>
           )}
 
@@ -140,6 +143,33 @@ export default function DomainAnalysisDialog({ projectId, domain, onClose, onCha
   );
 }
 
+function AnalysisPulse() {
+  const ringSx = (delay: string) => ({
+    position: 'absolute' as const,
+    inset: 0,
+    border: '4px solid',
+    borderColor: 'success.light',
+    borderRadius: '50%',
+    boxShadow: '0 0 14px rgba(50, 205, 130, .45)',
+    animation: 'domainPulse 2.4s ease-out infinite',
+    animationDelay: delay,
+    '@keyframes domainPulse': {
+      '0%': { transform: 'scale(.25)', opacity: .95 },
+      '70%': { opacity: .32 },
+      '100%': { transform: 'scale(1)', opacity: 0 },
+    },
+  });
+
+  return (
+    <Stack alignItems="center" justifyContent="center" sx={{ position: 'relative', width: 178, height: 178 }} aria-hidden="true">
+      <Box sx={ringSx('0s')} />
+      <Box sx={ringSx('.45s')} />
+      <Box sx={ringSx('.9s')} />
+      <Box sx={{ width: 38, height: 38, borderRadius: '50%', bgcolor: 'background.paper', border: '4px solid', borderColor: 'success.light', boxShadow: '0 0 14px rgba(50, 205, 130, .45)', zIndex: 1 }} />
+    </Stack>
+  );
+}
+
 function Result({
   analysis,
   busy,
@@ -156,7 +186,6 @@ function Result({
   onRetry: () => void;
 }) {
   const name = analysis.providerName;
-  const dnsUrl = safeDnsUrl(analysis.dnsSetupUrl);
   if (name && analysis.automaticConnectionAvailable && analysis.provider) {
     return (
       <Stack gap={1.5}>
@@ -175,8 +204,7 @@ function Result({
           ? `Your DNS is hosted at ${name}. Automatic connection is not available there yet, so add the records yourself.`
           : 'We could not detect where your DNS is hosted. Add the records yourself at your DNS provider.'}
       </Alert>
-      <Button variant="contained" size="large" onClick={onManual} disabled={busy}>Authenticate manually</Button>
-      {name && dnsUrl && <Button href={dnsUrl} target="_blank" rel="noopener noreferrer">Open {name} DNS settings</Button>}
+      {manualButton('Connect a different way')}
       <Button onClick={onRetry} disabled={busy}>Retry</Button>
     </Stack>
   );

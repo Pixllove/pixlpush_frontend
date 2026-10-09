@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { AddRounded } from '@mui/icons-material';
+import { AddRounded, DeleteOutline } from '@mui/icons-material';
 import {
   Alert,
   Box,
@@ -14,6 +14,7 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  IconButton,
   Skeleton,
   Stack,
   Table,
@@ -37,6 +38,7 @@ import { consumeCallbackParams, takeConnection } from './connection';
 import DnsSetupDialog from './DnsSetupDialog';
 import DomainAnalysisDialog from './DomainAnalysisDialog';
 import DomainStatusBadge from './DomainStatusBadge';
+import CustomDomainDialog from './CustomDomainDialog';
 
 const MANAGE_ROLES = ['owner', 'admin'];
 /** Statuses where the domain still needs a connection choice. */
@@ -47,6 +49,7 @@ type DialogState =
   | { kind: 'add' }
   | { kind: 'analyze'; domain: SendingDomain }
   | { kind: 'dns'; domainId: string }
+  | { kind: 'custom'; domain: SendingDomain }
   | { kind: 'delete'; domain: SendingDomain };
 
 type ToastState = { message: string; severity: 'success' | 'error' | 'info' } | null;
@@ -153,98 +156,44 @@ export default function SendingDomainsPanel({ onNavigate }: { onNavigate?: (tab:
 
   return (
     <Stack gap={2.5}>
-      <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" gap={1.5}>
-        <Box>
-          <Typography variant="h3">Sending domains</Typography>
-          <Typography color="text.secondary" fontSize={12}>Authenticate the domains you send email from. A domain can send once its DNS records, the sending connection and bounce handling are all verified.</Typography>
-        </Box>
-        {canManage && (
-          <Button variant="contained" startIcon={<AddRounded />} onClick={() => setDialog({ kind: 'add' })} sx={{ alignSelf: 'flex-start' }}>
-            Add domain
-          </Button>
-        )}
-      </Stack>
-
       {!canManage && <Alert severity="info">Only project owners and admins can add or change sending domains.</Alert>}
 
       {list.data?.some((d) => d.status === 'verification_failed' && isConnectionCode(d.lastError)) && (
         <Alert severity="warning" action={onNavigate && <Button color="inherit" size="small" onClick={() => onNavigate('Email sending')}>Finish setup</Button>}>
-          Provider connection incomplete. Your DNS records are correct, but email cannot be sent until the sending connection is finished under Email sending.
+          Provider connection incomplete. Your DNS records are correct, but email cannot be sent until the sending connection is finished under Domain.
         </Alert>
       )}
 
-      {list.isPending && (
-        <Card sx={{ p: 2, minHeight: 172 }} role="status" aria-label="Loading sending domains">
-          {[0, 1, 2].map((i) => <Skeleton key={i} height={40} />)}
-        </Card>
-      )}
+      <Card className="saas-card" sx={{ p: 0, overflow: 'hidden' }}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" gap={1.5} sx={{ p: 2.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+          <Box>
+            <Typography variant="h3">Sending domains</Typography>
+            <Typography color="text.secondary" fontSize={12}>Manage your sending domains. Add a domain and authenticate it before sending.</Typography>
+          </Box>
+          {canManage && <Button variant="contained" startIcon={<AddRounded />} onClick={() => setDialog({ kind: 'add' })} sx={{ alignSelf: 'flex-start' }}>Add domain</Button>}
+        </Stack>
 
-      {list.isError && (
-        <Alert severity="error" action={<Button color="inherit" size="small" onClick={() => list.refetch()}>Retry</Button>}>
-          {domainErrorMessage(list.error)}
-        </Alert>
-      )}
+        {list.isPending && <Box sx={{ p: 2 }} role="status" aria-label="Loading sending domains">{[0, 1, 2].map((i) => <Skeleton key={i} height={40} />)}</Box>}
 
-      {list.data && list.data.length === 0 && (
-        <Card>
-          <EmptyState size="compact" icon={<DnsOutlined />} title="No sending domains yet" description="Add the email address you want to send from to get started." action={canManage ? { label: 'Add domain', onClick: () => setDialog({ kind: 'add' }) } : undefined} />
-        </Card>
-      )}
+        {list.isError && <Box sx={{ p: 2 }}><Alert severity="error" action={<Button color="inherit" size="small" onClick={() => list.refetch()}>Retry</Button>}>{domainErrorMessage(list.error)}</Alert></Box>}
 
-      {list.data && list.data.length > 0 && (
-        <Card sx={{ overflowX: 'auto' }}>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Domain</TableCell>
-                <TableCell>Sender email</TableCell>
-                <TableCell>Provider</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Last check</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
+        {list.data && list.data.length === 0 && <Box sx={{ p: 2 }}><EmptyState size="compact" icon={<DnsOutlined />} title="No sending domains yet" description="Add the email address you want to send from to get started." action={canManage ? { label: 'Add domain', onClick: () => setDialog({ kind: 'add' }) } : undefined} /></Box>}
+
+        {list.data && list.data.length > 0 && <Box sx={{ overflowX: 'auto' }}>
+          <Table size="small" sx={{ tableLayout: 'fixed', minWidth: 980 }}>
+            <TableHead><TableRow><TableCell sx={{ width: '24%', color: 'text.secondary', fontSize: 12 }}>Domain</TableCell><TableCell sx={{ width: '24%', color: 'text.secondary', fontSize: 12 }}>Status</TableCell><TableCell sx={{ width: '24%', color: 'text.secondary', fontSize: 12 }}>Action</TableCell><TableCell sx={{ width: '24%', color: 'text.secondary', fontSize: 12 }}>Domain alignment</TableCell><TableCell sx={{ width: 56 }} align="right" /></TableRow></TableHead>
             <TableBody>
-              {list.data.map((domain) => (
-                <TableRow key={domain.id} data-testid={`domain-row-${domain.domain}`}>
-                  <TableCell><Typography fontWeight={600}>{domain.domain}</Typography></TableCell>
-                  <TableCell>{domain.senderEmail ?? '—'}</TableCell>
-                  <TableCell>{domain.providerName ?? (domain.connectionMethod === 'manual' && domain.dnsRecords.length ? 'Manual DNS' : '—')}</TableCell>
-                  <TableCell>
-                    <Stack direction="row" gap={0.5} flexWrap="wrap">
-                      <DomainStatusBadge status={domain.status} lastError={domain.lastError} />
-                      {domain.status === 'verified' && domain.domain === activeDomain && <Chip size="small" variant="outlined" label="Sending from this domain" />}
-                    </Stack>
-                  </TableCell>
-                  <TableCell>{domain.lastCheckedAt ? new Date(domain.lastCheckedAt).toLocaleString() : 'Never'}</TableCell>
-                  <TableCell align="right">
-                    <Stack direction="row" gap={0.5} justifyContent="flex-end" flexWrap="wrap">
-                      {rowBusy === domain.id && <CircularProgress size={18} sx={{ alignSelf: 'center' }} />}
-                      {canManage && domain.dnsRecords.length > 0 && (
-                        <Button size="small" onClick={() => checkStatus(domain)} disabled={rowBusy !== null}>Check status</Button>
-                      )}
-                      {canManage && domain.status === 'verified' && domain.domain !== activeDomain && (
-                        <Button size="small" onClick={() => sendFrom(domain)} disabled={rowBusy !== null}>Use for sending</Button>
-                      )}
-                      {canManage && domain.status !== 'verified' && (
-                        <Button size="small" onClick={() => resolve(domain)} disabled={rowBusy !== null}>Resolve</Button>
-                      )}
-                      {domain.dnsRecords.length > 0 && (
-                        <Button size="small" onClick={() => setDialog({ kind: 'dns', domainId: domain.id })}>View DNS records</Button>
-                      )}
-                      {canManage && (
-                        <Button size="small" color="error" onClick={() => { setDeleteError(null); setDialog({ kind: 'delete', domain }); }} disabled={rowBusy !== null}>
-                          Remove
-                        </Button>
-                      )}
-                    </Stack>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {list.data.map((domain) => <TableRow key={domain.id} data-testid={`domain-row-${domain.domain}`}>
+                <TableCell sx={{ verticalAlign: 'middle' }}><Typography fontWeight={600} color="text.secondary" noWrap>{domain.domain}</Typography></TableCell>
+                <TableCell sx={{ verticalAlign: 'middle' }}><Stack direction="row" gap={0.5} flexWrap="wrap"><DomainStatusBadge status={domain.status} lastError={domain.lastError} />{domain.status === 'verified' && domain.domain === activeDomain && <Chip size="small" variant="outlined" label="Sending from this domain" />}</Stack></TableCell>
+                <TableCell sx={{ verticalAlign: 'middle' }}><Stack direction="row" gap={0.5} flexWrap="wrap" alignItems="center">{rowBusy === domain.id && <CircularProgress size={18} />}{canManage && domain.dnsRecords.length > 0 && <Button variant="contained" disableElevation sx={{ px: 1.2, minWidth: 0, mr: 1, backgroundColor: 'action.hover', color: 'primary.main', '&:hover': { backgroundColor: 'action.selected' } }} size="small" onClick={() => checkStatus(domain)} disabled={rowBusy !== null}>Check status</Button>}{canManage && domain.status === 'verified' && domain.domain !== activeDomain && <Button variant="contained" disableElevation sx={{ px: 1.2, minWidth: 0, mr: 1, backgroundColor: 'action.hover', color: 'primary.main', '&:hover': { backgroundColor: 'action.selected' } }} size="small" onClick={() => sendFrom(domain)} disabled={rowBusy !== null}>Use for sending</Button>}{canManage && domain.status !== 'verified' && domain.dnsRecords.length === 0 && <Button variant="contained" disableElevation sx={{ px: 1.2, minWidth: 0, mr: 1, backgroundColor: 'action.hover', color: 'primary.main', '&:hover': { backgroundColor: 'action.selected' } }} size="small" onClick={() => resolve(domain)} disabled={rowBusy !== null}>Resolve</Button>}{domain.dnsRecords.length > 0 && <Button variant="contained" disableElevation sx={{ px: 1.2, minWidth: 0, mr: 1, backgroundColor: 'action.hover', color: 'primary.main', '&:hover': { backgroundColor: 'action.selected' } }} size="small" onClick={() => setDialog({ kind: 'dns', domainId: domain.id })}>View DNS records</Button>}</Stack></TableCell>
+                <TableCell sx={{ verticalAlign: 'middle' }}><Button variant="contained" disableElevation size="small" disabled={!canManage} onClick={() => setDialog({ kind: 'custom', domain })} sx={{ whiteSpace: 'nowrap', px: 1.2, minWidth: 0, backgroundColor: 'action.hover', color: 'text.secondary', '&:hover': { backgroundColor: 'action.selected' } }}>Add custom domain</Button></TableCell>
+                <TableCell align="right">{canManage && <IconButton aria-label="Remove" color="error" onClick={() => { setDeleteError(null); setDialog({ kind: 'delete', domain }); }} disabled={rowBusy !== null} size="small"><DeleteOutline fontSize="small" /></IconButton>}</TableCell>
+              </TableRow>)}
             </TableBody>
           </Table>
-        </Card>
-      )}
+        </Box>}
+      </Card>
 
       <AddDomainDialog
         open={dialog.kind === 'add'}
@@ -267,7 +216,25 @@ export default function SendingDomainsPanel({ onNavigate }: { onNavigate?: (tab:
       )}
 
       {dialog.kind === 'dns' && (
-        <DnsSetupDialog projectId={projectId} domainId={dialog.domainId} onClose={() => setDialog({ kind: 'none' })} onChanged={reload} />
+        <DnsSetupDialog
+          projectId={projectId}
+          domainId={dialog.domainId}
+          onClose={() => setDialog({ kind: 'none' })}
+          onChanged={reload}
+          onRetryAutomatic={(domain) => setDialog({ kind: 'analyze', domain })}
+        />
+      )}
+
+      {dialog.kind === 'custom' && (
+        <CustomDomainDialog
+          open
+          domain={dialog.domain.domain}
+          onClose={() => setDialog({ kind: 'none' })}
+          onAdd={() => {
+            setDialog({ kind: 'none' });
+            setToast({ message: 'Custom domain alignment needs its provider API connection before it can be saved.', severity: 'info' });
+          }}
+        />
       )}
 
       {dialog.kind === 'delete' && (

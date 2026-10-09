@@ -5,7 +5,7 @@ import ProjectSettingsCenter from '@/components/dashboard/ProjectSettingsCenter'
 export default function SendingDomainCallbackPage() {
   return (
     <DashboardFrame active="Settings" title="Project settings" description="Manage the active Project without changing other Projects in your Account.">
-      <ProjectSettingsCenter initialTab="Sending domains" />
+      <ProjectSettingsCenter initialTab="Domain" />
     </DashboardFrame>
   );
 }

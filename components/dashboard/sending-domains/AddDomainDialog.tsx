@@ -26,17 +26,15 @@ interface Props {
 }
 
 export default function AddDomainDialog({ open, projectId, onClose, onCreated }: Props) {
-  const [form, setForm] = useState({ senderEmail: '', senderName: '', replyTo: '' });
+  const [form, setForm] = useState({ senderEmail: '' });
   const [touched, setTouched] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const domain = domainFromEmail(form.senderEmail);
   const emailError = touched && !domain ? 'Enter a valid email address, for example sender@example.com.' : null;
-  const replyToError = form.replyTo.trim() && !email.safeParse(form.replyTo).success ? 'Enter a valid Reply-To address.' : null;
-
   const close = () => {
-    setForm({ senderEmail: '', senderName: '', replyTo: '' });
+    setForm({ senderEmail: '' });
     setTouched(false);
     setError(null);
     onClose();
@@ -45,16 +43,14 @@ export default function AddDomainDialog({ open, projectId, onClose, onCreated }:
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     setTouched(true);
-    if (!domain || replyToError) return;
+    if (!domain) return;
     setBusy(true);
     setError(null);
     try {
       const created = await createSendingDomain(projectId, {
         senderEmail: form.senderEmail.trim(),
-        ...(form.senderName.trim() ? { senderName: form.senderName.trim() } : {}),
-        ...(form.replyTo.trim() ? { replyTo: form.replyTo.trim() } : {}),
       });
-      setForm({ senderEmail: '', senderName: '', replyTo: '' });
+      setForm({ senderEmail: '' });
       setTouched(false);
       onCreated(created);
     } catch (e) {
@@ -82,15 +78,6 @@ export default function AddDomainDialog({ open, projectId, onClose, onCreated }:
               helperText={emailError ?? (domain ? `Domain: ${domain}` : ' ')}
               required
               autoFocus
-              fullWidth
-            />
-            <TextField label="Sender name (optional)" value={form.senderName} onChange={(e) => setForm({ ...form, senderName: e.target.value })} fullWidth />
-            <TextField
-              label="Reply-To (optional)"
-              value={form.replyTo}
-              onChange={(e) => setForm({ ...form, replyTo: e.target.value })}
-              error={Boolean(replyToError)}
-              helperText={replyToError ?? ' '}
               fullWidth
             />
           </Stack>
