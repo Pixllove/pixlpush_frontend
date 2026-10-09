@@ -112,6 +112,7 @@ import DeleteConfirmDialog from "./DeleteConfirmDialog";
 import { Toast } from "@/components/auth/AuthFeedback";
 import SearchField from "./SearchField";
 import EmptyState, { listEmpty } from "./EmptyState";
+import HomeCommandCenter from "./HomeCommandCenter";
 
 export function StatCard({
   label,
@@ -146,6 +147,11 @@ export function StatCard({
   );
 }
 export function OverviewSection() {
+  return <HomeCommandCenter />;
+}
+
+// Kept available for the deeper analytics surface while Home owns the primary dashboard experience.
+export function LegacyOverviewSection() {
   const selectedProject = useSelector(
     (state: RootState) => state.ui.selectedProject,
   );
