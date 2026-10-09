@@ -1,8 +1,8 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { LanguageRounded } from '@mui/icons-material';
-import { Alert, Avatar, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Typography } from '@mui/material';
+import { ArrowForwardRounded, CloseRounded, LanguageRounded } from '@mui/icons-material';
+import { Alert, Avatar, Button, CircularProgress, Dialog, DialogContent, DialogTitle, IconButton, Stack, Typography } from '@mui/material';
 import { analyzeSendingDomain, startManualConnection, startProviderConnection } from '@/lib/sending-domains/api';
 import { domainErrorMessage } from '@/lib/sending-domains/errors';
 import type { DomainAnalysis, SendingDomain } from '@/types/sending-domain';
@@ -78,16 +78,20 @@ export default function DomainAnalysisDialog({ projectId, domain, onClose, onCha
   const host = phase.kind === 'result' ? phase.analysis.providerName : null;
 
   return (
-    <Dialog open onClose={busy || phase.kind === 'redirecting' ? undefined : onClose} fullWidth maxWidth="xs">
-      <DialogTitle sx={{ textAlign: 'center' }}>
-        <Chip
-          variant="outlined"
-          label={domain.domain}
-          avatar={host ? <Avatar>{host[0]}</Avatar> : undefined}
-          icon={host ? undefined : <LanguageRounded fontSize="small" />}
-          sx={{ display: 'flex', width: 'fit-content', mx: 'auto', mb: 1.5 }}
-        />
-        Connect your {host ? `${host} ` : ''}domain to PixlPush
+    <Dialog className="domain-connect-dialog" open onClose={busy || phase.kind === 'redirecting' ? undefined : onClose} fullWidth maxWidth="xs">
+      <DialogTitle className="domain-connect-dialog-title">
+        <IconButton className="domain-connect-close" aria-label="Close" onClick={onClose} disabled={busy || phase.kind === 'redirecting'}>
+          <CloseRounded />
+        </IconButton>
+        <Stack className="domain-connect-domain-pill" direction="row" alignItems="center" gap={1}>
+          <Avatar className={host?.toLowerCase() === 'ionos' ? 'domain-connect-provider-avatar ionos' : 'domain-connect-provider-avatar'}>
+            {host ? host.slice(0, 4).toUpperCase() : <LanguageRounded fontSize="small" />}
+          </Avatar>
+          <Typography component="span">{domain.domain}</Typography>
+        </Stack>
+        <Typography component="div" className="domain-connect-heading">
+          Connect your {host ? <><span className="domain-connect-brand">{host}</span> </> : ''}domain to PixlPush
+        </Typography>
       </DialogTitle>
       <DialogContent>
         <Stack gap={2} sx={{ pt: 1 }}>
@@ -132,9 +136,6 @@ export default function DomainAnalysisDialog({ projectId, domain, onClose, onCha
           )}
         </Stack>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} disabled={busy || phase.kind === 'redirecting'}>Close</Button>
-      </DialogActions>
     </Dialog>
   );
 }
@@ -162,8 +163,8 @@ function Result({
         <Typography color="text.secondary" textAlign="center">
           Automatic connection available. You approve the DNS changes at {name}; we never see your password.
         </Typography>
-        <Button variant="contained" size="large" onClick={() => onAuto(analysis.provider!)} disabled={busy}>Continue with {name}</Button>
-        {manualButton('Connect a different way')}
+        <Button fullWidth variant="contained" size="large" onClick={() => onAuto(analysis.provider!)} disabled={busy}>Continue with {name}</Button>
+        <Button fullWidth variant="text" className="domain-connect-secondary" endIcon={<ArrowForwardRounded fontSize="small" />} onClick={onManual} disabled={busy}>Connect a different way</Button>
       </Stack>
     );
   }

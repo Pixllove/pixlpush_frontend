@@ -1661,6 +1661,75 @@ b, strong { font-weight: 600; }
    the window (loading rows) or shrinks back (an empty list). MUI adds padding to <body> when a dialog or
    menu locks scrolling; with the room already reserved that padding would itself move the page. */
 html { scrollbar-gutter: stable; }
+
+/* MailerLite-style sending-domain connection dialog. */
+.domain-connect-dialog .MuiDialog-paper {
+  width: min(480px, calc(100vw - 32px));
+  max-width: none;
+  margin: 16px;
+  border-radius: 28px;
+  box-shadow: 0 24px 70px rgba(24, 26, 42, .22);
+  overflow: hidden;
+}
+.domain-connect-dialog-title {
+  position: relative;
+  padding: 26px 32px 8px !important;
+  text-align: center;
+}
+.domain-connect-close {
+  position: absolute !important;
+  top: 18px;
+  right: 18px;
+  width: 34px;
+  height: 34px;
+  color: #1f2430 !important;
+  background: #f5f6f8 !important;
+}
+.domain-connect-domain-pill {
+  width: fit-content;
+  min-height: 38px;
+  margin: 34px auto 22px;
+  padding: 6px 14px 6px 8px;
+  border: 1px solid #eef0f3;
+  border-radius: 999px;
+  box-shadow: 0 4px 14px rgba(24, 26, 42, .10);
+}
+.domain-connect-provider-avatar {
+  width: 26px !important;
+  height: 26px !important;
+  color: #fff !important;
+  background: #172b63 !important;
+  font-size: 9px !important;
+  font-weight: 700 !important;
+}
+.domain-connect-provider-avatar.ionos { background: #12367f !important; }
+.domain-connect-heading {
+  max-width: 360px;
+  margin: 0 auto !important;
+  color: #1f232b;
+  font-size: 25px !important;
+  font-weight: 500 !important;
+  line-height: 1.16 !important;
+  letter-spacing: -.035em;
+}
+.domain-connect-brand { color: #172b63; }
+.domain-connect-dialog .MuiDialogContent-root { padding: 12px 32px 30px !important; }
+.domain-connect-dialog .MuiButton-root {
+  min-height: 52px;
+  border-radius: 999px;
+  text-transform: none;
+  font-weight: 500;
+}
+.domain-connect-dialog .MuiButton-contained {
+  background: #172b63;
+  box-shadow: none;
+}
+.domain-connect-dialog .MuiButton-contained:hover { background: #10214e; }
+.domain-connect-dialog .domain-connect-secondary {
+  min-height: 40px;
+  color: #1f232b;
+}
+
 /* Inside the app the scrollbar track is always shown. A page that is a little taller while it loads than
    once loaded would otherwise flash a scrollbar and take it away again; a permanent track cannot do that.
    (Only visible where the system shows scrollbars all the time; overlay scrollbars are unaffected.) */
