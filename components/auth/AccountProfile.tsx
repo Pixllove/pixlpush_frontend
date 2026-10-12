@@ -18,7 +18,7 @@ const memberSince = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', time
 const loadingField = { InputLabelProps: { shrink: true }, InputProps: { readOnly: true, startAdornment: <Skeleton width={96} /> } };
 const roleLabel = (role: string) => role.charAt(0).toUpperCase() + role.slice(1).replace('_', ' ');
 
-export default function AccountProfile() {
+export default function AccountProfile({ section = 'all' }: { section?: 'all' | 'profile' | 'company' } = {}) {
   const { account, isLoading, isError } = useCurrentUser();
   const { active, isEmpty, isPending: projectsPending } = useActiveProject();
   const queryClient = useQueryClient();
@@ -81,7 +81,7 @@ export default function AccountProfile() {
     </Stack>
 
     <Card>
-      <section className="pp-profile-section">
+      {(section === 'all' || section === 'profile') && <section className="pp-profile-section">
         <div>
           <Typography variant="h3">Profile</Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: .5 }}>Your PixlPush account information.</Typography>
@@ -96,9 +96,9 @@ export default function AccountProfile() {
             <Typography noWrap>{isLoading ? <Skeleton width="70%" /> : display(account?.email)}</Typography>
           </Box>
         </Box>
-      </section>
+      </section>}
 
-      <section className="pp-profile-section">
+      {(section === 'all' || section === 'company') && <section className="pp-profile-section">
         <div>
           <Typography variant="h3">Company & workspace</Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: .5 }}>Your current organization context in PixlPush.</Typography>
@@ -114,9 +114,9 @@ export default function AccountProfile() {
           {saveCompany.isError && <Alert severity="error">Could not save company name.</Alert>}
           <Button variant="contained" onClick={() => !companyLoading && saveCompany.mutate()} disabled={!companyLoading && (saveCompany.isPending || !canEditCompany)} sx={{ alignSelf: 'flex-start' }}>{saveCompany.isPending ? 'Saving…' : 'Save company name'}</Button>
         </Stack>
-      </section>
+      </section>}
 
-      <ChangePasswordForm />
+      {section === 'all' && <ChangePasswordForm />}
     </Card>
   </Stack>;
 }
