@@ -156,7 +156,7 @@ describe('findings', () => {
 describe('DeliverabilityCheck', () => {
   it('passes a clean email on a ready project', () => {
     render(<DeliverabilityCheck findings={analyzeEmail({ subject: 'Your October update', html: body })} sender={ready} />);
-    expect(screen.getByText('Domain authenticated and sending connection ready')).toBeInTheDocument();
+    expect(screen.getByText('Domain authenticated and ready to send')).toBeInTheDocument();
     expect(screen.getByText('Bounce and complaint handling is active')).toBeInTheDocument();
     expect(screen.getByText('Unsubscribe link and one-click unsubscribe headers are added automatically')).toBeInTheDocument();
     expect(screen.getByText('A plain-text version is generated automatically')).toBeInTheDocument();
@@ -175,11 +175,11 @@ describe('DeliverabilityCheck', () => {
   });
 
   it('blocks when the sending setup is incomplete, whatever the content, and says what is missing', () => {
-    const sender = { loading: false, ready: false, blockers: [{ code: 'SMTP_NOT_CONFIGURED', message: 'Connect the email provider (SMTP relay) this project sends through.' }] };
+    const sender = { loading: false, ready: false, blockers: [{ code: 'PLATFORM_PROVIDER_NOT_CONFIGURED', message: 'PixlPush email delivery is not ready yet.' }] };
     render(<DeliverabilityCheck findings={analyzeEmail({ subject: 'Your October update', html: body })} sender={sender} />);
     expect(screen.getByRole('alert')).toHaveTextContent('This campaign cannot be sent yet');
-    expect(screen.getByText('Connect the email provider (SMTP relay) this project sends through.')).toBeInTheDocument();
-    expect(screen.queryByText('Domain authenticated and sending connection ready')).toBeNull();
+    expect(screen.getByText('PixlPush email delivery is not ready yet.')).toBeInTheDocument();
+    expect(screen.queryByText('Domain authenticated and ready to send')).toBeNull();
     expect(screen.queryByText('Bounce and complaint handling is active')).toBeNull();
   });
 
@@ -199,8 +199,8 @@ describe('DeliverabilityCheck', () => {
 
 describe('DomainStatusBadge', () => {
   it('does not call a domain ready when only DNS passed', () => {
-    render(<DomainStatusBadge status="verification_failed" lastError="FEEDBACK_NOT_CONFIGURED" />);
-    expect(screen.getByText('Provider connection incomplete')).toBeInTheDocument();
+    render(<DomainStatusBadge status="verification_failed" lastError="PLATFORM_FEEDBACK_NOT_CONFIGURED" />);
+    expect(screen.getByText('Email delivery not ready')).toBeInTheDocument();
     expect(screen.queryByText('Ready to send')).toBeNull();
   });
 
