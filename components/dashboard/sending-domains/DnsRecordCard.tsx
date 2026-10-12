@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { CancelRounded, ContentCopyRounded, ErrorOutlineRounded } from '@mui/icons-material';
 import { Box, Card, Chip, IconButton, Stack, Tooltip, Typography } from '@mui/material';
 import type { DnsRecord } from '@/types/sending-domain';
-import { PURPOSE, RECORD_STATUS } from './labels';
+import { RECORD_STATUS } from './labels';
 
 function CopyField({ label, value }: { label: string; value: string }) {
   const [copied, setCopied] = useState(false);
@@ -39,18 +39,17 @@ function problemMessage(record: DnsRecord) {
 
 /** One DNS record the customer has to publish, with its last check result. */
 export default function DnsRecordCard({ record }: { record: DnsRecord }) {
-  const isVerified = record.status === 'verified' || record.verified;
+  const isVerified = record.status === 'verified';
   const status = RECORD_STATUS[record.status ?? (isVerified ? 'verified' : 'pending')];
   return (
     <Card variant="outlined" sx={{ p: 2 }} data-testid={`dns-record-${record.id}`}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1} sx={{ mb: 1.5 }}>
         <Stack direction="row" gap={1} alignItems="center">
           {!isVerified && <CancelRounded sx={{ color: 'error.main', fontSize: 20 }} aria-label="Record needs attention" />}
-          <Chip size="small" label={PURPOSE[record.purpose] ?? record.purpose} />
           <Typography fontWeight={600}>{record.type} DNS record</Typography>
           {!record.required && <Typography color="text.secondary" fontSize={12}>Optional</Typography>}
         </Stack>
-        {!isVerified && <Chip size="small" label={status.label} color={status.tone} variant={status.tone === 'default' ? 'outlined' : 'filled'} />}
+        <Chip size="small" label={isVerified ? 'Passed' : status.label} color={isVerified ? 'success' : status.tone} variant={isVerified || status.tone !== 'default' ? 'filled' : 'outlined'} />
       </Stack>
       {record.required && !isVerified && (
         <Box sx={{ mb: 1.5, px: 1.25, py: 0.75, borderRadius: 0.5, bgcolor: '#fff1f1', border: '1px solid #ffd5d5', color: '#b42318' }}>
@@ -64,7 +63,7 @@ export default function DnsRecordCard({ record }: { record: DnsRecord }) {
         <CopyField label="Name" value={record.name} />
         <CopyField label="Value" value={record.value} />
       </Stack>
-      {record.errorMessage && !record.verified && (
+      {record.errorMessage && !isVerified && (
         <Typography color={record.status === 'propagating' ? 'warning.main' : 'error.main'} fontSize={12} sx={{ mt: 1 }}>
           {record.errorMessage}
         </Typography>

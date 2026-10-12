@@ -8,6 +8,17 @@ import SendingDomainsPanel from './sending-domains/SendingDomainsPanel';
 import type { ApiError } from '@/types/auth';
 
 const CONFIG_ROLES = ['owner', 'admin', 'developer'];
+
+function emailErrorMessage(error: unknown): string {
+  const cause = error as Partial<ApiError> | undefined;
+  if (cause?.code === 'EMAIL_TEST_FAILED') {
+    return 'The email could not be sent because the sender or recipient is not ready for email delivery yet.';
+  }
+  if (cause?.code === 'EMAIL_SENDER_NOT_VERIFIED') {
+    return 'Verify your sending domain before sending a test email.';
+  }
+  return cause?.message ?? 'Something went wrong. Please try again.';
+}
 /**
  * Complete email setup for the Project. PixlPush owns the transport and
  * feedback pipeline; Projects only choose and authenticate a sending domain.
@@ -26,7 +37,7 @@ export default function EmailPanel() {
   const run = async (action: () => Promise<string | void>) => {
     setError(undefined);
     setNotice(undefined);
-    try { setNotice((await action()) || undefined); } catch (cause) { setError((cause as ApiError).message ?? 'Something went wrong. Please try again.'); }
+    try { setNotice((await action()) || undefined); } catch (cause) { setError(emailErrorMessage(cause)); }
   };
 
   const sendTestEmail = (event: React.FormEvent) => {
