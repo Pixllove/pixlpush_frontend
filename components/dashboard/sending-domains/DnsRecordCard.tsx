@@ -32,10 +32,10 @@ function CopyField({ label, value }: { label: string; value: string }) {
 }
 
 function problemMessage(record: DnsRecord) {
-  if (record.purpose === 'DKIM') return 'DomainKeys/DKIM records were not found. Make sure you have added them.';
-  if (record.purpose === 'SPF') return record.status === 'mismatch' ? 'SenderID/SPF records do not match.' : 'SenderID/SPF records were not found. Make sure you have added them.';
-  if (record.purpose === 'DOMAIN_VERIFICATION') return 'Domain verification TXT records were not found. Make sure you have added them.';
-  if (record.purpose === 'DMARC') return 'DMARC records were not found. Make sure you have added them.';
+  if (record.purpose === 'DKIM') return record.type === 'CNAME' ? 'Amazon SES DKIM CNAME was not found. Make sure you have added it.' : 'DKIM record was not found. Make sure you have added it.';
+  if (record.purpose === 'SPF') return record.status === 'mismatch' ? 'Amazon SES SPF authorization does not match.' : 'Amazon SES SPF authorization was not found. Make sure you have added it.';
+  if (record.purpose === 'DOMAIN_VERIFICATION') return 'PixlPush domain verification TXT record was not found. Make sure you have added it.';
+  if (record.purpose === 'DMARC') return 'DMARC record was not found. You can add it for additional protection.';
   return 'This DNS record is missing or does not match.';
 }
 

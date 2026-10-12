@@ -220,22 +220,6 @@ export const emailApi = {
       undefined,
       BASE,
     ),
-  configure: (
-    projectId: string,
-    input: { sendingDomain: string; senderEmail: string; senderName: string },
-  ) =>
-    authRequest<EmailSettings>(
-      at(projectId, "/email-settings"),
-      input,
-      BASE,
-      "PUT",
-    ),
-  verify: (projectId: string) =>
-    authRequest<EmailSettings>(
-      at(projectId, "/email-settings/verify"),
-      {},
-      BASE,
-    ),
   sendTest: (projectId: string, to: string) =>
     authRequest<{ sent: boolean; to: string }>(
       at(projectId, "/email-settings/test"),

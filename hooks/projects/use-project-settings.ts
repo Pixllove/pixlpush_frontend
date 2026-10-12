@@ -46,8 +46,6 @@ export function useSdkKeys(projectId: string | undefined) {
 export function useEmailSettings(projectId: string | undefined) {
   return {
     query: useArea(projectId, 'email', emailApi.get),
-    configure: useAreaMutation(projectId, 'email', emailApi.configure),
-    verify: useAreaMutation(projectId, 'email', (id, _: void) => emailApi.verify(id)),
     sendTest: useAreaMutation(projectId, 'email', emailApi.sendTest),
   };
 }

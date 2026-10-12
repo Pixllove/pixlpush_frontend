@@ -51,6 +51,10 @@ export const completeProviderConnection = (
 export const startManualConnection = (projectId: string, domainId: string) =>
   authRequest<SendingDomain>(one(projectId, domainId, '/manual'), {}, BASE);
 
+/** Reissues records for domains that were created before the Amazon SES flow. */
+export const refreshSesRecords = (projectId: string, domainId: string) =>
+  authRequest<SendingDomain>(one(projectId, domainId, '/refresh-ses-records'), {}, BASE);
+
 export const getDnsRecords = (projectId: string, domainId: string) =>
   authRequest<DnsRecordsResponse>(one(projectId, domainId, '/dns-records'), undefined, BASE);
 
