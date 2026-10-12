@@ -55,7 +55,7 @@ type DialogState =
 type ToastState = { message: string; severity: 'success' | 'error' | 'info' } | null;
 
 /** Sending domains of the active Project (several per Project). */
-export default function SendingDomainsPanel({ onNavigate }: { onNavigate?: (tab: string) => void }) {
+export default function SendingDomainsPanel() {
   const { active } = useActiveProject();
   const projectId = active?.id;
   const canManage = Boolean(active && MANAGE_ROLES.includes(active.role));
@@ -107,7 +107,7 @@ export default function SendingDomainsPanel({ onNavigate }: { onNavigate?: (tab:
       const updated = await checkDns(projectId!, domain.id);
       setToast(
         updated.status === 'verified'
-          ? { message: `${updated.domain}: Domain authenticated and sending connection ready.`, severity: 'success' }
+          ? { message: `${updated.domain}: Domain authenticated and ready to send.`, severity: 'success' }
           : isConnectionCode(updated.lastError)
             ? { message: `${updated.domain}: ${messageForCode(updated.lastError)}`, severity: 'info' }
             : { message: `${updated.domain}: DNS checked. Open the records for details.`, severity: 'info' },
@@ -158,9 +158,9 @@ export default function SendingDomainsPanel({ onNavigate }: { onNavigate?: (tab:
     <Stack gap={2.5}>
       {!canManage && <Alert severity="info">Only project owners and admins can add or change sending domains.</Alert>}
 
-      {list.data?.some((d) => d.status === 'verification_failed' && isConnectionCode(d.lastError)) && (
-        <Alert severity="warning" action={onNavigate && <Button color="inherit" size="small" onClick={() => onNavigate('Email sending')}>Finish setup</Button>}>
-          Provider connection incomplete. Your DNS records are correct, but email cannot be sent until the sending connection is finished under Domain.
+      {Array.isArray(list.data) && list.data.some((d) => d.status === 'verification_failed' && isConnectionCode(d.lastError)) && (
+        <Alert severity="warning">
+          Your DNS records are correct, but PixlPush email delivery is not ready yet. Please try again later.
         </Alert>
       )}
 

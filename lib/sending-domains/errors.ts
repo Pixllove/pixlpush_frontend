@@ -15,9 +15,8 @@ const MESSAGES: Record<string, string> = {
   DNS_LOOKUP_FAILED: 'We could not look up your DNS records right now. Try again in a few minutes.',
   DOMAIN_NOT_VERIFIED: 'Some required DNS records are missing or incorrect.',
   VALIDATION_ERROR: 'Check the value you entered and try again.',
-  SMTP_NOT_CONFIGURED: 'Your DNS records are correct. Set up the SMTP relay under Domain to finish.',
-  FEEDBACK_NOT_CONFIGURED: 'Your DNS records and SMTP relay are correct. Create the bounce and complaint webhook under Domain to finish.',
-  SMTP_VERIFICATION_FAILED: 'Your DNS records are correct, but the SMTP relay login failed. Check it under Domain.',
+  PLATFORM_PROVIDER_NOT_CONFIGURED: 'Your domain is authenticated, but PixlPush email delivery is not ready yet. Try again later.',
+  PLATFORM_FEEDBACK_NOT_CONFIGURED: 'Your domain is authenticated, but PixlPush deliverability protection is not ready yet. Try again later.',
   PROJECT_NOT_FOUND: 'This project is not available.',
   INSUFFICIENT_ROLE: 'Your project role does not allow this action.',
   NETWORK_ERROR: 'Cannot reach the server. Check your connection.',
@@ -25,8 +24,8 @@ const MESSAGES: Record<string, string> = {
 
 const FALLBACK = 'Something went wrong. Please try again.';
 
-/** DNS passed; what is missing is the provider's sending connection, set up under Domain. */
-export const isConnectionCode = (code: string | null | undefined) => Boolean(code && /^(SMTP_|FEEDBACK_)/.test(code));
+/** DNS passed; what is missing is PixlPush's internal delivery infrastructure. */
+export const isConnectionCode = (code: string | null | undefined) => Boolean(code && /^PLATFORM_/.test(code));
 
 export const messageForCode = (code: string | null | undefined) => (code && MESSAGES[code]) || null;
 

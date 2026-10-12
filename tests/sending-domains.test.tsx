@@ -366,17 +366,17 @@ describe('Manual DNS setup', () => {
   });
 
   it('shows a verification failure', async () => {
-    const dialog = await openDns(withRecords({ status: 'verification_failed', lastError: 'SMTP_NOT_CONFIGURED' }));
-    expect(await within(dialog).findByText(/Set up the SMTP relay under Email sending/)).toBeInTheDocument();
+    const dialog = await openDns(withRecords({ status: 'verification_failed', lastError: 'PLATFORM_PROVIDER_NOT_CONFIGURED' }));
+    expect(await within(dialog).findByText(/PixlPush email delivery is not ready yet/)).toBeInTheDocument();
   });
 
   it('does not call a domain ready while only its DNS is authenticated', async () => {
-    for (const lastError of ['SMTP_NOT_CONFIGURED', 'SMTP_VERIFICATION_FAILED', 'FEEDBACK_NOT_CONFIGURED']) {
+    for (const lastError of ['PLATFORM_PROVIDER_NOT_CONFIGURED', 'PLATFORM_FEEDBACK_NOT_CONFIGURED']) {
       m.listSendingDomains.mockResolvedValue([withRecords({ status: 'verification_failed', lastError })]);
       const { unmount } = renderPanel();
       const row = await screen.findByTestId('domain-row-example.com');
-      expect(within(row).getByText('Provider connection incomplete')).toBeInTheDocument();
-      expect(screen.getByRole('alert')).toHaveTextContent('email cannot be sent until the sending connection is finished');
+      expect(within(row).getByText('Email delivery not ready')).toBeInTheDocument();
+      expect(screen.getByRole('alert')).toHaveTextContent('PixlPush email delivery is not ready yet');
       expect(screen.queryByText('Ready to send')).not.toBeInTheDocument();
       expect(screen.queryByText(/Authenticated/)).not.toBeInTheDocument();
       unmount();
@@ -386,7 +386,7 @@ describe('Manual DNS setup', () => {
   it('shows a fully authenticated domain', async () => {
     const verified = withRecords({ status: 'verified', verifiedAt: '2026-09-29T12:00:00.000Z', dnsRecords: withRecords().dnsRecords.map((r) => ({ ...r, verified: true, status: 'verified' as const })) });
     const dialog = await openDns(verified);
-    expect(await within(dialog).findByText(/example.com: Domain authenticated and sending connection ready\./)).toBeInTheDocument();
+    expect(await within(dialog).findByText(/example.com: Domain authenticated and ready to send\./)).toBeInTheDocument();
     const row = screen.getByTestId('domain-row-example.com');
     expect(within(row).getByText('Ready to send')).toBeInTheDocument();
     expect(within(row).queryByRole('button', { name: 'Resolve' })).not.toBeInTheDocument();
@@ -445,7 +445,7 @@ describe('Manual DNS setup', () => {
     m.checkDns.mockResolvedValue(withRecords({ status: 'verified' }));
     renderPanel();
     await userEvent.click(await screen.findByRole('button', { name: 'Check status' }));
-    expect(await screen.findByText('example.com: Domain authenticated and sending connection ready.')).toBeInTheDocument();
+    expect(await screen.findByText('example.com: Domain authenticated and ready to send.')).toBeInTheDocument();
     expect(m.listSendingDomains).toHaveBeenCalledTimes(2);
   });
 });

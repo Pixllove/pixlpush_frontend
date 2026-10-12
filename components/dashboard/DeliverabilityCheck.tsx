@@ -7,7 +7,7 @@ import type { Finding } from '@/lib/deliverability';
 
 export type SenderState = {
   loading: boolean;
-  /** The backend's own answer to "may this project send": domain authenticated, sending connection verified, feedback webhook set. */
+  /** The backend's own answer to "may this project send": authenticated domain and PixlPush delivery readiness. */
   ready: boolean;
   /** What the backend says is still missing. */
   blockers?: { code: string; message: string }[];
@@ -56,10 +56,10 @@ export default function DeliverabilityCheck({ findings, sender }: { findings: Fi
 
       <Stack component="ul" gap={1} sx={{ m: 0, p: 0, listStyle: 'none' }}>
         {sender.loading ? <Skeleton width={280} /> : sender.ready
-          ? <Row tone="pass">Domain authenticated and sending connection ready</Row>
+          ? <Row tone="pass">Domain authenticated and ready to send</Row>
           : sender.blockers?.length
             ? sender.blockers.map((b) => <Row key={b.code} tone="block">{b.message}</Row>)
-            : <Row tone="block">Provider connection incomplete. Finish the email sending setup before sending.</Row>}
+            : <Row tone="block">Email delivery is not ready. Finish the sending-domain setup before sending.</Row>}
         {sender.ready && <Row tone="pass">Bounce and complaint handling is active</Row>}
         <Row tone="pass">Only recipients with confirmed email consent receive this campaign</Row>
         <Row tone="pass">Unsubscribed, bounced and complained recipients are excluded automatically</Row>

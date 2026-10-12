@@ -236,24 +236,6 @@ export const emailApi = {
       {},
       BASE,
     ),
-  /** The relay this project sends through. The password is stored encrypted and never returned. */
-  configureSmtp: (
-    projectId: string,
-    input: { host: string; port: number; username: string; password: string },
-  ) =>
-    authRequest<Pick<EmailSettings, "status" | "smtp">>(
-      at(projectId, "/email-settings/smtp"),
-      input,
-      BASE,
-      "PUT",
-    ),
-  /** Creates or rotates the bounce/complaint webhook secret. It is returned exactly once. */
-  createWebhookSecret: (projectId: string) =>
-    authRequest<{ secret: string; url: string; signing: string }>(
-      at(projectId, "/email-settings/webhook-secret"),
-      {},
-      BASE,
-    ),
   sendTest: (projectId: string, to: string) =>
     authRequest<{ sent: boolean; to: string }>(
       at(projectId, "/email-settings/test"),

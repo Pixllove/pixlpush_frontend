@@ -1,30 +1,25 @@
 'use client';
 
 import { useState } from 'react';
-import { Alert, Box, Button, Card, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Button, Card, Stack, TextField, Typography } from '@mui/material';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
 import { useEmailSettings } from '@/hooks/projects/use-project-settings';
-import SettingsStatus from './SettingsStatus';
 import SendingDomainsPanel from './sending-domains/SendingDomainsPanel';
 import type { ApiError } from '@/types/auth';
 
 const CONFIG_ROLES = ['owner', 'admin', 'developer'];
-const EMPTY_SMTP = { host: '', port: '587', username: '', password: '' };
-
 /**
- * Complete email setup for the Project: sending domains, the provider connection,
- * bounce and complaint handling, and a test email.
+ * Complete email setup for the Project. PixlPush owns the transport and
+ * feedback pipeline; Projects only choose and authenticate a sending domain.
  */
 export default function EmailPanel() {
   const { active } = useActiveProject();
-  const { query, configureSmtp, createWebhookSecret, sendTest } = useEmailSettings(active?.id);
+  const { query, sendTest } = useEmailSettings(active?.id);
   const config = query.data;
   const canEdit = Boolean(active && CONFIG_ROLES.includes(active.role));
   const ready = config?.productionSendingEnabled === true;
 
-  const [smtp, setSmtp] = useState(EMPTY_SMTP);
   const [testTo, setTestTo] = useState('');
-  const [secret, setSecret] = useState<{ secret: string; signing: string }>();
   const [notice, setNotice] = useState<string>();
   const [error, setError] = useState<string>();
 
@@ -34,17 +29,6 @@ export default function EmailPanel() {
     try { setNotice((await action()) || undefined); } catch (cause) { setError((cause as ApiError).message ?? 'Something went wrong. Please try again.'); }
   };
 
-  const saveSmtp = (event: React.FormEvent) => {
-    event.preventDefault();
-    return run(async () => {
-      await configureSmtp.mutateAsync({ ...smtp, port: Number(smtp.port) });
-      setSmtp(EMPTY_SMTP);
-      return 'Sending connection saved. Run "Check status" on your domain above to verify the login.';
-    });
-  };
-
-  const createSecret = () => run(async () => { setSecret(await createWebhookSecret.mutateAsync()); });
-
   const sendTestEmail = (event: React.FormEvent) => {
     event.preventDefault();
     return run(async () => {
@@ -52,14 +36,6 @@ export default function EmailPanel() {
       return `Test email sent to ${to}. Check that it arrived.`;
     });
   };
-
-  const smtpField = (key: keyof typeof smtp) => ({
-    value: smtp[key],
-    onChange: (e: React.ChangeEvent<HTMLInputElement>) => setSmtp({ ...smtp, [key]: e.target.value }),
-    disabled: !canEdit,
-    fullWidth: true,
-    required: true,
-  });
 
   return (
     <Stack gap={2.5}>
@@ -69,54 +45,17 @@ export default function EmailPanel() {
 
       <SendingDomainsPanel />
 
-      <Card className="saas-card" component="form" onSubmit={saveSmtp} aria-label="Sending connection">
-        <Stack direction="row" alignItems="center" gap={1}>
-          <Typography variant="h3">Sending connection (SMTP)</Typography>
-          {config && <SettingsStatus tone={config.smtp ? 'success' : 'neutral'}>{config.smtp ? `${config.smtp.host}:${config.smtp.port}` : 'Not connected'}</SettingsStatus>}
-        </Stack>
+      <Card className="saas-card">
+        <Typography variant="h3">PixlPush email delivery</Typography>
         <Typography color="text.secondary" fontSize={12} sx={{ mt: .5 }}>
-          Providers such as IONOS can publish your DNS records for us, but they do not hand out sending access to other apps. Enter the SMTP details of your email provider once. The password is stored encrypted and is never shown again.
+          PixlPush manages the delivery infrastructure, bounce protection, and spam-complaint suppression for every Project. Authenticate a sending domain above and we handle the rest automatically.
         </Typography>
-        <Stack gap={1.5} sx={{ mt: 2 }}>
-          <Stack direction={{ xs: 'column', sm: 'row' }} gap={1.5}>
-            <TextField label="SMTP host" placeholder="smtp.ionos.com" {...smtpField('host')} />
-            <TextField label="Port" type="number" sx={{ maxWidth: { sm: 120 } }} {...smtpField('port')} />
-          </Stack>
-          <Stack direction={{ xs: 'column', sm: 'row' }} gap={1.5}>
-            <TextField label="Username" autoComplete="off" {...smtpField('username')} />
-            <TextField label="Password" type="password" autoComplete="new-password" {...smtpField('password')} />
-          </Stack>
-        </Stack>
-        <Button type="submit" variant="contained" sx={{ mt: 2 }} disabled={!canEdit || configureSmtp.isPending}>
-          {configureSmtp.isPending ? 'Saving…' : config?.smtp ? 'Replace sending connection' : 'Save sending connection'}
-        </Button>
-      </Card>
-
-      <Card className="saas-card" aria-label="Bounce and complaint handling">
-        <Stack direction="row" alignItems="center" gap={1}>
-          <Typography variant="h3">Bounce and complaint handling</Typography>
-          {config && <SettingsStatus tone={config.webhook?.secretSet ? 'success' : 'neutral'}>{config.webhook?.secretSet ? 'Active' : 'Not set up'}</SettingsStatus>}
-        </Stack>
-        <Typography color="text.secondary" fontSize={12} sx={{ mt: .5 }}>
-          Your email provider reports bounces and spam complaints to this address, so those contacts are never emailed again. Add it as a webhook at your provider, signed with the secret.
-        </Typography>
-        {config?.webhook?.url && <Typography sx={{ mt: 1.5, fontFamily: 'var(--pp-mono)', wordBreak: 'break-all' }} fontSize={12}>{config.webhook.url}</Typography>}
-        {secret && (
-          <Alert severity="info" sx={{ mt: 1.5 }}>
-            Store this secret now. It cannot be shown again.
-            <Typography sx={{ fontFamily: 'var(--pp-mono)', wordBreak: 'break-all' }} fontSize={12}>{secret.secret}</Typography>
-            <Typography fontSize={12}>{secret.signing}</Typography>
-          </Alert>
-        )}
-        <Button variant="outlined" sx={{ mt: 2 }} disabled={!canEdit || createWebhookSecret.isPending} onClick={createSecret}>
-          {config?.webhook?.secretSet ? 'Rotate webhook secret' : 'Create webhook secret'}
-        </Button>
       </Card>
 
       <Card className="saas-card" component="form" onSubmit={sendTestEmail} aria-label="Test email">
         <Typography variant="h3">Send a test email</Typography>
         <Typography color="text.secondary" fontSize={12} sx={{ mt: .5 }}>
-          {ready ? 'Send one message through your sending connection to see it arrive.' : 'Available once every check above passes.'}
+          {ready ? 'Send one message through PixlPush to see it arrive.' : 'Available once your domain and PixlPush delivery checks pass.'}
         </Typography>
         <Stack direction={{ xs: 'column', sm: 'row' }} gap={1.5} sx={{ mt: 2 }}>
           <TextField label="Send to" type="email" required fullWidth value={testTo} onChange={(e) => setTestTo(e.target.value)} disabled={!canEdit || !ready} />

@@ -434,14 +434,10 @@ export interface EmailSettings {
   status: "not_configured" | "pending_verification" | "verified" | "error";
   lastError: string | null;
   lastCheckedAt: string | null;
-  /** True only when every sending requirement holds: authenticated domain, verified SMTP relay, feedback webhook. */
+  /** True only when the authenticated domain and PixlPush delivery checks pass. */
   productionSendingEnabled: boolean;
   /** The same answer with what is still missing, in the order to fix it. */
   sending?: { ready: boolean; blockers: { code: string; message: string }[] };
-  /** The project's SMTP relay, without its password; null when none has been set up. */
-  smtp?: { host: string; port: number | null; secure: boolean; username: string | null; passwordSet: boolean } | null;
-  /** Where the provider reports bounces and complaints, and whether its secret is set. */
-  webhook?: { url: string; secretSet: boolean };
 }
 
 export type UserImportStatus =

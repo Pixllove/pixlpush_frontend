@@ -35,7 +35,7 @@ const STEPS = [
   'Create the required records',
   'Copy the records exactly',
   'Return to PixlPush',
-  'Check the records and the sending connection',
+  'Check the records and sending readiness',
 ];
 
 interface Props {
@@ -158,10 +158,10 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
               </Alert>
             )}
             {domain.status === 'verified' && (
-              <Alert severity="success">{domain.domain}: Domain authenticated and sending connection ready. Send yourself a test email under Domain.</Alert>
+              <Alert severity="success">{domain.domain}: Domain authenticated and ready to send. Send yourself a test email under Email.</Alert>
             )}
             {domain.status === 'verification_failed' && (isConnectionCode(domain.lastError)
-              ? <Alert severity="warning">Provider connection incomplete. {statusMessage} Email cannot be sent from this domain yet.</Alert>
+              ? <Alert severity="warning">PixlPush email delivery is not ready yet. {statusMessage}</Alert>
               : <Alert severity="error">Verification failed. {statusMessage}</Alert>)}
             {domain.status === 'dns_check_failed' && <Alert severity="error">{messageForCode('DNS_LOOKUP_FAILED')}</Alert>}
             {domain.status === 'dns_pending' && domain.lastCheckedAt && <Alert severity="info">{messageForCode('DNS_RECORD_NOT_FOUND')}</Alert>}
