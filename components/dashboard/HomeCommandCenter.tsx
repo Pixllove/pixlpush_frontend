@@ -1,9 +1,10 @@
 "use client";
 
-import { ArrowForwardRounded, AutoAwesomeRounded, AutoGraphRounded, CampaignRounded, HistoryRounded, InsightsRounded, PeopleAltOutlined, PsychologyRounded, RouteRounded, SettingsRounded, TrendingDownRounded } from "@mui/icons-material";
-import { Avatar, Box, Button, ButtonBase, Chip, Dialog, DialogContent, DialogTitle, Menu, MenuItem, Stack, TextField, Typography } from "@mui/material";
+import { AddRounded, ArrowForwardRounded, ArrowUpwardRounded, AutoAwesomeRounded, AutoGraphRounded, CampaignRounded, CheckRounded, ExpandMoreRounded, HistoryRounded, InsightsRounded, PeopleAltOutlined, PsychologyRounded, RouteRounded, TrendingDownRounded } from "@mui/icons-material";
+import { Box, Button, ButtonBase, Dialog, DialogContent, DialogTitle, IconButton, InputBase, Menu, MenuItem, Stack, Typography } from "@mui/material";
 import Image from "next/image";
 import { useState } from "react";
+import { useCurrentUser } from "@/hooks/auth/use-current-user";
 
 type ChatMessage = { id: string; role: "user" | "assistant"; text: string };
 
@@ -12,27 +13,51 @@ const prompts = [
   ["Find users at risk of churning", TrendingDownRounded],
   ["Create a reactivation journey", InsightsRounded],
   ["Improve my onboarding", AutoGraphRounded],
-];
+] as const;
 
 const agents = [
   ["Max", "Growth Concierge", "Coordinates the team and turns your goal into a clear next step.", "#7040c9"],
   ["Ben", "Lifecycle & Campaign Data Analyst", "Analyzes retention, churn, campaigns and audience behavior.", "#2f8d70"],
   ["Nova", "Campaign & Journey Optimizer", "Turns Ben’s analysis into campaign and journey recommendations.", "#df7650"],
   ["Anna", "Cross-Sell & Marketing Expert", "Creates and improves email campaigns and content.", "#4f78c9"],
-];
+] as const;
+
+const shortcuts = [
+  [CampaignRounded, "Smart campaigns", "Create messages that move your audience.", "/dashboard/email"],
+  [RouteRounded, "Journey builder", "Automate the moments that matter.", "/dashboard/journeys"],
+  [PeopleAltOutlined, "Audience insights", "Understand who to reach next.", "/dashboard/users"],
+  [AutoGraphRounded, "Higher engagement", "Turn attention into retention.", "/dashboard/analytics"],
+] as const;
+
+function greeting() {
+  const hour = new Date().getHours();
+  return hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+}
 
 function MaxMark() {
-  return <Box className="max-orbit"><Box className="max-orbit-ring ring-one" /><Box className="max-orbit-ring ring-two" /><Box className="max-orbit-glow" /><Image className="max-orbit-icon" src="/assets/site-icon.png" alt="PixlPush AI" width={38} height={56} priority /></Box>;
+  return <Box className="max-orb" aria-hidden>
+    <span className="max-orb-aura" />
+    <span className="max-orb-ring" />
+    <span className="max-orb-path is-one" />
+    <span className="max-orb-path is-two" />
+    <span className="max-orb-pulse" />
+    <span className="max-orb-orbit is-one"><i><b /></i></span>
+    <span className="max-orb-orbit is-two"><i><b /></i></span>
+    <span className="max-orb-core"><Image className="max-orb-icon" src="/assets/site-icon.png" alt="" width={38} height={56} priority /></span>
+  </Box>;
 }
 
 export default function HomeCommandCenter() {
-  const [teamOpen, setTeamOpen] = useState(false);
+  const { account } = useCurrentUser();
+  const firstName = account?.name?.trim().split(/\s+/)[0];
+  const [agentAnchor, setAgentAnchor] = useState<null | HTMLElement>(null);
   const [contextAnchor, setContextAnchor] = useState<null | HTMLElement>(null);
   const [context, setContext] = useState<"recent" | "insight" | "handoff" | null>(null);
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [thinking, setThinking] = useState(false);
-  const [selectedAgent, setSelectedAgent] = useState("Max");
+  const [selectedAgent, setSelectedAgent] = useState<string>("Max");
+  const [, agentRole, , agentColor] = agents.find(([name]) => name === selectedAgent) ?? agents[0];
 
   const sendMessage = (value = draft) => {
     const text = value.trim();
@@ -50,7 +75,32 @@ export default function HomeCommandCenter() {
     }, 5000);
   };
 
-  const composer = (className = "home-composer") => <TextField fullWidth value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); sendMessage(); } }} placeholder={`Ask ${selectedAgent} about your users, campaigns, or journeys`} className={`max-input ${className}`} InputProps={{ endAdornment: <Button variant="contained" className="max-ask-button" endIcon={<ArrowForwardRounded />} onClick={() => sendMessage()} disabled={!draft.trim() || thinking}>{thinking ? "Thinking…" : `Ask ${selectedAgent}`}</Button> }} />;
+  const composer = (className = "home-composer") => <Box className={`ai-composer ${className}`}>
+    <InputBase
+      fullWidth
+      multiline
+      minRows={className === "home-composer" ? 2 : 1}
+      maxRows={6}
+      value={draft}
+      onChange={(event) => setDraft(event.target.value)}
+      onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); sendMessage(); } }}
+      placeholder={`Ask ${selectedAgent} about your users, campaigns, or journeys…`}
+      className="ai-composer-input"
+      inputProps={{ "aria-label": `Message ${selectedAgent}` }}
+    />
+    <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1} className="ai-composer-bar">
+      <ButtonBase className="ai-agent-pill" aria-haspopup="menu" aria-label={`Assistant: ${selectedAgent}. Change assistant`} onClick={(event) => setAgentAnchor(event.currentTarget)}>
+        <span className="ai-agent-dot" style={{ background: agentColor }}>{selectedAgent.slice(0, 1)}</span>
+        <b>{selectedAgent}</b>
+        <span className="ai-agent-role">{agentRole}</span>
+        <ExpandMoreRounded />
+      </ButtonBase>
+      <Stack direction="row" alignItems="center" gap={1.25}>
+        <span className="ai-composer-hint">{thinking ? `${selectedAgent} is thinking…` : "Enter to send"}</span>
+        <IconButton className="ai-send" aria-label={`Ask ${selectedAgent}`} onClick={() => sendMessage()} disabled={!draft.trim() || thinking}><ArrowUpwardRounded /></IconButton>
+      </Stack>
+    </Stack>
+  </Box>;
 
   const openContext = (value: "recent" | "insight" | "handoff") => {
     setContext(value);
@@ -58,36 +108,44 @@ export default function HomeCommandCenter() {
   };
 
   return <Box className="home-experience">
-    <Stack className="home-experience-toolbar" direction="row" alignItems="center" justifyContent="space-between">
-      <Chip className="home-toolbar-kicker" label="PIXLPUSH AI WORKSPACE" />
-      <Stack direction="row" gap={1}>
-        <Button className="home-toolbar-button" startIcon={<HistoryRounded />} onClick={(event) => setContextAnchor(event.currentTarget)}>Context</Button>
-        <Button className="home-toolbar-button home-toolbar-primary" startIcon={<SettingsRounded />} onClick={() => setTeamOpen(true)}>AI team</Button>
-      </Stack>
-    </Stack>
-
+    <Box className="home-backdrop" aria-hidden><span className="home-backdrop-mosaic" /></Box>
     {messages.length === 0 ? <Box className="home-hero">
       <MaxMark />
-      <Chip className="home-ai-badge" icon={<AutoAwesomeRounded />} label="AI POWERED" />
-      <Typography className="home-hero-title">Good afternoon, Haseeb.</Typography>
+      <Typography component="h1" className="home-hero-title" suppressHydrationWarning>{greeting()}{firstName && <>, <span>{firstName}</span></>}.</Typography>
       <Typography className="home-hero-subtitle">Let’s make your next growth move.</Typography>
 
       {composer()}
 
       <Stack direction="row" justifyContent="center" gap={1} flexWrap="wrap" className="home-prompt-row">
-        {prompts.map(([label, Icon]) => <Button key={label as string} className="home-prompt" startIcon={<Icon />} onClick={() => sendMessage(label as string)}>{label as string}</Button>)}
+        {prompts.map(([label, Icon]) => <Button key={label} className="home-prompt" startIcon={<Icon />} onClick={() => sendMessage(label)}>{label}</Button>)}
       </Stack>
 
-      <Stack direction="row" gap={1.5} className="home-feature-row">
-        {[[CampaignRounded, "Smart campaigns", "Create messages that move your audience.", "/dashboard/email"], [RouteRounded, "Journey builder", "Automate the moments that matter.", "/dashboard/journeys"], [PeopleAltOutlined, "Audience insights", "Understand who to reach next.", "/dashboard/users"], [AutoGraphRounded, "Higher engagement", "Turn attention into retention.", "/dashboard/analytics"]].map(([Icon, title, description, href]) => <Button key={title as string} href={href as string} className="home-feature-card"><Box className="home-feature-icon"><Icon /></Box><Box className="home-feature-copy"><Typography>{title as string}</Typography><span>{description as string}</span></Box><ArrowForwardRounded className="home-feature-arrow" /></Button>)}
-      </Stack>
+      <Button className="home-recent-link" startIcon={<HistoryRounded />} onClick={(event) => setContextAnchor(event.currentTarget)}>Recent conversations &amp; context</Button>
+
+      <Box className="home-feature-row">
+        {shortcuts.map(([Icon, title, description, href]) => <Button key={title} href={href} className="home-feature-card"><Box className="home-feature-icon"><Icon /></Box><Box className="home-feature-copy"><Typography>{title}</Typography><span>{description}</span></Box><ArrowForwardRounded className="home-feature-arrow" /></Button>)}
+      </Box>
+
+      <Typography className="home-disclaimer">AI can make mistakes. Check important growth decisions.</Typography>
     </Box> : <Box className="chat-experience">
+      <Stack direction="row" justifyContent="space-between" className="chat-topbar">
+        <Button className="home-recent-link" startIcon={<AddRounded />} disabled={thinking} onClick={() => setMessages([])}>New chat</Button>
+        <Button className="home-recent-link" startIcon={<HistoryRounded />} onClick={(event) => setContextAnchor(event.currentTarget)}>Context</Button>
+      </Stack>
       <Stack className="chat-thread" gap={2.5}>
-        {messages.map((message) => message.role === "user" ? <Box key={message.id} className="chat-user-message">{message.text}</Box> : <Stack key={message.id} direction="row" gap={1.5} className="chat-assistant-message"><Box className="chat-agent-mark"><Image src="/assets/site-icon.png" alt={selectedAgent} width={22} height={32} /></Box><Box><Typography className="chat-agent-name">{selectedAgent} <span>{agents.find(([name]) => name === selectedAgent)?.[1]}</span></Typography><Typography className="chat-response">{message.text}</Typography></Box></Stack>)}
-        {thinking && <Stack direction="row" gap={1.5} alignItems="center" className="chat-thinking"><Box className="chat-agent-mark is-thinking"><Image src="/assets/site-icon.png" alt="Max" width={22} height={32} /></Box><Typography>Thinking<span className="thinking-dots">…</span></Typography></Stack>}
+        {messages.map((message) => message.role === "user" ? <Box key={message.id} className="chat-user-message">{message.text}</Box> : <Stack key={message.id} direction="row" gap={1.5} className="chat-assistant-message"><Box className="chat-agent-mark"><Image src="/assets/site-icon.png" alt="" width={22} height={32} /></Box><Box><Typography className="chat-agent-name">{selectedAgent} <span>{agentRole}</span></Typography><Typography className="chat-response">{message.text}</Typography></Box></Stack>)}
+        {thinking && <Stack direction="row" gap={1.5} alignItems="center" className="chat-thinking"><Box className="chat-agent-mark is-thinking"><Image src="/assets/site-icon.png" alt="" width={22} height={32} /></Box><Typography>Thinking<span className="thinking-dots">…</span></Typography></Stack>}
       </Stack>
       <Box className="chat-composer-area">{composer("chat-composer")}<Typography className="chat-disclaimer">{selectedAgent} can make mistakes. Check important growth decisions.</Typography></Box>
     </Box>}
+
+    <Menu anchorEl={agentAnchor} open={Boolean(agentAnchor)} onClose={() => setAgentAnchor(null)} className="agent-menu">
+      {agents.map(([name, role, description, color]) => <MenuItem key={name} selected={selectedAgent === name} className="agent-menu-item" onClick={() => { setSelectedAgent(name); setAgentAnchor(null); }}>
+        <span className="ai-agent-dot" style={{ background: color }}>{name.slice(0, 1)}</span>
+        <Box sx={{ flex: 1, minWidth: 0 }}><Typography className="agent-menu-name">{name} <span>{role}</span></Typography><Typography className="agent-menu-description">{description}</Typography></Box>
+        {selectedAgent === name && <CheckRounded className="agent-menu-check" />}
+      </MenuItem>)}
+    </Menu>
 
     <Menu anchorEl={contextAnchor} open={Boolean(contextAnchor)} onClose={() => setContextAnchor(null)} className="home-context-menu">
       <MenuItem onClick={() => openContext("recent")}><HistoryRounded /> Recent conversations</MenuItem>
@@ -103,7 +161,5 @@ export default function HomeCommandCenter() {
         {context === "handoff" && <Stack className="context-dialog-list">{[["Max", "understood the goal", "Improve reactivation"], ["Ben", "analyzed inactive-user behavior", "Analysis complete"], ["Nova", "recommended a reactivation journey", "Ready to review"], ["Anna", "created the campaign content", "Draft available"]].map(([agent, action, status]) => <Stack direction="row" gap={1.5} className="context-dialog-row" key={agent}><Box className="handoff-dot" /><Box><Typography fontSize={13} fontWeight={600}>{agent} <span className="handoff-action">{action}</span></Typography><Typography fontSize={11} color="text.secondary">{status}</Typography></Box></Stack>)}</Stack>}
       </DialogContent>
     </Dialog>
-
-    <Dialog open={teamOpen} onClose={() => setTeamOpen(false)} maxWidth="sm" fullWidth><DialogTitle>Choose your AI assistant</DialogTitle><DialogContent><Typography color="text.secondary" fontSize={13} sx={{ mb: 2 }}>Select the specialist you want to work with. Max can always bring the rest of the team into the same conversation.</Typography><Stack divider={<Box component="span" sx={{ borderTop: "1px solid #eeeaf4" }} />}>{agents.map(([name, role, description, color]) => <ButtonBase key={name} className={`agent-setting-row ${selectedAgent === name ? "is-selected" : ""}`} onClick={() => { setSelectedAgent(name); setTeamOpen(false); }}><Avatar sx={{ width: 40, height: 40, bgcolor: `${color}18`, color, fontWeight: 700 }}>{name.slice(0, 1)}</Avatar><Box sx={{ flex: 1, textAlign: "left" }}><Typography fontWeight={650} fontSize={13}>{name}</Typography><Typography fontSize={11} color="text.secondary">{role}</Typography><Typography fontSize={12} sx={{ mt: .4 }}>{description}</Typography></Box><Chip label={selectedAgent === name ? "Selected" : "Select"} size="small" className={selectedAgent === name ? "context-chip selected-agent-chip" : "agent-select-chip"} /></ButtonBase>)}</Stack></DialogContent></Dialog>
   </Box>;
 }
