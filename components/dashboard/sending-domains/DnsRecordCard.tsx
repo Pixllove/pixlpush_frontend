@@ -32,9 +32,7 @@ function CopyField({ label, value }: { label: string; value: string }) {
 }
 
 function problemMessage(record: DnsRecord) {
-  if (record.purpose === 'DKIM') return record.type === 'CNAME' ? 'Amazon SES DKIM CNAME was not found. Make sure you have added it.' : 'DKIM record was not found. Make sure you have added it.';
-  if (record.purpose === 'SPF') return record.status === 'mismatch' ? 'Amazon SES SPF authorization does not match.' : 'Amazon SES SPF authorization was not found. Make sure you have added it.';
-  if (record.purpose === 'DOMAIN_VERIFICATION') return 'PixlPush domain verification TXT record was not found. Make sure you have added it.';
+  if (record.purpose === 'DKIM') return record.type === 'CNAME' ? 'DKIM CNAME record was not found. Make sure you have added it.' : 'DKIM record was not found. Make sure you have added it.';
   if (record.purpose === 'DMARC') return 'DMARC record was not found. You can add it for additional protection.';
   return 'This DNS record is missing or does not match.';
 }
@@ -48,8 +46,8 @@ export default function DnsRecordCard({ record }: { record: DnsRecord }) {
       <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1} sx={{ mb: 1.5 }}>
         <Stack direction="row" gap={1} alignItems="center">
           {!isVerified && <CancelRounded sx={{ color: 'error.main', fontSize: 20 }} aria-label="Record needs attention" />}
-          <Chip size="small" label={record.type} />
-          <Typography fontWeight={600}>{PURPOSE[record.purpose] ?? record.purpose}</Typography>
+          <Chip size="small" label={PURPOSE[record.purpose] ?? record.purpose} />
+          <Typography fontWeight={600}>{record.type} DNS record</Typography>
           {!record.required && <Typography color="text.secondary" fontSize={12}>Optional</Typography>}
         </Stack>
         {!isVerified && <Chip size="small" label={status.label} color={status.tone} variant={status.tone === 'default' ? 'outlined' : 'filled'} />}

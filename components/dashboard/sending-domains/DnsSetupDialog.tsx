@@ -58,9 +58,9 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
 
   const domain = query.data;
   const records = domain?.dnsRecords ?? [];
-  const hasSesDkim = records.some((record) => record.purpose === 'DKIM' && record.type === 'CNAME');
-  const hasSesSpf = records.some((record) => record.purpose === 'SPF' && /include:amazonses\.com/i.test(record.value));
-  const needsSesRefresh = records.length > 0 && (!hasSesDkim || !hasSesSpf);
+  const sesDkimRecords = records.filter((record) => record.purpose === 'DKIM' && record.type === 'CNAME');
+  const customerVisibleRecords = records.filter((record) => record.purpose !== 'SPF' && record.purpose !== 'DOMAIN_VERIFICATION');
+  const needsSesRefresh = records.length > 0 && sesDkimRecords.length < 3;
 
   const refreshRecords = async () => {
     setChecking(true);
@@ -121,7 +121,7 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
   }, [waiting]);
 
   const dnsUrl = safeDnsUrl(domain?.dnsSetupUrl);
-  const displayRecords = needsSesRefresh ? [] : records;
+  const displayRecords = needsSesRefresh ? [] : customerVisibleRecords;
   const automaticProvider = domain?.provider ?? (domain?.providerName?.toLowerCase() === 'ionos' ? 'ionos' : null);
   // The key belongs to the customer's email provider (TXT) and has not been found yet.
   const providerDkim = records.find((r) => r.purpose === 'DKIM' && r.type === 'TXT');
@@ -184,8 +184,8 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
             {domain.status === 'dns_check_failed' && <Alert severity="error">{messageForCode('DNS_LOOKUP_FAILED')}</Alert>}
             {domain.status === 'dns_pending' && domain.lastCheckedAt && <Alert severity="info">{messageForCode('DNS_RECORD_NOT_FOUND')}</Alert>}
             {needsSesRefresh && (
-              <Alert severity="warning" action={<Button color="inherit" size="small" onClick={refreshRecords} disabled={checking}>Refresh SES records</Button>}>
-                This domain still has records from the old provider-based setup. Refresh the setup to load the Amazon SES SPF and DKIM records.
+              <Alert severity="warning" action={<Button color="inherit" size="small" onClick={refreshRecords} disabled={checking}>Refresh email records</Button>}>
+                This domain still has records from the previous provider-based setup. Refresh the setup to load the current DKIM records.
               </Alert>
             )}
             {checkError && (
@@ -198,8 +198,8 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
               <li>DNS changes can take several hours to take effect.</li>
               <li><code>@</code> stands for the root domain ({domain.domain}). Some providers want the name left empty instead.</li>
               <li>Copy CNAME and TXT values exactly, without extra spaces or quotes.</li>
-              <li>Keep a single SPF record: add <code>include:amazonses.com</code> to an existing SPF record instead of creating a second one.</li>
-              <li>Amazon SES DKIM uses the CNAME records shown below. Copy each name and target exactly.</li>
+              <li>For DKIM, choose <code>CNAME</code> as the DNS record type. DKIM is the email authentication method, not a DNS record type.</li>
+              <li>Copy each record name and target exactly as shown below.</li>
               <li>DMARC is optional and does not block authentication or sending.</li>
               <li>The domain stays unauthenticated while any required record is missing.</li>
             </Stack>
