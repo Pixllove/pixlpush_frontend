@@ -19,7 +19,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { checkDns, getSendingDomain, updateSendingDomain } from '@/lib/sending-domains/api';
+import { checkDns, getSendingDomain, refreshSesRecords, updateSendingDomain } from '@/lib/sending-domains/api';
 import { domainErrorMessage, isConnectionCode, messageForCode } from '@/lib/sending-domains/errors';
 import type { SendingDomain } from '@/types/sending-domain';
 import DnsRecordCard from './DnsRecordCard';
@@ -57,6 +57,24 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
   const [selector, setSelector] = useState<string | null>(null);
 
   const domain = query.data;
+  const records = domain?.dnsRecords ?? [];
+  const hasSesDkim = records.some((record) => record.purpose === 'DKIM' && record.type === 'CNAME');
+  const hasSesSpf = records.some((record) => record.purpose === 'SPF' && /include:amazonses\.com/i.test(record.value));
+  const needsSesRefresh = records.length > 0 && (!hasSesDkim || !hasSesSpf);
+
+  const refreshRecords = async () => {
+    setChecking(true);
+    setCheckError(null);
+    try {
+      await refreshSesRecords(projectId, domainId);
+      await query.refetch();
+    } catch (e) {
+      setCheckError(domainErrorMessage(e));
+    } finally {
+      onChanged();
+      setChecking(false);
+    }
+  };
 
   const runCheck = async () => {
     setChecking(true);
@@ -103,7 +121,7 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
   }, [waiting]);
 
   const dnsUrl = safeDnsUrl(domain?.dnsSetupUrl);
-  const records = domain?.dnsRecords ?? [];
+  const displayRecords = needsSesRefresh ? [] : records;
   const automaticProvider = domain?.provider ?? (domain?.providerName?.toLowerCase() === 'ionos' ? 'ionos' : null);
   // The key belongs to the customer's email provider (TXT) and has not been found yet.
   const providerDkim = records.find((r) => r.purpose === 'DKIM' && r.type === 'TXT');
@@ -165,6 +183,11 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
               : <Alert severity="error">Verification failed. {statusMessage}</Alert>)}
             {domain.status === 'dns_check_failed' && <Alert severity="error">{messageForCode('DNS_LOOKUP_FAILED')}</Alert>}
             {domain.status === 'dns_pending' && domain.lastCheckedAt && <Alert severity="info">{messageForCode('DNS_RECORD_NOT_FOUND')}</Alert>}
+            {needsSesRefresh && (
+              <Alert severity="warning" action={<Button color="inherit" size="small" onClick={refreshRecords} disabled={checking}>Refresh SES records</Button>}>
+                This domain still has records from the old provider-based setup. Refresh the setup to load the Amazon SES SPF and DKIM records.
+              </Alert>
+            )}
             {checkError && (
               <Alert severity="error" action={<Button color="inherit" size="small" onClick={runCheck} disabled={checking}>Retry</Button>}>
                 {checkError}
@@ -175,14 +198,16 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
               <li>DNS changes can take several hours to take effect.</li>
               <li><code>@</code> stands for the root domain ({domain.domain}). Some providers want the name left empty instead.</li>
               <li>Copy CNAME and TXT values exactly, without extra spaces or quotes.</li>
-              <li>Keep a single SPF record: if one already exists, add our include to it instead of creating a second one.</li>
+              <li>Keep a single SPF record: add <code>include:amazonses.com</code> to an existing SPF record instead of creating a second one.</li>
+              <li>Amazon SES DKIM uses the CNAME records shown below. Copy each name and target exactly.</li>
+              <li>DMARC is optional and does not block authentication or sending.</li>
               <li>The domain stays unauthenticated while any required record is missing.</li>
             </Stack>
 
-            {records.length === 0 ? (
+            {displayRecords.length === 0 ? (
               <Alert severity="info">No DNS records yet. Choose how to connect this domain first.</Alert>
             ) : (
-              <Stack gap={1.5}>{records.map((record) => <DnsRecordCard key={record.id} record={record} />)}</Stack>
+              <Stack gap={1.5}>{displayRecords.map((record) => <DnsRecordCard key={record.id} record={record} />)}</Stack>
             )}
 
             {providerDkim && !providerDkim.verified && (
@@ -206,7 +231,7 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
               </Stack>
             )}
 
-            {domain.status !== 'verified' && records.length > 0 && (
+            {domain.status !== 'verified' && displayRecords.length > 0 && (
               <Stack gap={0.75} sx={{ pt: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
                 <Typography fontWeight={600}>Wait for the records to become active</Typography>
                 <Typography color="text.secondary" fontSize={13}>
@@ -231,7 +256,7 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
             Try automatic connection
           </Button>
         )}
-        {domain && records.length > 0 && (
+        {domain && displayRecords.length > 0 && (
           <Button variant="outlined" onClick={runCheck} disabled={checking}>
             {checking ? 'Checking DNS…' : 'Check status'}
           </Button>

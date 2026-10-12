@@ -7,7 +7,7 @@ const ALLOWED = [
   "restore",
   "firebase",
   "sdk-keys",
-  // Includes /smtp, /webhook-secret, /test and /verify.
+  // Includes only the current read/status and test-send operations.
   "email-settings",
   "billing",
   "members",
