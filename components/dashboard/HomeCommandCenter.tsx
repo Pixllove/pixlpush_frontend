@@ -229,7 +229,16 @@ export default function HomeCommandCenter() {
   const [flowStep, setFlowStep] = useState(0);
   const [flowAnswers, setFlowAnswers] = useState<Record<number, string>>({});
   const [selectedAgent, setSelectedAgent] = useState<string>("Max");
+  const [greetingAgent, setGreetingAgent] = useState<string | null>(null);
   const [, agentRole, , agentAvatar] = agents.find(([name]) => name === selectedAgent) ?? agents[0];
+  const leftFrontAgent = selectedAgent === "Ben" ? "ben" : "max";
+  const rightFrontAgent = selectedAgent === "Anna" ? "anna" : "nova";
+
+  const selectAgent = (name: string) => {
+    setSelectedAgent(name);
+    setGreetingAgent(name);
+    window.setTimeout(() => setGreetingAgent((current) => current === name ? null : current), 1800);
+  };
 
   const sendMessage = (value = draft) => {
     const text = value.trim();
@@ -320,11 +329,11 @@ export default function HomeCommandCenter() {
 
   return <Box className="home-experience">
     <Box className="home-backdrop" aria-hidden><span className="home-backdrop-mosaic" /></Box>
-    {messages.length === 0 && <Box className="home-agent-characters" aria-hidden="true">
-      <Image className="home-agent-figure is-max" src="/assets/agent-full-max.png" alt="" width={533} height={800} />
-      <Image className="home-agent-figure is-ben" src="/assets/agent-full-ben.png" alt="" width={400} height={800} />
-      <Image className="home-agent-figure is-nova" src="/assets/agent-full-nova.png" alt="" width={533} height={800} />
-      <Image className="home-agent-figure is-anna" src="/assets/agent-full-anna.png" alt="" width={342} height={800} />
+    {messages.length === 0 && <Box className={`home-agent-characters is-left-front-${leftFrontAgent} is-right-front-${rightFrontAgent}${greetingAgent ? ` is-greeting-${greetingAgent.toLowerCase()}` : ""}`} aria-hidden="true">
+      <Box className="home-agent-character is-max"><Image className="home-agent-figure" src="/assets/agent-full-max.png" alt="" fill sizes="220px" />{greetingAgent === "Max" && <><span className="home-agent-wave">👋</span><span className="home-agent-greeting">Hi!</span></>}</Box>
+      <Box className="home-agent-character is-ben"><Image className="home-agent-figure" src="/assets/agent-full-ben.png" alt="" fill sizes="180px" />{greetingAgent === "Ben" && <><span className="home-agent-wave">👋</span><span className="home-agent-greeting">Hi!</span></>}</Box>
+      <Box className="home-agent-character is-nova"><Image className="home-agent-figure" src="/assets/agent-full-nova.png" alt="" fill sizes="220px" />{greetingAgent === "Nova" && <><span className="home-agent-wave">👋</span><span className="home-agent-greeting">Hi!</span></>}</Box>
+      <Box className="home-agent-character is-anna"><Image className="home-agent-figure" src="/assets/agent-full-anna.png" alt="" fill sizes="150px" />{greetingAgent === "Anna" && <><span className="home-agent-wave">👋</span><span className="home-agent-greeting">Hi!</span></>}</Box>
     </Box>}
     {messages.length === 0 ? <Box className="home-hero">
       <MaxMark />
@@ -362,7 +371,7 @@ export default function HomeCommandCenter() {
     </Box>}
 
     <Menu anchorEl={agentAnchor} open={Boolean(agentAnchor)} onClose={() => setAgentAnchor(null)} className="agent-menu">
-      {agents.map(([name, role, description, avatar]) => <MenuItem key={name} selected={selectedAgent === name} className="agent-menu-item" onClick={() => { setSelectedAgent(name); setAgentAnchor(null); }}>
+      {agents.map(([name, role, description, avatar]) => <MenuItem key={name} selected={selectedAgent === name} className="agent-menu-item" onClick={() => { selectAgent(name); setAgentAnchor(null); }}>
         <Image className="ai-agent-dot" src={avatar} alt={`${name} avatar`} width={34} height={34} />
         <Box sx={{ flex: 1, minWidth: 0 }}><Typography className="agent-menu-name">{name} <span>{role}</span></Typography><Typography className="agent-menu-description">{description}</Typography></Box>
         {selectedAgent === name && <CheckRounded className="agent-menu-check" />}
