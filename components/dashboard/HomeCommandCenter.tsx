@@ -5,6 +5,7 @@ import { Box, Button, ButtonBase, Dialog, DialogContent, DialogTitle, IconButton
 import Image from "next/image";
 import { useState } from "react";
 import { useCurrentUser } from "@/hooks/auth/use-current-user";
+import { accountGreetingName } from "@/lib/auth/display-name";
 
 type ChatMessage = { id: string; role: "user" | "assistant"; text: string };
 type FlowChoice = { label: string; description: string };
@@ -224,7 +225,7 @@ function MaxMark() {
 
 export default function HomeCommandCenter() {
   const { account } = useCurrentUser();
-  const firstName = account?.name?.trim().split(/\s+/)[0];
+  const firstName = accountGreetingName(account);
   const [agentAnchor, setAgentAnchor] = useState<null | HTMLElement>(null);
   const [contextAnchor, setContextAnchor] = useState<null | HTMLElement>(null);
   const [context, setContext] = useState<"recent" | "insight" | "handoff" | null>(null);

@@ -452,5 +452,6 @@ Every auth route (`/login`, `/get-started`, `/reset-password`, `/verify-email`, 
   preheader is not saved.
 - Tabs built from plain buttons do not exist any more; if arrow-key navigation is needed, use MUI `Tabs`.
 - Not yet reviewed on screen at phone width: most dashboard screens.
-- The Analytics tab runs on demo data (`components/dashboard/analytics/demo-data.ts`); it has no empty or
-  error state because nothing is fetched yet. The optional widgets show fixed demo content.
+- The Analytics tab reads its overview, campaign, and selected-widget data from the project analytics APIs;
+  widget selections are persisted per account and project. Keep new analytics widgets on the same API-backed
+  loading, empty, error, and disabled-during-save patterns.

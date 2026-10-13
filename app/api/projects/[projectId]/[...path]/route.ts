@@ -32,6 +32,7 @@ const ALLOWED = [
   "email-campaigns",
   "email-deliveries",
   "journeys",
+  "analytics",
 ];
 
 type Params = { params: { projectId: string; path: string[] } };

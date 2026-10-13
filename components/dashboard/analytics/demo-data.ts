@@ -1,7 +1,6 @@
 /**
- * DEMO DATA for the Analytics tab. There is no analytics endpoint yet, so every number on the tab comes
- * from here: seeded, so it is the same on every render. Replace `getDemoAnalytics` with a query when the
- * backend exists; the tab reads nothing else.
+ * Legacy deterministic fixture retained for chart-helper tests and local visual references.
+ * Production Analytics renders the backend analytics APIs and does not read this fixture.
  */
 export type RangeDays = 7 | 30 | 90;
 export type Kpi = { label: string; value: string; delta: string; direction: 'up' | 'down' | 'flat'; spark: number[] };
