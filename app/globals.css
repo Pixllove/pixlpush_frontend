@@ -2006,14 +2006,7 @@ body { padding-right: 0 !important; }
 .pp-hero-eyebrow::before { content: ""; width: 6px; height: 6px; flex: 0 0 auto; border-radius: 50%; background: #55D39B; box-shadow: 0 0 0 3px rgba(85,211,155,.24); }
 .pp-hero-title.MuiTypography-root { margin: 10px 0 4px; color: #fff; font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -.02em; }
 .pp-hero-text { margin: 0; color: rgba(255,255,255,.78); font-size: 14px; line-height: 22px; }
-.pp-hero-stats { display: flex; flex: 0 0 auto; margin: 0; }
-.pp-hero-stat { display: flex; flex-direction: column-reverse; justify-content: flex-end; gap: 2px; padding: 2px 28px; border-left: 1px solid rgba(255,255,255,.16); }
-.pp-hero-stat:last-child { padding-right: 0; }
-.pp-hero-stat dd { margin: 0; font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.pp-hero-stat dt { color: rgba(255,255,255,.74); font-size: 12px; line-height: 16px; white-space: nowrap; }
 .pp-hero-card .MuiSkeleton-root { background-color: rgba(255,255,255,.16); }
-@media (max-width: 1099px) { .pp-hero-card.MuiCard-root { flex-direction: column; align-items: stretch; gap: 20px; padding: 24px; } .pp-hero-stats { padding-top: 20px; border-top: 1px solid rgba(255,255,255,.16); } .pp-hero-stat { flex: 1 1 0; min-width: 0; padding: 0 16px; } .pp-hero-stat:first-child { padding-left: 0; border-left: 0; } }
-@media (max-width: 599px) { .pp-hero-stat dd { font-size: 20px; line-height: 28px; } .pp-hero-stat dt { white-space: normal; } }
 .pp-kpi-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
 .pp-panel-grid, .analytics-widget-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .pp-num { font-variant-numeric: tabular-nums; }
@@ -2062,6 +2055,12 @@ body { padding-right: 0 !important; }
 @media (max-width: 899px) { .pp-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .pp-panel-grid, .analytics-widget-grid { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 599px) { .pp-kpi-grid { grid-template-columns: minmax(0, 1fr); } .pp-chart { grid-template-rows: 20px 200px 16px; } .pp-chart-skeleton.MuiSkeleton-root { height: 260px; } }
 .analytics-widget-card { height: 100%; padding: 20px !important; }
+.analytics-add-widget-card.MuiButtonBase-root { display: flex; min-height: 220px; height: 100%; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 24px; color: var(--pp-text-2); border: 1px dashed #cfc3dc; border-radius: 12px; background: rgba(255,255,255,.55); text-align: center; transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease; }
+.analytics-add-widget-card.MuiButtonBase-root:hover { border-color: #8958d3; background: #fff; box-shadow: 0 8px 22px rgba(73,42,109,.08); transform: translateY(-1px); }
+.analytics-add-widget-card.MuiButtonBase-root:focus-visible { outline: 2px solid #7046c8; outline-offset: 2px; }
+.analytics-add-widget-icon { display: grid; width: 42px; height: 42px; place-items: center; color: #6b34bd; border-radius: 12px; background: #f2ebfc; }
+.analytics-add-widget-title.MuiTypography-root { color: var(--pp-text); font-size: 14px; font-weight: 650; }
+.analytics-add-widget-description.MuiTypography-root { max-width: 230px; color: var(--pp-text-3); font-size: 12px; line-height: 1.45; }
 .analytics-widget-icon, .analytics-picker-icon { width: 36px; height: 36px; display: grid; place-items: center; flex: 0 0 auto; border-radius: var(--pp-r-card); color: var(--pp-accent); background: var(--pp-accent-soft); }
 .analytics-widget-title { color: var(--pp-text) !important; font-size: 14px !important; font-weight: 600 !important; }
 .analytics-widget-description { color: var(--pp-text-2) !important; font-size: 12px !important; }

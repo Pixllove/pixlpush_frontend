@@ -11,7 +11,7 @@ import SdkKeysPanel from './SdkKeysPanel';
 import SettingsStatus from './SettingsStatus';
 import AccountProfile from '@/components/auth/AccountProfile';
 
-const tabs = ['Project details', 'Profile', 'Company & workspace', 'Firebase / FCM', 'Domain', 'SDK keys', 'Data & privacy', 'Danger zone'];
+const tabs = ['Profile', 'Project details', 'Company & workspace', 'Firebase / FCM', 'Domain', 'SDK keys', 'Data & privacy', 'Danger zone'];
 
 // ponytail: static until the backend has privacy settings; wire it like EmailPanel then.
 function PrivacyPanel() { return <Stack gap={2.5}><Box><Typography variant="h3">Data & privacy</Typography><Typography color="text.secondary" fontSize={12}>Control consent, retention and deletion behavior for this Project.</Typography></Box><Card className="saas-card">{[['Tracking enabled','Accept SDK events from identified users','Enabled'],['Marketing consent','Respect customer-provided email and push consent','Enabled'],['Location data','Only collect where legally permitted','Disabled']].map(([a,b,c]) => <Stack direction="row" alignItems="center" key={a} sx={{ py: 1.5, borderBottom: '1px solid #eeeaf3' }}><Box sx={{ flex: 1 }}><Typography fontWeight={600} fontSize={13}>{a}</Typography><Typography color="text.secondary" fontSize={12}>{b}</Typography></Box><SettingsStatus>{c}</SettingsStatus></Stack>)}</Card></Stack>; }
@@ -26,7 +26,7 @@ const panels: Record<string, (props: { onNavigate?: (tab: string) => void }) => 
   'Danger zone': DangerZonePanel,
 };
 
-export default function ProjectSettingsCenter({ initialTab = 'Project details' }: { initialTab?: string }) {
+export default function ProjectSettingsCenter({ initialTab = 'Profile' }: { initialTab?: string }) {
   const [tab, setTab] = useState(initialTab);
   const Panel = panels[tab] ?? ProjectDetailsPanel;
   return <Box className="settings-layout"><Tabs value={tab} onChange={(_, value) => setTab(value)}>{tabs.map(item => <Tab key={item} value={item} label={item} />)}</Tabs><Box className="settings-panel"><Panel onNavigate={setTab} /></Box></Box>;
