@@ -6,12 +6,14 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Box,
+  Checkbox,
   Divider,
+  FormControlLabel,
   Link as MuiLink,
   TextField,
   Typography,
 } from '@mui/material';
-import { signupSchema, type SignupInput } from '@/schemas/auth.schema';
+import { signupSchema, type SignupFormInput } from '@/schemas/auth.schema';
 import { useSignup } from '@/hooks/auth/use-signup';
 import { useClearOnRestore } from '@/hooks/auth/use-clear-on-restore';
 import { applyApiError } from '@/lib/auth/form';
@@ -32,50 +34,64 @@ export default function SignupForm({ active = true, onSwitch }: { active?: boole
     reset,
     watch,
     formState: { errors, isSubmitting },
-  } = useForm<SignupInput>({
+  } = useForm<SignupFormInput>({
     resolver: zodResolver(signupSchema),
-    defaultValues: { email: '', password: '', name: '', company: '' },
+    defaultValues: { email: '', password: '', name: '', company: '', legalAccepted: false },
   });
 
   useClearOnRestore(reset);
 
-  const onSubmit = handleSubmit(async (values) => {
-    setFormError(undefined);
-    try {
-      await signup.mutateAsync({
-        email: values.email,
-        password: values.password,
-        // The backend takes a single optional name; empty means "not supplied".
-        ...(values.name?.trim() ? { name: values.name.trim() } : {}),
-        company: values.company.trim(),
-      });
+  const onSubmit = handleSubmit(
+    async (values) => {
+      setFormError(undefined);
+      try {
+        await signup.mutateAsync({
+          email: values.email,
+          password: values.password,
+          // The backend takes a single optional name; empty means "not supplied".
+          ...(values.name?.trim() ? { name: values.name.trim() } : {}),
+          ...(values.company?.trim() ? { company: values.company.trim() } : {}),
+        });
 
-      // Signup establishes no session: the backend emails a verification link.
-      router.push(`/verify-email?email=${encodeURIComponent(values.email)}`);
-    } catch (error) {
-      setFormError(applyApiError(error as never, setError));
-    }
-  });
+        // Signup establishes no session: the backend emails a verification link.
+        router.push(`/verify-email?email=${encodeURIComponent(values.email)}`);
+      } catch (error) {
+        setFormError(applyApiError(error as never, setError));
+      }
+    },
+    (formErrors) => {
+      if (formErrors.legalAccepted) setFormError(formErrors.legalAccepted.message);
+    },
+  );
 
   const pending = isSubmitting || signup.isPending;
 
   return (
     <Box className={`auth-block${active ? ' is-active' : ''}`}>
-      <Box>
-        <Typography component="h1" variant="h1">Create your workspace</Typography>
-        <Typography color="text.secondary" sx={{ mt: 0.5 }}>Set up your account and build your first retention journey.</Typography>
+      <Box sx={{ textAlign: 'center' }}>
+        <Typography component="h1" variant="h1">Get Started Today</Typography>
+        <Typography color="text.secondary" sx={{ mt: 0.5 }}>Quick setup, no credit card required.</Typography>
       </Box>
 
+      <FormError message={formError} />
       <GoogleButton onError={setFormError} />
       <Divider>or</Divider>
 
       <Box component="form" onSubmit={onSubmit} noValidate sx={{ display: 'grid', gap: 2 }}>
-        <FormError message={formError} />
+        <TextField
+          label="Company name"
+          autoComplete="organization"
+          autoFocus={active}
+          fullWidth
+          disabled={pending}
+          error={Boolean(errors.company)}
+          helperText={errors.company?.message}
+          {...register('company')}
+        />
 
         <TextField
           label="Full name"
           autoComplete="name"
-          autoFocus={active}
           fullWidth
           disabled={pending}
           error={Boolean(errors.name)}
@@ -84,18 +100,7 @@ export default function SignupForm({ active = true, onSwitch }: { active?: boole
         />
 
         <TextField
-          label="Company name"
-          autoComplete="organization"
-          fullWidth
-          required
-          disabled={pending}
-          error={Boolean(errors.company)}
-          helperText={errors.company?.message}
-          {...register('company')}
-        />
-
-        <TextField
-          label="Work email"
+          label="Email Address"
           type="email"
           autoComplete="email"
           fullWidth
@@ -118,14 +123,16 @@ export default function SignupForm({ active = true, onSwitch }: { active?: boole
           <PasswordRule value={watch('password')} />
         </Box>
 
+        <FormControlLabel
+          control={<Checkbox color="primary" disabled={pending} {...register('legalAccepted')} />}
+          label={<>I agree to PixlPush&apos;s <MuiLink href="/legal/terms" target="_blank" rel="noreferrer">Terms of Service</MuiLink> and <MuiLink href="/privacy" target="_blank" rel="noreferrer">Privacy Policy</MuiLink>.</>}
+          sx={{ alignItems: 'center', '& .MuiFormControlLabel-label': { fontSize: 12, lineHeight: 1.5 } }}
+        />
+
         <SubmitButton type="submit" variant="contained" size="large" fullWidth pending={pending}>
-          Create account
+          Sign up with Email
         </SubmitButton>
       </Box>
-
-      <Typography variant="caption" color="text.secondary">
-        By creating an account, you agree to the <MuiLink href="/legal/terms">Terms of Service</MuiLink> and <MuiLink href="/legal/aup">Acceptable Use Policy</MuiLink> and acknowledge the <MuiLink href="/privacy">Privacy Policy</MuiLink>. No credit card required.
-      </Typography>
       <Typography color="text.secondary">
         Already have an account?         <MuiLink href="/login" onClick={(event) => { if (onSwitch) { event.preventDefault(); onSwitch('login'); } }}>Log in</MuiLink>
       </Typography>
