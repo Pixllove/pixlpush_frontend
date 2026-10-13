@@ -11,17 +11,12 @@ import {
   Box,
   Button,
   IconButton,
-  MenuItem,
-  Select,
   Stack,
   Typography,
 } from "@mui/material";
 import { useDispatch } from "react-redux";
 import { setSelectedProject } from "@/lib/uiSlice";
-import {
-  useActiveProject,
-  planLabel,
-} from "@/hooks/projects/use-active-project";
+import { useActiveProject } from "@/hooks/projects/use-active-project";
 import CreateProjectDialog from "./CreateProjectDialog";
 import DashboardSidebar from "./DashboardSidebar";
 import AccountMenu from "@/components/auth/AccountMenu";
@@ -48,12 +43,7 @@ export default function DashboardFrame({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const dispatch = useDispatch();
-  const {
-    projects,
-    active: activeProject,
-    isEmpty,
-    isPending,
-  } = useActiveProject();
+  const { active: activeProject, isEmpty } = useActiveProject();
 
   const [createOpen, setCreateOpen] = useState(false);
   const changeProject = (value: string) => {
@@ -74,6 +64,7 @@ export default function DashboardFrame({
         mobileOpen={mobileOpen}
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(value => !value)}
+        onChangeProject={changeProject}
       />
       {mobileOpen && (
         <Box
@@ -90,52 +81,6 @@ export default function DashboardFrame({
           >
             <MenuRounded />
           </IconButton>
-          <Select
-            className="project-select"
-            value={activeProject?.id ?? ""}
-            size="small"
-            onChange={(event) => changeProject(event.target.value)}
-            aria-label="Select project"
-            displayEmpty
-            renderValue={() =>
-              activeProject ? (
-                <>
-                  {activeProject.name}{" "}
-                  <Typography
-                    component="span"
-                    color="text.secondary"
-                    fontSize={11}
-                    sx={{ ml: 1 }}
-                  >
-                    {planLabel(activeProject)}
-                  </Typography>
-                </>
-              ) : (
-                <Typography
-                  component="span"
-                  color="text.secondary"
-                  fontSize={13}
-                >
-                  {isPending ? "Loading projects…" : "No project"}
-                </Typography>
-              )
-            }
-          >
-            {projects.map((option) => (
-              <MenuItem value={option.id} key={option.id}>
-                {option.name}{" "}
-                <Typography
-                  component="span"
-                  color="text.secondary"
-                  fontSize={11}
-                  sx={{ ml: 1 }}
-                >
-                  {planLabel(option)}
-                </Typography>
-              </MenuItem>
-            ))}
-            <MenuItem value="create">＋ Create project</MenuItem>
-          </Select>
           {/* <SearchField placeholder="Search users, events, campaigns" sx={{ width: { xs: "42vw", sm: "min(330px, 42vw)" } }} /> */}
           <Stack
             direction="row"

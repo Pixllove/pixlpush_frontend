@@ -1,11 +1,11 @@
 'use client';
 
 import {
-  BarChartOutlined, BoltOutlined, ChevronLeftRounded, ChevronRightRounded, EmailOutlined, GroupsOutlined,
-  HistoryOutlined, HomeOutlined, InsightsOutlined, PeopleAltOutlined, SettingsOutlined, SpaceDashboardOutlined, TuneOutlined,
+  AddRounded, BarChartOutlined, BoltOutlined, ChevronLeftRounded, ChevronRightRounded, EmailOutlined, GroupsOutlined,
+  HistoryOutlined, HomeOutlined, InsightsOutlined, PeopleAltOutlined, SettingsOutlined, SpaceDashboardOutlined, TuneOutlined, UnfoldMoreRounded,
 } from '@mui/icons-material';
 import {
-  Avatar, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Tooltip,
+  Avatar, ButtonBase, Divider, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Menu, MenuItem, Tooltip, Typography,
 } from '@mui/material';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -36,18 +36,23 @@ const groups = [
   },
 ];
 
-export default function DashboardSidebar({ active, setActive, mobileOpen, collapsed, onToggleCollapse }: {
+export default function DashboardSidebar({ active, setActive, mobileOpen, collapsed, onToggleCollapse, onChangeProject }: {
   active: string;
   setActive: (value: string) => void;
   mobileOpen: boolean;
   collapsed: boolean;
   onToggleCollapse: () => void;
+  /** A Project id, or `create` to start a new one. */
+  onChangeProject: (value: string) => void;
 }) {
-  const { active: activeProject, isPending } = useActiveProject();
+  const { projects, active: activeProject, isPending } = useActiveProject();
+  const [menu, setMenu] = useState<HTMLElement | null>(null);
   const [clicked, setClicked] = useState<string | null>(null);
   useEffect(() => setClicked(null), [active]);
   const current = clicked ?? active;
   const projectName = activeProject?.name ?? (isPending ? 'Loading…' : 'No project');
+  const projectPlan = activeProject ? planLabel(activeProject) : 'Not set up yet';
+  const switchProject = (value: string) => { setMenu(null); onChangeProject(value); };
 
   return (
     <aside className={`dashboard-sidebar${mobileOpen ? ' is-open' : ''}`} aria-label="PixlPush navigation">
@@ -68,6 +73,35 @@ export default function DashboardSidebar({ active, setActive, mobileOpen, collap
           {collapsed ? <ChevronRightRounded /> : <ChevronLeftRounded />}
         </IconButton>
       </header>
+
+      <div className="sidebar-switch">
+        <Tooltip title={collapsed && !menu ? `${projectName} · ${projectPlan}` : ''} placement="right">
+          <ButtonBase
+            className="sidebar-project"
+            aria-label={`Project: ${projectName}. Switch project`}
+            aria-haspopup="menu"
+            aria-expanded={Boolean(menu)}
+            onClick={(event) => setMenu(event.currentTarget)}
+          >
+            <Avatar className="sidebar-project-mark" aria-hidden="true">{activeProject ? activeProject.name.charAt(0) : '+'}</Avatar>
+            <span className="sidebar-project-copy">
+              <span className="sidebar-project-name">{projectName}</span>
+              <span className="sidebar-project-meta">{projectPlan}</span>
+            </span>
+            <UnfoldMoreRounded className="sidebar-project-chevron" />
+          </ButtonBase>
+        </Tooltip>
+        <Menu anchorEl={menu} open={Boolean(menu)} onClose={() => setMenu(null)} slotProps={{ paper: { sx: { minWidth: 220 } } }}>
+          {projects.map((project) => (
+            <MenuItem key={project.id} selected={project.id === activeProject?.id} onClick={() => switchProject(project.id)}>
+              <Typography component="span" variant="inherit" noWrap>{project.name}</Typography>
+              <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 'auto', pl: 2 }}>{planLabel(project)}</Typography>
+            </MenuItem>
+          ))}
+          {projects.length > 0 && <Divider />}
+          <MenuItem onClick={() => switchProject('create')}><AddRounded fontSize="small" />Create project</MenuItem>
+        </Menu>
+      </div>
 
       <nav id="dashboard-sidebar-navigation" className="sidebar-navigation" aria-label="Primary navigation">
         {groups.map((group) => (
@@ -99,16 +133,6 @@ export default function DashboardSidebar({ active, setActive, mobileOpen, collap
         ))}
       </nav>
 
-      <footer className="sidebar-foot">
-        <div className="sidebar-project" title={collapsed ? `${projectName} · ${activeProject ? planLabel(activeProject) : 'Not set up yet'}` : undefined}>
-          <Avatar className="sidebar-project-mark" aria-hidden="true">{activeProject ? activeProject.name.charAt(0) : '+'}</Avatar>
-          <div className="sidebar-project-copy">
-            <div className="sidebar-project-name">{projectName}</div>
-            <div className="sidebar-project-meta">{activeProject ? planLabel(activeProject) : 'Not set up yet'}</div>
-          </div>
-          <span className={`sidebar-project-status ${activeProject ? 'is-live' : ''}`} aria-label={activeProject ? 'Active project' : 'No project yet'} />
-        </div>
-      </footer>
     </aside>
   );
 }

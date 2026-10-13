@@ -232,6 +232,37 @@ The most important surface in the app; use `ReusableDataTable` for lists.
 - Tabs sit above the table; search and filters share one toolbar row.
 - Every table handles loading (skeleton rows), empty (one sentence, one action) and error.
 
+### Analytics
+Used by the Analytics tab; class-based, in the "Analytics surfaces" block of `app/globals.css`.
+- **Health block** (`.pp-hero-card`): the first thing on the tab, on `var(--pp-hero)`. Left: an 11px overline
+  with a live dot and the project's name, a 24px greeting to the signed-in person, and one factual sentence
+  built from the numbers below. Right: three 24px summary figures divided by white hairlines at 16%. No
+  buttons, no icons, never a hard-coded name.
+- **Stat card** (`.pp-stat`): a 13px label, a 28px/600 tabular number, a 96×32 sparkline, and a 12px change
+  line. The sparkline shows shape, not detail: at most 15 averaged points on an `accentSoft` fill. The change is an arrow plus a number: green up, red down, grey flat, never colour alone. A rate
+  changes in points ("1.2 pts"), a count in percent. No icon tile.
+- **Panel** (`.pp-panel`): a card with 20px padding, an `h3` title, one line of secondary text and a 20px gap.
+- **Charts are inline SVG** (`components/dashboard/analytics/Charts.tsx`); there is no chart library.
+  One y axis, 2px smooth lines that touch every value, hairline gridlines, 11px `textMuted` axis text, a legend whenever there are two
+  series, at most six date labels each under its own point, and a crosshair with a plum tooltip on hover and on the arrow keys.
+- **Series colours** are `--pp-series-1` (the accent), `--pp-series-2` (`secondary`) and `--pp-series-3`
+  (teal `#0E9F8E`), set with `.pp-series-1..3`. Colour follows the series (email is always 1, push always 2),
+  never its rank. Legend and tooltip text stays in a text colour; the swatch beside it carries the identity.
+  A fourth series needs a colour added here first.
+- **Colour only for identity.** Bars, meters and single lines that show one measure are the accent on a
+  hairline track; a row's label tells them apart. Series colours are for parts of one whole (a donut) or
+  lines on one chart.
+- **Widget bodies** are built from the pieces in `AnalyticsWidgetsSection.tsx`: `Headline` (number and
+  trend), `Bars`, `Meters`, `Rows`, `Donut`. A widget passes data, never a colour. The widget picker shows
+  the same body at 80% under a header row of icon tile, title, one line and an Add / Added chip.
+- **Maps** use `public/world-land.svg` (Natural Earth 1:110m land, public domain) as a CSS mask, so the
+  land is `borderStrong` and markers are accent dots placed by longitude and latitude. Never draw a map by
+  hand.
+- **Date range** is a small `ToggleButtonGroup` (7d / 30d / 90d) beside the primary action in the page
+  header, and it drives every number on the page. Past a month a time chart plots each week's daily
+  average, and says so in its subtitle and tooltip ("Week of Jul 16").
+- One compact `EmptyState` stands in for an empty widget area; never a grid of placeholder slots.
+
 ### Badges and chips
 20–22px pills, 11–12px/500, soft fill with matching text by meaning: Running/Active/Paid green, Draft amber,
 Scheduled blue, Paused orange, Failed red, Archived grey. Use `<Chip color="success | warning | error |
@@ -306,7 +337,7 @@ Always `EmptyState`. Never hand-build one.
 - **Sidebar**: 212px, flat plum, a brand row the height of the top bar, 12px/500 group labels, 40px rows with
   16px outlined icons; the active row is `plumSoft` with a 2px `#A67BF5` indicator. Navigation highlights
   instantly on click.
-- **Top bar**: 60px, white, a bottom hairline, no shadow. Project switcher and search on the left, actions on
+- **Top bar**: 60px, white, a bottom hairline, no shadow. Search on the left (the project switcher lives in the sidebar), actions on
   the right.
 - **Page header**: title (`h1`) and one line on the left, the primary action on the right, identical on every
   screen.
@@ -366,7 +397,7 @@ Every auth route (`/login`, `/get-started`, `/reset-password`, `/verify-email`, 
 - The sidebar can collapse to a 68px icon rail. The expanded rail uses the full PixlPush wordmark; the collapsed rail uses the dedicated `site-icon.png` mark rather than cropping the wordmark.
 - The collapse control remains visible in both states, changes direction to communicate restore/ collapse, exposes `aria-expanded`, and has an accessible tooltip and focus state.
 - Collapsed items must retain tooltips, visible focus states, and `aria-current="page"`.
-- The project identity card stays pinned below the scrolling navigation. Its text hides in the collapsed rail while the project initial remains available.
+- The project switcher sits directly under the brand row: the project's initial, its name and plan, and an up/down chevron. It opens a menu of the account's projects with "Create project" last. It is the only project control: there is none in the top bar and no project card at the foot of the sidebar. In the collapsed rail only the initial shows, with the name and plan in a tooltip.
 - At widths below 761px the sidebar is a 280px temporary drawer with a backdrop; selecting a route closes it.
 - Sidebar transitions use short width/colour transforms and must respect `prefers-reduced-motion`.
 
@@ -421,3 +452,5 @@ Every auth route (`/login`, `/get-started`, `/reset-password`, `/verify-email`, 
   preheader is not saved.
 - Tabs built from plain buttons do not exist any more; if arrow-key navigation is needed, use MUI `Tabs`.
 - Not yet reviewed on screen at phone width: most dashboard screens.
+- The Analytics tab runs on demo data (`components/dashboard/analytics/demo-data.ts`); it has no empty or
+  error state because nothing is fetched yet. The optional widgets show fixed demo content.
