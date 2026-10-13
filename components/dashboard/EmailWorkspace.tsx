@@ -873,7 +873,10 @@ export default function EmailWorkspace() {
       <SegmentedTabs
         value={tab}
         ariaLabel="Email workspace"
-        onChange={setTab}
+        onChange={(nextTab) => {
+          setTab(nextTab);
+          void queryClient.invalidateQueries({ queryKey: ["email"], refetchType: "active" });
+        }}
         options={[
           { value: "send", icon: <SendRounded />, label: <>Send<Chip label={tabCounts?.send ?? sentQuery.data?.total ?? 0} size="small" /></> },
           { value: "drafts", icon: <EditRounded />, label: <>Drafts<Chip label={tabCounts?.drafts ?? draftsQuery.data?.total ?? 0} size="small" /></> },

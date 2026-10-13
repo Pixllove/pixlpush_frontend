@@ -49,6 +49,17 @@ export interface AiConversationPreview {
   lastMessage: { role: "user" | "assistant"; content: string; createdAt: string } | null;
 }
 
+export interface AiConversation {
+  id: string;
+  projectId: string;
+  accountId: string;
+  assistant: AiAssistantId;
+  title: string | null;
+  flowId: AiFlowId | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface AiInsight {
   title: string;
   message: string;
@@ -133,6 +144,10 @@ export const aiApi = {
     projectId: string,
     input: { assistant: AiAssistantId; prompt: string; conversationId?: string },
   ) => authRequest<AiChatResponse>(at(projectId, "/chat"), input, BASE),
+  createConversation: (
+    projectId: string,
+    input: { assistant: AiAssistantId; title?: string; flowId?: AiFlowId; opening?: { prompt: string; response: string } },
+  ) => authRequest<AiConversation>(at(projectId, "/conversations"), input, BASE),
   /** Retry or edit: answers the thread's latest message again (or `prompt` in its place) and replaces that turn. */
   regenerate: (
     projectId: string,

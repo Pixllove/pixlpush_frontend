@@ -410,18 +410,32 @@ export default function HomeCommandCenter() {
 
   const startFlow = (flowId: string) => {
     const flow = guidedFlows.find((item) => item.id === flowId);
-    if (!flow || thinking || (catalogQuery.data && !catalogQuery.data.flows.includes(flowId as AiFlowId))) return;
-    setMessages([{ id: `user-${Date.now()}`, role: "user", flow: true, text: flowId === "segment" ? "I want to create a new audience segment. Help me define the right filters and walk me through setting it up." : `Help me with ${flow.title.toLowerCase()}. Ask me what you need, one step at a time.` }]);
+    if (!flow || !projectId || thinking || (catalogQuery.data && !catalogQuery.data.flows.includes(flowId as AiFlowId))) return;
+    const openingPrompt = flowId === "segment"
+      ? "I want to create a new audience segment. Help me define the right filters and walk me through setting it up."
+      : `Help me with ${flow.title.toLowerCase()}. Ask me what you need, one step at a time.`;
+    setMessages([{ id: `user-${Date.now()}`, role: "user", flow: true, text: openingPrompt }]);
     setActiveFlow(flow);
     setFlowStep(0);
     setFlowAnswers({});
     setFlowReady(false);
     setOpeningFlow(true);
-    window.setTimeout(() => {
+    void aiApi.createConversation(projectId!, {
+      assistant: selectedAgent as AiAssistantId,
+      title: flow.title,
+      flowId: flow.id,
+      opening: { prompt: openingPrompt, response: flow.subtitle },
+    }).then((conversation) => {
+      setConversationId(conversation.id);
       setMessages((current) => [...current, { id: `assistant-${Date.now()}`, role: "assistant", text: flow.subtitle, flow: true }]);
       setOpeningFlow(false);
       setFlowReady(true);
-    }, 1100);
+      void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "ai", "context"] });
+    }).catch((error) => {
+      setMessages((current) => [...current, { id: `assistant-error-${Date.now()}`, role: "assistant", text: apiMessage(error, "The guided setup could not be started. Please try again."), flow: true, error: true }]);
+      setActiveFlow(null);
+      setOpeningFlow(false);
+    });
   };
 
   const advanceFlow = (skip = false) => {
