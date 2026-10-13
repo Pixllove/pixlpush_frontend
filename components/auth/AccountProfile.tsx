@@ -116,7 +116,7 @@ export default function AccountProfile({ section = 'all' }: { section?: 'all' | 
         </Stack>
       </section>}
 
-      {section === 'all' && <ChangePasswordForm />}
+      {(section === 'all' || section === 'profile') && <ChangePasswordForm />}
     </Card>
   </Stack>;
 }

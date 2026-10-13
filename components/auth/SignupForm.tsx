@@ -124,7 +124,7 @@ export default function SignupForm({ active = true, onSwitch }: { active?: boole
       </Box>
 
       <Typography variant="caption" color="text.secondary">
-        By creating an account, you agree to our terms and privacy policy. No credit card required.
+        By creating an account, you agree to the <MuiLink href="/legal/terms">Terms of Service</MuiLink> and <MuiLink href="/legal/aup">Acceptable Use Policy</MuiLink> and acknowledge the <MuiLink href="/privacy">Privacy Policy</MuiLink>. No credit card required.
       </Typography>
       <Typography color="text.secondary">
         Already have an account?         <MuiLink href="/login" onClick={(event) => { if (onSwitch) { event.preventDefault(); onSwitch('login'); } }}>Log in</MuiLink>

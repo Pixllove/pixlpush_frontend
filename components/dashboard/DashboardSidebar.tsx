@@ -28,9 +28,9 @@ const groups = [
     label: 'Project',
     items: [
       { label: 'Integrations', href: '/dashboard/integrations', icon: TuneOutlined },
-      { label: 'Team & Access', href: '/dashboard/team', icon: GroupsOutlined },
       { label: 'Audit Logs', href: '/dashboard/audit-logs', icon: HistoryOutlined },
       { label: 'Billing & Usage', href: '/dashboard/billing', icon: BarChartOutlined },
+      { label: 'Team & Access', href: '/dashboard/team', icon: GroupsOutlined },
       { label: 'Settings', href: '/dashboard/settings', icon: SettingsOutlined },
     ],
   },

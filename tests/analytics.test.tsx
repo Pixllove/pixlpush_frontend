@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -77,9 +77,11 @@ describe('Analytics', () => {
 
     const empty = screen.getByRole('status');
     expect(empty).toHaveTextContent('No custom widgets yet');
-    await userEvent.click(within(empty).getByRole('button', { name: 'Add widget' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Add widget' }));
     await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: /Retention pulse/ }));
     expect(screen.queryByText('No custom widgets yet')).not.toBeInTheDocument();
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Done' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Add another widget' })).toBeInTheDocument());
     // The page behind the dialog is hidden until the dialog has finished closing.
     await userEvent.click(await screen.findByRole('button', { name: 'Remove Retention pulse' }));
     expect(screen.getByText('No custom widgets yet')).toBeInTheDocument();

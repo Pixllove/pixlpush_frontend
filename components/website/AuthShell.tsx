@@ -127,7 +127,7 @@ export default function AuthShell({ children, mode, back = true }: { children: R
         </Box>
         <Box className="auth-form-wrap">{formChildren}</Box>
         <Typography className="auth-foot">
-          © {new Date().getFullYear()} PixlPush · <Link href="#" color="inherit">Privacy</Link> · <Link href="#" color="inherit">Terms</Link>
+          © {new Date().getFullYear()} PixlPush · <Link href="/legal" color="inherit">Legal</Link> · <Link href="/privacy" color="inherit">Privacy</Link> · <Link href="/legal/terms" color="inherit">Terms</Link>
         </Typography>
       </Box>
 

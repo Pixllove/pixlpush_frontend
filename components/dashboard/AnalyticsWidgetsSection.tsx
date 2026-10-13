@@ -24,6 +24,7 @@ import {
 import {
   Box,
   Button,
+  ButtonBase,
   Card,
   Chip,
   Dialog,
@@ -525,14 +526,6 @@ export default function AnalyticsWidgetsSection() {
   const widgetData = new Map((widgetPreference?.widgets ?? []).map((item) => [item.id, item.data]));
   const sends = metric === "sends";
   const metricsUp = data.kpis.filter((kpi) => kpi.direction === "up").length;
-  const sent = data.channels.reduce((total, channel) => total + channel.sent, 0);
-  // Delivered across both channels, weighted by how much each one sent.
-  const delivered = sent ? data.channels.reduce((total, channel) => total + channel.sent * channel.rates[0].value, 0) / sent : 0;
-  const headline = [
-    { label: "Messages sent", value: whole.format(sent) },
-    { label: "Delivered", value: percent(delivered) },
-    { label: "Metrics trending up", value: `${metricsUp} of ${data.kpis.length}` },
-  ];
   // The API already returns weekly buckets for a 90-day period, so preserve its point/label alignment.
   const weekly = range === 90;
   const plot = (values: number[]) => values;
@@ -566,7 +559,6 @@ export default function AnalyticsWidgetsSection() {
     <Stack direction="row" alignItems="center" flexWrap="wrap" gap={1.5}>
       <SegmentedTabs value={range} options={RANGES.map((days) => ({ value: days, label: `${days}d`, ariaLabel: `Last ${days} days` }))} onChange={setRange} ariaLabel="Date range" className="pp-segmented-tabs-wide" />
       <Button variant="outlined" startIcon={<DownloadRounded />} onClick={exportAnalytics} disabled={!project?.id || exporting}>{exporting ? "Exporting…" : "Export"}</Button>
-      <Button variant="contained" startIcon={<AddRounded />} onClick={() => setPickerOpen(true)}>Add widget</Button>
     </Stack>
   );
 
@@ -580,9 +572,6 @@ export default function AnalyticsWidgetsSection() {
             <Typography component="h2" className="pp-hero-title" suppressHydrationWarning>{greeting()}{firstName && `, ${firstName}`}.</Typography>
             <p className="pp-hero-text">{pageLoading ? <Skeleton width={320} /> : `${metricsUp} of your ${data.kpis.length} key metrics are up on the previous ${range} days.`}</p>
           </Box>
-          <dl className="pp-hero-stats">
-            {headline.map(({ label, value }) => <div className="pp-hero-stat" key={label}><dt>{label}</dt><dd>{pageLoading ? <Skeleton width={72} /> : value}</dd></div>)}
-          </dl>
         </Card>
 
         <Box className="pp-kpi-grid">{data.kpis.map((kpi) => <KpiCard kpi={kpi} range={range} loading={pageLoading} key={kpi.label} />)}</Box>
@@ -660,16 +649,26 @@ export default function AnalyticsWidgetsSection() {
         </Box>
 
         <Stack gap={2}>
-          <Stack direction="row" alignItems="center" gap={1}>
-            <Typography variant="h2">Custom widgets</Typography>
-            {widgets.length > 0 && <Chip size="small" label={`${widgets.length} added`} />}
+          <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1.5}>
+            <Stack direction="row" alignItems="center" gap={1}>
+              <Typography variant="h2">Custom widgets</Typography>
+              {widgets.length > 0 && <Chip size="small" label={`${widgets.length} added`} />}
+            </Stack>
+            <Button variant="contained" startIcon={<AddRounded />} onClick={() => setPickerOpen(true)}>Add widget</Button>
           </Stack>
           {widgetError && <Typography color="error" role="alert">{widgetError}</Typography>}
           {widgetsLoading && selectedWidgets.length === 0
             ? <Card><Stack p={3} gap={1}><Skeleton width="40%" /><Skeleton width="80%" /><Skeleton width="100%" height={96} /></Stack></Card>
             : widgets.length === 0
-            ? <Card><EmptyState size="compact" icon={<WidgetsOutlined />} title="No custom widgets yet" description="Add the signals your team wants to keep an eye on." action={{ label: "Add widget", onClick: () => setPickerOpen(true) }} /></Card>
-            : <Box className="analytics-widget-grid">{widgets.map((config) => <WidgetCard config={config} data={widgetData.get(config.id)} removing={savingWidget === config.id} onRemove={() => removeWidget(config.id)} key={config.id} />)}</Box>}
+            ? <Card><EmptyState size="compact" icon={<WidgetsOutlined />} title="No custom widgets yet" description="Add the signals your team wants to keep an eye on." /></Card>
+            : <Box className="analytics-widget-grid">
+              {widgets.map((config) => <WidgetCard config={config} data={widgetData.get(config.id)} removing={savingWidget === config.id} onRemove={() => removeWidget(config.id)} key={config.id} />)}
+              <ButtonBase className="analytics-add-widget-card" onClick={() => setPickerOpen(true)} aria-label="Add another widget">
+                <Box className="analytics-add-widget-icon"><AddRounded /></Box>
+                <Typography className="analytics-add-widget-title">Add a widget</Typography>
+                <Typography className="analytics-add-widget-description">Choose another signal to add to your dashboard.</Typography>
+              </ButtonBase>
+            </Box>}
         </Stack>
         {exportStatus && <Typography color={exportStatus.includes("could not") ? "error" : "success.main"} role="status">{exportStatus}</Typography>}
         {project?.id && <AnalyticsSupportingData projectId={project.id} range={range} />}
