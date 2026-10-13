@@ -1408,6 +1408,12 @@ footer > div > div > div:first-child > p { display: none; }
 .home-backdrop-mosaic { position: absolute; inset: 0; background: conic-gradient(rgba(255,255,255,.2) 25%, transparent 0 50%, rgba(255,255,255,.1) 0 75%, transparent 0) 0 0 / 96px 96px, conic-gradient(rgba(255,255,255,.14) 25%, transparent 0 50%, rgba(255,255,255,.22) 0 75%, transparent 0) 24px 0 / 144px 144px, conic-gradient(transparent 25%, rgba(255,255,255,.16) 0 50%, transparent 0 75%, rgba(255,255,255,.1) 0) 0 24px / 240px 240px; -webkit-mask-image: radial-gradient(120% 100% at 50% 0%, transparent 62%, #000 100%); mask-image: radial-gradient(120% 100% at 50% 0%, transparent 62%, #000 100%); }
 .dashboard-app:has(.home-experience) .dashboard-topbar { border-bottom-color: transparent; }
 .home-hero, .chat-experience { position: relative; z-index: 1; }
+.home-agent-characters { position: absolute; z-index: 1; top: 220px; bottom: auto; left: 50%; width: min(100%, 1720px); height: 450px; margin: 0 auto; transform: translateX(-50%); pointer-events: none; overflow: hidden; }
+.home-agent-figure { position: absolute; bottom: 0; width: auto; height: min(40vh, 390px); max-width: none; object-fit: contain; object-position: bottom center; opacity: .96; filter: drop-shadow(0 10px 16px rgba(63, 41, 86, .12)); }
+.home-agent-figure.is-max { left: -45px; }
+.home-agent-figure.is-ben { left: 70px; height: min(36vh, 350px); }
+.home-agent-figure.is-nova { right: 20px; height: min(37vh, 360px); }
+.home-agent-figure.is-anna { right: -18px; height: min(35vh, 340px); }
 .home-hero { display: flex; width: min(100%, 1040px); margin: auto; flex-direction: column; align-items: center; padding: 24px 0 8px; text-align: center; }
 .home-hero > * { animation: home-rise .7s cubic-bezier(.2,.7,.2,1) both; }
 .home-hero > :nth-child(2) { animation-delay: .06s; }.home-hero > :nth-child(3) { animation-delay: .12s; }.home-hero > :nth-child(4) { animation-delay: .18s; }.home-hero > :nth-child(5) { animation-delay: .26s; }.home-hero > :nth-child(n+6) { animation-delay: .34s; }

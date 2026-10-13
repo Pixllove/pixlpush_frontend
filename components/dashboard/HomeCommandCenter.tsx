@@ -320,6 +320,12 @@ export default function HomeCommandCenter() {
 
   return <Box className="home-experience">
     <Box className="home-backdrop" aria-hidden><span className="home-backdrop-mosaic" /></Box>
+    {messages.length === 0 && <Box className="home-agent-characters" aria-hidden="true">
+      <Image className="home-agent-figure is-max" src="/assets/agent-full-max.png" alt="" width={533} height={800} />
+      <Image className="home-agent-figure is-ben" src="/assets/agent-full-ben.png" alt="" width={400} height={800} />
+      <Image className="home-agent-figure is-nova" src="/assets/agent-full-nova.png" alt="" width={533} height={800} />
+      <Image className="home-agent-figure is-anna" src="/assets/agent-full-anna.png" alt="" width={342} height={800} />
+    </Box>}
     {messages.length === 0 ? <Box className="home-hero">
       <MaxMark />
       <Typography component="h1" className="home-hero-title" suppressHydrationWarning>{greeting()}{firstName && <>, <span>{firstName}</span></>}.</Typography>
