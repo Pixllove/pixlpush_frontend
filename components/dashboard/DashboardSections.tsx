@@ -1501,6 +1501,7 @@ export function ChannelSection({ channel }: { channel: "email" | "push" }) {
 
 function EmailDataSection() {
   const { active } = useActiveProject();
+  const queryClient = useQueryClient();
   const project = projectContext(
     useSelector((state: RootState) => state.ui.selectedProject),
   );
@@ -1597,7 +1598,7 @@ function EmailDataSection() {
           <Button variant="outlined" startIcon={<GridViewRounded />}>Create email template</Button>
         </Stack>
       </Stack>
-      <Tabs value={tab} onChange={(_, value) => { setTab(value); setPage(1); }}>
+      <Tabs value={tab} onChange={(_, value) => { setTab(value); setPage(1); void queryClient.invalidateQueries({ queryKey: ["email"], refetchType: "active" }); }}>
         {emailTabs.map(({ id, label, count: tabCount, icon: Icon }) => (
           <Tab key={id} value={id} icon={<Icon />} iconPosition="start" label={<>{label}<Chip label={tabCount} size="small" /></>} />
         ))}
@@ -2220,7 +2221,7 @@ function PushSection() {
           </Button>
         </Stack>
       </Stack>
-      <Tabs value={tab} onChange={(_, value) => { setTab(value); setPage(1); }}>
+      <Tabs value={tab} onChange={(_, value) => { setTab(value); setPage(1); void queryClient.invalidateQueries({ queryKey: ["push"], refetchType: "active" }); }}>
         {pushTabs.map(({ id, label, count, icon: Icon }) => (
           <Tab key={id} value={id} icon={<Icon />} iconPosition="start" label={<>{label}<Chip label={count} size="small" /></>} />
         ))}

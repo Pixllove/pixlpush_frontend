@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { ArrowForwardRounded, AutoGraphRounded, ContentCopyRounded, DeleteOutlineRounded, EditRounded, EmailRounded, GroupsRounded, PlayCircleOutlineRounded, RocketLaunchRounded, SendRounded } from '@mui/icons-material';
@@ -74,6 +74,12 @@ export default function JourneyWorkspace() {
     return sort === 'name' ? [...mapped].sort((a, b) => a.name.localeCompare(b.name)) : mapped;
   }, [list.data, list.isPlaceholderData, sort]);
   const total = list.data?.total ?? 0;
+
+  // A tab represents a fresh server view. Revalidate the journey list whenever
+  // it opens so drafts or status changes made elsewhere are reflected.
+  useEffect(() => {
+    if (projectId) void queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'journeys'], refetchType: 'active' });
+  }, [projectId, queryClient, tab]);
 
   /** One row action at a time; the list is re-read after it. */
   const act = async (key: string, work: () => Promise<unknown>, done: string) => {

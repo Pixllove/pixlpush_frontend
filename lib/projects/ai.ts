@@ -13,6 +13,8 @@ export interface AiAssistant {
   name: string;
   role: string;
   description: string;
+  capabilities?: string[];
+  instructions?: string;
 }
 
 export interface AiFlowDefinition {
@@ -45,6 +47,17 @@ export interface AiConversationPreview {
   updatedAt: string;
   _count: { messages: number };
   lastMessage: { role: "user" | "assistant"; content: string; createdAt: string } | null;
+}
+
+export interface AiConversation {
+  id: string;
+  projectId: string;
+  accountId: string;
+  assistant: AiAssistantId;
+  title: string | null;
+  flowId: AiFlowId | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface AiInsight {
@@ -90,6 +103,19 @@ export interface AiChatResponse {
   message: string;
   nextActions: string[];
   evidence: Array<{ label: string; value: string }>;
+  creationIntent?: {
+    resourceType: "journey" | "segment" | "audience-group" | "campaign";
+    name: string;
+    channel?: "email" | "push" | "both";
+  };
+  createdResources?: Array<{
+    type: "journey" | "segment" | "audience-group" | "campaign";
+    id: string;
+    name: string;
+    channel?: "email" | "push";
+    status: "draft";
+    href: string;
+  }>;
   context: { generatedAt: string };
 }
 
@@ -102,6 +128,7 @@ export interface AiFlowDraftResponse {
   draft: Record<string, unknown>;
   summary: string;
   warnings: string[];
+  createdResources?: AiChatResponse["createdResources"];
   context: {
     generatedAt: string;
     audience: AiProjectContext["project"]["audience"];
@@ -117,6 +144,10 @@ export const aiApi = {
     projectId: string,
     input: { assistant: AiAssistantId; prompt: string; conversationId?: string },
   ) => authRequest<AiChatResponse>(at(projectId, "/chat"), input, BASE),
+  createConversation: (
+    projectId: string,
+    input: { assistant: AiAssistantId; title?: string; flowId?: AiFlowId; opening?: { prompt: string; response: string } },
+  ) => authRequest<AiConversation>(at(projectId, "/conversations"), input, BASE),
   /** Retry or edit: answers the thread's latest message again (or `prompt` in its place) and replaces that turn. */
   regenerate: (
     projectId: string,
@@ -128,6 +159,11 @@ export const aiApi = {
     flowId: AiFlowId,
     input: { assistant: AiAssistantId; answers: Record<string, string>; conversationId?: string },
   ) => authRequest<AiFlowDraftResponse>(at(projectId, `/flows/${encodeURIComponent(flowId)}/draft`), input, BASE),
+  flowCreate: (
+    projectId: string,
+    flowId: AiFlowId,
+    input: { assistant: AiAssistantId; answers: Record<string, string>; conversationId?: string },
+  ) => authRequest<AiFlowDraftResponse & { createdResources: NonNullable<AiChatResponse["createdResources"]> }>(at(projectId, `/flows/${encodeURIComponent(flowId)}/create`), input, BASE),
   conversation: (projectId: string, conversationId: string) =>
     authRequest<{ id: string; messages: Array<{ id: string; role: "user" | "assistant"; content: string; createdAt: string }> }>(
       at(projectId, `/conversations/${encodeURIComponent(conversationId)}`),
