@@ -319,6 +319,19 @@ export default function HomeCommandCenter() {
       setConversationId(response.conversationId);
       setMessages((current) => [...current, { id: `assistant-${Date.now()}`, role: "assistant", text: response.message }]);
       void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "ai", "context"] });
+      if (response.createdResources?.length) {
+        // The AI endpoint creates only editable drafts. Refresh the resource
+        // lists so the new draft is visible immediately when the user opens
+        // the corresponding workspace, without changing the Home layout.
+        for (const resource of response.createdResources) {
+          const key = resource.type === "journey"
+            ? "journeys"
+            : resource.type === "campaign"
+              ? resource.channel === "push" ? "push-campaigns" : "email-campaigns"
+              : resource.type === "segment" ? "lifecycle-segments" : "audience-groups";
+          void queryClient.invalidateQueries({ queryKey: ["projects", projectId, key] });
+        }
+      }
     },
     onError: (error) => {
       setMessages((current) => [...current, { id: `assistant-error-${Date.now()}`, role: "assistant", text: apiMessage(error, "The AI assistant could not respond. Please try again."), error: true }]);

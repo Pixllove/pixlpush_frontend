@@ -13,6 +13,8 @@ export interface AiAssistant {
   name: string;
   role: string;
   description: string;
+  capabilities?: string[];
+  instructions?: string;
 }
 
 export interface AiFlowDefinition {
@@ -90,6 +92,19 @@ export interface AiChatResponse {
   message: string;
   nextActions: string[];
   evidence: Array<{ label: string; value: string }>;
+  creationIntent?: {
+    resourceType: "journey" | "segment" | "audience-group" | "campaign";
+    name: string;
+    channel?: "email" | "push" | "both";
+  };
+  createdResources?: Array<{
+    type: "journey" | "segment" | "audience-group" | "campaign";
+    id: string;
+    name: string;
+    channel?: "email" | "push";
+    status: "draft";
+    href: string;
+  }>;
   context: { generatedAt: string };
 }
 
