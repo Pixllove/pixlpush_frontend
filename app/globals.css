@@ -1463,7 +1463,7 @@ footer > div > div > div:first-child > p { display: none; }
 .ai-agent-pill:focus-visible, .ai-send:focus-visible, .home-prompt:focus-visible, .home-recent-link:focus-visible, .home-feature-card:focus-visible { outline: 2px solid var(--ai-violet); outline-offset: 2px; }
 .ai-agent-pill svg { color: #8e7fa3; font-size: 18px; }
 .ai-agent-role { overflow: hidden; color: var(--pp-text-3); white-space: nowrap; text-overflow: ellipsis; }
-.ai-agent-dot { display: grid; width: 24px; height: 24px; flex: 0 0 auto; place-items: center; color: #fff; border-radius: 50%; font-size: 11px; font-weight: 700; }
+.ai-agent-dot { display: block; width: 30px; height: 30px; flex: 0 0 auto; border-radius: 50%; object-fit: cover; }
 .ai-composer-hint { color: #a79db3; font-size: 12px; white-space: nowrap; }
 .ai-send { width: 40px; height: 40px; flex: 0 0 auto; color: #fff !important; border-radius: 12px !important; background: linear-gradient(135deg, #6a32bb, #8955dc) !important; box-shadow: 0 8px 18px rgba(101,49,175,.3), inset 0 1px 0 rgba(255,255,255,.28); transition: transform 160ms ease, box-shadow 160ms ease !important; }
 .ai-send:hover { transform: translateY(-1px); box-shadow: 0 11px 22px rgba(101,49,175,.38), inset 0 1px 0 rgba(255,255,255,.28); }
@@ -1493,7 +1493,7 @@ footer > div > div > div:first-child > p { display: none; }
 .agent-menu .MuiPaper-root { width: 360px; max-width: calc(100vw - 32px); margin-top: -8px; border: 1px solid #e6dcf2; border-radius: 14px; box-shadow: 0 20px 44px -12px rgba(81,47,113,.28); }
 .agent-menu .MuiList-root { padding: 6px; }
 .agent-menu-item { align-items: flex-start !important; gap: 12px; padding: 10px !important; border-radius: 10px !important; white-space: normal !important; }
-.agent-menu-item .ai-agent-dot { width: 30px; height: 30px; font-size: 13px; }
+.agent-menu-item .ai-agent-dot { width: 34px; height: 34px; }
 .agent-menu-name { font-size: 13px !important; font-weight: 650 !important; }.agent-menu-name span { margin-left: 4px; color: var(--pp-text-3); font-weight: 400; }
 .agent-menu-description { margin-top: 2px !important; color: var(--pp-text-2); font-size: 12px !important; line-height: 1.4 !important; }
 .agent-menu-check { color: var(--ai-violet); font-size: 18px !important; }

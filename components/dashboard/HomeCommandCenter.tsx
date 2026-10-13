@@ -18,10 +18,10 @@ const prompts = [
 ] as const;
 
 const agents = [
-  ["Max", "Growth Concierge", "Coordinates the team and turns your goal into a clear next step.", "#7040c9"],
-  ["Ben", "Lifecycle & Campaign Data Analyst", "Analyzes retention, churn, campaigns and audience behavior.", "#2f8d70"],
-  ["Nova", "Campaign & Journey Optimizer", "Turns Ben’s analysis into campaign and journey recommendations.", "#df7650"],
-  ["Anna", "Cross-Sell & Marketing Expert", "Creates and improves email campaigns and content.", "#4f78c9"],
+  ["Max", "Growth Concierge", "Coordinates the team and turns your goal into a clear next step.", "/assets/agent-avatar-max-v2.png"],
+  ["Ben", "Lifecycle & Campaign Data Analyst", "Analyzes retention, churn, campaigns and audience behavior.", "/assets/agent-avatar-ben-v2.png"],
+  ["Nova", "Campaign & Journey Optimizer", "Turns Ben’s analysis into campaign and journey recommendations.", "/assets/agent-avatar-nova-v2.png"],
+  ["Anna", "Cross-Sell & Marketing Expert", "Creates and improves email campaigns and content.", "/assets/agent-avatar-anna-v2.png"],
 ] as const;
 
 const shortcuts = [
@@ -229,7 +229,7 @@ export default function HomeCommandCenter() {
   const [flowStep, setFlowStep] = useState(0);
   const [flowAnswers, setFlowAnswers] = useState<Record<number, string>>({});
   const [selectedAgent, setSelectedAgent] = useState<string>("Max");
-  const [, agentRole, , agentColor] = agents.find(([name]) => name === selectedAgent) ?? agents[0];
+  const [, agentRole, , agentAvatar] = agents.find(([name]) => name === selectedAgent) ?? agents[0];
 
   const sendMessage = (value = draft) => {
     const text = value.trim();
@@ -301,7 +301,7 @@ export default function HomeCommandCenter() {
     />
     <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1} className="ai-composer-bar">
       <ButtonBase className="ai-agent-pill" aria-haspopup="menu" aria-label={`Assistant: ${selectedAgent}. Change assistant`} onClick={(event) => setAgentAnchor(event.currentTarget)}>
-        <span className="ai-agent-dot" style={{ background: agentColor }}>{selectedAgent.slice(0, 1)}</span>
+        <Image className="ai-agent-dot" src={agentAvatar} alt={`${selectedAgent} avatar`} width={30} height={30} />
         <b>{selectedAgent}</b>
         <span className="ai-agent-role">{agentRole}</span>
         <ExpandMoreRounded />
@@ -356,8 +356,8 @@ export default function HomeCommandCenter() {
     </Box>}
 
     <Menu anchorEl={agentAnchor} open={Boolean(agentAnchor)} onClose={() => setAgentAnchor(null)} className="agent-menu">
-      {agents.map(([name, role, description, color]) => <MenuItem key={name} selected={selectedAgent === name} className="agent-menu-item" onClick={() => { setSelectedAgent(name); setAgentAnchor(null); }}>
-        <span className="ai-agent-dot" style={{ background: color }}>{name.slice(0, 1)}</span>
+      {agents.map(([name, role, description, avatar]) => <MenuItem key={name} selected={selectedAgent === name} className="agent-menu-item" onClick={() => { setSelectedAgent(name); setAgentAnchor(null); }}>
+        <Image className="ai-agent-dot" src={avatar} alt={`${name} avatar`} width={34} height={34} />
         <Box sx={{ flex: 1, minWidth: 0 }}><Typography className="agent-menu-name">{name} <span>{role}</span></Typography><Typography className="agent-menu-description">{description}</Typography></Box>
         {selectedAgent === name && <CheckRounded className="agent-menu-check" />}
       </MenuItem>)}
