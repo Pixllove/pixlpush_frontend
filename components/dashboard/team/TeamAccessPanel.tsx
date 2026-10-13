@@ -139,6 +139,7 @@ export default function TeamAccessPanel() {
                   <TableCell>Member</TableCell>
                   <TableCell>Role</TableCell>
                   <TableCell>Status</TableCell>
+                  <TableCell>2FA</TableCell>
                   <TableCell>Invited by</TableCell>
                   <TableCell>Access since</TableCell>
                   <TableCell align="right">Actions</TableCell>
@@ -147,7 +148,7 @@ export default function TeamAccessPanel() {
               <TableBody>
                 {members.isPending && [0].map((i) => (
                   <TableRow key={i} role="status" aria-label="Loading members" sx={{ height: 61 }}>
-                    {[0, 1, 2, 3, 4, 5].map((c) => <TableCell key={c}><Skeleton variant="text" /></TableCell>)}
+                    {[0, 1, 2, 3, 4, 5, 6].map((c) => <TableCell key={c}><Skeleton variant="text" /></TableCell>)}
                   </TableRow>
                 ))}
                 {(members.data ?? []).map((m) => (
@@ -184,6 +185,13 @@ export default function TeamAccessPanel() {
                     </TableCell>
                     <TableCell>
                       <Chip size="small" label={m.state === 'pending' ? 'Pending' : 'Activated'} className={m.state === 'pending' ? 'paused-chip' : 'active-chip'} />
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        size="small"
+                        label={m.account.twoFactorEnabled === undefined ? 'Not reported' : m.account.twoFactorEnabled ? 'Enabled' : 'Not enabled'}
+                        color={m.account.twoFactorEnabled ? 'success' : 'default'}
+                      />
                     </TableCell>
                     <TableCell sx={{ fontSize: 12 }}>{person(m.invitedBy)}</TableCell>
                     <TableCell sx={{ fontSize: 12 }}>{m.joinedAt ? date(m.joinedAt) : '—'}</TableCell>

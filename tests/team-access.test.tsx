@@ -32,18 +32,18 @@ vi.mock('@/hooks/auth/use-current-user', () => ({
 const team = vi.mocked(teamApi);
 const audit = vi.mocked(auditApi);
 
-const member = (over: Partial<ProjectMember> & { email: string; name?: string }): ProjectMember => ({
+const member = (over: Partial<ProjectMember> & { email: string; name?: string; twoFactorEnabled?: boolean }): ProjectMember => ({
   id: `m-${over.email}`,
   role: over.role ?? 'developer',
   joinedAt: '2026-09-29T10:00:00.000Z',
   state: 'activated',
-  account: { id: `a-${over.email}`, email: over.email, name: over.name ?? null },
+  account: { id: `a-${over.email}`, email: over.email, name: over.name ?? null, ...(over.twoFactorEnabled === undefined ? {} : { twoFactorEnabled: over.twoFactorEnabled }) },
   invitedBy: over.invitedBy ?? null,
 });
 
 const members = [
-  member({ email: 'emi@example.com', name: 'Emi', role: 'owner' }),
-  member({ email: 'dimi@example.com', name: 'Dimi', role: 'read_only', invitedBy: { id: 'a-emi', email: 'emi@example.com', name: 'Emi' } }),
+  member({ email: 'emi@example.com', name: 'Emi', role: 'owner', twoFactorEnabled: true }),
+  member({ email: 'dimi@example.com', name: 'Dimi', role: 'read_only', twoFactorEnabled: false, invitedBy: { id: 'a-emi', email: 'emi@example.com', name: 'Emi' } }),
 ];
 
 const wrap = (ui: React.ReactElement) =>
@@ -65,6 +65,9 @@ describe('Team & Access', () => {
     expect(within(dimi).getByText('Dimi')).toBeInTheDocument();
     expect(within(dimi).getByText('Emi')).toBeInTheDocument(); // invited by
     expect(within(dimi).getByText('Activated')).toBeInTheDocument();
+    expect(within(dimi).getByText('Not enabled')).toBeInTheDocument();
+    expect(within(await screen.findByTestId('member-emi@example.com')).getByText('Enabled')).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: '2FA' })).toBeInTheDocument();
     const invite = await screen.findByTestId('invitation-new@example.com');
     expect(within(invite).getByText('Analyst')).toBeInTheDocument();
     expect(screen.queryByText('Team & Access')).not.toBeInTheDocument();

@@ -8,6 +8,7 @@ import { useActiveProject } from '@/hooks/projects/use-active-project';
 import { billingApi, teamApi } from '@/lib/projects/api';
 import type { ProjectRole } from '@/types/project';
 import ChangePasswordForm from './ChangePasswordForm';
+import TwoFactorSettings from './TwoFactorSettings';
 import UserAvatar from './UserAvatar';
 
 const display = (value: string | null | undefined) => value?.trim() || '-';
@@ -116,6 +117,7 @@ export default function AccountProfile({ section = 'all' }: { section?: 'all' | 
         </Stack>
       </section>}
 
+      {(section === 'all' || section === 'profile') && <TwoFactorSettings />}
       {(section === 'all' || section === 'profile') && <ChangePasswordForm />}
     </Card>
   </Stack>;
