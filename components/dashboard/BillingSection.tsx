@@ -764,7 +764,7 @@ export function BillingSection() {
                 </Grid>
 
                 <Stack direction={{ xs: "column", sm: "row" }} justifyContent="flex-end" gap={0.75} sx={{ mt: 2, pt: 1.75, borderTop: "1px solid #e9e3f2" }}>
-                  <Button component="a" href="/pricing" variant="contained" sx={{ px: 2.5, minHeight: 42, borderRadius: 1.5, textTransform: "none", fontWeight: 650, color: "#fff", background: "linear-gradient(105deg, #5315b8 0%, #762be0 100%)", boxShadow: "0 5px 14px rgba(96, 35, 191, .22)", "&:hover": { background: "linear-gradient(105deg, #45109f 0%, #6420c5 100%)", boxShadow: "0 7px 18px rgba(96, 35, 191, .3)" } }}>Contact sales for Enterprise</Button>
+                  <Button href="/pricing" variant="contained" sx={{ px: 2.5, minHeight: 42, borderRadius: 1.5, textTransform: "none", fontWeight: 650, color: "#fff", background: "linear-gradient(105deg, #5315b8 0%, #762be0 100%)", boxShadow: "0 5px 14px rgba(96, 35, 191, .22)", "&:hover": { background: "linear-gradient(105deg, #45109f 0%, #6420c5 100%)", boxShadow: "0 7px 18px rgba(96, 35, 191, .3)" } }}>Contact sales for Enterprise</Button>
                 </Stack>
                 {!canManage && <Typography color="text.secondary" fontSize={11} sx={{ mt: 0.75 }}>Ask an owner, admin or billing member of this project to change the plan.</Typography>}
               </Box>

@@ -1,3 +1,4 @@
+import { createElement, forwardRef, type AnchorHTMLAttributes } from 'react';
 import NextLink from 'next/link';
 import { alpha, createTheme } from '@mui/material/styles';
 
@@ -50,6 +51,16 @@ export const tokens = {
 } as const;
 
 const t = tokens;
+
+/**
+ * What MUI's `Link` renders. A plain <a> makes the browser load the next page from scratch: the query cache
+ * is thrown away, so every header re-checks the session and shows its placeholder again on each click.
+ * Next's router swaps the page in place instead and keeps what is already known. A link with no `href`
+ * (a button styled as a link) stays a plain element, since the router link requires one.
+ */
+const RouterLink = forwardRef<HTMLAnchorElement, AnchorHTMLAttributes<HTMLAnchorElement>>(function RouterLink({ href, ...props }, ref) {
+  return href ? createElement(NextLink, { ref, href, ...props }) : createElement('a', { ref, ...props });
+});
 const ease = '150ms cubic-bezier(.2,.6,.2,1)';
 const ring = `0 0 0 3px ${alpha(t.accent, 0.2)}`;
 // The only shadows: things that float.
@@ -309,6 +320,6 @@ export const theme = createTheme({
       },
     },
     MuiAvatar: { styleOverrides: { root: { fontSize: 13, fontWeight: 600 } } },
-    MuiLink: { defaultProps: { underline: 'hover' }, styleOverrides: { root: { color: t.accent, fontWeight: 500 } } },
+    MuiLink: { defaultProps: { underline: 'hover', component: RouterLink } as object, styleOverrides: { root: { color: t.accent, fontWeight: 500 } } },
   },
 });

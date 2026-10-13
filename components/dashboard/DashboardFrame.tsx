@@ -90,7 +90,6 @@ export default function DashboardFrame({
           >
             {/* Nothing to upgrade to once the Project is on Pro or Enterprise. */}
             {activeProject && !['pro', 'enterprise'].includes(activeProject.subscription?.plan ?? '') && <Button
-              component="a"
               href="/pricing"
               className="upgrade-pro-button"
               startIcon={<WorkspacePremiumRounded fontSize="small" />}

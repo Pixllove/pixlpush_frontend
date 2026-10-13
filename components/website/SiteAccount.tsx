@@ -104,11 +104,11 @@ export function SiteAccount() {
           </Box>
         </Stack>
         <Divider />
-        <MenuItem component="a" href="/dashboard" onClick={close} sx={{ px: 2.2, py: 1.25, '&:hover': { bgcolor: '#f5edff', color: 'primary.main' } }}>
+        <MenuItem href="/dashboard" onClick={close} sx={{ px: 2.2, py: 1.25, '&:hover': { bgcolor: '#f5edff', color: 'primary.main' } }}>
           <ListItemIcon><DashboardRounded fontSize="small" /></ListItemIcon>
           Dashboard
         </MenuItem>
-        <MenuItem component="a" href="/dashboard/account" onClick={close} sx={{ px: 2.2, py: 1.25, '&:hover': { bgcolor: '#f5edff', color: 'primary.main' } }}>
+        <MenuItem href="/dashboard/account" onClick={close} sx={{ px: 2.2, py: 1.25, '&:hover': { bgcolor: '#f5edff', color: 'primary.main' } }}>
           <ListItemIcon><PersonOutlineRounded fontSize="small" /></ListItemIcon>
           My profile
         </MenuItem>
