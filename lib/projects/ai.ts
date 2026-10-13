@@ -46,7 +46,7 @@ export interface AiConversationPreview {
   createdAt: string;
   updatedAt: string;
   _count: { messages: number };
-  lastMessage: { role: "user" | "assistant"; content: string; createdAt: string } | null;
+  lastMessage: { role: "user" | "assistant" | "system"; content: string; createdAt: string } | null;
 }
 
 export interface AiConversation {
@@ -100,6 +100,7 @@ export interface AiChatResponse {
   assistant: AiAssistantId;
   provider: "rules" | "gemini";
   degraded?: boolean;
+  cancelled?: boolean;
   message: string;
   nextActions: string[];
   evidence: Array<{ label: string; value: string }>;
@@ -125,6 +126,7 @@ export interface AiFlowDraftResponse {
   assistant: AiAssistantId;
   provider: "rules" | "gemini";
   degraded?: boolean;
+  cancelled?: boolean;
   draft: Record<string, unknown>;
   summary: string;
   warnings: string[];
@@ -143,27 +145,39 @@ export const aiApi = {
   chat: (
     projectId: string,
     input: { assistant: AiAssistantId; prompt: string; conversationId?: string },
-  ) => authRequest<AiChatResponse>(at(projectId, "/chat"), input, BASE),
+    signal?: AbortSignal,
+  ) => authRequest<AiChatResponse>(at(projectId, "/chat"), input, BASE, undefined, { signal }),
   createConversation: (
     projectId: string,
-    input: { assistant: AiAssistantId; title?: string; flowId?: AiFlowId; opening?: { prompt: string; response: string } },
-  ) => authRequest<AiConversation>(at(projectId, "/conversations"), input, BASE),
+    input: { assistant: AiAssistantId; title?: string; flowId?: AiFlowId; opening?: { prompt: string; response?: string } },
+    signal?: AbortSignal,
+  ) => authRequest<AiConversation>(at(projectId, "/conversations"), input, BASE, undefined, { signal }),
+  cancelConversation: (projectId: string, conversationId: string, reason = "user_stopped") =>
+    authRequest<{ conversationId: string; status: "cancelled"; recordedAt: string }>(
+      at(projectId, `/conversations/${encodeURIComponent(conversationId)}/cancel`),
+      { reason },
+      BASE,
+      "POST",
+    ),
   /** Retry or edit: answers the thread's latest message again (or `prompt` in its place) and replaces that turn. */
   regenerate: (
     projectId: string,
     conversationId: string,
     input: { assistant: AiAssistantId; prompt?: string },
-  ) => authRequest<AiChatResponse>(at(projectId, `/conversations/${encodeURIComponent(conversationId)}/regenerate`), input, BASE),
+    signal?: AbortSignal,
+  ) => authRequest<AiChatResponse>(at(projectId, `/conversations/${encodeURIComponent(conversationId)}/regenerate`), input, BASE, undefined, { signal }),
   flowDraft: (
     projectId: string,
     flowId: AiFlowId,
     input: { assistant: AiAssistantId; answers: Record<string, string>; conversationId?: string },
-  ) => authRequest<AiFlowDraftResponse>(at(projectId, `/flows/${encodeURIComponent(flowId)}/draft`), input, BASE),
+    signal?: AbortSignal,
+  ) => authRequest<AiFlowDraftResponse>(at(projectId, `/flows/${encodeURIComponent(flowId)}/draft`), input, BASE, undefined, { signal }),
   flowCreate: (
     projectId: string,
     flowId: AiFlowId,
     input: { assistant: AiAssistantId; answers: Record<string, string>; conversationId?: string },
-  ) => authRequest<AiFlowDraftResponse & { createdResources: NonNullable<AiChatResponse["createdResources"]> }>(at(projectId, `/flows/${encodeURIComponent(flowId)}/create`), input, BASE),
+    signal?: AbortSignal,
+  ) => authRequest<AiFlowDraftResponse & { createdResources: NonNullable<AiChatResponse["createdResources"]> }>(at(projectId, `/flows/${encodeURIComponent(flowId)}/create`), input, BASE, undefined, { signal }),
   conversation: (projectId: string, conversationId: string) =>
     authRequest<{ id: string; messages: Array<{ id: string; role: "user" | "assistant"; content: string; createdAt: string }> }>(
       at(projectId, `/conversations/${encodeURIComponent(conversationId)}`),

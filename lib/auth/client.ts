@@ -34,6 +34,8 @@ function normalizeError(status: number, body: unknown): ApiError {
  */
 let refreshInFlight: Promise<RefreshOutcome> | null = null;
 
+type AuthRequestOptions = { signal?: AbortSignal };
+
 /** `expired` is the only outcome that means the user is signed out. */
 type RefreshOutcome = 'ok' | 'expired' | 'error';
 
@@ -64,7 +66,7 @@ function leaveIfSignedOut(): void {
   window.location.assign(`/login?redirect=${encodeURIComponent(pathname + search)}`);
 }
 
-async function rawRequest(path: string, body?: unknown, base = '/api/auth', method?: string): Promise<Response> {
+async function rawRequest(path: string, body?: unknown, base = '/api/auth', method?: string, options?: AuthRequestOptions): Promise<Response> {
   // A string body is a raw file (CSV user import); everything else is JSON.
   const isFile = typeof body === 'string';
   return fetch(`${base}${path}`, {
@@ -73,26 +75,28 @@ async function rawRequest(path: string, body?: unknown, base = '/api/auth', meth
     body: body === undefined ? undefined : isFile ? body : JSON.stringify(body),
     // Same-origin, but explicit so the session cookies are always sent.
     credentials: 'same-origin',
+    signal: options?.signal,
   });
 }
 
 /** Paths that must never trigger a refresh, or the retry could recurse. */
 const NO_REFRESH = ['/refresh', '/login', '/google', '/logout', '/signup'];
 
-export async function authRequest<T>(path: string, body?: unknown, base?: string, method?: string): Promise<T> {
+export async function authRequest<T>(path: string, body?: unknown, base?: string, method?: string, options?: AuthRequestOptions): Promise<T> {
   let response: Response;
 
   try {
-    response = await rawRequest(path, body, base, method);
+    response = await rawRequest(path, body, base, method, options);
 
     // Retry at most once, and never for the endpoints that establish or end a
     // session - that is what keeps this from looping.
     if (response.status === 401 && !NO_REFRESH.includes(path)) {
       const outcome = await refreshOnce();
-      if (outcome === 'ok') response = await rawRequest(path, body, base, method);
+      if (outcome === 'ok') response = await rawRequest(path, body, base, method, options);
       else if (outcome === 'expired') leaveIfSignedOut();
     }
   } catch {
+    if (options?.signal?.aborted) throw { status: 0, code: 'ABORTED', message: 'Request stopped.' } satisfies ApiError;
     throw { status: 0, code: 'NETWORK_ERROR', message: 'Cannot reach the server. Check your connection.' } satisfies ApiError;
   }
 

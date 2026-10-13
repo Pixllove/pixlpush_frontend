@@ -1,9 +1,9 @@
 "use client";
 
-import { AddRounded, ArrowForwardRounded, ArrowUpwardRounded, AutoAwesomeRounded, AutoGraphRounded, CampaignRounded, CheckRounded, ContentCopyRounded, EditOutlined, ExpandMoreRounded, HistoryRounded, InsightsRounded, PeopleAltOutlined, PsychologyRounded, ReplayRounded, RouteRounded, TrendingDownRounded } from "@mui/icons-material";
-import { Box, Button, ButtonBase, CircularProgress, Dialog, DialogContent, DialogTitle, IconButton, InputBase, Menu, MenuItem, Stack, Tooltip, Typography } from "@mui/material";
+import { AddRounded, ArrowForwardRounded, ArrowUpwardRounded, AutoAwesomeRounded, AutoGraphRounded, CampaignRounded, CheckRounded, ContentCopyRounded, EditOutlined, ExpandMoreRounded, HistoryRounded, InsightsRounded, PeopleAltOutlined, PsychologyRounded, ReplayRounded, RouteRounded, StopRounded, TrendingDownRounded } from "@mui/icons-material";
+import { Box, Button, ButtonBase, Dialog, DialogContent, DialogTitle, IconButton, InputBase, Menu, MenuItem, Stack, Tooltip, Typography } from "@mui/material";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCurrentUser } from "@/hooks/auth/use-current-user";
 import { useActiveProject } from "@/hooks/projects/use-active-project";
@@ -285,6 +285,8 @@ export default function HomeCommandCenter() {
   const [flowStep, setFlowStep] = useState(0);
   const [flowAnswers, setFlowAnswers] = useState<Record<number, string>>({});
   const [selectedAgent, setSelectedAgent] = useState<string>("Max");
+  const activeRequestRef = useRef<AbortController | null>(null);
+  const openingRequestRef = useRef(0);
   const [, agentRole, , agentAvatar] = agents.find(([name]) => name === selectedAgent) ?? agents[0];
 
   const catalogQuery = useQuery({
@@ -304,20 +306,43 @@ export default function HomeCommandCenter() {
     mutationFn: async (input: { prompt: string; conversationId?: string; replace?: boolean }) => {
       if (!projectId) throw new Error("Select a project before using the AI assistant.");
       const assistant = selectedAgent as AiAssistantId;
-      if (input.replace && input.conversationId) {
-        try {
-          return await aiApi.regenerate(projectId, input.conversationId, { assistant, prompt: input.prompt });
-        } catch (error) {
-          // ponytail: a backend deployed before /regenerate existed answers ROUTE_NOT_FOUND; fall back to a plain
-          // turn (that thread then keeps both answers). Delete this catch once the endpoint is live everywhere.
-          if ((error as { code?: string } | null)?.code !== "ROUTE_NOT_FOUND") throw error;
+      const controller = new AbortController();
+      activeRequestRef.current = controller;
+      try {
+        let threadId = input.conversationId;
+        if (!threadId) {
+          // Create the thread before the model request so an immediate Stop still leaves
+          // the user's prompt in Recent conversations.
+          const conversation = await aiApi.createConversation(projectId, {
+            assistant,
+            title: input.prompt.slice(0, 160),
+            opening: { prompt: input.prompt },
+          });
+          threadId = conversation.id;
+          setConversationId(threadId);
+          if (controller.signal.aborted) {
+            await aiApi.cancelConversation(projectId, threadId);
+            throw { status: 0, code: "ABORTED", message: "Request stopped." };
+          }
         }
+        if (input.replace && input.conversationId) {
+          try {
+            return await aiApi.regenerate(projectId, threadId, { assistant, prompt: input.prompt }, controller.signal);
+          } catch (error) {
+            // Keep compatibility with an older edge deployment while the route rolls out.
+            if ((error as { code?: string } | null)?.code !== "ROUTE_NOT_FOUND") throw error;
+          }
+        }
+        return await aiApi.chat(projectId, { assistant, prompt: input.prompt, conversationId: threadId }, controller.signal);
+      } finally {
+        if (activeRequestRef.current === controller) activeRequestRef.current = null;
       }
-      return aiApi.chat(projectId, { assistant, prompt: input.prompt, conversationId: input.conversationId });
     },
     onSuccess: (response) => {
       setConversationId(response.conversationId);
-      setMessages((current) => [...current, { id: `assistant-${Date.now()}`, role: "assistant", text: response.message }]);
+      setMessages((current) => response.cancelled
+        ? current.some((message) => message.text === "Generation stopped.") ? current : [...current, { id: `assistant-stopped-${Date.now()}`, role: "assistant", text: response.message }]
+        : [...current, { id: `assistant-${Date.now()}`, role: "assistant", text: response.message }]);
       void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "ai", "context"] });
       if (response.createdResources?.length) {
         // The AI endpoint creates only editable drafts. Refresh the resource
@@ -334,21 +359,30 @@ export default function HomeCommandCenter() {
       }
     },
     onError: (error) => {
+      if ((error as { code?: string } | null)?.code === "ABORTED") return;
       setMessages((current) => [...current, { id: `assistant-error-${Date.now()}`, role: "assistant", text: apiMessage(error, "The AI assistant could not respond. Please try again."), error: true }]);
     },
   });
 
   const draftMutation = useMutation({
-    mutationFn: (input: DraftInput) => {
+    mutationFn: async (input: DraftInput) => {
       if (!projectId) throw new Error("Select a project before using the AI assistant.");
-      return aiApi.flowCreate(projectId, input.flowId, { assistant: selectedAgent as AiAssistantId, answers: input.answers, conversationId: input.conversationId });
+      const controller = new AbortController();
+      activeRequestRef.current = controller;
+      try {
+        return await aiApi.flowCreate(projectId, input.flowId, { assistant: selectedAgent as AiAssistantId, answers: input.answers, conversationId: input.conversationId }, controller.signal);
+      } finally {
+        if (activeRequestRef.current === controller) activeRequestRef.current = null;
+      }
     },
     onSuccess: (response) => {
+      if (response.cancelled) return;
       setConversationId(response.conversationId);
       setMessages((current) => [...current, { id: `assistant-${Date.now()}`, role: "assistant", text: draftMessage(response), flow: true }]);
       void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "ai", "context"] });
     },
     onError: (error) => {
+      if ((error as { code?: string } | null)?.code === "ABORTED") return;
       setMessages((current) => [...current, { id: `assistant-error-${Date.now()}`, role: "assistant", text: apiMessage(error, "The draft could not be prepared. Please try again."), flow: true, error: true }]);
     },
   });
@@ -378,6 +412,21 @@ export default function HomeCommandCenter() {
     setDraft("");
     setEditing(null);
     chatMutation.mutate({ prompt: text, conversationId });
+  };
+
+  const stopGeneration = () => {
+    const stoppedConversationId = conversationId;
+    activeRequestRef.current?.abort();
+    openingRequestRef.current += 1;
+    if (projectId && stoppedConversationId) void aiApi.cancelConversation(projectId, stoppedConversationId);
+    if (openingFlow) {
+      setOpeningFlow(false);
+      setActiveFlow(null);
+      setFlowReady(false);
+    }
+    setMessages((current) => current.some((message) => message.text === "Generation stopped.")
+      ? current
+      : [...current, { id: `assistant-stopped-${Date.now()}`, role: "assistant", text: "Generation stopped." }]);
   };
 
   const lastUserIndex = messages.map((message) => message.role).lastIndexOf("user");
@@ -420,12 +469,18 @@ export default function HomeCommandCenter() {
     setFlowAnswers({});
     setFlowReady(false);
     setOpeningFlow(true);
+    const openingRequest = ++openingRequestRef.current;
     void aiApi.createConversation(projectId!, {
       assistant: selectedAgent as AiAssistantId,
       title: flow.title,
       flowId: flow.id,
       opening: { prompt: openingPrompt, response: flow.subtitle },
     }).then((conversation) => {
+      if (openingRequest !== openingRequestRef.current) {
+        setConversationId(conversation.id);
+        void aiApi.cancelConversation(projectId!, conversation.id);
+        return;
+      }
       setConversationId(conversation.id);
       setMessages((current) => [...current, { id: `assistant-${Date.now()}`, role: "assistant", text: flow.subtitle, flow: true }]);
       setOpeningFlow(false);
@@ -482,12 +537,11 @@ export default function HomeCommandCenter() {
         <span className="ai-agent-role">{agentRole}</span>
         <ExpandMoreRounded />
       </ButtonBase>
-      {/* The button says what state the composer is in: quiet when empty, lit when there is something to send,
-          a spinner while the assistant works. The span lets the tooltip show on a disabled button. */}
-      <Tooltip title={thinking ? `${selectedAgent} is thinking…` : draft.trim() ? "Send · Enter" : "Type a message to send"} placement="top">
+      {/* The button is a send action when idle and a direct cancellation action while an AI request is in flight. */}
+      <Tooltip title={thinking ? "Stop generation" : draft.trim() ? "Send · Enter" : "Type a message to send"} placement="top">
         <span className="ai-send-wrap">
-          <IconButton className={`ai-send${thinking ? " is-busy" : ""}`} aria-label={`Ask ${selectedAgent}`} onClick={() => sendMessage()} disabled={!draft.trim() || thinking}>
-            {thinking ? <CircularProgress size={16} thickness={5} color="inherit" /> : <ArrowUpwardRounded />}
+          <IconButton className={`ai-send${thinking ? " is-busy is-stop" : ""}`} aria-label={thinking ? "Stop generation" : `Ask ${selectedAgent}`} onClick={() => thinking ? stopGeneration() : sendMessage()} disabled={!thinking && !draft.trim()}>
+            {thinking ? <StopRounded /> : <ArrowUpwardRounded />}
           </IconButton>
         </span>
       </Tooltip>
@@ -567,7 +621,7 @@ export default function HomeCommandCenter() {
             </Box>
           </Stack>;
         })}
-        {thinking && <Stack direction="row" gap={1.5} alignItems="center" className="chat-thinking"><Box className="chat-agent-mark is-thinking"><Image src={agentAvatar} alt={`${selectedAgent} avatar`} width={38} height={38} /></Box><Typography>Thinking<span className="thinking-dots">…</span></Typography></Stack>}
+        {thinking && <Stack direction="row" gap={1.5} alignItems="center" className="chat-thinking" role="status" aria-live="polite"><Box className="chat-agent-mark is-thinking"><Image src={agentAvatar} alt={`${selectedAgent} avatar`} width={38} height={38} /></Box><Box className="chat-thinking-copy"><Typography>Thinking<span className="thinking-dots">…</span></Typography><Box className="thinking-bars" aria-hidden><span /><span /><span /></Box></Box></Stack>}
         {activeFlow && flowReady && <GuidedFlowCard flow={activeFlow} step={flowStep} answers={flowAnswers} onSelect={(value) => setFlowAnswers((current) => ({ ...current, [flowStep]: value }))} onNext={() => advanceFlow()} onBack={() => setFlowStep((current) => Math.max(0, current - 1))} onSkip={() => advanceFlow(true)} onCancel={cancelFlow} />}
       </Stack>
       <Box className="chat-composer-area">{composer("chat-composer")}<Typography className="chat-disclaimer">{selectedAgent} can make mistakes. Check important growth decisions.</Typography></Box>
