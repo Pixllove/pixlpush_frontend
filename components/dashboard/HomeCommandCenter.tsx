@@ -21,8 +21,15 @@ const agents = [
   ["Max", "Growth Concierge", "Coordinates the team and turns your goal into a clear next step.", "/assets/agent-avatar-max-v2.png"],
   ["Ben", "Lifecycle & Campaign Data Analyst", "Analyzes retention, churn, campaigns and audience behavior.", "/assets/agent-avatar-ben-v2.png"],
   ["Nova", "Campaign & Journey Optimizer", "Turns Ben’s analysis into campaign and journey recommendations.", "/assets/agent-avatar-nova-v2.png"],
-  ["Anna", "Cross-Sell & Marketing Expert", "Creates and improves email campaigns and content.", "/assets/agent-avatar-anna-v2.png"],
+  ["Anna", "Cross-Sell & Marketing Expert", "Creates and improves email campaigns and content.", "/assets/agent-avatar-anna-v3.png"],
 ] as const;
+
+const agentFigures = {
+  Max: { src: "/assets/agent-full-max.png", width: 533, height: 800 },
+  Ben: { src: "/assets/agent-full-ben.png", width: 400, height: 800 },
+  Nova: { src: "/assets/agent-full-nova.png", width: 533, height: 800 },
+  Anna: { src: "/assets/agent-full-anna-v3.png", width: 682, height: 1024 },
+} as const;
 
 const shortcuts = [
   [CampaignRounded, "Create campaign", "Build a message with the right audience and channel.", "campaigns"],
@@ -231,18 +238,22 @@ export default function HomeCommandCenter() {
   const [selectedAgent, setSelectedAgent] = useState<string>("Max");
   const [greetingAgent, setGreetingAgent] = useState<string | null>(null);
   const [, agentRole, , agentAvatar] = agents.find(([name]) => name === selectedAgent) ?? agents[0];
-  const leftFrontAgent = selectedAgent === "Ben" ? "ben" : "max";
-  const rightFrontAgent = selectedAgent === "Anna" ? "anna" : "nova";
+  const selectedFigure = agentFigures[selectedAgent as keyof typeof agentFigures] ?? agentFigures.Max;
+
+  const greetAgent = (name: string) => {
+    setGreetingAgent(name);
+    window.setTimeout(() => setGreetingAgent((current) => current === name ? null : current), 1800);
+  };
 
   const selectAgent = (name: string) => {
     setSelectedAgent(name);
-    setGreetingAgent(name);
-    window.setTimeout(() => setGreetingAgent((current) => current === name ? null : current), 1800);
+    if (messages.length > 0) greetAgent(name);
   };
 
   const sendMessage = (value = draft) => {
     const text = value.trim();
     if (!text || thinking) return;
+    greetAgent(selectedAgent);
     setMessages((current) => [...current, { id: `user-${Date.now()}`, role: "user", text }]);
     setDraft("");
     setThinking(true);
@@ -327,13 +338,11 @@ export default function HomeCommandCenter() {
     setContextAnchor(null);
   };
 
-  return <Box className="home-experience">
+  return <Box className={`home-experience${messages.length > 0 ? " has-chat-agent" : ""}`}>
     <Box className="home-backdrop" aria-hidden><span className="home-backdrop-mosaic" /></Box>
-    {messages.length === 0 && <Box className={`home-agent-characters is-left-front-${leftFrontAgent} is-right-front-${rightFrontAgent}${greetingAgent ? ` is-greeting-${greetingAgent.toLowerCase()}` : ""}`} aria-hidden="true">
-      <Box className="home-agent-character is-max"><Image className="home-agent-figure" src="/assets/agent-full-max.png" alt="" fill sizes="220px" />{greetingAgent === "Max" && <><span className="home-agent-wave">👋</span><span className="home-agent-greeting">Hi!</span></>}</Box>
-      <Box className="home-agent-character is-ben"><Image className="home-agent-figure" src="/assets/agent-full-ben.png" alt="" fill sizes="180px" />{greetingAgent === "Ben" && <><span className="home-agent-wave">👋</span><span className="home-agent-greeting">Hi!</span></>}</Box>
-      <Box className="home-agent-character is-nova"><Image className="home-agent-figure" src="/assets/agent-full-nova.png" alt="" fill sizes="220px" />{greetingAgent === "Nova" && <><span className="home-agent-wave">👋</span><span className="home-agent-greeting">Hi!</span></>}</Box>
-      <Box className="home-agent-character is-anna"><Image className="home-agent-figure" src="/assets/agent-full-anna.png" alt="" fill sizes="150px" />{greetingAgent === "Anna" && <><span className="home-agent-wave">👋</span><span className="home-agent-greeting">Hi!</span></>}</Box>
+    {messages.length > 0 && <Box className={`chat-agent-spotlight${greetingAgent === selectedAgent ? " is-greeting" : ""}`} aria-hidden="true">
+      <Image className="chat-agent-fullbody" src={selectedFigure.src} alt="" width={selectedFigure.width} height={selectedFigure.height} priority />
+      {greetingAgent === selectedAgent && <><span className="chat-agent-wave">👋</span><span className="chat-agent-greeting">Hi, I’m {selectedAgent}!</span></>}
     </Box>}
     {messages.length === 0 ? <Box className="home-hero">
       <MaxMark />

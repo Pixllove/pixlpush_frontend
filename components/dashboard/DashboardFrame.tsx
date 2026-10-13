@@ -92,8 +92,9 @@ export default function DashboardFrame({
             {activeProject && !['pro', 'enterprise'].includes(activeProject.subscription?.plan ?? '') && <Button
               component="a"
               href="/pricing"
+              className="upgrade-pro-button"
               startIcon={<WorkspacePremiumRounded fontSize="small" />}
-              variant="outlined"
+              variant="contained"
               size="small"
               sx={{ display: { xs: "none", sm: "inline-flex" }, whiteSpace: "nowrap" }}
             >
