@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
+import Script from 'next/script';
 import { AppProviders } from '@/components/AppProviders';
 import './globals.css';
 
@@ -20,7 +21,14 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     // The email page may mark <html> before hydration (an editor being restored); that is not a mismatch.
     <html lang="en" className={inter.variable} suppressHydrationWarning>
-      <body><AppProviders>{children}</AppProviders></body>
+      <body>
+        <Script
+          id="cookieyes"
+          src="https://cdn-cookieyes.com/client_data/26d76afcda9769bedc96bd25244de17d/script.js"
+          strategy="afterInteractive"
+        />
+        <AppProviders>{children}</AppProviders>
+      </body>
     </html>
   );
 }
