@@ -25,13 +25,6 @@ const agents = [
   ["Anna", "Cross-Sell & Marketing Expert", "Creates and improves email campaigns and content.", "/assets/agent-avatar-anna-v3.png"],
 ] as const;
 
-const agentFigures = {
-  Max: { src: "/assets/agent-full-max.png", width: 533, height: 800 },
-  Ben: { src: "/assets/agent-full-ben.png", width: 400, height: 800 },
-  Nova: { src: "/assets/agent-full-nova.png", width: 533, height: 800 },
-  Anna: { src: "/assets/agent-full-anna-v3.png", width: 682, height: 1024 },
-} as const;
-
 const shortcuts = [
   [CampaignRounded, "Create campaign", "Build a message with the right audience and channel.", "campaigns"],
   [RouteRounded, "Create journey", "Map the trigger and next steps for an automated flow.", "journey"],
@@ -237,24 +230,15 @@ export default function HomeCommandCenter() {
   const [flowStep, setFlowStep] = useState(0);
   const [flowAnswers, setFlowAnswers] = useState<Record<number, string>>({});
   const [selectedAgent, setSelectedAgent] = useState<string>("Max");
-  const [greetingAgent, setGreetingAgent] = useState<string | null>(null);
   const [, agentRole, , agentAvatar] = agents.find(([name]) => name === selectedAgent) ?? agents[0];
-  const selectedFigure = agentFigures[selectedAgent as keyof typeof agentFigures] ?? agentFigures.Max;
-
-  const greetAgent = (name: string) => {
-    setGreetingAgent(name);
-    window.setTimeout(() => setGreetingAgent((current) => current === name ? null : current), 1800);
-  };
 
   const selectAgent = (name: string) => {
     setSelectedAgent(name);
-    if (messages.length > 0) greetAgent(name);
   };
 
   const sendMessage = (value = draft) => {
     const text = value.trim();
     if (!text || thinking) return;
-    greetAgent(selectedAgent);
     setMessages((current) => [...current, { id: `user-${Date.now()}`, role: "user", text }]);
     setDraft("");
     setThinking(true);
@@ -339,12 +323,8 @@ export default function HomeCommandCenter() {
     setContextAnchor(null);
   };
 
-  return <Box className={`home-experience${messages.length > 0 ? " has-chat-agent" : ""}`}>
+  return <Box className="home-experience">
     <Box className="home-backdrop" aria-hidden><span className="home-backdrop-mosaic" /></Box>
-    {messages.length > 0 && <Box className={`chat-agent-spotlight${greetingAgent === selectedAgent ? " is-greeting" : ""}`} aria-hidden="true">
-      <Image className="chat-agent-fullbody" src={selectedFigure.src} alt="" width={selectedFigure.width} height={selectedFigure.height} priority />
-      {greetingAgent === selectedAgent && <><span className="chat-agent-wave">👋</span><span className="chat-agent-greeting">Hi, I’m {selectedAgent}!</span></>}
-    </Box>}
     {messages.length === 0 ? <Box className="home-hero">
       <MaxMark />
       <Typography component="h1" className="home-hero-title" suppressHydrationWarning>{greeting()}{firstName && <>, <span>{firstName}</span></>}.</Typography>
@@ -373,8 +353,8 @@ export default function HomeCommandCenter() {
         <Button className="home-recent-link" startIcon={<HistoryRounded />} onClick={(event) => setContextAnchor(event.currentTarget)}>Context</Button>
       </Stack>
       <Stack className="chat-thread" gap={2.5}>
-        {messages.map((message) => message.role === "user" ? <Box key={message.id} className="chat-user-message">{message.text}</Box> : <Stack key={message.id} direction="row" gap={1.5} className="chat-assistant-message"><Box className="chat-agent-mark"><Image src="/assets/site-icon.png" alt="" width={22} height={32} /></Box><Box><Typography className="chat-agent-name">{selectedAgent} <span>{agentRole}</span></Typography><Typography className="chat-response">{message.text}</Typography></Box></Stack>)}
-        {thinking && <Stack direction="row" gap={1.5} alignItems="center" className="chat-thinking"><Box className="chat-agent-mark is-thinking"><Image src="/assets/site-icon.png" alt="" width={22} height={32} /></Box><Typography>Thinking<span className="thinking-dots">…</span></Typography></Stack>}
+        {messages.map((message) => message.role === "user" ? <Box key={message.id} className="chat-user-message">{message.text}</Box> : <Stack key={message.id} direction="row" gap={1.5} className="chat-assistant-message"><Box className="chat-agent-mark"><Image src={agentAvatar} alt={`${selectedAgent} avatar`} width={38} height={38} /></Box><Box><Typography className="chat-agent-name">{selectedAgent} <span>{agentRole}</span></Typography><Typography className="chat-response">{message.text}</Typography></Box></Stack>)}
+        {thinking && <Stack direction="row" gap={1.5} alignItems="center" className="chat-thinking"><Box className="chat-agent-mark is-thinking"><Image src={agentAvatar} alt={`${selectedAgent} avatar`} width={38} height={38} /></Box><Typography>Thinking<span className="thinking-dots">…</span></Typography></Stack>}
         {activeFlow && flowReady && <GuidedFlowCard flow={activeFlow} step={flowStep} answers={flowAnswers} onSelect={(value) => setFlowAnswers((current) => ({ ...current, [flowStep]: value }))} onNext={() => advanceFlow()} onBack={() => setFlowStep((current) => Math.max(0, current - 1))} onSkip={() => advanceFlow(true)} onCancel={cancelFlow} />}
       </Stack>
       <Box className="chat-composer-area">{composer("chat-composer")}<Typography className="chat-disclaimer">{selectedAgent} can make mistakes. Check important growth decisions.</Typography></Box>
