@@ -341,7 +341,7 @@ export default function HomeCommandCenter() {
   const draftMutation = useMutation({
     mutationFn: (input: DraftInput) => {
       if (!projectId) throw new Error("Select a project before using the AI assistant.");
-      return aiApi.flowDraft(projectId, input.flowId, { assistant: selectedAgent as AiAssistantId, answers: input.answers, conversationId: input.conversationId });
+      return aiApi.flowCreate(projectId, input.flowId, { assistant: selectedAgent as AiAssistantId, answers: input.answers, conversationId: input.conversationId });
     },
     onSuccess: (response) => {
       setConversationId(response.conversationId);

@@ -117,6 +117,7 @@ export interface AiFlowDraftResponse {
   draft: Record<string, unknown>;
   summary: string;
   warnings: string[];
+  createdResources?: AiChatResponse["createdResources"];
   context: {
     generatedAt: string;
     audience: AiProjectContext["project"]["audience"];
@@ -143,6 +144,11 @@ export const aiApi = {
     flowId: AiFlowId,
     input: { assistant: AiAssistantId; answers: Record<string, string>; conversationId?: string },
   ) => authRequest<AiFlowDraftResponse>(at(projectId, `/flows/${encodeURIComponent(flowId)}/draft`), input, BASE),
+  flowCreate: (
+    projectId: string,
+    flowId: AiFlowId,
+    input: { assistant: AiAssistantId; answers: Record<string, string>; conversationId?: string },
+  ) => authRequest<AiFlowDraftResponse & { createdResources: NonNullable<AiChatResponse["createdResources"]> }>(at(projectId, `/flows/${encodeURIComponent(flowId)}/create`), input, BASE),
   conversation: (projectId: string, conversationId: string) =>
     authRequest<{ id: string; messages: Array<{ id: string; role: "user" | "assistant"; content: string; createdAt: string }> }>(
       at(projectId, `/conversations/${encodeURIComponent(conversationId)}`),
