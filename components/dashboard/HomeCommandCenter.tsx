@@ -1,15 +1,20 @@
 "use client";
 
-import { AddRounded, ArrowForwardRounded, ArrowUpwardRounded, AutoAwesomeRounded, AutoGraphRounded, CampaignRounded, CheckRounded, ExpandMoreRounded, HistoryRounded, InsightsRounded, PeopleAltOutlined, PsychologyRounded, RouteRounded, TrendingDownRounded } from "@mui/icons-material";
-import { Box, Button, ButtonBase, Dialog, DialogContent, DialogTitle, IconButton, InputBase, Menu, MenuItem, Stack, Typography } from "@mui/material";
+import { AddRounded, ArrowForwardRounded, ArrowUpwardRounded, AutoAwesomeRounded, AutoGraphRounded, CampaignRounded, CheckRounded, ContentCopyRounded, EditOutlined, ExpandMoreRounded, HistoryRounded, InsightsRounded, PeopleAltOutlined, PsychologyRounded, ReplayRounded, RouteRounded, TrendingDownRounded } from "@mui/icons-material";
+import { Box, Button, ButtonBase, CircularProgress, Dialog, DialogContent, DialogTitle, IconButton, InputBase, Menu, MenuItem, Stack, Tooltip, Typography } from "@mui/material";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCurrentUser } from "@/hooks/auth/use-current-user";
+import { useActiveProject } from "@/hooks/projects/use-active-project";
 import { accountGreetingName } from "@/lib/auth/display-name";
+import { aiApi, type AiAssistantId, type AiFlowId, type AiFlowDraftResponse } from "@/lib/projects/ai";
 
-type ChatMessage = { id: string; role: "user" | "assistant"; text: string };
+/** `flow` marks a guided-flow turn (it is re-run, not edited); `error` an answer that never arrived, so nothing was stored for it. */
+type ChatMessage = { id: string; role: "user" | "assistant"; text: string; flow?: boolean; error?: boolean };
+type DraftInput = { flowId: AiFlowId; answers: Record<string, string>; conversationId?: string };
 type FlowChoice = { label: string; description: string };
-type GuidedFlow = { id: string; title: string; subtitle: string; steps: Array<{ question: string; choices: FlowChoice[] }> };
+type GuidedFlow = { id: AiFlowId; title: string; subtitle: string; steps: Array<{ question: string; choices: FlowChoice[] }> };
 
 const prompts = [
   ["What should I work on today?", AutoAwesomeRounded],
@@ -203,6 +208,21 @@ export function greeting() {
   return hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 }
 
+export type HomeInsightStats = { total: number; reachable: number; eventsToday: number; eventsYesterday: number };
+
+/** Pure insight formatting kept exportable for the Home summary tests. */
+export function buildInsights(stats: HomeInsightStats | undefined, runningJourneys: number) {
+  if (!stats) return [] as Array<{ title: string; tone: "warning" | "info" | "success" }>;
+  if (stats.total === 0) return [{ title: "No users in this project yet", tone: "info" as const }];
+  const insights: Array<{ title: string; tone: "warning" | "info" | "success" }> = [];
+  const unreachable = Math.round(((stats.total - stats.reachable) / stats.total) * 100);
+  if (unreachable >= 30) insights.push({ title: `${unreachable}% of users cannot be reached`, tone: "warning" });
+  if (stats.eventsToday === 0 && stats.eventsYesterday === 0) insights.push({ title: "No events in the last two days", tone: "warning" });
+  if (runningJourneys === 0) insights.push({ title: "No journey is running", tone: "warning" });
+  if (stats.eventsToday > stats.eventsYesterday) return [{ title: "Activity is up today", tone: "success" }];
+  return insights;
+}
+
 function MaxMark() {
   return <Box className="max-orb" aria-hidden>
     <span className="max-orb-aura" />
@@ -216,21 +236,123 @@ function MaxMark() {
   </Box>;
 }
 
+function apiMessage(error: unknown, fallback: string) {
+  const message = error && typeof error === "object" && "message" in error && typeof error.message === "string" ? error.message : "";
+  return message || fallback;
+}
+
+function draftMessage(result: AiFlowDraftResponse) {
+  const values = Object.entries(result.draft)
+    .filter(([, value]) => ["string", "number", "boolean"].includes(typeof value))
+    .slice(0, 6)
+    .map(([key, value]) => `${key}: ${String(value)}`);
+  const warnings = result.warnings.length ? `\n\n${result.warnings.join(" ")}` : "";
+  return `${result.summary}${values.length ? `\n\n${values.join("\n")}` : ""}${warnings}`;
+}
+
+function conversationTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  if (date.toDateString() === today.toDateString()) return "Today";
+  if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
 export default function HomeCommandCenter() {
   const { account } = useCurrentUser();
+  const { active } = useActiveProject();
+  const projectId = active?.id;
+  const queryClient = useQueryClient();
   const firstName = accountGreetingName(account);
   const [agentAnchor, setAgentAnchor] = useState<null | HTMLElement>(null);
   const [contextAnchor, setContextAnchor] = useState<null | HTMLElement>(null);
-  const [context, setContext] = useState<"recent" | "insight" | "handoff" | null>(null);
+  // Which view the dialog shows is kept apart from whether it is open, so the content stays put while it
+  // fades out instead of flipping to another view for the length of the closing animation.
+  const [context, setContext] = useState<"recent" | "insight" | "handoff">("recent");
+  const [contextOpen, setContextOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [thinking, setThinking] = useState(false);
+  const [conversationId, setConversationId] = useState<string | undefined>();
+  const [editing, setEditing] = useState<string | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
+  const [lastDraft, setLastDraft] = useState<DraftInput | null>(null);
+  const [openingFlow, setOpeningFlow] = useState(false);
   const [activeFlow, setActiveFlow] = useState<GuidedFlow | null>(null);
   const [flowReady, setFlowReady] = useState(false);
   const [flowStep, setFlowStep] = useState(0);
   const [flowAnswers, setFlowAnswers] = useState<Record<number, string>>({});
   const [selectedAgent, setSelectedAgent] = useState<string>("Max");
   const [, agentRole, , agentAvatar] = agents.find(([name]) => name === selectedAgent) ?? agents[0];
+
+  const catalogQuery = useQuery({
+    queryKey: ["projects", projectId, "ai", "catalog"],
+    queryFn: () => aiApi.catalog(projectId!),
+    enabled: Boolean(projectId),
+    staleTime: 5 * 60_000,
+  });
+  const contextQuery = useQuery({
+    queryKey: ["projects", projectId, "ai", "context"],
+    queryFn: () => aiApi.context(projectId!),
+    enabled: Boolean(projectId),
+    staleTime: 30_000,
+  });
+
+  const chatMutation = useMutation({
+    mutationFn: async (input: { prompt: string; conversationId?: string; replace?: boolean }) => {
+      if (!projectId) throw new Error("Select a project before using the AI assistant.");
+      const assistant = selectedAgent as AiAssistantId;
+      if (input.replace && input.conversationId) {
+        try {
+          return await aiApi.regenerate(projectId, input.conversationId, { assistant, prompt: input.prompt });
+        } catch (error) {
+          // ponytail: a backend deployed before /regenerate existed answers ROUTE_NOT_FOUND; fall back to a plain
+          // turn (that thread then keeps both answers). Delete this catch once the endpoint is live everywhere.
+          if ((error as { code?: string } | null)?.code !== "ROUTE_NOT_FOUND") throw error;
+        }
+      }
+      return aiApi.chat(projectId, { assistant, prompt: input.prompt, conversationId: input.conversationId });
+    },
+    onSuccess: (response) => {
+      setConversationId(response.conversationId);
+      setMessages((current) => [...current, { id: `assistant-${Date.now()}`, role: "assistant", text: response.message }]);
+      void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "ai", "context"] });
+    },
+    onError: (error) => {
+      setMessages((current) => [...current, { id: `assistant-error-${Date.now()}`, role: "assistant", text: apiMessage(error, "The AI assistant could not respond. Please try again."), error: true }]);
+    },
+  });
+
+  const draftMutation = useMutation({
+    mutationFn: (input: DraftInput) => {
+      if (!projectId) throw new Error("Select a project before using the AI assistant.");
+      return aiApi.flowDraft(projectId, input.flowId, { assistant: selectedAgent as AiAssistantId, answers: input.answers, conversationId: input.conversationId });
+    },
+    onSuccess: (response) => {
+      setConversationId(response.conversationId);
+      setMessages((current) => [...current, { id: `assistant-${Date.now()}`, role: "assistant", text: draftMessage(response), flow: true }]);
+      void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "ai", "context"] });
+    },
+    onError: (error) => {
+      setMessages((current) => [...current, { id: `assistant-error-${Date.now()}`, role: "assistant", text: apiMessage(error, "The draft could not be prepared. Please try again."), flow: true, error: true }]);
+    },
+  });
+
+  const thinking = openingFlow || chatMutation.isPending || draftMutation.isPending;
+  const aiContext = contextQuery.data;
+
+  useEffect(() => {
+    setMessages([]);
+    setConversationId(undefined);
+    setActiveFlow(null);
+    setFlowReady(false);
+    setFlowAnswers({});
+    setFlowStep(0);
+    setEditing(null);
+    setLastDraft(null);
+  }, [projectId]);
 
   const selectAgent = (name: string) => {
     setSelectedAgent(name);
@@ -241,54 +363,76 @@ export default function HomeCommandCenter() {
     if (!text || thinking) return;
     setMessages((current) => [...current, { id: `user-${Date.now()}`, role: "user", text }]);
     setDraft("");
-    setThinking(true);
-    window.setTimeout(() => {
-      setMessages((current) => [...current, {
-        id: `assistant-${Date.now()}`,
-        role: "assistant",
-        text: "I’ve reviewed your growth context. A strong next step is reactivation: Ben can identify your highest-intent inactive users, then Nova can shape the journey and Anna can draft the messages.",
-      }]);
-      setThinking(false);
-    }, 5000);
+    setEditing(null);
+    chatMutation.mutate({ prompt: text, conversationId });
+  };
+
+  const lastUserIndex = messages.map((message) => message.role).lastIndexOf("user");
+  const lastTurnIsChat = lastUserIndex >= 0 && !messages[lastUserIndex].flow;
+
+  /** Retry (same text) or edit (new text) of the latest message: everything after it is dropped and it is answered again. */
+  const resend = (value: string) => {
+    const prompt = value.trim();
+    if (!prompt || thinking || !lastTurnIsChat) return;
+    // An answer that arrived was stored, so the server replaces that turn; one that failed left nothing to replace.
+    const stored = messages.slice(lastUserIndex + 1).some((message) => message.role === "assistant" && !message.error);
+    setMessages((current) => [...current.slice(0, lastUserIndex), { ...current[lastUserIndex], text: prompt }]);
+    setEditing(null);
+    chatMutation.mutate({ prompt, conversationId, replace: stored });
+  };
+
+  const retryDraft = () => {
+    if (!lastDraft || thinking) return;
+    setMessages((current) => current.slice(0, -1));
+    draftMutation.mutate(lastDraft);
+  };
+
+  const copyMessage = async (message: ChatMessage) => {
+    try {
+      await navigator.clipboard.writeText(message.text);
+      setCopied(message.id);
+      window.setTimeout(() => setCopied((current) => (current === message.id ? null : current)), 1600);
+    } catch { /* clipboard blocked by the browser: nothing was copied, so nothing is confirmed */ }
   };
 
   const startFlow = (flowId: string) => {
     const flow = guidedFlows.find((item) => item.id === flowId);
-    if (!flow || thinking) return;
-    setMessages([{ id: `user-${Date.now()}`, role: "user", text: flowId === "segment" ? "I want to create a new audience segment. Help me define the right filters and walk me through setting it up." : `Help me with ${flow.title.toLowerCase()}. Ask me what you need, one step at a time.` }]);
+    if (!flow || thinking || (catalogQuery.data && !catalogQuery.data.flows.includes(flowId as AiFlowId))) return;
+    setMessages([{ id: `user-${Date.now()}`, role: "user", flow: true, text: flowId === "segment" ? "I want to create a new audience segment. Help me define the right filters and walk me through setting it up." : `Help me with ${flow.title.toLowerCase()}. Ask me what you need, one step at a time.` }]);
     setActiveFlow(flow);
     setFlowStep(0);
     setFlowAnswers({});
     setFlowReady(false);
-    setThinking(true);
+    setOpeningFlow(true);
     window.setTimeout(() => {
-      setMessages((current) => [...current, { id: `assistant-${Date.now()}`, role: "assistant", text: flow.subtitle }]);
-      setThinking(false);
+      setMessages((current) => [...current, { id: `assistant-${Date.now()}`, role: "assistant", text: flow.subtitle, flow: true }]);
+      setOpeningFlow(false);
       setFlowReady(true);
     }, 1100);
   };
 
   const advanceFlow = (skip = false) => {
     if (!activeFlow) return;
+    void skip;
     const nextStep = flowStep + 1;
     if (nextStep < activeFlow.steps.length) {
       setFlowStep(nextStep);
       return;
     }
-    const answer = flowAnswers[flowStep];
+    const flow = activeFlow;
     setActiveFlow(null);
     setFlowReady(false);
-    setMessages((current) => [...current, {
-      id: `assistant-${Date.now()}`,
-      role: "assistant",
-      text: skip ? "I’ve saved the details you shared so far. We can refine the remaining choices whenever you’re ready." : `Great — I’ve captured your setup${answer ? `, including “${answer}”` : ""}. I’m ready to turn this into a working draft next.`,
-    }]);
+    if (!flow || !projectId) return;
+    const answers = Object.fromEntries(Object.entries(flowAnswers).map(([step, value]) => [step, value]));
+    const input = { flowId: flow.id, answers, conversationId };
+    setLastDraft(input);
+    draftMutation.mutate(input);
   };
 
   const cancelFlow = () => {
     setActiveFlow(null);
     setFlowReady(false);
-    setMessages((current) => [...current, { id: `assistant-${Date.now()}`, role: "assistant", text: "No problem — I paused that setup. You can start it again whenever you’re ready." }]);
+    setMessages((current) => [...current, { id: `assistant-${Date.now()}`, role: "assistant", text: "No problem — I paused that setup. You can start it again whenever you’re ready.", flow: true }]);
   };
 
   const composer = (className = "home-composer") => <Box className={`ai-composer ${className}`}>
@@ -311,15 +455,21 @@ export default function HomeCommandCenter() {
         <span className="ai-agent-role">{agentRole}</span>
         <ExpandMoreRounded />
       </ButtonBase>
-      <Stack direction="row" alignItems="center" gap={1.25}>
-        <span className="ai-composer-hint">{thinking ? `${selectedAgent} is thinking…` : "Enter to send"}</span>
-        <IconButton className="ai-send" aria-label={`Ask ${selectedAgent}`} onClick={() => sendMessage()} disabled={!draft.trim() || thinking}><ArrowUpwardRounded /></IconButton>
-      </Stack>
+      {/* The button says what state the composer is in: quiet when empty, lit when there is something to send,
+          a spinner while the assistant works. The span lets the tooltip show on a disabled button. */}
+      <Tooltip title={thinking ? `${selectedAgent} is thinking…` : draft.trim() ? "Send · Enter" : "Type a message to send"} placement="top">
+        <span className="ai-send-wrap">
+          <IconButton className={`ai-send${thinking ? " is-busy" : ""}`} aria-label={`Ask ${selectedAgent}`} onClick={() => sendMessage()} disabled={!draft.trim() || thinking}>
+            {thinking ? <CircularProgress size={16} thickness={5} color="inherit" /> : <ArrowUpwardRounded />}
+          </IconButton>
+        </span>
+      </Tooltip>
     </Stack>
   </Box>;
 
   const openContext = (value: "recent" | "insight" | "handoff") => {
     setContext(value);
+    setContextOpen(true);
     setContextAnchor(null);
   };
 
@@ -349,11 +499,47 @@ export default function HomeCommandCenter() {
       <Typography className="home-disclaimer">AI can make mistakes. Check important growth decisions.</Typography>
     </Box> : <Box className="chat-experience">
       <Stack direction="row" justifyContent="space-between" className="chat-topbar">
-        <Button className="home-recent-link" startIcon={<AddRounded />} disabled={thinking} onClick={() => { setMessages([]); setActiveFlow(null); setFlowReady(false); setFlowAnswers({}); setFlowStep(0); }}>New chat</Button>
+        <Button className="home-recent-link" startIcon={<AddRounded />} disabled={thinking} onClick={() => { setMessages([]); setConversationId(undefined); setEditing(null); setLastDraft(null); setActiveFlow(null); setFlowReady(false); setFlowAnswers({}); setFlowStep(0); }}>New chat</Button>
         <Button className="home-recent-link" startIcon={<HistoryRounded />} onClick={(event) => setContextAnchor(event.currentTarget)}>Context</Button>
       </Stack>
       <Stack className="chat-thread" gap={2.5}>
-        {messages.map((message) => message.role === "user" ? <Box key={message.id} className="chat-user-message">{message.text}</Box> : <Stack key={message.id} direction="row" gap={1.5} className="chat-assistant-message"><Box className="chat-agent-mark"><Image src={agentAvatar} alt={`${selectedAgent} avatar`} width={38} height={38} /></Box><Box><Typography className="chat-agent-name">{selectedAgent} <span>{agentRole}</span></Typography><Typography className="chat-response">{message.text}</Typography></Box></Stack>)}
+        {messages.map((message, index) => {
+          const copyButton = <Tooltip title={copied === message.id ? "Copied" : "Copy"}><IconButton size="small" aria-label="Copy message" onClick={() => void copyMessage(message)}>{copied === message.id ? <CheckRounded /> : <ContentCopyRounded />}</IconButton></Tooltip>;
+          const isLast = index === messages.length - 1;
+          if (message.role === "user") {
+            const editable = index === lastUserIndex && lastTurnIsChat && !thinking;
+            if (editable && editing !== null) return <Box key={message.id} className="chat-user-turn is-editing">
+              <Box className="chat-edit">
+                <InputBase autoFocus fullWidth multiline maxRows={8} value={editing} className="chat-edit-input" inputProps={{ "aria-label": "Edit message" }} onChange={(event) => setEditing(event.target.value)} onKeyDown={(event) => { if (event.key === "Escape") setEditing(null); if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); resend(editing); } }} />
+                <Stack direction="row" justifyContent="flex-end" gap={1}>
+                  <Button size="small" onClick={() => setEditing(null)}>Cancel</Button>
+                  <Button size="small" variant="contained" disabled={!editing.trim()} onClick={() => resend(editing)}>Send</Button>
+                </Stack>
+              </Box>
+            </Box>;
+            return <Box key={message.id} className="chat-user-turn">
+              <Box className="chat-user-message">{message.text}</Box>
+              <Stack direction="row" className="chat-actions">
+                {editable && <Tooltip title="Edit"><IconButton size="small" aria-label="Edit message" onClick={() => setEditing(message.text)}><EditOutlined /></IconButton></Tooltip>}
+                {copyButton}
+              </Stack>
+            </Box>;
+          }
+          // Only the latest answer can be asked for again: a chat turn is re-answered, a failed draft is re-run.
+          const retry = !isLast || thinking ? undefined : message.flow ? (message.error && lastDraft ? retryDraft : undefined) : lastTurnIsChat ? () => resend(messages[lastUserIndex].text) : undefined;
+          return <Stack key={message.id} direction="row" gap={1.5} className={`chat-assistant-message${message.error ? " is-error" : ""}`}>
+            <Box className="chat-agent-mark"><Image src={agentAvatar} alt={`${selectedAgent} avatar`} width={38} height={38} /></Box>
+            <Box>
+              <Typography className="chat-agent-name">{selectedAgent} <span>{agentRole}</span></Typography>
+              <Typography className="chat-response" role={message.error ? "alert" : undefined}>{message.text}</Typography>
+              <Stack direction="row" alignItems="center" className={`chat-actions${isLast ? " is-pinned" : ""}`}>
+                {message.error
+                  ? retry && <Button size="small" variant="outlined" startIcon={<ReplayRounded />} onClick={retry}>Try again</Button>
+                  : <>{copyButton}{retry && <Tooltip title="Retry"><IconButton size="small" aria-label="Retry answer" onClick={retry}><ReplayRounded /></IconButton></Tooltip>}</>}
+              </Stack>
+            </Box>
+          </Stack>;
+        })}
         {thinking && <Stack direction="row" gap={1.5} alignItems="center" className="chat-thinking"><Box className="chat-agent-mark is-thinking"><Image src={agentAvatar} alt={`${selectedAgent} avatar`} width={38} height={38} /></Box><Typography>Thinking<span className="thinking-dots">…</span></Typography></Stack>}
         {activeFlow && flowReady && <GuidedFlowCard flow={activeFlow} step={flowStep} answers={flowAnswers} onSelect={(value) => setFlowAnswers((current) => ({ ...current, [flowStep]: value }))} onNext={() => advanceFlow()} onBack={() => setFlowStep((current) => Math.max(0, current - 1))} onSkip={() => advanceFlow(true)} onCancel={cancelFlow} />}
       </Stack>
@@ -374,12 +560,12 @@ export default function HomeCommandCenter() {
       <MenuItem onClick={() => openContext("handoff")}><PsychologyRounded /> Handoff history</MenuItem>
     </Menu>
 
-    <Dialog open={Boolean(context)} onClose={() => setContext(null)} maxWidth="sm" fullWidth>
+    <Dialog open={contextOpen} onClose={() => setContextOpen(false)} maxWidth="sm" fullWidth>
       <DialogTitle>{context === "recent" ? "Recent conversations" : context === "insight" ? "Ben’s latest insight" : "Handoff history"}</DialogTitle>
       <DialogContent>
-        {context === "recent" && <Stack className="context-dialog-list">{[["Reduce churn in my trial users", "Max · Ben", "Today"], ["Improve the welcome email series", "Max · Anna", "Yesterday"], ["Build a journey for inactive users", "Max · Ben · Nova", "Sep 17"]].map(([title, team, time]) => <Stack direction="row" alignItems="center" gap={1.5} className="context-dialog-row" key={title}><Box className="conversation-icon"><PsychologyRounded /></Box><Box sx={{ flex: 1 }}><Typography fontSize={13} fontWeight={600}>{title}</Typography><Typography fontSize={11} color="text.secondary">{team}</Typography></Box><Typography fontSize={11} color="text.secondary">{time}</Typography></Stack>)}</Stack>}
-        {context === "insight" && <Box className="insight-callout"><Typography fontSize={14} fontWeight={650}>Reactivation is your clearest opportunity</Typography><Typography fontSize={13} color="text.secondary" sx={{ mt: .7 }}>Ben found 5,215 users inactive for 14+ days. Reaching them now could lift returning users by an estimated 8–12%.</Typography><Stack direction="row" gap={1} sx={{ mt: 2 }}><Button variant="contained" size="small" href="/dashboard/journeys/create">Send insights to Nova</Button><Button size="small" href="/dashboard/users">Review audience</Button></Stack></Box>}
-        {context === "handoff" && <Stack className="context-dialog-list">{[["Max", "understood the goal", "Improve reactivation"], ["Ben", "analyzed inactive-user behavior", "Analysis complete"], ["Nova", "recommended a reactivation journey", "Ready to review"], ["Anna", "created the campaign content", "Draft available"]].map(([agent, action, status]) => <Stack direction="row" gap={1.5} className="context-dialog-row" key={agent}><Box className="handoff-dot" /><Box><Typography fontSize={13} fontWeight={600}>{agent} <span className="handoff-action">{action}</span></Typography><Typography fontSize={11} color="text.secondary">{status}</Typography></Box></Stack>)}</Stack>}
+        {context === "recent" && <Stack className="context-dialog-list">{aiContext?.recentConversations?.length ? aiContext.recentConversations.map((item) => <Stack direction="row" alignItems="center" gap={1.5} className="context-dialog-row" key={item.id}><Box className="conversation-icon"><PsychologyRounded /></Box><Box sx={{ flex: 1 }}><Typography fontSize={13} fontWeight={600}>{item.title || item.lastMessage?.content || "AI conversation"}</Typography><Typography fontSize={11} color="text.secondary">{item.assistant}</Typography></Box><Typography fontSize={11} color="text.secondary">{conversationTime(item.updatedAt)}</Typography></Stack>) : <Typography color="text.secondary">No conversations yet.</Typography>}</Stack>}
+        {context === "insight" && <Box className="insight-callout"><Typography fontSize={14} fontWeight={650}>{aiContext?.latestInsight.title ?? "No insight yet"}</Typography><Typography fontSize={13} color="text.secondary" sx={{ mt: .7 }}>{aiContext?.latestInsight.message ?? "The latest project insight will appear here."}</Typography><Stack direction="row" gap={1} sx={{ mt: 2 }}><Button variant="contained" size="small" href="/dashboard/journeys/create">Send insights to Nova</Button><Button size="small" href="/dashboard/users">Review audience</Button></Stack></Box>}
+        {context === "handoff" && <Stack className="context-dialog-list">{aiContext?.handoffHistory?.length ? aiContext.handoffHistory.map((item) => <Stack direction="row" gap={1.5} className="context-dialog-row" key={`${item.assistant}-${item.action}`}><Box className="handoff-dot" /><Box><Typography fontSize={13} fontWeight={600}>{item.assistant} <span className="handoff-action">{item.action}</span></Typography><Typography fontSize={11} color="text.secondary">{item.status}</Typography></Box></Stack>) : <Typography color="text.secondary">No handoff history yet.</Typography>}</Stack>}
       </DialogContent>
     </Dialog>
   </Box>;

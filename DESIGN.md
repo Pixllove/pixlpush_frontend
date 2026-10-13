@@ -339,6 +339,16 @@ Always `EmptyState`. Never hand-build one.
   instantly on click.
 - **Top bar**: 60px, white, a bottom hairline, no shadow. Search on the left (the project switcher lives in the sidebar), actions on
   the right.
+- **Home is the exception to the top bar and page padding.** Its backdrop runs under the top bar, which
+  becomes frosted glass fading to clear (no fill, no hairline), so header and page are one gradient. The
+  hero's orb and gaps scale with the window's height and the page padding is trimmed, so Home opens
+  without a scrollbar from about 750px tall at desktop width. Text on the gradient is `text` or
+  `textSecondary`, never `textMuted`, and cards on it are at least 80% white.
+- **AI composer** (Home): a 24px-radius glass card with the message on top and one bar below: the assistant
+  switcher on the left (quiet until hovered), a 40px round send button on the right. The button is the
+  state: grey when there is nothing to send, violet when there is, a spinner while the assistant works.
+  No helper text in the bar; the shortcut lives in the button's tooltip. Do not add controls that do
+  nothing (attach, voice) until they work.
 - **Page header**: title (`h1`) and one line on the left, the primary action on the right, identical on every
   screen.
 - **Page body**: sections separated by 24px. Reserve cards for real objects; do not wrap every section in one.

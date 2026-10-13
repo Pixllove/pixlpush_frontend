@@ -33,6 +33,10 @@ const ALLOWED = [
   "email-deliveries",
   "journeys",
   "analytics",
+  // Home AI workspace: /assistants, /context, /chat, /conversations and
+  // /flows/:flowId/draft. Chat and drafts only return text to review; they
+  // never send or change anything themselves.
+  "ai",
 ];
 
 type Params = { params: { projectId: string; path: string[] } };
