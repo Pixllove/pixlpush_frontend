@@ -4,13 +4,13 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AddRounded, ArrowBackRounded, CalendarMonthRounded, CloseRounded, DeleteOutlineRounded, EmailRounded, GroupRounded, MoreVertRounded, NotificationsActiveRounded, PauseCircleOutlineRounded, PlayArrowRounded, ReplayRounded, SaveRounded, SettingsRounded, StopCircleRounded, TimerRounded } from '@mui/icons-material';
-import { Box, Button, Card, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControlLabel, Grid, IconButton, MenuItem, Radio, Select, Stack, TextField, Typography } from '@mui/material';
+import { Box, Button, Card, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControlLabel, Grid, IconButton, MenuItem, Radio, Select, Stack, TextField, Typography } from '@mui/material';
 
 import { audienceGroupsApi, emailApi, journeysApi, lifecycleSegmentsApi, pushApi } from '@/lib/projects/api';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
 import { ENTRANCE, EXIT, conditionOptions, fromJourney, journeyError, toJourneyInput, type Block, type BlockSettings, type BlockStats, type BlockType, type Branches, type BuilderStatus, type EntranceConfig } from '@/lib/journeys';
 
-type Option = { id: string; name: string; title?: string; body?: string; subject?: string };
+type Option = { id: string; name: string; title?: string; body?: string; subject?: string; text?: string | null; html?: string | null };
 /** The real choices of this Project for the settings panel's dropdowns. */
 type Choices = { segments: Option[]; groups: Option[]; emailTemplates: Option[]; pushTemplates: Option[] };
 type SettingProps = { values: Record<string, string>; set: (key: string, value: string) => void };
@@ -34,12 +34,28 @@ export default function JourneyBuilder() {
   const groups = useQuery({ queryKey: ['projects', projectId, 'audience-groups'], queryFn: () => audienceGroupsApi.list(projectId!), ...listOptions });
   const emailTemplates = useQuery({ queryKey: ['projects', projectId, 'journey-email-templates'], queryFn: () => emailApi.templates.list(projectId!, { category: 'template', limit: 100 }), ...listOptions });
   const pushTemplates = useQuery({ queryKey: ['projects', projectId, 'journey-push-templates'], queryFn: () => pushApi.templates.list(projectId!, { category: 'template', limit: 100 }), ...listOptions });
-  const choices: Choices = { segments: segments.data ?? [], groups: groups.data ?? [], emailTemplates: emailTemplates.data?.items ?? [], pushTemplates: pushTemplates.data?.items ?? [] };
   const loaded = useQuery({ queryKey: ['projects', projectId, 'journeys', journeyId], queryFn: () => journeysApi.get(projectId!, journeyId!), enabled: Boolean(projectId && params.get('id')), refetchOnWindowFocus: false });
   const [entranceConfig, setEntranceConfig] = useState<EntranceConfig>({ lifecycle: '', audience: '', allUsers: false });
   const [conditionValues, setConditionValues] = useState<Record<string, string[]>>({});
   const [blocks, setBlocks] = useState<Block[]>([ENTRANCE, EXIT]);
   const [selected, setSelected] = useState<Block | null>(null); const [addTarget, setAddTarget] = useState<AddTarget | null>(null); const [stopOpen, setStopOpen] = useState(false); const [toast, setToast] = useState(''); const [branches, setBranches] = useState<Branches>({});
+  const emailTemplateIds = Array.from(new Set([
+    ...blocks,
+    ...Object.values(branches).flatMap(branch => [...branch.yes, ...branch.no]),
+  ].filter(block => block.type === 'email').map(block => settings[block.id]?.template).filter((id): id is string => Boolean(id))));
+  const emailTemplateDetails = useQuery({
+    queryKey: ['projects', projectId, 'journey-email-template-details', emailTemplateIds],
+    queryFn: async () => {
+      const details = await Promise.all(emailTemplateIds.map(id => emailApi.templates.get(projectId!, id)));
+      return Object.fromEntries(details.map(template => [template.id, template]));
+    },
+    enabled: Boolean(projectId && emailTemplateIds.length),
+    staleTime: 60_000,
+  });
+  const listedEmailTemplates = emailTemplates.data?.items ?? [];
+  const detailedEmailTemplates = listedEmailTemplates.map(template => emailTemplateDetails.data?.[template.id] ? { ...template, ...emailTemplateDetails.data[template.id] } : template);
+  const choices: Choices = { segments: segments.data ?? [], groups: groups.data ?? [], emailTemplates: detailedEmailTemplates, pushTemplates: pushTemplates.data?.items ?? [] };
+  const builderLoading = Boolean(journeyId && !loaded.error && (loaded.isLoading || !loaded.data || segments.isLoading || groups.isLoading || emailTemplates.isLoading || pushTemplates.isLoading || (emailTemplateIds.length > 0 && emailTemplateDetails.isLoading)));
   const notify = (message: string) => { setToast(message); window.setTimeout(() => setToast(''), 3200); };
   // A saved journey is put on the canvas once, when it arrives.
   useEffect(() => {
@@ -87,16 +103,25 @@ export default function JourneyBuilder() {
   const isTarget = (target: AddTarget) => Boolean(addTarget && JSON.stringify(addTarget) === JSON.stringify(target));
   const entranceDescription = entranceConfig.allUsers ? 'All users' : entranceConfig.lifecycle ? `Lifecycle segment: ${nameOf(choices.segments, entranceConfig.lifecycle)}` : entranceConfig.audience ? `Audience group: ${nameOf(choices.groups, entranceConfig.audience)}` : 'Select a lifecycle segment, audience group, or all users';
   const conditionDescription = (block: Block) => conditionValues[block.id]?.[0] || block.description;
-  /** A message card says what will be sent: the push's title and body, or the email's subject (any editor). */
+  const readableEmailBody = (template: Option) => String(template.text || template.html || '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p\s*>/gi, '\n\n')
+    .replace(/<li\s*>/gi, '• ')
+    .replace(/<[^>]+>/g, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+  /** A message card says what will be sent: the push title/body or the complete email template. */
   const describe = (block: Block): Block => {
     const template = (block.type === 'notification' ? choices.pushTemplates : block.type === 'email' ? choices.emailTemplates : []).find(item => item.id === settings[block.id]?.template);
     if (!template) return block;
-    return { ...block, description: block.type === 'notification' ? `Title: ${template.title ?? template.name}\nBody: ${template.body ?? ''}` : `Subject: ${settings[block.id]?.subject || template.subject || template.name}` };
+    return { ...block, description: block.type === 'notification'
+      ? `Title: ${template.title ?? template.name}\nBody: ${template.body ?? ''}`
+      : `Template name: ${template.name}\nSubject: ${settings[block.id]?.subject || template.subject || template.name}\nBody:\n${readableEmailBody(template) || 'No email body added yet.'}` };
   };
   return <Box className="journey-builder-page">
     {toast && <Box className="journey-toast"><SaveRounded fontSize="small" />{toast}</Box>}
     <Box className="journey-builder-header"><Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ md: 'center' }} gap={2}><Stack direction="row" alignItems="center" gap={1.5}><Button startIcon={<ArrowBackRounded />} onClick={() => router.push('/dashboard/journeys')} sx={{ minWidth:0, color:'#64748b' }} /><Stack direction="row" alignItems="center" gap={1}><Typography className="journey-name-label">Journey name:</Typography><TextField size="small" value={name} placeholder="New Journey" onChange={event => setName(event.target.value)} aria-label="Journey name" sx={{ width: { xs: 180, md: 240 } }} /></Stack><Box className={`journey-status ${status.toLowerCase()}`}>{status}</Box></Stack><Stack direction="row" gap={1} flexWrap="wrap"><Button startIcon={<SaveRounded />} variant="contained" disabled={busy} onClick={saveDraft}>Save draft</Button>{status === 'Draft' && <Button startIcon={<PlayArrowRounded />} color="success" variant="contained" disabled={busy} onClick={setLive}>Save & set live</Button>}{status === 'Running' && <><Button startIcon={<PauseCircleOutlineRounded />} variant="outlined" disabled={busy} onClick={pause}>Pause</Button><Button startIcon={<StopCircleRounded />} color="error" variant="contained" onClick={() => setStopOpen(true)}>Stop journey</Button></>} {status === 'Paused' && <Button startIcon={<PlayArrowRounded />} color="success" variant="contained" disabled={busy} onClick={resume}>Resume</Button>}<Button startIcon={<DeleteOutlineRounded />} color="error" variant="outlined" onClick={() => setStopOpen(true)}>Delete</Button></Stack></Stack></Box>
-    <Box className={`journey-builder-canvas ${selected ? 'with-settings' : ''}`}><Stack alignItems="center" gap={0} className="journey-flow">{blocks.map((block, index) => <Box key={block.id} className="journey-flow-sequence"><JourneyBlock block={block.type === 'entrance' ? { ...block, description: entranceDescription } : block.type === 'condition' ? { ...block, description: conditionDescription(block) } : describe(block)} sourceType={blocks[index - 1]?.type} selected={selected?.id === block.id} onSelect={setSelected} onRemove={removeBlock} />{block.type === 'condition' ? <ConditionBranches describe={describe} conditionId={block.id} branches={branches[block.id] || { yes: [], no: [] }} selectedId={selected?.id} onSelect={setSelected} onRemove={removeBranchBlock} onOpenAdd={openAdd} isTarget={isTarget} addBlock={addBlock} /> : block.type !== 'exit' ? <PlusConnector target={{ scope: 'root', index: index + 1 }} onOpen={openAdd} isTarget={isTarget} addBlock={addBlock} /> : null}</Box>)}</Stack></Box>
+    <Box className={`journey-builder-canvas ${selected ? 'with-settings' : ''}`}><Stack alignItems="center" gap={0} className="journey-flow">{builderLoading ? <Box className="journey-builder-loading" role="status" aria-live="polite"><CircularProgress size={34} /><Typography fontWeight={600}>Loading your journey</Typography><Typography color="text.secondary" fontSize={13}>Fetching the steps and message templates…</Typography></Box> : blocks.map((block, index) => <Box key={block.id} className="journey-flow-sequence"><JourneyBlock block={block.type === 'entrance' ? { ...block, description: entranceDescription } : block.type === 'condition' ? { ...block, description: conditionDescription(block) } : describe(block)} sourceType={blocks[index - 1]?.type} selected={selected?.id === block.id} onSelect={setSelected} onRemove={removeBlock} />{block.type === 'condition' ? <ConditionBranches describe={describe} conditionId={block.id} branches={branches[block.id] || { yes: [], no: [] }} selectedId={selected?.id} onSelect={setSelected} onRemove={removeBranchBlock} onOpenAdd={openAdd} isTarget={isTarget} addBlock={addBlock} /> : block.type !== 'exit' ? <PlusConnector target={{ scope: 'root', index: index + 1 }} onOpen={openAdd} isTarget={isTarget} addBlock={addBlock} /> : null}</Box>)}</Stack></Box>
     {selected && <SettingsPanel block={selected} entranceConfig={entranceConfig} conditionValues={conditionValues[selected.id] || []} choices={choices} values={settings[selected.id] || {}} set={(key, value) => setSetting(selected.id, key, value)} onEntranceChange={setEntranceConfig} onConditionChange={values => setConditionValues(items => ({ ...items, [selected.id]: values }))} onClose={() => setSelected(null)} onDelete={() => removeBlock(selected.id)} />}
     <Dialog open={stopOpen} onClose={() => setStopOpen(false)} maxWidth="xs" fullWidth><DialogTitle>{status === 'Running' ? 'Stop this journey?' : 'Delete this journey?'}</DialogTitle><DialogContent><Typography color="text.secondary">This action cannot be undone. Your journey data will be preserved, but you will need to create a new journey to run it again.</Typography></DialogContent><DialogActions><Button onClick={() => setStopOpen(false)}>Cancel</Button><Button color="error" variant="contained" disabled={busy} onClick={stopOrDelete}>{status === 'Running' ? 'Stop journey' : 'Delete journey'}</Button></DialogActions></Dialog>
   </Box>;

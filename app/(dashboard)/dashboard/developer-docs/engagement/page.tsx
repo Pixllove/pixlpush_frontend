@@ -21,7 +21,7 @@ function CodeBlock({ children }: { children: string }) {
 }
 
 export default function EngagementDocsPage() {
-  return <DashboardFrame requiresProject active="Integrations" title="Developer documentation" description="Set up the events PixlPush needs to identify users who have left the app and can be brought back with an engagement journey.">
+  return <DashboardFrame requiresProject active="Developer documentation" title="Developer documentation" description="Set up the events PixlPush needs to identify users who have left the app and can be brought back with an engagement journey.">
     <Container maxWidth="md" disableGutters>
       <Stack gap={2.5}>
         <Card className="saas-card"><CardContent sx={{ p: { xs: 2.5, md: 4 } }}>

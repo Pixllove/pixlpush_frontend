@@ -1045,7 +1045,25 @@ function EmailTableRow({
   return (
     <TableRow hover data-email-id={item.id} className={highlighted ? "is-highlighted" : undefined}>
       <TableCell>
-        <Typography fontSize={12} fontWeight={500}>
+        <Typography
+          component="button"
+          type="button"
+          fontSize={12}
+          fontWeight={500}
+          onClick={onEdit}
+          sx={{
+            display: "block",
+            p: 0,
+            border: 0,
+            background: "transparent",
+            color: "inherit",
+            font: "inherit",
+            textAlign: "left",
+            cursor: "pointer",
+            "&:hover": { color: "#4775de", textDecoration: "underline" },
+          }}
+          aria-label={`Open ${item.name}`}
+        >
           {item.name}
         </Typography>
         <Typography color="text.secondary" fontSize={11}>

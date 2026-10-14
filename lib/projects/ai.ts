@@ -117,10 +117,26 @@ export interface AiBusinessContext {
   appName: string | null;
   appSummary: string | null;
   appAnalyzedAt: string | null;
+  businessAnalysis: AiBusinessAnalysis | null;
+  businessAnalysisConfirmedAt: string | null;
   updatedAt: string | null;
 }
 
-export type AiBusinessContextUpdate = Partial<Omit<AiBusinessContext, "updatedAt" | "websiteAnalyzedAt" | "appAnalyzedAt">>;
+export interface AiBusinessAnalysis {
+  elevatorPitch: string;
+  businessModel: { classification: string; reasoning: string };
+  businessStage: { classification: string; reasoning: string };
+  coreProductOrService: string;
+  idealCustomerProfile: Record<string, string>;
+  icpPainPoints: { confirmed: string[]; likely: string[]; unknown: string[] };
+  customerGoals: string[];
+  buyingAndEngagementTriggers: Array<{ trigger: string; evidence: string; status: string } | string>;
+  valueProposition: string[];
+  objectionsAndBarriers: string[];
+  messagingRecommendations: Record<string, string[]>;
+}
+
+export type AiBusinessContextUpdate = Partial<Omit<AiBusinessContext, "updatedAt" | "websiteAnalyzedAt" | "appAnalyzedAt">> & { businessAnalysisConfirmed?: boolean };
 
 export interface AiProjectContext {
   project: AiProjectSnapshot;
@@ -185,8 +201,10 @@ export const aiApi = {
   ) => authRequest<AiBusinessContext>(at(projectId, "/business-context"), input, BASE, "PATCH"),
   analyzeBusinessContext: (
     projectId: string,
-    input: { kind: "website" | "app"; url: string },
+    input: { kind: "website" | "app"; url: string; appStoreUrl?: string | null; googlePlayUrl?: string | null },
   ) => authRequest<AiBusinessContext>(at(projectId, "/business-context/analyze"), input, BASE, "POST"),
+  detectBusinessContextLinks: (projectId: string, input: { url: string }) =>
+    authRequest<{ websiteUrl: string; appStoreUrl: string | null; googlePlayUrl: string | null }>(at(projectId, "/business-context/detect-links"), input, BASE, "POST"),
   chat: (
     projectId: string,
     input: { assistant: AiAssistantId; prompt: string; conversationId?: string },

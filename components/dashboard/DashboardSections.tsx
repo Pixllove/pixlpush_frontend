@@ -1884,6 +1884,7 @@ function EmailSection() {
 }
 
 function PushSection() {
+  const router = useRouter();
   const { active } = useActiveProject();
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
@@ -2061,7 +2062,7 @@ function PushSection() {
       label: "Notification name",
       render: (row) => (
         <Box>
-          <Typography fontSize={12} fontWeight={500}>
+          <Typography component="button" type="button" fontSize={12} fontWeight={500} onClick={() => router.push(`/dashboard/push?tab=${tab}&highlight=${row.id}`)} sx={{ display: "block", p: 0, border: 0, background: "transparent", color: "inherit", font: "inherit", textAlign: "left", cursor: "pointer", "&:hover": { color: "#4775de", textDecoration: "underline" } }}>
             {row.name}
           </Typography>
           <Typography color="text.secondary" fontSize={11}>

@@ -50,7 +50,7 @@ function normalizePublicUrl(value: string): string {
 }
 
 function normalizeBusinessContextAnalyzeBody(path: string[], body: unknown): unknown {
-  if (path[0] !== "ai" || path[1] !== "business-context" || path[2] !== "analyze") return body;
+  if (path[0] !== "ai" || path[1] !== "business-context" || !["analyze", "detect-links"].includes(path[2] ?? "")) return body;
   if (!body || typeof body !== "object" || Array.isArray(body)) return body;
   const payload = body as Record<string, unknown>;
   return typeof payload.url === "string" ? { ...payload, url: normalizePublicUrl(payload.url) } : body;

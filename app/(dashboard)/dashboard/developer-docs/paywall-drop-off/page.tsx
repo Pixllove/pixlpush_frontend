@@ -25,7 +25,7 @@ function CodeBlock({ children }: { children: string }) {
 }
 
 export default function PaywallDropOffDocsPage() {
-  return <DashboardFrame requiresProject active="Integrations" title="Developer documentation" description="Set up the events PixlPush needs to identify users who viewed a paywall but did not convert.">
+  return <DashboardFrame requiresProject active="Developer documentation" title="Developer documentation" description="Set up the events PixlPush needs to identify users who viewed a paywall but did not convert.">
     <Container maxWidth="md" disableGutters>
       <Stack gap={2.5}>
         <Card className="saas-card">

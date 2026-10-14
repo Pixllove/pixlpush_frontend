@@ -1,8 +1,8 @@
 'use client';
 
 import {
-  AddRounded, BarChartOutlined, BoltOutlined, ChevronLeftRounded, ChevronRightRounded, EmailOutlined, GroupsOutlined,
-  HistoryOutlined, HomeOutlined, InsightsOutlined, PeopleAltOutlined, SettingsOutlined, SpaceDashboardOutlined, TuneOutlined, UnfoldMoreRounded,
+  AddRounded, BarChartOutlined, BoltOutlined, ChevronLeftRounded, ChevronRightRounded, DescriptionOutlined, EmailOutlined, GroupsOutlined,
+  HistoryOutlined, HomeOutlined, InsightsOutlined, PeopleAltOutlined, PersonOutlineOutlined, SettingsOutlined, SpaceDashboardOutlined, TuneOutlined, UnfoldMoreRounded,
 } from '@mui/icons-material';
 import {
   Avatar, ButtonBase, Divider, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Menu, MenuItem, Tooltip, Typography,
@@ -27,11 +27,13 @@ const groups = [
   {
     label: 'Project',
     items: [
-      { label: 'Integrations', href: '/dashboard/integrations', icon: TuneOutlined },
+      { label: 'SDK Integration Guide', href: '/dashboard/integrations', icon: TuneOutlined },
+      { label: 'Developer documentation', href: '/dashboard/developer-docs', icon: DescriptionOutlined },
       { label: 'Audit Logs', href: '/dashboard/audit-logs', icon: HistoryOutlined },
       { label: 'Billing & Usage', href: '/dashboard/billing', icon: BarChartOutlined },
       { label: 'Team & Access', href: '/dashboard/team', icon: GroupsOutlined },
-      { label: 'Settings', href: '/dashboard/settings', icon: SettingsOutlined },
+      { label: 'Project Settings', href: '/dashboard/settings', icon: SettingsOutlined },
+      { label: 'Profile', href: '/dashboard/account', icon: PersonOutlineOutlined },
     ],
   },
 ];

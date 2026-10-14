@@ -5,8 +5,8 @@ export default function IntegrationsPage() {
   return (
     <DashboardFrame
       requiresProject
-      active="Integrations"
-      title="Integrations"
+      active="SDK Integration Guide"
+      title="SDK Integration Guide"
       description="Connect your product to PixlPush with the React SDK and start turning behavior into retention."
     >
       <IntegrationDocumentation />
