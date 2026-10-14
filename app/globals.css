@@ -1716,6 +1716,50 @@ html:has(.home-experience)::-webkit-scrollbar { display: none; }
   .home-feature-card { min-height: 108px; border-radius: 16px !important; }
 }
 
+/* Mobile Home layout: keep the assistant composer and creation shortcuts usable on narrow screens.
+   These rules intentionally live after the desktop polish so the same components can be used without
+   introducing a second mobile-only render tree. */
+@media (max-width: 760px) {
+  .dashboard-content:has(.home-experience) { width: 100%; padding: 8px 0 24px; }
+  .home-experience { width: 100%; min-width: 0; }
+  .home-hero { min-width: 0; padding: 12px 16px 24px; }
+  .home-hero .max-orb { --orb: clamp(92px, 28vw, 112px); margin-top: 4px; margin-bottom: 30px; }
+  .home-hero-title { width: 100%; max-width: 380px; font-size: clamp(32px, 9.8vw, 42px) !important; line-height: 1.08 !important; }
+  .home-hero-subtitle { max-width: 320px; font-size: 17px !important; line-height: 1.4 !important; }
+  .home-hero .home-composer { width: 100%; margin-top: 26px; border-radius: 24px; }
+  .home-composer .ai-composer-input { min-height: 76px; padding: 17px 20px 6px !important; font-size: 16px !important; }
+  .home-composer .ai-composer-bar { min-height: 58px; padding: 6px 14px 12px; }
+  .home-composer .ai-agent-pill { min-height: 44px; padding-left: 6px !important; }
+  .home-composer .ai-send { min-width: 44px; min-height: 44px; }
+  .home-prompt-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; margin-top: 20px; }
+  .home-prompt { width: 100%; min-height: 52px; padding: 8px 10px !important; font-size: 14px !important; line-height: 1.25 !important; }
+  .home-prompt .MuiButton-startIcon { margin-right: 5px; }
+  .home-hero .home-recent-link { min-height: 44px; margin-top: 14px !important; }
+  .home-feature-intro { width: 100%; margin-top: 22px; padding-inline: 8px; }
+  .home-feature-intro p { font-size: 16px; line-height: 1.35; }
+  .home-feature-intro span { max-width: 350px; font-size: 14px; line-height: 1.45; }
+  .home-feature-row { grid-template-columns: 1fr; width: 100%; margin-top: 16px; gap: 10px; }
+  .home-feature-card { min-height: 92px; padding: 16px !important; }
+  .home-feature-copy p { font-size: 14px; }
+  .home-feature-copy span { font-size: 13px; }
+  .home-disclaimer { max-width: calc(100% - 24px); margin-top: 18px !important; }
+
+  .chat-experience { width: 100%; min-width: 0; padding-inline: 8px; }
+  .chat-topbar { padding-inline: 0; }
+  .chat-thread { min-width: 0; padding: 0 2px 190px; }
+  .chat-user-turn, .chat-user-turn.is-editing { max-width: 92%; width: auto; }
+  .chat-user-message, .chat-assistant-message { max-width: 100%; }
+  .chat-composer-area { right: 10px; bottom: max(10px, env(safe-area-inset-bottom)); left: 10px; }
+  .chat-composer { border-radius: 20px; }
+}
+
+@media (max-width: 420px) {
+  .home-hero { padding-right: 12px; padding-left: 12px; }
+  .home-hero .max-orb { margin-bottom: 26px; }
+  .home-prompt { padding-inline: 7px !important; font-size: 13px !important; }
+  .home-feature-card { min-height: 88px; }
+}
+
 .home-command-center { max-width: 1120px; margin: 0 auto; }
 .home-page-heading { padding: 2px 2px 0; }
 .home-page-title { color: var(--pp-text); font-size: 24px !important; line-height: 1.2 !important; font-weight: 650 !important; letter-spacing: -.04em !important; }
