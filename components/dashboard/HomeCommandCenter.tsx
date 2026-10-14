@@ -1,14 +1,14 @@
 "use client";
 
-import { AddRounded, ArrowForwardRounded, ArrowUpwardRounded, AutoAwesomeRounded, AutoGraphRounded, CampaignRounded, CheckRounded, CloseRounded, ContentCopyRounded, DeleteOutlineRounded, EditOutlined, ExpandMoreRounded, HistoryRounded, InsightsRounded, PeopleAltOutlined, PsychologyRounded, ReplayRounded, RouteRounded, SearchRounded, StopRounded, TrendingDownRounded } from "@mui/icons-material";
-import { Alert, Box, Button, ButtonBase, Dialog, DialogContent, DialogTitle, IconButton, InputBase, Menu, MenuItem, Stack, Tooltip, Typography } from "@mui/material";
+import { AddRounded, ArrowForwardRounded, ArrowUpwardRounded, AutoAwesomeRounded, AutoGraphRounded, CampaignRounded, CheckRounded, CloseRounded, ContentCopyRounded, DeleteOutlineRounded, EditOutlined, ExpandMoreRounded, HistoryRounded, InsightsRounded, LinkRounded, PeopleAltOutlined, PhoneIphoneRounded, PsychologyRounded, ReplayRounded, RouteRounded, SearchRounded, StopRounded, TrendingDownRounded } from "@mui/icons-material";
+import { Alert, Box, Button, ButtonBase, Dialog, DialogContent, DialogTitle, IconButton, InputBase, Menu, MenuItem, Stack, TextField, Tooltip, Typography } from "@mui/material";
 import Image from "next/image";
 import { useDeferredValue, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCurrentUser } from "@/hooks/auth/use-current-user";
 import { useActiveProject } from "@/hooks/projects/use-active-project";
 import { accountGreetingName } from "@/lib/auth/display-name";
-import { aiApi, type AiAssistantId, type AiConversationMessage, type AiConversationPreview, type AiCreatedResource, type AiFlowId, type AiFlowDraftResponse, type AiResourceType } from "@/lib/projects/ai";
+import { aiApi, type AiAssistantId, type AiBusinessContext, type AiBusinessContextUpdate, type AiConversationMessage, type AiConversationPreview, type AiCreatedResource, type AiFlowId, type AiFlowDraftResponse, type AiProjectContext, type AiResourceType } from "@/lib/projects/ai";
 import { audienceGroupsApi, firebaseApi, lifecycleSegmentsApi, sdkKeyApi } from "@/lib/projects/api";
 import type { AudienceGroup, LifecycleSegment } from "@/types/project";
 import DeleteConfirmDialog from "@/components/dashboard/DeleteConfirmDialog";
@@ -350,12 +350,184 @@ function CreatedResourceActions({ resources }: { resources: AiCreatedResource[] 
   </Box>;
 }
 
+type BusinessContextPhase = "description" | "website" | "app-choice" | "app-link" | "review";
+
+const emptyBusinessContext: AiBusinessContext = {
+  businessDescription: null,
+  websiteUrl: null,
+  websiteTitle: null,
+  websiteSummary: null,
+  websiteAnalyzedAt: null,
+  hasMobileApp: null,
+  appStoreUrl: null,
+  googlePlayUrl: null,
+  appName: null,
+  appSummary: null,
+  appAnalyzedAt: null,
+  updatedAt: null,
+};
+
+function firstBusinessContextPhase(context: AiBusinessContext): BusinessContextPhase {
+  if (!context.businessDescription?.trim()) return "description";
+  if (!context.websiteUrl?.trim()) return "website";
+  if (context.hasMobileApp === null) return "app-choice";
+  if (context.hasMobileApp && !context.appStoreUrl && !context.googlePlayUrl) return "app-link";
+  return "review";
+}
+
+function BusinessContextCard({
+  context,
+  loading,
+  saving,
+  onUpdate,
+  onAnalyze,
+  onComplete,
+  onCancel,
+}: {
+  context: AiBusinessContext;
+  loading: boolean;
+  saving: boolean;
+  onUpdate: (input: AiBusinessContextUpdate) => Promise<AiBusinessContext>;
+  onAnalyze: (kind: "website" | "app", url: string) => Promise<AiBusinessContext>;
+  onComplete: (context: AiBusinessContext) => void;
+  onCancel: () => void;
+}) {
+  const [phase, setPhase] = useState<BusinessContextPhase>("description");
+  const [draft, setDraft] = useState<AiBusinessContext>(context);
+  const [description, setDescription] = useState(context.businessDescription ?? "");
+  const [websiteUrl, setWebsiteUrl] = useState(context.websiteUrl ?? "");
+  const [appListingUrl, setAppListingUrl] = useState(context.appStoreUrl ?? context.googlePlayUrl ?? "");
+  const [error, setError] = useState<string | null>(null);
+  const initialized = useRef(false);
+
+  useEffect(() => {
+    if (loading || initialized.current) return;
+    const initial = { ...emptyBusinessContext, ...context };
+    initialized.current = true;
+    setDraft(initial);
+    setDescription(initial.businessDescription ?? "");
+    setWebsiteUrl(initial.websiteUrl ?? "");
+    setAppListingUrl(initial.appStoreUrl ?? initial.googlePlayUrl ?? "");
+    setPhase(firstBusinessContextPhase(initial));
+  }, [context, loading]);
+
+  const applyUpdate = async (input: Partial<AiBusinessContext>) => {
+    setError(null);
+    const updated = await onUpdate(input);
+    setDraft(updated);
+    return updated;
+  };
+
+  const saveDescriptionAndContinue = async () => {
+    try {
+      await applyUpdate({ businessDescription: description.trim() || null });
+      setPhase("website");
+    } catch (cause) {
+      setError(apiMessage(cause, "I couldn’t save that business description. Please try again."));
+    }
+  };
+
+  const analyzeWebsiteAndContinue = async () => {
+    if (!websiteUrl.trim()) return setPhase("app-choice");
+    try {
+      const updated = await onAnalyze("website", websiteUrl.trim());
+      setDraft(updated);
+      setWebsiteUrl(updated.websiteUrl ?? websiteUrl.trim());
+      setPhase(updated.hasMobileApp === null ? "app-choice" : firstBusinessContextPhase(updated));
+    } catch (cause) {
+      setError(apiMessage(cause, "I couldn’t analyze that website. Check the URL or skip this question."));
+    }
+  };
+
+  const saveAppChoiceAndContinue = async (hasMobileApp: boolean) => {
+    try {
+      const updated = await applyUpdate({
+        hasMobileApp,
+        ...(hasMobileApp ? {} : { appStoreUrl: null, googlePlayUrl: null, appName: null, appSummary: null }),
+      });
+      setPhase(hasMobileApp ? "app-link" : "review");
+      setDraft(updated);
+    } catch (cause) {
+      setError(apiMessage(cause, "I couldn’t save that app preference. Please try again."));
+    }
+  };
+
+  const analyzeAppAndContinue = async () => {
+    const url = appListingUrl.trim();
+    if (!url) return setPhase("review");
+    try {
+      const updated = await onAnalyze("app", url);
+      setDraft(updated);
+      setAppListingUrl(updated.appStoreUrl ?? updated.googlePlayUrl ?? appListingUrl.trim());
+      setPhase("review");
+    } catch (cause) {
+      setError(apiMessage(cause, "I couldn’t analyze that app listing. Check the link or skip this question."));
+    }
+  };
+
+  const reviewValue = (value: string | null, fallback = "Skipped") => value?.trim() || fallback;
+  const editPhase = (next: BusinessContextPhase) => { setError(null); setPhase(next); };
+
+  if (loading || !initialized.current) {
+    return <Box className="guided-flow-card business-context-card"><Typography className="guided-flow-title">Tell me about your business</Typography><Typography className="guided-flow-subtitle">I’m checking what your project already knows before I ask anything.</Typography><Typography className="business-context-loading">Loading business context…</Typography></Box>;
+  }
+
+  return <Box className="guided-flow-card business-context-card">
+    <Stack direction="row" alignItems="flex-start" gap={1.5}>
+      <Box className="business-context-icon"><AutoAwesomeRounded /></Box>
+      <Box>
+        <Typography component="h2" className="guided-flow-title">Tell me about your business</Typography>
+        <Typography className="guided-flow-subtitle">I’ll use this context to make the journey recommendations more relevant. You can skip or edit anything.</Typography>
+      </Box>
+    </Stack>
+
+    {error && <Alert severity="error" sx={{ mt: 2, fontSize: 12 }}>{error}</Alert>}
+
+    {phase === "description" && <Box>
+      <Typography className="guided-flow-question">What does your business or product do?</Typography>
+      <TextField fullWidth multiline minRows={3} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Describe the product, service, or experience you offer." label="Business or product description" inputProps={{ maxLength: 2_000 }} />
+      <Stack direction="row" justifyContent="flex-end" gap={.75} sx={{ mt: 1.5 }}><Button className="guided-flow-secondary" onClick={() => setPhase("website")} disabled={saving}>Skip</Button><Button className="guided-flow-next" variant="contained" onClick={() => void saveDescriptionAndContinue()} disabled={saving}>{saving ? "Saving…" : "Continue"}</Button></Stack>
+    </Box>}
+
+    {phase === "website" && <Box>
+      <Typography className="guided-flow-question"><LinkRounded fontSize="small" sx={{ mr: .5, verticalAlign: "middle" }} />What is your website?</Typography>
+      <TextField fullWidth value={websiteUrl} onChange={(event) => setWebsiteUrl(event.target.value)} placeholder="https://example.com" label="Website URL" type="url" helperText="I’ll read the public page and save only the relevant business context." />
+      <Stack direction="row" justifyContent="flex-end" gap={.75} sx={{ mt: 1.5 }}><Button className="guided-flow-secondary" onClick={() => setPhase("app-choice")} disabled={saving}>Skip</Button><Button className="guided-flow-next" variant="contained" onClick={() => void analyzeWebsiteAndContinue()} disabled={saving || !websiteUrl.trim()}>{saving ? "Analyzing…" : "Analyze & continue"}</Button></Stack>
+    </Box>}
+
+    {phase === "app-choice" && <Box>
+      <Typography className="guided-flow-question"><PhoneIphoneRounded fontSize="small" sx={{ mr: .5, verticalAlign: "middle" }} />Do you have an iOS or Android app?</Typography>
+      <Stack gap={1}>
+        {[{ label: "Yes, we have an app", value: true, description: "I’ll use its public App Store or Google Play listing." }, { label: "No app yet", value: false, description: "Continue with website and product context only." }].map((choice) => <ButtonBase key={choice.label} className="guided-flow-choice" onClick={() => void saveAppChoiceAndContinue(choice.value)} disabled={saving}><span className="guided-choice-check">{draft.hasMobileApp === choice.value && <CheckRounded />}</span><Box className="guided-choice-copy"><Typography>{choice.label}</Typography><span>{choice.description}</span></Box></ButtonBase>)}
+      </Stack>
+      <Stack direction="row" justifyContent="flex-end" gap={.75} sx={{ mt: 1.5 }}><Button className="guided-flow-secondary" onClick={() => setPhase("review")} disabled={saving}>Skip</Button></Stack>
+    </Box>}
+
+    {phase === "app-link" && <Box>
+      <Typography className="guided-flow-question">Share the App Store or Google Play link</Typography>
+      <TextField fullWidth value={appListingUrl} onChange={(event) => setAppListingUrl(event.target.value)} placeholder="https://apps.apple.com/... or https://play.google.com/..." label="App Store or Google Play link" type="url" helperText="Share one public listing link; I’ll detect which store it belongs to." />
+      <Stack direction="row" justifyContent="flex-end" gap={.75} sx={{ mt: 1.5 }}><Button className="guided-flow-secondary" onClick={() => setPhase("review")} disabled={saving}>Skip</Button><Button className="guided-flow-next" variant="contained" onClick={() => void analyzeAppAndContinue()} disabled={saving || !appListingUrl.trim()}>{saving ? "Analyzing…" : "Analyze & continue"}</Button></Stack>
+    </Box>}
+
+    {phase === "review" && <Box>
+      <Typography className="guided-flow-question">Review your business context</Typography>
+      <Stack gap={1} className="business-context-review">
+        <Box><Typography className="business-context-label">Business or product</Typography><Typography>{reviewValue(draft.businessDescription)}</Typography><Button size="small" startIcon={<EditOutlined />} onClick={() => editPhase("description")}>Edit</Button></Box>
+        <Box><Typography className="business-context-label">Website</Typography><Typography>{reviewValue(draft.websiteTitle || draft.websiteUrl)}</Typography>{draft.websiteSummary && <Typography className="business-context-summary">{draft.websiteSummary}</Typography>}<Button size="small" startIcon={<EditOutlined />} onClick={() => editPhase("website")}>Edit</Button></Box>
+        <Box><Typography className="business-context-label">Mobile app</Typography><Typography>{draft.hasMobileApp === true ? reviewValue(draft.appName || draft.appStoreUrl || draft.googlePlayUrl) : draft.hasMobileApp === false ? "No app" : "Skipped"}</Typography>{draft.appSummary && <Typography className="business-context-summary">{draft.appSummary}</Typography>}<Button size="small" startIcon={<EditOutlined />} onClick={() => editPhase(draft.hasMobileApp ? "app-link" : "app-choice")}>Edit</Button></Box>
+      </Stack>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 2 }}><Button className="guided-flow-cancel" onClick={onCancel}>Cancel</Button><Button className="guided-flow-next" variant="contained" onClick={() => onComplete(draft)}>Continue to journey</Button></Stack>
+    </Box>}
+  </Box>;
+}
+
 function GuidedFlowCard({ flow, steps, step, answers, onSelect, onNext, onBack, onSkip, onCancel, onContinueWithoutAudience, sdkIntegrated, paywallEventsReady, eventActionReady, pushReady, pushUnavailableReason, purposeRecommendation }: {
   flow: GuidedFlow; steps: FlowStep[]; step: number; answers: Record<number, string>; onSelect: (value: string) => void;
   onNext: () => void; onBack: () => void; onSkip: () => void; onCancel: () => void; onContinueWithoutAudience: () => void; sdkIntegrated?: boolean; paywallEventsReady?: boolean; eventActionReady?: boolean; pushReady?: boolean; pushUnavailableReason?: string; purposeRecommendation?: string;
 }) {
   const current = steps[step];
   const selected = answers[step];
+  const selectedPurposeAnswer = answers[0];
   const [unavailableChoice, setUnavailableChoice] = useState<string | null>(null);
   const paywallNeedsSetup = flow.id === "journey" && step === 1 && answers[0] === "Paywall drop-off" && (!sdkIntegrated || !paywallEventsReady);
   const lifecycleUnavailable = flow.id === "journey" && step === 1 && answers[0] !== "Paywall drop-off" && !sdkIntegrated;
@@ -363,7 +535,7 @@ function GuidedFlowCard({ flow, steps, step, answers, onSelect, onNext, onBack, 
   const showLifecycleUnavailable = lifecycleUnavailable && unavailableChoice === "Lifecycle segment entry";
   const showEventActionUnavailable = eventActionUnavailable && unavailableChoice === "An event or action";
   const showPushUnavailable = flow.id === "journey" && step === steps.length - 1 && unavailableChoice !== null && (unavailableChoice === "Push" || unavailableChoice === "Multichannel") && !pushReady;
-  useEffect(() => setUnavailableChoice(null), [step, answers[0]]);
+  useEffect(() => setUnavailableChoice(null), [step, selectedPurposeAnswer]);
   return <Box className="guided-flow-card">
     <Typography component="h2" className="guided-flow-title">{flow.title}</Typography>
     <Typography className="guided-flow-subtitle">{flow.subtitle}</Typography>
@@ -630,6 +802,9 @@ export default function HomeCommandCenter() {
   const [flowStep, setFlowStep] = useState(0);
   const [flowAnswers, setFlowAnswers] = useState<Record<number, string>>({});
   const [flowConfirming, setFlowConfirming] = useState(false);
+  const [businessContext, setBusinessContext] = useState<AiBusinessContext>(emptyBusinessContext);
+  const [businessContextSaving, setBusinessContextSaving] = useState(false);
+  const [businessContextComplete, setBusinessContextComplete] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<string>("Max");
   const activeRequestRef = useRef<AbortController | null>(null);
   const openingRequestRef = useRef(0);
@@ -785,6 +960,8 @@ export default function HomeCommandCenter() {
         setFlowAnswers({});
         setFlowStep(0);
         setFlowConfirming(false);
+        setBusinessContext(emptyBusinessContext);
+        setBusinessContextComplete(false);
         setHistoryOpen(false);
         setConversationSearch("");
       }
@@ -800,7 +977,7 @@ export default function HomeCommandCenter() {
 
   const thinking = openingFlow || chatMutation.isPending || draftMutation.isPending;
   const aiContext = contextQuery.data;
-  const knownEventNames = new Set(aiContext?.project.activity.knownEvents.map((event) => event.name) ?? []);
+  const knownEventNames = new Set(aiContext?.project?.activity?.knownEvents?.map((event) => event.name) ?? []);
   const paywallEventsReady = knownEventNames.has("paywall_viewed") && (knownEventNames.has("purchase_completed") || knownEventNames.has("subscription_started"));
   const sdkIntegrated = Boolean(sdkKeysQuery.data?.some((key) => key.status === "active"));
   const firebaseSettingsQuery = useQuery({
@@ -846,11 +1023,17 @@ export default function HomeCommandCenter() {
     setFlowAnswers({});
     setFlowStep(0);
     setFlowConfirming(false);
+    setBusinessContext(emptyBusinessContext);
+    setBusinessContextComplete(false);
     setEditing(null);
     setLastDraft(null);
     setDeletedConversationIds(new Set());
     setDeleteTarget(null);
   }, [projectId]);
+
+  useEffect(() => {
+    if (aiContext?.businessContext) setBusinessContext(aiContext.businessContext);
+  }, [aiContext?.businessContext]);
 
   const selectAgent = (name: string) => {
     setSelectedAgent(name);
@@ -881,6 +1064,7 @@ export default function HomeCommandCenter() {
       setOpeningFlow(false);
       setActiveFlow(null);
       setFlowReady(false);
+      setBusinessContextComplete(false);
     }
     setMessages((current) => current.some((message) => message.text === "Generation stopped.")
       ? current
@@ -928,6 +1112,8 @@ export default function HomeCommandCenter() {
     setFlowAnswers({});
     setFlowStep(0);
     setFlowConfirming(false);
+    setBusinessContext(emptyBusinessContext);
+    setBusinessContextComplete(false);
   };
 
   const openConversation = async (id: string) => {
@@ -949,6 +1135,8 @@ export default function HomeCommandCenter() {
       setFlowAnswers({});
       setFlowStep(0);
       setFlowConfirming(false);
+      setBusinessContext(emptyBusinessContext);
+      setBusinessContextComplete(false);
       setContextOpen(false);
       setHistoryOpen(false);
       setConversationSearch("");
@@ -971,11 +1159,16 @@ export default function HomeCommandCenter() {
     const openingPrompt = flowId === "segment"
       ? prompt || "I want to create a new audience segment. Help me define the right filters and walk me through setting it up."
       : prompt || `Help me with ${flow.title.toLowerCase()}. Ask me what you need, one step at a time.`;
+    const openingResponse = flowId === "journey"
+      ? "Before we define the journey, I’d like to understand your business and product context first."
+      : flow.subtitle;
     setMessages([{ id: `user-${Date.now()}`, role: "user", flow: true, text: openingPrompt }]);
     setActiveFlow(flow);
     setFlowStep(0);
     setFlowAnswers({});
     setFlowConfirming(false);
+    setBusinessContext(aiContext?.businessContext ?? emptyBusinessContext);
+    setBusinessContextComplete(flowId !== "journey");
     setFlowReady(false);
     setOpeningFlow(true);
     const openingRequest = ++openingRequestRef.current;
@@ -983,7 +1176,7 @@ export default function HomeCommandCenter() {
       assistant: selectedAgent as AiAssistantId,
       title: conversationTitle(openingPrompt, flow.title),
       flowId: flow.id,
-      opening: { prompt: openingPrompt, response: flow.subtitle },
+      opening: { prompt: openingPrompt, response: openingResponse },
     }).then((conversation) => {
       if (openingRequest !== openingRequestRef.current) {
         setConversationId(conversation.id);
@@ -991,7 +1184,7 @@ export default function HomeCommandCenter() {
         return;
       }
       setConversationId(conversation.id);
-      setMessages((current) => [...current, { id: `assistant-${Date.now()}`, role: "assistant", text: flow.subtitle, flow: true }]);
+      setMessages((current) => [...current, { id: `assistant-${Date.now()}`, role: "assistant", text: openingResponse, flow: true }]);
       setOpeningFlow(false);
       setFlowReady(true);
       void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "ai", "context"] });
@@ -1000,6 +1193,44 @@ export default function HomeCommandCenter() {
       setActiveFlow(null);
       setOpeningFlow(false);
     });
+  };
+
+  const updateBusinessContext = async (input: AiBusinessContextUpdate) => {
+    if (!projectId) throw new Error("Select a project before saving business context.");
+    setBusinessContextSaving(true);
+    try {
+      const updated = await aiApi.updateBusinessContext(projectId, input);
+      setBusinessContext(updated);
+      queryClient.setQueryData<AiProjectContext>(["projects", projectId, "ai", "context"], (current) => current ? { ...current, businessContext: updated } : current);
+      return updated;
+    } finally {
+      setBusinessContextSaving(false);
+    }
+  };
+
+  const analyzeBusinessContext = async (kind: "website" | "app", url: string) => {
+    if (!projectId) throw new Error("Select a project before analyzing business context.");
+    setBusinessContextSaving(true);
+    try {
+      const updated = await aiApi.analyzeBusinessContext(projectId, { kind, url });
+      setBusinessContext(updated);
+      queryClient.setQueryData<AiProjectContext>(["projects", projectId, "ai", "context"], (current) => current ? { ...current, businessContext: updated } : current);
+      return updated;
+    } finally {
+      setBusinessContextSaving(false);
+    }
+  };
+
+  const completeBusinessContext = (updated: AiBusinessContext) => {
+    setBusinessContext(updated);
+    setBusinessContextComplete(true);
+    setFlowStep(0);
+    setMessages((current) => [...current, {
+      id: `assistant-business-context-${Date.now()}`,
+      role: "assistant",
+      text: "Thanks — I now understand your business, product and audience context. I’ll use this information to recommend the right journey purpose, trigger, audience and channels. Let’s define the journey.",
+      flow: true,
+    }]);
   };
 
   const advanceFlow = (skip = false) => {
@@ -1056,6 +1287,7 @@ export default function HomeCommandCenter() {
     setActiveFlow(null);
     setFlowReady(false);
     setFlowConfirming(false);
+    setBusinessContextComplete(false);
     setMessages((current) => [...current, { id: `assistant-${Date.now()}`, role: "assistant", text: "No problem — I paused that setup. You can start it again whenever you’re ready.", flow: true }]);
   };
 
@@ -1263,7 +1495,8 @@ export default function HomeCommandCenter() {
           </Stack>;
         })}
         {thinking && <Stack direction="row" gap={1.5} alignItems="center" className="chat-thinking" role="status" aria-live="polite"><Box className="chat-agent-mark is-thinking"><Image src={agentAvatar} alt={`${selectedAgent} avatar`} width={38} height={38} /></Box><Box className="chat-thinking-copy"><Typography>Thinking<span className="thinking-dots">…</span></Typography><Box className="thinking-bars" aria-hidden><span /><span /><span /></Box></Box></Stack>}
-        {activeFlow && flowReady && !flowConfirming && <GuidedFlowCard flow={activeFlow} steps={visibleFlowSteps} step={flowStep} answers={flowAnswers} onSelect={(value) => setFlowAnswers((current) => ({ ...current, [flowStep]: value }))} onNext={() => advanceFlow()} onBack={() => setFlowStep((current) => Math.max(0, current - 1))} onSkip={() => advanceFlow(true)} onCancel={cancelFlow} onContinueWithoutAudience={continueJourneyWithoutAudience} sdkIntegrated={sdkIntegrated} paywallEventsReady={paywallEventsReady} eventActionReady={eventActionReady} pushReady={pushReady} pushUnavailableReason={pushUnavailableReason} purposeRecommendation={purposeRecommendation} />}
+        {activeFlow?.id === "journey" && flowReady && !flowConfirming && !businessContextComplete && <BusinessContextCard key={`business-context-${conversationId ?? "new"}`} context={businessContext} loading={contextQuery.isPending} saving={businessContextSaving} onUpdate={updateBusinessContext} onAnalyze={analyzeBusinessContext} onComplete={completeBusinessContext} onCancel={cancelFlow} />}
+        {activeFlow && flowReady && !flowConfirming && (activeFlow.id !== "journey" || businessContextComplete) && <GuidedFlowCard flow={activeFlow} steps={visibleFlowSteps} step={flowStep} answers={flowAnswers} onSelect={(value) => setFlowAnswers((current) => ({ ...current, [flowStep]: value }))} onNext={() => advanceFlow()} onBack={() => setFlowStep((current) => Math.max(0, current - 1))} onSkip={() => advanceFlow(true)} onCancel={cancelFlow} onContinueWithoutAudience={continueJourneyWithoutAudience} sdkIntegrated={sdkIntegrated} paywallEventsReady={paywallEventsReady} eventActionReady={eventActionReady} pushReady={pushReady} pushUnavailableReason={pushUnavailableReason} purposeRecommendation={purposeRecommendation} />}
         {activeFlow?.id === "journey" && flowConfirming && <JourneySummaryCard steps={visibleFlowSteps} answers={flowAnswers} onApprove={approveJourney} onBack={() => { setFlowConfirming(false); setFlowReady(true); }} onCancel={cancelFlow} />}
       </Stack>
       <Box className="chat-composer-area">{composer("chat-composer")}<Typography className="chat-disclaimer">{selectedAgent} can make mistakes. Check important growth decisions.</Typography></Box>

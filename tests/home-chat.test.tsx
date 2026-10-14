@@ -8,7 +8,7 @@ import { aiApi } from '@/lib/projects/ai';
 vi.mock('next/image', () => ({ default: ({ alt }: { alt: string }) => <img alt={alt} /> }));
 vi.mock('@/hooks/projects/use-active-project', () => ({ useActiveProject: () => ({ projects: [], active: { id: 'p1', name: 'Acme' }, isPending: false }) }));
 vi.mock('@/hooks/auth/use-current-user', () => ({ useCurrentUser: () => ({ account: { name: 'Kamran Ahsan' } }) }));
-vi.mock('@/lib/projects/ai', () => ({ aiApi: { catalog: vi.fn(), context: vi.fn(), conversations: vi.fn(), deleteConversation: vi.fn(), chat: vi.fn(), regenerate: vi.fn(), flowDraft: vi.fn(), flowCreate: vi.fn(), createConversation: vi.fn(), cancelConversation: vi.fn(), conversation: vi.fn() } }));
+vi.mock('@/lib/projects/ai', () => ({ aiApi: { catalog: vi.fn(), context: vi.fn(), businessContext: vi.fn(), updateBusinessContext: vi.fn(), analyzeBusinessContext: vi.fn(), conversations: vi.fn(), deleteConversation: vi.fn(), chat: vi.fn(), regenerate: vi.fn(), flowDraft: vi.fn(), flowCreate: vi.fn(), createConversation: vi.fn(), cancelConversation: vi.fn(), conversation: vi.fn() } }));
 
 const api = vi.mocked(aiApi);
 const reply = (message: string) => ({ conversationId: 'c1', assistant: 'Max', provider: 'rules', message, nextActions: [], evidence: [], context: { generatedAt: '' } }) as never;
@@ -200,5 +200,37 @@ describe('Home chat', () => {
 
     expect(api.deleteConversation).toHaveBeenCalledWith('p1', 'c11');
     await waitFor(() => expect(screen.queryByText('Delete me')).not.toBeInTheDocument());
+  });
+
+  it('collects business context before showing the journey questions', async () => {
+    const user = userEvent.setup();
+    api.context.mockResolvedValue({
+      project: { id: 'p1', name: 'Acme', description: null, audience: { totalUsers: 0, reachableByEmail: 0, reachableByPush: 0, reachableByBoth: 0, reachableByEither: 0, reachableByNeither: 0, inactive14Days: 0, active30Days: 0 }, activity: { knownEvents: [] }, lifecycle: [], campaigns: { email: 0, push: 0, total: 0 }, journeys: { total: 0 }, activitySummary: { total: 0, last30Days: 0 }, generatedAt: '' },
+      businessContext: { businessDescription: null, websiteUrl: null, websiteTitle: null, websiteSummary: null, websiteAnalyzedAt: null, hasMobileApp: null, appStoreUrl: null, googlePlayUrl: null, appName: null, appSummary: null, appAnalyzedAt: null, updatedAt: null },
+      recentConversations: [],
+      latestInsight: { title: 'Insight', message: 'Message', metric: { key: 'users', value: 0 }, actions: [] },
+      handoffHistory: [],
+    } as never);
+    api.updateBusinessContext.mockImplementation(async (_projectId, input) => ({
+      businessDescription: typeof input.businessDescription === 'string' ? input.businessDescription : null,
+      websiteUrl: null, websiteTitle: null, websiteSummary: null, websiteAnalyzedAt: null,
+      hasMobileApp: input.hasMobileApp ?? null, appStoreUrl: null, googlePlayUrl: null, appName: null, appSummary: null, appAnalyzedAt: null, updatedAt: null,
+    } as never));
+    api.createConversation.mockResolvedValue({ id: 'c1' } as never);
+    render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><HomeCommandCenter /></QueryClientProvider>);
+
+    await user.click(await screen.findByRole('button', { name: /Create journey/ }));
+    expect(await screen.findByRole('heading', { name: 'Tell me about your business' })).toBeInTheDocument();
+    await user.type(screen.getByLabelText('Business or product description'), 'A subscription app for teams.');
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(await screen.findByLabelText('Website URL')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Skip' }));
+    expect(await screen.findByText('Do you have an iOS or Android app?')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /No app yet/ }));
+    expect(await screen.findByText('Review your business context')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Continue to journey' }));
+
+    expect(await screen.findByText(/Thanks — I now understand your business, product and audience context\./)).toBeInTheDocument();
+    expect(await screen.findByText('What is the purpose of this journey?')).toBeInTheDocument();
   });
 });

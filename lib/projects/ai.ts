@@ -86,7 +86,7 @@ export interface AiInsight {
 }
 
 export interface AiProjectSnapshot {
-  project: { id: string; name: string };
+  project: { id: string; name: string; description: string | null };
   audience: {
     totalUsers: number;
     reachableByEmail: number;
@@ -105,8 +105,26 @@ export interface AiProjectSnapshot {
   generatedAt: string;
 }
 
+export interface AiBusinessContext {
+  businessDescription: string | null;
+  websiteUrl: string | null;
+  websiteTitle: string | null;
+  websiteSummary: string | null;
+  websiteAnalyzedAt: string | null;
+  hasMobileApp: boolean | null;
+  appStoreUrl: string | null;
+  googlePlayUrl: string | null;
+  appName: string | null;
+  appSummary: string | null;
+  appAnalyzedAt: string | null;
+  updatedAt: string | null;
+}
+
+export type AiBusinessContextUpdate = Partial<Omit<AiBusinessContext, "updatedAt" | "websiteAnalyzedAt" | "appAnalyzedAt">>;
+
 export interface AiProjectContext {
   project: AiProjectSnapshot;
+  businessContext: AiBusinessContext;
   recentConversations: AiConversationPreview[];
   latestInsight: AiInsight;
   handoffHistory: Array<{ assistant: AiAssistantId; action: string; status: string }>;
@@ -159,6 +177,16 @@ export const aiApi = {
     authRequest<AiCatalog>(at(projectId, "/assistants"), undefined, BASE),
   context: (projectId: string) =>
     authRequest<AiProjectContext>(at(projectId, "/context"), undefined, BASE),
+  businessContext: (projectId: string) =>
+    authRequest<AiBusinessContext>(at(projectId, "/business-context"), undefined, BASE),
+  updateBusinessContext: (
+    projectId: string,
+    input: AiBusinessContextUpdate,
+  ) => authRequest<AiBusinessContext>(at(projectId, "/business-context"), input, BASE, "PATCH"),
+  analyzeBusinessContext: (
+    projectId: string,
+    input: { kind: "website" | "app"; url: string },
+  ) => authRequest<AiBusinessContext>(at(projectId, "/business-context/analyze"), input, BASE, "POST"),
   chat: (
     projectId: string,
     input: { assistant: AiAssistantId; prompt: string; conversationId?: string },
