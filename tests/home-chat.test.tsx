@@ -216,6 +216,7 @@ describe('Home chat', () => {
       websiteUrl: null, websiteTitle: null, websiteSummary: null, websiteAnalyzedAt: null,
       hasMobileApp: input.hasMobileApp ?? null, appStoreUrl: null, googlePlayUrl: null, appName: null, appSummary: null, appAnalyzedAt: null, updatedAt: null,
     } as never));
+    api.analyzeBusinessContext.mockRejectedValueOnce({ status: 422, message: 'The public page could not be reached.' });
     api.createConversation.mockResolvedValue({ id: 'c1' } as never);
     render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><HomeCommandCenter /></QueryClientProvider>);
 
@@ -223,7 +224,11 @@ describe('Home chat', () => {
     expect(await screen.findByRole('heading', { name: 'Tell me about your business' })).toBeInTheDocument();
     expect(await screen.findByLabelText('Website URL')).toBeInTheDocument();
     expect(screen.queryByRole('textbox', { name: 'Message Max' })).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText('Website URL'), 'www.example.com');
+    await user.click(screen.getByRole('button', { name: 'Analyze & continue' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('The public page could not be reached.');
     await user.click(screen.getByRole('button', { name: 'Skip' }));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     await user.type(screen.getByLabelText('Business or product description'), 'A subscription app for teams.');
     await user.click(screen.getByRole('button', { name: 'Continue' }));
     expect(await screen.findByText('Do you have an iOS or Android app?')).toBeInTheDocument();

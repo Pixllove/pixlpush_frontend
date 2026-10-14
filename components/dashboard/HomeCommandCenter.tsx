@@ -418,6 +418,11 @@ function BusinessContextCard({
     return updated;
   };
 
+  const goToPhase = (next: BusinessContextPhase) => {
+    setError(null);
+    setPhase(next);
+  };
+
   const saveDescriptionAndContinue = async () => {
     try {
       await applyUpdate({ businessDescription: description.trim() || null });
@@ -428,7 +433,7 @@ function BusinessContextCard({
   };
 
   const analyzeWebsiteAndContinue = async () => {
-    if (!websiteUrl.trim()) return setPhase("app-choice");
+    if (!websiteUrl.trim()) return goToPhase("description");
     try {
       const updated = await onAnalyze("website", websiteUrl.trim());
       setDraft(updated);
@@ -486,13 +491,13 @@ function BusinessContextCard({
     {phase === "description" && <Box>
       <Typography className="guided-flow-question">What does your business or product do?</Typography>
       <TextField fullWidth multiline minRows={3} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Describe the product, service, or experience you offer." label="Business or product description" inputProps={{ maxLength: 2_000 }} />
-      <Stack direction="row" justifyContent="flex-end" gap={.75} sx={{ mt: 1.5 }}><Button className="guided-flow-secondary" onClick={() => setPhase("website")} disabled={saving}>Skip</Button><Button className="guided-flow-next" variant="contained" onClick={() => void saveDescriptionAndContinue()} disabled={saving}>{saving ? "Saving…" : "Continue"}</Button></Stack>
+      <Stack direction="row" justifyContent="flex-end" gap={.75} sx={{ mt: 1.5 }}><Button className="guided-flow-secondary" onClick={() => goToPhase("app-choice")} disabled={saving}>Skip</Button><Button className="guided-flow-next" variant="contained" onClick={() => void saveDescriptionAndContinue()} disabled={saving}>{saving ? "Saving…" : "Continue"}</Button></Stack>
     </Box>}
 
     {phase === "website" && <Box>
       <Typography className="guided-flow-question"><LinkRounded fontSize="small" sx={{ mr: .5, verticalAlign: "middle" }} />What is your website?</Typography>
       <TextField fullWidth value={websiteUrl} onChange={(event) => setWebsiteUrl(event.target.value)} placeholder="https://example.com" label="Website URL" type="url" helperText="I’ll read the public page and save only the relevant business context." />
-      <Stack direction="row" justifyContent="flex-end" gap={.75} sx={{ mt: 1.5 }}><Button className="guided-flow-secondary" onClick={() => setPhase("description")} disabled={saving}>Skip</Button><Button className="guided-flow-next" variant="contained" onClick={() => void analyzeWebsiteAndContinue()} disabled={saving || !websiteUrl.trim()}>{saving ? "Analyzing…" : "Analyze & continue"}</Button></Stack>
+      <Stack direction="row" justifyContent="flex-end" gap={.75} sx={{ mt: 1.5 }}><Button className="guided-flow-secondary" onClick={() => goToPhase("description")} disabled={saving}>Skip</Button><Button className="guided-flow-next" variant="contained" onClick={() => void analyzeWebsiteAndContinue()} disabled={saving || !websiteUrl.trim()}>{saving ? "Analyzing…" : "Analyze & continue"}</Button></Stack>
     </Box>}
 
     {phase === "app-choice" && <Box>
@@ -500,13 +505,13 @@ function BusinessContextCard({
       <Stack gap={1}>
         {[{ label: "Yes, we have an app", value: true, description: "I’ll use its public App Store or Google Play listing." }, { label: "No app yet", value: false, description: "Continue with website and product context only." }].map((choice) => <ButtonBase key={choice.label} className="guided-flow-choice" onClick={() => void saveAppChoiceAndContinue(choice.value)} disabled={saving}><span className="guided-choice-check">{draft.hasMobileApp === choice.value && <CheckRounded />}</span><Box className="guided-choice-copy"><Typography>{choice.label}</Typography><span>{choice.description}</span></Box></ButtonBase>)}
       </Stack>
-      <Stack direction="row" justifyContent="flex-end" gap={.75} sx={{ mt: 1.5 }}><Button className="guided-flow-secondary" onClick={() => setPhase("review")} disabled={saving}>Skip</Button></Stack>
+      <Stack direction="row" justifyContent="flex-end" gap={.75} sx={{ mt: 1.5 }}><Button className="guided-flow-secondary" onClick={() => goToPhase("review")} disabled={saving}>Skip</Button></Stack>
     </Box>}
 
     {phase === "app-link" && <Box>
       <Typography className="guided-flow-question">Share the App Store or Google Play link</Typography>
       <TextField fullWidth value={appListingUrl} onChange={(event) => setAppListingUrl(event.target.value)} placeholder="https://apps.apple.com/... or https://play.google.com/..." label="App Store or Google Play link" type="url" helperText="Share one public listing link; I’ll detect which store it belongs to." />
-      <Stack direction="row" justifyContent="flex-end" gap={.75} sx={{ mt: 1.5 }}><Button className="guided-flow-secondary" onClick={() => setPhase("review")} disabled={saving}>Skip</Button><Button className="guided-flow-next" variant="contained" onClick={() => void analyzeAppAndContinue()} disabled={saving || !appListingUrl.trim()}>{saving ? "Analyzing…" : "Analyze & continue"}</Button></Stack>
+      <Stack direction="row" justifyContent="flex-end" gap={.75} sx={{ mt: 1.5 }}><Button className="guided-flow-secondary" onClick={() => goToPhase("review")} disabled={saving}>Skip</Button><Button className="guided-flow-next" variant="contained" onClick={() => void analyzeAppAndContinue()} disabled={saving || !appListingUrl.trim()}>{saving ? "Analyzing…" : "Analyze & continue"}</Button></Stack>
     </Box>}
 
     {phase === "review" && <Box>
