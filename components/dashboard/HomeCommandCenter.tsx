@@ -1,7 +1,7 @@
 "use client";
 
 import { AddRounded, ArrowForwardRounded, ArrowUpwardRounded, AutoAwesomeRounded, AutoGraphRounded, CampaignRounded, CheckRounded, CloseRounded, ContentCopyRounded, DeleteOutlineRounded, EditOutlined, ExpandMoreRounded, HistoryRounded, InsightsRounded, PeopleAltOutlined, PsychologyRounded, ReplayRounded, RouteRounded, SearchRounded, StopRounded, TrendingDownRounded } from "@mui/icons-material";
-import { Box, Button, ButtonBase, Dialog, DialogContent, DialogTitle, IconButton, InputBase, Menu, MenuItem, Stack, Tooltip, Typography } from "@mui/material";
+import { Alert, Box, Button, ButtonBase, Dialog, DialogContent, DialogTitle, IconButton, InputBase, Menu, MenuItem, Stack, Tooltip, Typography } from "@mui/material";
 import Image from "next/image";
 import { useDeferredValue, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -9,6 +9,8 @@ import { useCurrentUser } from "@/hooks/auth/use-current-user";
 import { useActiveProject } from "@/hooks/projects/use-active-project";
 import { accountGreetingName } from "@/lib/auth/display-name";
 import { aiApi, type AiAssistantId, type AiConversationMessage, type AiConversationPreview, type AiCreatedResource, type AiFlowId, type AiFlowDraftResponse, type AiResourceType } from "@/lib/projects/ai";
+import { audienceGroupsApi, firebaseApi, lifecycleSegmentsApi, sdkKeyApi } from "@/lib/projects/api";
+import type { AudienceGroup, LifecycleSegment } from "@/types/project";
 import DeleteConfirmDialog from "@/components/dashboard/DeleteConfirmDialog";
 
 /** `flow` marks a guided-flow turn (it is re-run, not edited); `error` an answer that never arrived, so nothing was stored for it. */
@@ -22,8 +24,9 @@ type ChatMessage = {
   createdResources?: AiCreatedResource[];
 };
 type DraftInput = { flowId: AiFlowId; answers: Record<string, string>; conversationId?: string };
-type FlowChoice = { label: string; description: string };
+type FlowChoice = { label: string; description: string; disabled?: boolean };
 type GuidedFlow = { id: AiFlowId; title: string; subtitle: string; steps: Array<{ question: string; choices: FlowChoice[] }> };
+type FlowStep = GuidedFlow["steps"][number];
 
 const prompts = [
   ["What should I work on today?", AutoAwesomeRounded],
@@ -75,25 +78,27 @@ const guidedFlows: GuidedFlow[] = [
   {
     id: "journey",
     title: "New journey",
-    subtitle: "I’ll help you map the audience, trigger and next steps for this journey.",
+    subtitle: "I’ll understand your goal, audience and channels before recommending the journey.",
     steps: [
+      { question: "What is the purpose of this journey?", choices: [
+        { label: "Engagement", description: "Bring users back and encourage meaningful activity." },
+        { label: "Retention", description: "Keep users active and reduce churn." },
+        { label: "Paywall drop-off", description: "Help users who viewed or left a paywall." },
+        { label: "Upsell", description: "Guide users toward a higher-value plan or feature." },
+        { label: "Onboarding", description: "Help new users reach their first success." },
+        { label: "Something else?", description: "Describe the outcome you want." },
+      ] },
       { question: "What should start this journey?", choices: [
         { label: "An event or action", description: "Start when a user does something important." },
-        { label: "Audience entry", description: "Start when someone joins a saved segment." },
-        { label: "A schedule", description: "Begin on a date or recurring schedule." },
+        { label: "Audience group entry", description: "Start when someone joins a saved audience group." },
+        { label: "Lifecycle segment entry", description: "Start when someone joins a saved lifecycle segment." },
+        { label: "All reachable users", description: "Use with caution. This targets all users reachable by email or push. Choose an audience group or lifecycle segment for more control." },
         { label: "Something else?", description: "Describe the moment that should start it." },
       ] },
-      { question: "Who should enter it?", choices: [
-        { label: "All reachable users", description: "Make the journey available to your full audience." },
-        { label: "A saved segment", description: "Use an audience you have already defined." },
-        { label: "Users matching a behavior", description: "Bring in users based on their activity." },
-        { label: "Something else?", description: "Tell Max who this journey is for." },
-      ] },
-      { question: "What should happen first?", choices: [
-        { label: "Send a push", description: "Deliver a timely notification." },
-        { label: "Send an email", description: "Start with a detailed email message." },
-        { label: "Wait or branch", description: "Create a delay, split or decision point." },
-        { label: "Something else?", description: "Describe the first step you need." },
+      { question: "Which channels should we use?", choices: [
+        { label: "Email", description: "Use email for richer, detailed communication." },
+        { label: "Push", description: "Use push for timely, direct notifications." },
+        { label: "Multichannel", description: "Push first, with email fallback when push cannot reach the user." },
       ] },
     ],
   },
@@ -181,6 +186,69 @@ const guidedFlows: GuidedFlow[] = [
     ],
   },
 ];
+
+function relevantJourneyEvents(purpose?: string) {
+  if (purpose === "Engagement") return ["app_closed", "session_ended"];
+  if (purpose === "Retention") return ["app_opened", "session_started", "user_engagement", "purchase_completed", "subscription_started"];
+  if (purpose === "Upsell") return ["purchase_completed", "plan_viewed", "feature_limit_reached", "subscription_started"];
+  if (purpose === "Onboarding") return ["account_created", "signup_completed", "onboarding_started", "profile_created"];
+  return [];
+}
+
+function journeyStepsFor(answers: Record<number, string>, groups: AudienceGroup[], segments: LifecycleSegment[], sdkIntegrated: boolean, paywallEventsReady: boolean, knownEvents: Set<string>, pushReady: boolean): FlowStep[] {
+  const base = guidedFlows.find((flow) => flow.id === "journey")!.steps;
+  const trigger = answers[1];
+  const steps = base.slice();
+  const paywallDropOff = answers[0] === "Paywall drop-off";
+  const purposeEvents = relevantJourneyEvents(answers[0]);
+  const hasRelevantEvents = purposeEvents.length === 0 || purposeEvents.some((event) => knownEvents.has(event));
+  if (paywallDropOff) {
+    steps[1] = {
+      ...steps[1],
+      choices: [{
+        label: "Lifecycle segment entry",
+        description: "Required for detecting paywall drop-off users.",
+        disabled: !sdkIntegrated || !paywallEventsReady,
+      }],
+    };
+  } else {
+    steps[1] = {
+      ...steps[1],
+      choices: steps[1].choices.map((choice) => choice.label === "Lifecycle segment entry"
+        ? { ...choice, disabled: !sdkIntegrated }
+        : choice.label === "An event or action"
+          ? { ...choice, disabled: !sdkIntegrated || !hasRelevantEvents }
+        : choice),
+    };
+  }
+  if (trigger === "Audience group entry") {
+    steps.splice(2, 0, {
+      question: "Which audience group should this journey use?",
+      choices: [
+        { label: "Create a new audience group", description: "Define a new audience for this journey." },
+        ...groups.map((group) => ({ label: group.name, description: "Choose this existing audience group." })),
+      ],
+    });
+  } else if (sdkIntegrated && trigger === "Lifecycle segment entry") {
+    steps.splice(2, 0, {
+      question: "Which lifecycle segment should this journey use?",
+      choices: [
+        { label: "Create a new lifecycle segment", description: "Define a new lifecycle segment for this journey." },
+        ...segments.map((segment) => ({ label: segment.name, description: "Choose this existing lifecycle segment." })),
+      ],
+    });
+  }
+  const channelStepIndex = steps.findIndex((step) => step.question === "Which channels should we use?");
+  if (channelStepIndex >= 0) {
+    steps[channelStepIndex] = {
+      ...steps[channelStepIndex],
+      choices: steps[channelStepIndex].choices.map((choice) => choice.label === "Push" || choice.label === "Multichannel"
+        ? { ...choice, disabled: !pushReady }
+        : choice),
+    };
+  }
+  return steps;
+}
 
 type CreationFlowId = Exclude<AiFlowId, "engagement">;
 
@@ -275,39 +343,88 @@ function CreatedResourceActions({ resources }: { resources: AiCreatedResource[] 
     <Typography className="chat-created-copy">Open the new draft in its workspace to review and finish it.</Typography>
     <Stack gap={.75} className="chat-created-list">
       {resources.map((resource) => <Stack key={`${resource.type}-${resource.id}`} direction={{ xs: "column", sm: "row" }} alignItems={{ sm: "center" }} justifyContent="space-between" gap={1} className="chat-created-row">
-        <Box sx={{ minWidth: 0 }}><Typography className="chat-created-name" noWrap>{resource.name}</Typography><Typography className="chat-created-type">{resource.type === "audience-group" ? "Audience group" : resource.type === "segment" ? "Lifecycle segment" : resource.type === "journey" ? "Journey" : `${resource.channel === "push" ? "Push" : "Email"} campaign`}</Typography></Box>
+        <Box sx={{ minWidth: 0 }}><Typography className="chat-created-name" noWrap>{resource.name}</Typography><Typography className="chat-created-type">{resource.type === "audience-group" ? "Audience group" : resource.type === "segment" ? "Lifecycle segment" : resource.type === "journey" ? "Journey" : `${resource.channel === "both" ? "Multichannel" : resource.channel === "push" ? "Push" : "Email"} campaign`}</Typography></Box>
         <Button size="small" variant="outlined" href={resourceHref(resource)} endIcon={<ArrowForwardRounded />}>Open</Button>
       </Stack>)}
     </Stack>
   </Box>;
 }
 
-function GuidedFlowCard({ flow, step, answers, onSelect, onNext, onBack, onSkip, onCancel }: {
-  flow: GuidedFlow; step: number; answers: Record<number, string>; onSelect: (value: string) => void;
-  onNext: () => void; onBack: () => void; onSkip: () => void; onCancel: () => void;
+function GuidedFlowCard({ flow, steps, step, answers, onSelect, onNext, onBack, onSkip, onCancel, onContinueWithoutAudience, sdkIntegrated, paywallEventsReady, eventActionReady, pushReady, pushUnavailableReason, purposeRecommendation }: {
+  flow: GuidedFlow; steps: FlowStep[]; step: number; answers: Record<number, string>; onSelect: (value: string) => void;
+  onNext: () => void; onBack: () => void; onSkip: () => void; onCancel: () => void; onContinueWithoutAudience: () => void; sdkIntegrated?: boolean; paywallEventsReady?: boolean; eventActionReady?: boolean; pushReady?: boolean; pushUnavailableReason?: string; purposeRecommendation?: string;
 }) {
-  const current = flow.steps[step];
+  const current = steps[step];
   const selected = answers[step];
+  const [unavailableChoice, setUnavailableChoice] = useState<string | null>(null);
+  const paywallNeedsSetup = flow.id === "journey" && step === 1 && answers[0] === "Paywall drop-off" && (!sdkIntegrated || !paywallEventsReady);
+  const lifecycleUnavailable = flow.id === "journey" && step === 1 && answers[0] !== "Paywall drop-off" && !sdkIntegrated;
+  const eventActionUnavailable = flow.id === "journey" && step === 1 && answers[0] !== "Paywall drop-off" && (!sdkIntegrated || !eventActionReady);
+  const showLifecycleUnavailable = lifecycleUnavailable && unavailableChoice === "Lifecycle segment entry";
+  const showEventActionUnavailable = eventActionUnavailable && unavailableChoice === "An event or action";
+  const showPushUnavailable = flow.id === "journey" && step === steps.length - 1 && unavailableChoice !== null && (unavailableChoice === "Push" || unavailableChoice === "Multichannel") && !pushReady;
+  useEffect(() => setUnavailableChoice(null), [step, answers[0]]);
   return <Box className="guided-flow-card">
     <Typography component="h2" className="guided-flow-title">{flow.title}</Typography>
     <Typography className="guided-flow-subtitle">{flow.subtitle}</Typography>
     <Typography className="guided-flow-question">{current.question}</Typography>
+    {step === 1 && purposeRecommendation && <Alert severity="info" sx={{ mb: 1.25, fontSize: 12 }}>
+      <strong>Recommended:</strong> {purposeRecommendation}{' '}
+      <a className="paywall-doc-link" href="/dashboard/developer-docs/engagement" target="_blank" rel="noreferrer">View developer documentation</a>
+    </Alert>}
     <Stack gap={1}>
-      {current.choices.map((choice) => <ButtonBase key={choice.label} className={`guided-flow-choice ${selected === choice.label ? "is-selected" : ""}`} onClick={() => onSelect(choice.label)}>
-        <span className="guided-choice-check">{selected === choice.label && <CheckRounded />}</span>
-        <Box className="guided-choice-copy"><Typography>{choice.label}</Typography><span>{choice.description}</span></Box>
-      </ButtonBase>)}
+      {current.choices.map((choice) => <Box key={choice.label}>
+        <ButtonBase aria-disabled={choice.disabled || undefined} className={`guided-flow-choice ${selected === choice.label ? "is-selected" : ""}${choice.disabled ? " is-disabled" : ""}`} onClick={() => choice.disabled ? setUnavailableChoice(choice.label) : (setUnavailableChoice(null), onSelect(choice.label))}>
+          <span className="guided-choice-check">{selected === choice.label && <CheckRounded />}</span>
+          <Box className="guided-choice-copy"><Typography>{choice.label}</Typography><span>{choice.description}</span></Box>
+        </ButtonBase>
+        {choice.label === "Lifecycle segment entry" && showLifecycleUnavailable && <Typography component="div" className="sdk-unavailable-message" fontSize={11.5} sx={{ mt: .75, px: 1 }}>
+          Lifecycle segment entry is unavailable until the SDK is integrated.{' '}
+          <a className="paywall-doc-link" href="/dashboard/developer-docs/engagement" target="_blank" rel="noreferrer">View developer documentation</a>
+        </Typography>}
+        {choice.label === "An event or action" && showEventActionUnavailable && <Typography component="div" className="sdk-unavailable-message" fontSize={11.5} sx={{ mt: .75, px: 1 }}>
+          {!sdkIntegrated ? "Event or action is unavailable until the SDK is integrated." : "The SDK is integrated, but no relevant events have been received yet. Ask your developer to add and verify the required events."}{' '}
+          <a className="paywall-doc-link" href="/dashboard/developer-docs/engagement" target="_blank" rel="noreferrer">View developer documentation</a>
+        </Typography>}
+        {(choice.label === "Push" || choice.label === "Multichannel") && showPushUnavailable && <Typography component="div" className="sdk-unavailable-message" fontSize={11.5} sx={{ mt: .75, px: 1 }}>
+          {pushUnavailableReason} <a className="paywall-doc-link" href="/dashboard/settings" target="_blank" rel="noreferrer">Open push settings</a>
+        </Typography>}
+      </Box>)}
     </Stack>
+    {paywallNeedsSetup && <Alert severity="warning" sx={{ mt: 1.5, fontSize: 12 }}>
+      {!sdkIntegrated
+        ? <>Your SDK isn’t integrated yet, so paywall drop-off events aren’t available. Ask your developer to integrate the SDK before using this trigger.</>
+        : <>We haven’t received the events needed to detect paywall drop-off yet. Ask your developer to add them before using this trigger.</>}
+      <Box component="div" sx={{ mt: .5 }}><a className="paywall-doc-link" href="/dashboard/developer-docs/paywall-drop-off" target="_blank" rel="noreferrer">View developer documentation</a></Box>
+      <Typography component="div" fontSize={12} sx={{ mt: .9 }}>You can continue without an audience for now and add the lifecycle segment later.</Typography>
+      <Button className="paywall-continue-button" size="small" variant="outlined" onClick={onContinueWithoutAudience}>Continue without an audience for now</Button>
+    </Alert>}
     <Stack direction="row" alignItems="center" gap={1.5} className="guided-flow-footer">
       <Button className="guided-flow-cancel" onClick={onCancel}>Cancel</Button>
-      <Box className="guided-flow-progress" aria-label={`Step ${step + 1} of ${flow.steps.length}`}>
-        {flow.steps.map((_, index) => <span key={index} className={index === step ? "is-current" : index < step ? "is-done" : ""} />)}
+      <Box className="guided-flow-progress" aria-label={`Step ${step + 1} of ${steps.length}`}>
+        {steps.map((_, index) => <span key={index} className={index === step ? "is-current" : index < step ? "is-done" : ""} />)}
       </Box>
       <Stack direction="row" gap={.75}>
         {step > 0 && <Button className="guided-flow-secondary" onClick={onBack}>Back</Button>}
         <Button className="guided-flow-secondary" onClick={onSkip}>Skip</Button>
-        <Button className="guided-flow-next" variant="contained" disabled={!selected} onClick={onNext}>{step === flow.steps.length - 1 ? "Finish" : "Next"}</Button>
+        <Button className="guided-flow-next" variant="contained" disabled={!selected} onClick={onNext}>{step === steps.length - 1 ? "Review" : "Next"}</Button>
       </Stack>
+    </Stack>
+  </Box>;
+}
+
+function JourneySummaryCard({ steps, answers, onApprove, onBack, onCancel }: { steps: FlowStep[]; answers: Record<number, string>; onApprove: () => void; onBack: () => void; onCancel: () => void }) {
+  return <Box className="guided-flow-card">
+    <Typography component="h2" className="guided-flow-title">Review your journey</Typography>
+    <Typography className="guided-flow-subtitle">Here’s what I’ll use to recommend and create your editable journey draft.</Typography>
+    <Stack gap={1.1} sx={{ mt: 2 }}>
+      {steps.map((step, index) => answers[index] ? <Box key={step.question} sx={{ borderBottom: "1px solid rgba(92, 61, 120, .12)", pb: 1 }}><Typography fontSize={12} color="text.secondary">{step.question}</Typography><Typography fontSize={14} fontWeight={600}>{answers[index]}</Typography></Box> : null)}
+    </Stack>
+    <Typography fontSize={12} color="text.secondary" sx={{ mt: 2 }}>You can continue the conversation afterward to adjust any step or change the journey goal.</Typography>
+    <Stack direction="row" justifyContent="flex-end" gap={.75} sx={{ mt: 2 }}>
+      <Button className="guided-flow-cancel" onClick={onCancel}>Cancel</Button>
+      <Button className="guided-flow-secondary" onClick={onBack}>Edit</Button>
+      <Button className="guided-flow-next" variant="contained" onClick={onApprove}>Approve and create draft</Button>
     </Stack>
   </Box>;
 }
@@ -512,6 +629,7 @@ export default function HomeCommandCenter() {
   const [flowReady, setFlowReady] = useState(false);
   const [flowStep, setFlowStep] = useState(0);
   const [flowAnswers, setFlowAnswers] = useState<Record<number, string>>({});
+  const [flowConfirming, setFlowConfirming] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<string>("Max");
   const activeRequestRef = useRef<AbortController | null>(null);
   const openingRequestRef = useRef(0);
@@ -521,6 +639,25 @@ export default function HomeCommandCenter() {
     queryKey: ["projects", projectId, "ai", "context"],
     queryFn: () => aiApi.context(projectId!),
     enabled: Boolean(projectId),
+    staleTime: 30_000,
+  });
+
+  const audienceGroupsQuery = useQuery({
+    queryKey: ["projects", projectId, "audience-groups"],
+    queryFn: () => audienceGroupsApi.list(projectId!),
+    enabled: Boolean(projectId) && activeFlow?.id === "journey",
+    staleTime: 30_000,
+  });
+  const lifecycleSegmentsQuery = useQuery({
+    queryKey: ["projects", projectId, "lifecycle-segments"],
+    queryFn: () => lifecycleSegmentsApi.list(projectId!),
+    enabled: Boolean(projectId) && activeFlow?.id === "journey",
+    staleTime: 30_000,
+  });
+  const sdkKeysQuery = useQuery({
+    queryKey: ["projects", projectId, "sdk-keys"],
+    queryFn: () => sdkKeyApi.list(projectId!),
+    enabled: Boolean(projectId) && activeFlow?.id === "journey",
     staleTime: 30_000,
   });
 
@@ -647,6 +784,7 @@ export default function HomeCommandCenter() {
         setFlowReady(false);
         setFlowAnswers({});
         setFlowStep(0);
+        setFlowConfirming(false);
         setHistoryOpen(false);
         setConversationSearch("");
       }
@@ -662,6 +800,43 @@ export default function HomeCommandCenter() {
 
   const thinking = openingFlow || chatMutation.isPending || draftMutation.isPending;
   const aiContext = contextQuery.data;
+  const knownEventNames = new Set(aiContext?.project.activity.knownEvents.map((event) => event.name) ?? []);
+  const paywallEventsReady = knownEventNames.has("paywall_viewed") && (knownEventNames.has("purchase_completed") || knownEventNames.has("subscription_started"));
+  const sdkIntegrated = Boolean(sdkKeysQuery.data?.some((key) => key.status === "active"));
+  const firebaseSettingsQuery = useQuery({
+    queryKey: ["projects", projectId, "firebase"],
+    queryFn: () => firebaseApi.get(projectId!),
+    enabled: Boolean(projectId) && activeFlow?.id === "journey",
+    staleTime: 30_000,
+  });
+  const pushReady = sdkIntegrated && firebaseSettingsQuery.data?.status === "connected";
+  const pushUnavailableReason = !sdkIntegrated
+    ? "Push is unavailable until the SDK is integrated."
+    : "Push is unavailable until Firebase / FCM is connected in Settings.";
+  const relevantEvents = relevantJourneyEvents(flowAnswers[0]);
+  const eventActionReady = relevantEvents.length === 0 || relevantEvents.some((event) => knownEventNames.has(event));
+  const engagementEvent = ["app_closed", "session_ended"].find((name) => knownEventNames.has(name));
+  const purpose = flowAnswers[0];
+  const purposeRecommendation = purpose === "Engagement"
+    ? engagementEvent
+      ? `Start with an event or action such as ${engagementEvent}, wait 1 day, then send a push notification to bring the user back.`
+      : "Start with an event or action such as app_closed or session_ended, wait 1 day, then send a push notification to bring the user back once your SDK tracks that event."
+    : purpose === "Retention"
+      ? sdkIntegrated
+        ? "Start with lifecycle segment entry. Use an at-risk or inactive lifecycle segment, then send a message before the user churns."
+        : "Start with lifecycle segment entry after the SDK is integrated. Use an at-risk or inactive lifecycle segment to identify users before they churn."
+      : purpose === "Paywall drop-off"
+        ? undefined
+        : purpose === "Upsell"
+          ? sdkIntegrated
+            ? "Start with lifecycle segment entry. Use a lifecycle segment for existing buyers who are eligible for an upgrade or add-on, then send a message explaining the additional value."
+            : "Start with lifecycle segment entry after the SDK is integrated. Use a lifecycle segment for existing buyers who are eligible for an upgrade or add-on."
+          : purpose === "Onboarding"
+            ? "Start with an event or action when a user signs up or creates an account, then guide them toward their first key action."
+            : undefined;
+  const visibleFlowSteps = activeFlow?.id === "journey"
+    ? journeyStepsFor(flowAnswers, audienceGroupsQuery.data ?? [], lifecycleSegmentsQuery.data ?? [], sdkIntegrated, paywallEventsReady, knownEventNames, pushReady)
+    : activeFlow?.steps ?? [];
 
   useEffect(() => {
     setMessages([]);
@@ -670,6 +845,7 @@ export default function HomeCommandCenter() {
     setFlowReady(false);
     setFlowAnswers({});
     setFlowStep(0);
+    setFlowConfirming(false);
     setEditing(null);
     setLastDraft(null);
     setDeletedConversationIds(new Set());
@@ -751,6 +927,7 @@ export default function HomeCommandCenter() {
     setFlowReady(false);
     setFlowAnswers({});
     setFlowStep(0);
+    setFlowConfirming(false);
   };
 
   const openConversation = async (id: string) => {
@@ -771,6 +948,7 @@ export default function HomeCommandCenter() {
       setFlowReady(false);
       setFlowAnswers({});
       setFlowStep(0);
+      setFlowConfirming(false);
       setContextOpen(false);
       setHistoryOpen(false);
       setConversationSearch("");
@@ -797,6 +975,7 @@ export default function HomeCommandCenter() {
     setActiveFlow(flow);
     setFlowStep(0);
     setFlowAnswers({});
+    setFlowConfirming(false);
     setFlowReady(false);
     setOpeningFlow(true);
     const openingRequest = ++openingRequestRef.current;
@@ -827,8 +1006,13 @@ export default function HomeCommandCenter() {
     if (!activeFlow) return;
     void skip;
     const nextStep = flowStep + 1;
-    if (nextStep < activeFlow.steps.length) {
+    if (nextStep < visibleFlowSteps.length) {
       setFlowStep(nextStep);
+      return;
+    }
+    if (activeFlow.id === "journey") {
+      setFlowReady(false);
+      setFlowConfirming(true);
       return;
     }
     const flow = activeFlow;
@@ -841,9 +1025,37 @@ export default function HomeCommandCenter() {
     draftMutation.mutate(input);
   };
 
+  const continueJourneyWithoutAudience = () => {
+    if (!activeFlow || activeFlow.id !== "journey") return;
+    const isPaywallTriggerStep = flowStep === 1 && flowAnswers[0] === "Paywall drop-off";
+    setFlowAnswers((current) => ({
+      ...current,
+      ...(isPaywallTriggerStep ? { [flowStep]: "Lifecycle segment entry", 2: "Continue without an audience — set up later" } : { [flowStep]: "Continue without an audience — set up later" }),
+    }));
+    const nextStep = isPaywallTriggerStep ? flowStep + 2 : flowStep + 1;
+    if (nextStep < visibleFlowSteps.length) {
+      setFlowStep(nextStep);
+      return;
+    }
+    setFlowReady(false);
+    setFlowConfirming(true);
+  };
+
+  const approveJourney = () => {
+    if (!activeFlow || activeFlow.id !== "journey" || !projectId) return;
+    const answers = Object.fromEntries(Object.entries(flowAnswers).map(([step, value]) => [step, value]));
+    const input = { flowId: activeFlow.id, answers, conversationId };
+    setLastDraft(input);
+    setActiveFlow(null);
+    setFlowReady(false);
+    setFlowConfirming(false);
+    draftMutation.mutate(input);
+  };
+
   const cancelFlow = () => {
     setActiveFlow(null);
     setFlowReady(false);
+    setFlowConfirming(false);
     setMessages((current) => [...current, { id: `assistant-${Date.now()}`, role: "assistant", text: "No problem — I paused that setup. You can start it again whenever you’re ready.", flow: true }]);
   };
 
@@ -1051,7 +1263,8 @@ export default function HomeCommandCenter() {
           </Stack>;
         })}
         {thinking && <Stack direction="row" gap={1.5} alignItems="center" className="chat-thinking" role="status" aria-live="polite"><Box className="chat-agent-mark is-thinking"><Image src={agentAvatar} alt={`${selectedAgent} avatar`} width={38} height={38} /></Box><Box className="chat-thinking-copy"><Typography>Thinking<span className="thinking-dots">…</span></Typography><Box className="thinking-bars" aria-hidden><span /><span /><span /></Box></Box></Stack>}
-        {activeFlow && flowReady && <GuidedFlowCard flow={activeFlow} step={flowStep} answers={flowAnswers} onSelect={(value) => setFlowAnswers((current) => ({ ...current, [flowStep]: value }))} onNext={() => advanceFlow()} onBack={() => setFlowStep((current) => Math.max(0, current - 1))} onSkip={() => advanceFlow(true)} onCancel={cancelFlow} />}
+        {activeFlow && flowReady && !flowConfirming && <GuidedFlowCard flow={activeFlow} steps={visibleFlowSteps} step={flowStep} answers={flowAnswers} onSelect={(value) => setFlowAnswers((current) => ({ ...current, [flowStep]: value }))} onNext={() => advanceFlow()} onBack={() => setFlowStep((current) => Math.max(0, current - 1))} onSkip={() => advanceFlow(true)} onCancel={cancelFlow} onContinueWithoutAudience={continueJourneyWithoutAudience} sdkIntegrated={sdkIntegrated} paywallEventsReady={paywallEventsReady} eventActionReady={eventActionReady} pushReady={pushReady} pushUnavailableReason={pushUnavailableReason} purposeRecommendation={purposeRecommendation} />}
+        {activeFlow?.id === "journey" && flowConfirming && <JourneySummaryCard steps={visibleFlowSteps} answers={flowAnswers} onApprove={approveJourney} onBack={() => { setFlowConfirming(false); setFlowReady(true); }} onCancel={cancelFlow} />}
       </Stack>
       <Box className="chat-composer-area">{composer("chat-composer")}<Typography className="chat-disclaimer">{selectedAgent} can make mistakes. Check important growth decisions.</Typography></Box>
     </Box>}

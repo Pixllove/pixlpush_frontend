@@ -13,7 +13,7 @@ export interface AiCreatedResource {
   type: AiResourceType;
   id: string;
   name: string;
-  channel?: "email" | "push";
+  channel?: "email" | "push" | "both";
   status: "draft";
   href: string;
 }

@@ -1,7 +1,7 @@
 export type LegalSection = { heading: string; body: string };
 export type LegalDocument = { title: string; description: string; version: string; effectiveDate: string; sections: LegalSection[] };
 
-export const LEGAL_DOCUMENTS: Record<string, LegalDocument> = {
+const BASE_LEGAL_DOCUMENTS: Record<string, LegalDocument> = {
   "privacy": { title: "Privacy Policy", description: "How PixlPush processes personal data in connection with its websites, accounts and services.", version: "2.0", effectiveDate: "13 October 2026", sections: [
     { heading: "Overview", body: "Version 2.0\n\nThis Privacy Policy explains how PIXLLOVE SOCIAL MEDIA APPLICATIONS DEVELOPMENT AND MANAGEMENT L.L.C. (“PixlPush”, “we”, “us” or “our”) processes personal data in connection with the PixlPush websites, applications, software-as-a-service platform, APIs, SDKs, customer support and related services.\n\nPixlPush is a business-to-business customer engagement platform that enables customers to manage audiences, analytics, automations, email, mobile push and in-app communications. This Policy applies both to personal data that PixlPush processes for its own business purposes and to Customer Data that PixlPush processes on behalf of its business customers." },
     { heading: "1. Who we are and how to contact us", body: "The operator and contracting party for PixlPush is:\n\nPIXLLOVE SOCIAL MEDIA APPLICATIONS DEVELOPMENT AND MANAGEMENT L.L.C.\n\nBuilding Name – ALSUAIDI / Plot Number 247-0 / Property Number 1F01\n\nDubai, United Arab Emirates\n\nPrivacy contact: contact@pixl-develop.com\n\nTelephone: +971 52 993 7054\n\nPixl-develop is a brand or development designation and is not a separate operator or contracting party for PixlPush.\n\nFor privacy requests, complaints or questions about this Policy, please contact us using the details above. If you use PixlPush on behalf of one of our customers, that customer may be the responsible controller for your personal data. In that case, please contact the relevant customer first." },
@@ -253,3 +253,34 @@ export const LEGAL_DOCUMENTS: Record<string, LegalDocument> = {
     { heading: "7. Legal documents", body: "The PixlPush Legal Hub contains the following applicable and supplementary documents:\n\n• PixlPush – Terms of Service\n• PixlPush – Privacy Policy\n• PixlPush – Cookie Policy\n• PixlPush – Acceptable Use Policy\n• PixlPush – Anti-Spam Policy\n• PixlPush – AI Policy\n• PixlPush – Security & Privacy\n• PixlPush – GDPR & Compliance Overview\n• PixlPush – Data Processing Addendum (DPA)\n• PixlPush – Software Lifecycle & Versioning Policy\n• PixlPush – Responsible Disclosure Policy\n• PixlPush – Subprocessor & Provider List\n• PixlPush – Legal Notice\n• PixlPush – SDK Terms & End-User License Agreement\n\nThis Legal Notice is effective from the date stated above and should be read together with the current PixlPush Legal Hub documents." },
   ] },
 };
+
+const AI_CONTROL_SECTIONS: Record<string, LegalSection> = {
+  privacy: {
+    heading: "12.1. AI feature controls",
+    body: "AI features are optional and are controlled at workspace level by the workspace administrator. When AI features are disabled for a workspace, PixlPush will not send new prompts, source material, Customer Data or other workspace content to an AI provider for optional AI features. This does not affect processing that is strictly necessary for security, abuse prevention, legal compliance or another separately disclosed purpose. Disabling AI does not automatically delete historical AI records; deletion remains subject to the applicable retention and deletion rules in this Policy and the DPA."
+  },
+  terms: {
+    heading: "22.1. AI feature controls",
+    body: "AI-assisted features are optional. A workspace administrator may disable them for the relevant workspace. Once disabled, PixlPush will not process new workspace content through optional AI features or send it to an AI provider, except where processing is strictly necessary for security, abuse prevention, legal compliance or another separately disclosed purpose. The Customer is responsible for configuring the workspace setting and informing Authorized Users of the applicable restrictions."
+  },
+  "ai-policy": {
+    heading: "8. Workspace AI control",
+    body: "AI features are optional and should be controlled through a workspace-level administrator setting. When the setting is disabled, optional AI features must not receive new prompts, source material, Customer Data or other workspace content. Disabling AI does not delete historical prompts or outputs automatically; deletion follows the Privacy Policy, DPA and applicable retention rules. Re-enabling AI is an affirmative administrator action."
+  },
+  dpa: {
+    heading: "5.6. Customer control of optional AI processing",
+    body: "AI-assisted processing is optional and subject to the Customer’s workspace configuration and documented instructions. Where the Customer disables optional AI features for a workspace, PixlPush will not send new Customer Personal Data or other Customer Data from that workspace to an AI provider for those features. This restriction does not prevent processing required for security, abuse prevention, legal compliance or another separately documented purpose. Historical AI records remain subject to the deletion and retention provisions of this DPA."
+  },
+  security: {
+    heading: "9. AI feature control",
+    body: "PixlPush provides a workspace-level administrative control for optional AI-assisted features. Disabling the control prevents new optional AI requests from sending workspace content to an AI provider. PixlPush applies this setting as a service-control measure; it does not by itself delete historical records, which remain subject to the applicable retention and deletion controls."
+  }
+};
+
+export const LEGAL_DOCUMENTS: Record<string, LegalDocument> = Object.fromEntries(
+  Object.entries(BASE_LEGAL_DOCUMENTS).map(([slug, document]) => {
+    const addition = AI_CONTROL_SECTIONS[slug];
+    if (!addition) return [slug, document];
+    return [slug, { ...document, version: (Number(document.version) + 0.1).toFixed(1), sections: [...document.sections, addition] }];
+  }),
+) as Record<string, LegalDocument>;

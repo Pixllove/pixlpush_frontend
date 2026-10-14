@@ -1619,6 +1619,15 @@ footer > div > div > div:first-child > p { display: none; }
 .guided-flow-subtitle { margin-top: 5px !important; color: #8a7d96; font-size: 13px !important; line-height: 1.5 !important; }
 .guided-flow-question { margin: 22px 0 11px !important; color: #554965; font-size: 14px !important; font-weight: 600 !important; }
 .guided-flow-choice { width: 100%; align-items: flex-start !important; justify-content: flex-start !important; gap: 12px; padding: 13px 14px !important; border: 1px solid #ebe5f0 !important; border-radius: 11px !important; background: #fff !important; text-align: left !important; transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease !important; }
+.guided-flow-choice.is-disabled { opacity: .58; filter: saturate(.55); cursor: not-allowed !important; }
+.guided-flow-choice.is-disabled:hover { border-color: #ebe5f0 !important; background: #fff !important; transform: none; }
+.paywall-doc-link { color: #7046c8; font-weight: 650; text-decoration: underline; text-underline-offset: 2px; }
+.paywall-doc-link:hover { color: #4f2d9b; }
+.sdk-unavailable-message { color: #b42318; }
+.sdk-unavailable-message .paywall-doc-link { color: #1976d2; }
+.sdk-unavailable-message .paywall-doc-link:hover { color: #115293; }
+.paywall-continue-button { margin-top: 10px !important; color: #7046c8 !important; border-color: rgba(112,70,200,.45) !important; font-weight: 650 !important; text-transform: none !important; }
+.paywall-continue-button:hover { border-color: #7046c8 !important; background: rgba(112,70,200,.06) !important; }
 .guided-flow-choice:hover { border-color: #bca5df !important; background: #fcfaff !important; transform: translateY(-1px); }
 .guided-flow-choice.is-selected { border-color: #7951d2 !important; background: #fbf8ff !important; box-shadow: 0 0 0 2px rgba(121,81,210,.1); }
 .guided-choice-check { display: grid; width: 19px; height: 19px; flex: 0 0 auto; margin-top: 1px; place-items: center; color: transparent; border: 1px solid #d8cfdf; border-radius: 5px; background: #fff; }
