@@ -2,22 +2,33 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import HomeCommandCenter from '@/components/dashboard/HomeCommandCenter';
+import HomeCommandCenter, { detectCreationFlow } from '@/components/dashboard/HomeCommandCenter';
 import { aiApi } from '@/lib/projects/ai';
 
 vi.mock('next/image', () => ({ default: ({ alt }: { alt: string }) => <img alt={alt} /> }));
 vi.mock('@/hooks/projects/use-active-project', () => ({ useActiveProject: () => ({ projects: [], active: { id: 'p1', name: 'Acme' }, isPending: false }) }));
 vi.mock('@/hooks/auth/use-current-user', () => ({ useCurrentUser: () => ({ account: { name: 'Kamran Ahsan' } }) }));
-vi.mock('@/lib/projects/ai', () => ({ aiApi: { catalog: vi.fn(), context: vi.fn(), chat: vi.fn(), regenerate: vi.fn(), flowDraft: vi.fn(), conversation: vi.fn() } }));
+vi.mock('@/lib/projects/ai', () => ({ aiApi: { catalog: vi.fn(), context: vi.fn(), chat: vi.fn(), regenerate: vi.fn(), flowDraft: vi.fn(), flowCreate: vi.fn(), createConversation: vi.fn(), cancelConversation: vi.fn(), conversation: vi.fn() } }));
 
 const api = vi.mocked(aiApi);
 const reply = (message: string) => ({ conversationId: 'c1', assistant: 'Max', provider: 'rules', message, nextActions: [], evidence: [], context: { generatedAt: '' } }) as never;
+
+describe('creation command matching', () => {
+  it('recognises natural phrasing and common typos for every creation type', () => {
+    expect(detectCreationFlow('create a journey')).toBe('journey');
+    expect(detectCreationFlow('please make a compaign')).toBe('campaigns');
+    expect(detectCreationFlow('can you create an audience grpup')).toBe('audience-group');
+    expect(detectCreationFlow('I need a lifecycle segement')).toBe('segment');
+    expect(detectCreationFlow('how many users are active')).toBeNull();
+  });
+});
 
 describe('Home chat', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     api.catalog.mockReturnValue(new Promise(() => {}));
     api.context.mockReturnValue(new Promise(() => {}));
+    api.createConversation.mockResolvedValue({ id: 'c1' } as never);
   });
 
   it('retries a failed message as a new turn, then retries and edits a stored one in place', async () => {
@@ -31,14 +42,14 @@ describe('Home chat', () => {
     api.chat.mockResolvedValueOnce(reply('You have 12 users.'));
     await user.click(screen.getByRole('button', { name: 'Try again' }));
     expect(await screen.findByText('You have 12 users.')).toBeInTheDocument();
-    expect(api.chat).toHaveBeenLastCalledWith('p1', { assistant: 'Max', prompt: 'how many users do I have', conversationId: undefined });
+    expect(api.chat).toHaveBeenLastCalledWith('p1', { assistant: 'Max', prompt: 'how many users do I have', conversationId: 'c1' }, expect.any(AbortSignal));
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 
     // The answer is stored now: Retry replaces that turn on the server.
     api.regenerate.mockResolvedValueOnce(reply('12 users, 9 reachable.'));
     await user.click(screen.getByRole('button', { name: 'Retry answer' }));
     expect(await screen.findByText('12 users, 9 reachable.')).toBeInTheDocument();
-    expect(api.regenerate).toHaveBeenLastCalledWith('p1', 'c1', { assistant: 'Max', prompt: 'how many users do I have' });
+    expect(api.regenerate).toHaveBeenLastCalledWith('p1', 'c1', { assistant: 'Max', prompt: 'how many users do I have' }, expect.any(AbortSignal));
     expect(screen.queryByText('You have 12 users.')).not.toBeInTheDocument();
 
     // Edit rewrites the same message; an older backend without the route falls back to a plain turn.
@@ -49,8 +60,8 @@ describe('Home chat', () => {
     await user.clear(editor);
     await user.type(editor, 'how many are inactive{Enter}');
     expect(await screen.findByText('3 users are inactive.')).toBeInTheDocument();
-    expect(api.regenerate).toHaveBeenLastCalledWith('p1', 'c1', { assistant: 'Max', prompt: 'how many are inactive' });
-    expect(api.chat).toHaveBeenLastCalledWith('p1', { assistant: 'Max', prompt: 'how many are inactive', conversationId: 'c1' });
+    expect(api.regenerate).toHaveBeenLastCalledWith('p1', 'c1', { assistant: 'Max', prompt: 'how many are inactive' }, expect.any(AbortSignal));
+    expect(api.chat).toHaveBeenLastCalledWith('p1', { assistant: 'Max', prompt: 'how many are inactive', conversationId: 'c1' }, expect.any(AbortSignal));
     expect(screen.queryByText('how many users do I have')).not.toBeInTheDocument();
 
     const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue();

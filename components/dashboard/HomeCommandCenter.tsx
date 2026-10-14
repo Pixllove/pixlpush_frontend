@@ -8,10 +8,18 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCurrentUser } from "@/hooks/auth/use-current-user";
 import { useActiveProject } from "@/hooks/projects/use-active-project";
 import { accountGreetingName } from "@/lib/auth/display-name";
-import { aiApi, type AiAssistantId, type AiFlowId, type AiFlowDraftResponse } from "@/lib/projects/ai";
+import { aiApi, type AiAssistantId, type AiCreatedResource, type AiFlowId, type AiFlowDraftResponse, type AiResourceType } from "@/lib/projects/ai";
 
 /** `flow` marks a guided-flow turn (it is re-run, not edited); `error` an answer that never arrived, so nothing was stored for it. */
-type ChatMessage = { id: string; role: "user" | "assistant"; text: string; flow?: boolean; error?: boolean };
+type ChatMessage = {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  flow?: boolean;
+  error?: boolean;
+  suggestedFlow?: Exclude<AiFlowId, "engagement">;
+  createdResources?: AiCreatedResource[];
+};
 type DraftInput = { flowId: AiFlowId; answers: Record<string, string>; conversationId?: string };
 type FlowChoice = { label: string; description: string };
 type GuidedFlow = { id: AiFlowId; title: string; subtitle: string; steps: Array<{ question: string; choices: FlowChoice[] }> };
@@ -173,6 +181,106 @@ const guidedFlows: GuidedFlow[] = [
   },
 ];
 
+type CreationFlowId = Exclude<AiFlowId, "engagement">;
+
+const creationFlowMeta: Record<CreationFlowId, { label: string; description: string; action: string }> = {
+  campaigns: { label: "campaign", description: "Create a message for a specific audience and channel.", action: "Open campaign drafts" },
+  journey: { label: "journey", description: "Map the trigger, audience and next steps for an automated flow.", action: "Open journeys" },
+  segment: { label: "segment", description: "Define filters for a focused, reusable audience.", action: "Open segments" },
+  "audience-group": { label: "audience group", description: "Organize users around a shared goal or behavior.", action: "Open audience groups" },
+};
+
+function editDistance(left: string, right: string) {
+  const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+  for (let row = 1; row <= left.length; row += 1) {
+    const current = [row];
+    for (let column = 1; column <= right.length; column += 1) {
+      current[column] = Math.min(
+        current[column - 1] + 1,
+        previous[column] + 1,
+        previous[column - 1] + (left[row - 1] === right[column - 1] ? 0 : 1),
+      );
+    }
+    for (let column = 0; column <= right.length; column += 1) previous[column] = current[column];
+  }
+  return previous[right.length];
+}
+
+function hasNearToken(tokens: string[], target: string) {
+  return tokens.some((token) => token === target || (token.length >= 5 && editDistance(token, target) <= 1));
+}
+
+/** Recognises ordinary phrasing and common typos before the request reaches the general chat route. */
+export function detectCreationFlow(value: string): CreationFlowId | null {
+  const normalized = value.toLowerCase().replace(/[’']/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+  if (!normalized) return null;
+  const tokens = normalized.split(/\s+/);
+  const hasCreationIntent = /\b(create|make|build|start|setup|set up|draft|prepare|launch|add|new)\b/.test(normalized)
+    || /\b(i need|id like|i want|help me with|can you)\b/.test(normalized);
+  if (!hasCreationIntent) return null;
+
+  const hasAudienceGroup = (hasNearToken(tokens, "audience") && hasNearToken(tokens, "group"))
+    || /audience\s*group/.test(normalized)
+    || /targeting\s+group/.test(normalized);
+  if (hasAudienceGroup) return "audience-group";
+  if (hasNearToken(tokens, "campaign") || hasNearToken(tokens, "compaign")) return "campaigns";
+  if (hasNearToken(tokens, "journey") || hasNearToken(tokens, "automation")) return "journey";
+  if (hasNearToken(tokens, "segment") || /lifecycle\s+audience/.test(normalized)) return "segment";
+  return null;
+}
+
+function flowForResource(resourceType: AiResourceType): CreationFlowId {
+  return resourceType === "campaign" ? "campaigns" : resourceType;
+}
+
+function resourceHref(resource: AiCreatedResource) {
+  const params = new URLSearchParams({ highlight: resource.id });
+  if (resource.type === "journey") return `/dashboard/journeys?${params}`;
+  if (resource.type === "segment") return `/dashboard/users?tab=segments&${params}`;
+  if (resource.type === "audience-group") return `/dashboard/users?tab=groups&${params}`;
+  return `/dashboard/${resource.channel === "push" ? "push" : "email"}?tab=drafts&${params}`;
+}
+
+function flowHref(flow: CreationFlowId) {
+  if (flow === "journey") return "/dashboard/journeys";
+  if (flow === "segment") return "/dashboard/users?tab=segments";
+  if (flow === "audience-group") return "/dashboard/users?tab=groups";
+  return "/dashboard/email?tab=drafts";
+}
+
+function CreationOptions({ flow, onStart, onOpen }: { flow: CreationFlowId; onStart: () => void; onOpen: () => void }) {
+  const meta = creationFlowMeta[flow];
+  return <Box className="chat-creation-options">
+    <Stack direction="row" alignItems="flex-start" justifyContent="space-between" gap={2}>
+      <Box>
+        <Typography className="chat-creation-options-title">I can help you create a {meta.label}.</Typography>
+        <Typography className="chat-creation-options-copy">{meta.description}</Typography>
+      </Box>
+      <AutoAwesomeRounded className="chat-creation-options-icon" aria-hidden />
+    </Stack>
+    <Stack direction={{ xs: "column", sm: "row" }} gap={1} className="chat-creation-options-actions">
+      <Button variant="contained" onClick={onStart}>Use guided setup</Button>
+      <Button variant="outlined" onClick={onOpen}>{meta.action}</Button>
+    </Stack>
+  </Box>;
+}
+
+function CreatedResourceActions({ resources }: { resources: AiCreatedResource[] }) {
+  return <Box className="chat-created-resources" role="status" aria-live="polite">
+    <Stack direction="row" alignItems="center" gap={1}>
+      <CheckRounded className="chat-created-check" />
+      <Typography className="chat-created-title">Draft created</Typography>
+    </Stack>
+    <Typography className="chat-created-copy">Open the new draft in its workspace to review and finish it.</Typography>
+    <Stack gap={.75} className="chat-created-list">
+      {resources.map((resource) => <Stack key={`${resource.type}-${resource.id}`} direction={{ xs: "column", sm: "row" }} alignItems={{ sm: "center" }} justifyContent="space-between" gap={1} className="chat-created-row">
+        <Box sx={{ minWidth: 0 }}><Typography className="chat-created-name" noWrap>{resource.name}</Typography><Typography className="chat-created-type">{resource.type === "audience-group" ? "Audience group" : resource.type === "segment" ? "Lifecycle segment" : resource.type === "journey" ? "Journey" : `${resource.channel === "push" ? "Push" : "Email"} campaign`}</Typography></Box>
+        <Button size="small" variant="outlined" href={resourceHref(resource)} endIcon={<ArrowForwardRounded />}>Open</Button>
+      </Stack>)}
+    </Stack>
+  </Box>;
+}
+
 function GuidedFlowCard({ flow, step, answers, onSelect, onNext, onBack, onSkip, onCancel }: {
   flow: GuidedFlow; step: number; answers: Record<number, string>; onSelect: (value: string) => void;
   onNext: () => void; onBack: () => void; onSkip: () => void; onCancel: () => void;
@@ -289,12 +397,6 @@ export default function HomeCommandCenter() {
   const openingRequestRef = useRef(0);
   const [, agentRole, , agentAvatar] = agents.find(([name]) => name === selectedAgent) ?? agents[0];
 
-  const catalogQuery = useQuery({
-    queryKey: ["projects", projectId, "ai", "catalog"],
-    queryFn: () => aiApi.catalog(projectId!),
-    enabled: Boolean(projectId),
-    staleTime: 5 * 60_000,
-  });
   const contextQuery = useQuery({
     queryKey: ["projects", projectId, "ai", "context"],
     queryFn: () => aiApi.context(projectId!),
@@ -340,9 +442,13 @@ export default function HomeCommandCenter() {
     },
     onSuccess: (response) => {
       setConversationId(response.conversationId);
+      const createdResources = response.createdResources ?? [];
+      const suggestedFlow = response.creationIntent && !createdResources.length
+        ? flowForResource(response.creationIntent.resourceType)
+        : undefined;
       setMessages((current) => response.cancelled
         ? current.some((message) => message.text === "Generation stopped.") ? current : [...current, { id: `assistant-stopped-${Date.now()}`, role: "assistant", text: response.message }]
-        : [...current, { id: `assistant-${Date.now()}`, role: "assistant", text: response.message }]);
+        : [...current, { id: `assistant-${Date.now()}`, role: "assistant", text: response.message, suggestedFlow, createdResources }]);
       void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "ai", "context"] });
       if (response.createdResources?.length) {
         // The AI endpoint creates only editable drafts. Refresh the resource
@@ -378,8 +484,17 @@ export default function HomeCommandCenter() {
     onSuccess: (response) => {
       if (response.cancelled) return;
       setConversationId(response.conversationId);
-      setMessages((current) => [...current, { id: `assistant-${Date.now()}`, role: "assistant", text: draftMessage(response), flow: true }]);
+      const createdResources = response.createdResources ?? [];
+      setMessages((current) => [...current, { id: `assistant-${Date.now()}`, role: "assistant", text: draftMessage(response), flow: true, createdResources }]);
       void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "ai", "context"] });
+      for (const resource of createdResources) {
+        const key = resource.type === "journey"
+          ? "journeys"
+          : resource.type === "campaign"
+            ? resource.channel === "push" ? "push-campaigns" : "email-campaigns"
+            : resource.type === "segment" ? "lifecycle-segments" : "audience-groups";
+        void queryClient.invalidateQueries({ queryKey: ["projects", projectId, key] });
+      }
     },
     onError: (error) => {
       if ((error as { code?: string } | null)?.code === "ABORTED") return;
@@ -411,6 +526,13 @@ export default function HomeCommandCenter() {
     setMessages((current) => [...current, { id: `user-${Date.now()}`, role: "user", text }]);
     setDraft("");
     setEditing(null);
+    const creationFlow = detectCreationFlow(text);
+    if (creationFlow) {
+      // Creation commands are routed into the same guided setup as the four home cards.
+      // This prevents the general chat route from creating an empty draft before the user has supplied details.
+      startFlow(creationFlow, text);
+      return;
+    }
     chatMutation.mutate({ prompt: text, conversationId });
   };
 
@@ -457,12 +579,12 @@ export default function HomeCommandCenter() {
     } catch { /* clipboard blocked by the browser: nothing was copied, so nothing is confirmed */ }
   };
 
-  const startFlow = (flowId: string) => {
+  const startFlow = (flowId: string, prompt?: string) => {
     const flow = guidedFlows.find((item) => item.id === flowId);
-    if (!flow || !projectId || thinking || (catalogQuery.data && !catalogQuery.data.flows.includes(flowId as AiFlowId))) return;
+    if (!flow || !projectId || thinking) return;
     const openingPrompt = flowId === "segment"
-      ? "I want to create a new audience segment. Help me define the right filters and walk me through setting it up."
-      : `Help me with ${flow.title.toLowerCase()}. Ask me what you need, one step at a time.`;
+      ? prompt || "I want to create a new audience segment. Help me define the right filters and walk me through setting it up."
+      : prompt || `Help me with ${flow.title.toLowerCase()}. Ask me what you need, one step at a time.`;
     setMessages([{ id: `user-${Date.now()}`, role: "user", flow: true, text: openingPrompt }]);
     setActiveFlow(flow);
     setFlowStep(0);
@@ -613,6 +735,12 @@ export default function HomeCommandCenter() {
             <Box>
               <Typography className="chat-agent-name">{selectedAgent} <span>{agentRole}</span></Typography>
               <Typography className="chat-response" role={message.error ? "alert" : undefined}>{message.text}</Typography>
+              {!message.error && message.suggestedFlow && <CreationOptions
+                flow={message.suggestedFlow}
+                onStart={() => startFlow(message.suggestedFlow!)}
+                onOpen={() => { window.location.assign(flowHref(message.suggestedFlow!)); }}
+              />}
+              {!message.error && message.createdResources?.length ? <CreatedResourceActions resources={message.createdResources} /> : null}
               <Stack direction="row" alignItems="center" className={`chat-actions${isLast ? " is-pinned" : ""}`}>
                 {message.error
                   ? retry && <Button size="small" variant="outlined" startIcon={<ReplayRounded />} onClick={retry}>Try again</Button>

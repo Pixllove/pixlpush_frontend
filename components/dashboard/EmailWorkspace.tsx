@@ -14,6 +14,7 @@ import ZoomInRounded from "@mui/icons-material/ZoomInRounded";
 import ZoomOutRounded from "@mui/icons-material/ZoomOutRounded";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   AddRounded,
   FormatAlignCenterRounded,
@@ -503,8 +504,12 @@ const dragLibrary: Record<DragCategory, LibraryItem[]> = {
 export default function EmailWorkspace() {
   const { active: activeProject } = useActiveProject();
   const queryClient = useQueryClient();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const highlightedId = searchParams.get("highlight");
+  const requestedTab = searchParams.get("tab");
   const [items, setItems] = useState<EmailItem[]>([]);
-  const [tab, setTab] = useState<TabId>("templates");
+  const [tab, setTab] = useState<TabId>(requestedTab === "send" || requestedTab === "drafts" || requestedTab === "templates" ? requestedTab : "templates");
   const [query, setQuery] = useState("");
   // What the server was last asked for; the list is also filtered on `query` at once from what is loaded.
   const [appliedQuery, setAppliedQuery] = useState("");
@@ -655,6 +660,15 @@ export default function EmailWorkspace() {
   // isPending, not isLoading: before the Project is known the query has not started, and that is still loading,
   // not an empty list.
   const isListLoading = activeListQuery.isPending || (activeListQuery.isFetching && !activeListQuery.data);
+  useEffect(() => {
+    if (!highlightedId || !visible.some((item) => item.id === highlightedId)) return;
+    const frame = window.requestAnimationFrame(() => {
+      const row = Array.from(document.querySelectorAll<HTMLElement>("[data-email-id]")).find((element) => element.dataset.emailId === highlightedId);
+      row?.scrollIntoView({ block: "center", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    });
+    const timer = window.setTimeout(() => router.replace(`/dashboard/email?tab=${tab}`, { scroll: false }), 4600);
+    return () => { window.cancelAnimationFrame(frame); window.clearTimeout(timer); };
+  }, [highlightedId, router, tab, visible]);
   // Loading rows stand in for the rows that were there (two on a first load, the height of the empty state).
   const placeholders = useRef(2);
   if (!isListLoading) placeholders.current = Math.min(Math.max(visible.length, 2), 10);
@@ -948,6 +962,7 @@ export default function EmailWorkspace() {
                     <EmailTableRow
                       key={item.id}
                       item={item}
+                      highlighted={item.id === highlightedId}
                       onEdit={() => open(item)}
                       onDuplicate={() => duplicate(item)}
                       onDelete={() => remove(item)}
@@ -1003,17 +1018,19 @@ export default function EmailWorkspace() {
 }
 function EmailTableRow({
   item,
+  highlighted,
   onEdit,
   onDuplicate,
   onDelete,
 }: {
   item: EmailItem;
+  highlighted?: boolean;
   onEdit: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
 }) {
   return (
-    <TableRow hover>
+    <TableRow hover data-email-id={item.id} className={highlighted ? "is-highlighted" : undefined}>
       <TableCell>
         <Typography fontSize={12} fontWeight={500}>
           {item.name}

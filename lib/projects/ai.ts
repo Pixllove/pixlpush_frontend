@@ -7,6 +7,16 @@ const at = (projectId: string, path = "") =>
 
 export type AiAssistantId = "Max" | "Ben" | "Nova" | "Anna";
 export type AiFlowId = "campaigns" | "journey" | "segment" | "audience-group" | "engagement";
+export type AiResourceType = "journey" | "segment" | "audience-group" | "campaign";
+
+export interface AiCreatedResource {
+  type: AiResourceType;
+  id: string;
+  name: string;
+  channel?: "email" | "push";
+  status: "draft";
+  href: string;
+}
 
 export interface AiAssistant {
   id: AiAssistantId;
@@ -105,18 +115,11 @@ export interface AiChatResponse {
   nextActions: string[];
   evidence: Array<{ label: string; value: string }>;
   creationIntent?: {
-    resourceType: "journey" | "segment" | "audience-group" | "campaign";
+    resourceType: AiResourceType;
     name: string;
     channel?: "email" | "push" | "both";
   };
-  createdResources?: Array<{
-    type: "journey" | "segment" | "audience-group" | "campaign";
-    id: string;
-    name: string;
-    channel?: "email" | "push";
-    status: "draft";
-    href: string;
-  }>;
+  createdResources?: AiCreatedResource[];
   context: { generatedAt: string };
 }
 

@@ -676,6 +676,7 @@ export function UsersSection() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const requestedTab = searchParams.get("tab");
+  const highlightedId = searchParams.get("highlight");
   const [tab, setTab] = useState<"users" | "segments" | "groups">(
     requestedTab === "segments" || requestedTab === "groups" ? requestedTab : "users",
   );
@@ -782,6 +783,11 @@ export function UsersSection() {
   useEffect(() => {
     if (requestedTab === "users" || requestedTab === "segments" || requestedTab === "groups") setTab(requestedTab);
   }, [requestedTab]);
+  useEffect(() => {
+    if (!highlightedId) return;
+    const timer = window.setTimeout(() => router.replace(`/dashboard/users?tab=${encodeURIComponent(requestedTab === "segments" || requestedTab === "groups" ? requestedTab : tab)}`, { scroll: false }), 4600);
+    return () => window.clearTimeout(timer);
+  }, [highlightedId, requestedTab, router, tab]);
   const statsQuery = useQuery({
     queryKey: ["projects", "users", "stats", active?.id],
     queryFn: () => userStatsApi.get(active!.id),
@@ -1388,6 +1394,7 @@ export function UsersSection() {
                 rows={segments}
                 totalCount={segments.length}
                 noun="segments"
+                highlightedRowId={highlightedId}
                 empty={listEmpty({ icon: <DonutLargeOutlined />, noun: "segments", description: "Segments group users by where they are in their lifecycle.", search: segmentSearch, onClear: () => setSegmentSearch(""), create: { label: "Create segment", onClick: () => setCreateSegmentOpen(true) } })}
                 showMenu={false}
                 loading={segmentsQuery.isPending || segmentsQuery.isFetching}
@@ -1446,6 +1453,7 @@ export function UsersSection() {
               rows={groups}
               totalCount={groups.length}
               noun="groups"
+                highlightedRowId={highlightedId}
               empty={listEmpty({ icon: <GroupsOutlined />, noun: "audience groups", description: "Groups are saved audiences you can target in campaigns and journeys.", search: groupSearch, onClear: () => setGroupSearch(""), create: { label: "Create group", onClick: () => setCreateGroupOpen(true) } })}
               showMenu={false}
               loading={groupsQuery.isPending || groupsQuery.isFetching}
@@ -1878,7 +1886,10 @@ function EmailSection() {
 function PushSection() {
   const { active } = useActiveProject();
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<"send" | "drafts" | "templates">("templates");
+  const searchParams = useSearchParams();
+  const highlightedId = searchParams.get("highlight");
+  const requestedTab = searchParams.get("tab");
+  const [tab, setTab] = useState<"send" | "drafts" | "templates">(requestedTab === "send" || requestedTab === "drafts" || requestedTab === "templates" ? requestedTab : "templates");
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [composer, setComposer] = useState<"campaign" | "template" | null>(
@@ -1893,6 +1904,11 @@ function PushSection() {
     severity: "success" | "error";
   } | null>(null);
   const [appliedSearch, setAppliedSearch] = useState("");
+  useEffect(() => {
+    if (!highlightedId) return;
+    const timer = window.setTimeout(() => window.history.replaceState(null, "", `/dashboard/push?tab=${tab}`), 4600);
+    return () => window.clearTimeout(timer);
+  }, [highlightedId, tab]);
   const templatesQuery = useQuery({
     queryKey: ["push", "templates", active?.id, page, appliedSearch],
     queryFn: () =>
@@ -2290,6 +2306,7 @@ function PushSection() {
             onRetry: () => activeQuery.refetch(),
           })}
           showMenu={false}
+          highlightedRowId={highlightedId}
           loading={
             activeQuery.isPending ||
             (activeQuery.isFetching && !activeQuery.data) ||
