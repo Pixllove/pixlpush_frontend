@@ -70,6 +70,14 @@ export interface AiConversation {
   updatedAt: string;
 }
 
+export interface AiConversationMessage {
+  id: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+}
+
 export interface AiInsight {
   title: string;
   message: string;
@@ -199,7 +207,7 @@ export const aiApi = {
     signal?: AbortSignal,
   ) => authRequest<AiFlowDraftResponse & { createdResources: NonNullable<AiChatResponse["createdResources"]> }>(at(projectId, `/flows/${encodeURIComponent(flowId)}/create`), input, BASE, undefined, { signal }),
   conversation: (projectId: string, conversationId: string) =>
-    authRequest<{ id: string; messages: Array<{ id: string; role: "user" | "assistant"; content: string; createdAt: string }> }>(
+    authRequest<AiConversation & { messages: AiConversationMessage[] }>(
       at(projectId, `/conversations/${encodeURIComponent(conversationId)}`),
       undefined,
       BASE,

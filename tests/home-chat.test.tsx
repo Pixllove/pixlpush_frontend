@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import HomeCommandCenter, { detectCreationFlow } from '@/components/dashboard/HomeCommandCenter';
+import HomeCommandCenter, { detectCreationFlow, persistedMessageToChatMessage } from '@/components/dashboard/HomeCommandCenter';
 import { aiApi } from '@/lib/projects/ai';
 
 vi.mock('next/image', () => ({ default: ({ alt }: { alt: string }) => <img alt={alt} /> }));
@@ -20,6 +20,35 @@ describe('creation command matching', () => {
     expect(detectCreationFlow('can you create an audience grpup')).toBe('audience-group');
     expect(detectCreationFlow('I need a lifecycle segement')).toBe('segment');
     expect(detectCreationFlow('how many users are active')).toBeNull();
+  });
+
+  it('normalizes older persisted guided-flow JSON into readable messages and resource cards', () => {
+    const userMessage = persistedMessageToChatMessage({
+      id: 'm1',
+      role: 'user',
+      content: JSON.stringify({ flowId: 'campaigns', answers: { '0': 'Something else?', '1': 'Push notification', '2': 'All reachable users' } }),
+      metadata: { kind: 'flow_create', flowId: 'campaigns' },
+      createdAt: '2026-10-14T10:00:00.000Z',
+    });
+    const assistantMessage = persistedMessageToChatMessage({
+      id: 'm2',
+      role: 'assistant',
+      content: JSON.stringify({ type: 'campaign', objective: 'Something else?', channel: 'Push notification', audience: 'All reachable users', status: 'draft' }),
+      metadata: {
+        kind: 'flow_created',
+        flowId: 'campaigns',
+        warnings: ['Created as an editable draft. Nothing has been sent or activated.'],
+        createdResources: [{ type: 'campaign', id: 'campaign-1', name: 'New campaign', channel: 'push', status: 'draft', href: '/dashboard/push?tab=drafts&highlight=campaign-1' }],
+      },
+      createdAt: '2026-10-14T10:00:01.000Z',
+    });
+
+    expect(userMessage.text).toContain('Campaign details');
+    expect(userMessage.text).toContain('Which channel should we use?: Push notification');
+    expect(userMessage.text).not.toContain('{"flowId"');
+    expect(assistantMessage.text).toContain('Campaign draft prepared for All reachable users.');
+    expect(assistantMessage.text).not.toContain('{"type"');
+    expect(assistantMessage.createdResources).toHaveLength(1);
   });
 });
 
@@ -166,7 +195,7 @@ describe('Home chat', () => {
 
     await user.click(screen.getByRole('button', { name: 'Recent conversations' }));
     await user.click(await screen.findByRole('button', { name: 'Delete conversation Delete me' }));
-    expect(screen.getByRole('heading', { name: 'Are you sure you want to delete?' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Are you sure you want to delete this conversation?' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Delete' }));
 
     expect(api.deleteConversation).toHaveBeenCalledWith('p1', 'c11');

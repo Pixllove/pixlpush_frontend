@@ -8,7 +8,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCurrentUser } from "@/hooks/auth/use-current-user";
 import { useActiveProject } from "@/hooks/projects/use-active-project";
 import { accountGreetingName } from "@/lib/auth/display-name";
-import { aiApi, type AiAssistantId, type AiConversationPreview, type AiCreatedResource, type AiFlowId, type AiFlowDraftResponse, type AiResourceType } from "@/lib/projects/ai";
+import { aiApi, type AiAssistantId, type AiConversationMessage, type AiConversationPreview, type AiCreatedResource, type AiFlowId, type AiFlowDraftResponse, type AiResourceType } from "@/lib/projects/ai";
 import DeleteConfirmDialog from "@/components/dashboard/DeleteConfirmDialog";
 
 /** `flow` marks a guided-flow turn (it is re-run, not edited); `error` an answer that never arrived, so nothing was stored for it. */
@@ -350,13 +350,107 @@ function apiMessage(error: unknown, fallback: string) {
   return message || fallback;
 }
 
-function draftMessage(result: AiFlowDraftResponse) {
-  const values = Object.entries(result.draft)
+function objectValue(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function parseJsonObject(value: string) {
+  try {
+    return objectValue(JSON.parse(value));
+  } catch {
+    return {};
+  }
+}
+
+function isFlowId(value: unknown): value is AiFlowId {
+  return guidedFlows.some((flow) => flow.id === value);
+}
+
+function humanizeFlowKey(key: string) {
+  return key.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, (character) => character.toUpperCase());
+}
+
+function flowAnswersMessage(flowId: AiFlowId, answers: Record<string, string>) {
+  const flow = guidedFlows.find((item) => item.id === flowId);
+  const label = flowId === "campaigns" ? "Campaign" : flowId === "journey" ? "Journey" : flowId === "segment" ? "Segment" : flowId === "audience-group" ? "Audience group" : "Engagement";
+  const rows = Object.entries(answers)
+    .filter(([key, value]) => /^\d+$/.test(key) && value.trim())
+    .sort(([left], [right]) => Number(left) - Number(right))
+    .map(([key, value]) => `${flow?.steps[Number(key)]?.question ?? `Step ${Number(key) + 1}`}: ${value.trim()}`);
+  return `${label} details${rows.length ? `\n\n${rows.join("\n")}` : ""}`;
+}
+
+function fallbackFlowSummary(flowId: AiFlowId, draft: Record<string, unknown>) {
+  const label = flowId === "campaigns" ? "Campaign" : flowId === "journey" ? "Journey" : flowId === "segment" ? "Segment" : flowId === "audience-group" ? "Audience group" : "Engagement";
+  const audience = typeof draft.audience === "string" ? draft.audience : typeof draft.targetAudience === "string" ? draft.targetAudience : "the selected audience";
+  return `${label} draft prepared for ${audience}.`;
+}
+
+function flowDraftMessageFromValues(flowId: AiFlowId, draft: Record<string, unknown>, summary?: string, warnings: string[] = []) {
+  const values = Object.entries(draft)
     .filter(([, value]) => ["string", "number", "boolean"].includes(typeof value))
     .slice(0, 6)
-    .map(([key, value]) => `${key}: ${String(value)}`);
-  const warnings = result.warnings.length ? `\n\n${result.warnings.join(" ")}` : "";
-  return `${result.summary}${values.length ? `\n\n${values.join("\n")}` : ""}${warnings}`;
+    .map(([key, value]) => `${humanizeFlowKey(key)}: ${String(value)}`);
+  const warningText = warnings.length ? `\n\n${warnings.join(" ")}` : "";
+  return `${summary?.trim() || fallbackFlowSummary(flowId, draft)}${values.length ? `\n\n${values.join("\n")}` : ""}${warningText}`;
+}
+
+function storedCreatedResources(value: unknown): AiCreatedResource[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const resources = value.flatMap((item) => {
+    const resource = objectValue(item);
+    const type = resource.type;
+    if (!(["journey", "segment", "audience-group", "campaign"] as string[]).includes(String(type)) || typeof resource.id !== "string" || typeof resource.name !== "string") return [];
+    return [{
+      type: type as AiResourceType,
+      id: resource.id,
+      name: resource.name,
+      channel: resource.channel === "push" || resource.channel === "email" ? resource.channel : undefined,
+      status: "draft",
+      href: typeof resource.href === "string" ? resource.href : "",
+    } satisfies AiCreatedResource];
+  });
+  return resources.length ? resources : undefined;
+}
+
+/**
+ * Converts persisted guided-flow JSON from older conversations into the same
+ * readable messages and resource card used by a live Home AI response.
+ */
+export function persistedMessageToChatMessage(message: AiConversationMessage): ChatMessage {
+  const metadata = objectValue(message.metadata);
+  const kind = typeof metadata.kind === "string" ? metadata.kind : "";
+  const flowId = isFlowId(metadata.flowId) ? metadata.flowId : null;
+  if (flowId && (kind === "flow_answers" || kind === "flow_create")) {
+    const parsed = parseJsonObject(message.content);
+    const answers = objectValue(metadata.answers);
+    const storedAnswers = Object.keys(answers).length ? answers : objectValue(parsed.answers);
+    return {
+      id: message.id,
+      role: message.role === "assistant" ? "assistant" : "user",
+      text: flowAnswersMessage(flowId, Object.fromEntries(Object.entries(storedAnswers).filter(([, value]) => typeof value === "string")) as Record<string, string>),
+      flow: true,
+    };
+  }
+  if (flowId && (kind === "flow_draft" || kind === "flow_created")) {
+    const parsed = parseJsonObject(message.content);
+    const storedDraft = objectValue(metadata.draft);
+    const draft = Object.keys(storedDraft).length ? storedDraft : parsed;
+    const warnings = Array.isArray(metadata.warnings) ? metadata.warnings.filter((value): value is string => typeof value === "string") : [];
+    const summary = typeof metadata.summary === "string" ? metadata.summary : undefined;
+    return {
+      id: message.id,
+      role: "assistant",
+      text: flowDraftMessageFromValues(flowId, draft, summary, warnings),
+      flow: true,
+      createdResources: storedCreatedResources(metadata.createdResources),
+    };
+  }
+  return { id: message.id, role: message.role === "assistant" ? "assistant" : "user", text: message.content };
+}
+
+function draftMessage(result: AiFlowDraftResponse) {
+  return flowDraftMessageFromValues(result.flowId, result.draft, result.summary, result.warnings);
 }
 
 function conversationTime(value: string) {
@@ -667,9 +761,10 @@ export default function HomeCommandCenter() {
       const conversation = await aiApi.conversation(projectId, id);
       const loadedMessages = conversation.messages
         .filter((message) => message.role === "user" || message.role === "assistant")
-        .map((message) => ({ id: message.id, role: message.role, text: message.content } as ChatMessage));
+        .map(persistedMessageToChatMessage);
       setMessages(loadedMessages);
       setConversationId(conversation.id);
+      if (agents.some(([name]) => name === conversation.assistant)) setSelectedAgent(conversation.assistant);
       setEditing(null);
       setLastDraft(null);
       setActiveFlow(null);
@@ -989,8 +1084,8 @@ export default function HomeCommandCenter() {
       onClose={() => { if (!deleteConversationMutation.isPending) setDeleteTarget(null); }}
       loading={deleteConversationMutation.isPending}
       onConfirm={() => { if (deleteTarget) deleteConversationMutation.mutate(deleteTarget.id); }}
-      title="Are you sure you want to delete?"
-      description="This action cannot be undone."
+      title="Are you sure you want to delete this conversation?"
+      description="This conversation and all of its messages will be permanently deleted. This action cannot be undone."
     />
   </Box>;
 }
