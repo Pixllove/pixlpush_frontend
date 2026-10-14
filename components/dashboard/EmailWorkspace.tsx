@@ -105,7 +105,6 @@ import { emailApi } from "@/lib/projects/api";
 import type { EmailCampaign, EmailTemplate } from "@/lib/projects/api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import SearchField from "./SearchField";
-import SegmentedTabs from "./SegmentedTabs";
 
 type TabId = "send" | "drafts" | "templates";
 type Editor = "simple" | "drag";
@@ -884,19 +883,33 @@ export default function EmailWorkspace() {
           </Button>
         </Stack>
       </Stack>
-      <SegmentedTabs
+      <Tabs
         value={tab}
-        ariaLabel="Email workspace"
-        onChange={(nextTab) => {
+        aria-label="Email workspace"
+        onChange={(_, nextTab: TabId) => {
           setTab(nextTab);
           void queryClient.invalidateQueries({ queryKey: ["email"], refetchType: "active" });
         }}
-        options={[
-          { value: "send", icon: <SendRounded />, label: <>Send<Chip label={tabCounts?.send ?? sentQuery.data?.total ?? 0} size="small" /></> },
-          { value: "drafts", icon: <EditRounded />, label: <>Drafts<Chip label={tabCounts?.drafts ?? draftsQuery.data?.total ?? 0} size="small" /></> },
-          { value: "templates", icon: <GridViewRounded />, label: <>My Templates<Chip label={templatesQuery.data?.total ?? 0} size="small" /></> },
-        ]}
-      />
+      >
+        <Tab
+          value="send"
+          icon={<SendRounded />}
+          iconPosition="start"
+          label={<>Send<Chip label={tabCounts?.send ?? sentQuery.data?.total ?? 0} size="small" /></>}
+        />
+        <Tab
+          value="drafts"
+          icon={<EditRounded />}
+          iconPosition="start"
+          label={<>Drafts<Chip label={tabCounts?.drafts ?? draftsQuery.data?.total ?? 0} size="small" /></>}
+        />
+        <Tab
+          value="templates"
+          icon={<GridViewRounded />}
+          iconPosition="start"
+          label={<>My Templates<Chip label={templatesQuery.data?.total ?? 0} size="small" /></>}
+        />
+      </Tabs>
       <Card className="saas-card data-panel email-data-panel email-table-panel">
         <Stack
           direction={{ xs: "column", sm: "row" }}
