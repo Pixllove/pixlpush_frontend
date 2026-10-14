@@ -21,11 +21,15 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Enter your password.').max(200),
 });
 
-export const signupSchema = z.object({
+const signupApiSchema = z.object({
   email,
   password: newPassword,
   name: z.string().trim().min(1).max(120).optional(),
-  company: z.string().trim().min(1, 'Enter your company name.').max(160, 'Company name must be at most 160 characters.'),
+  company: z.string().trim().max(160, 'Company name must be at most 160 characters.').optional(),
+});
+
+export const signupSchema = signupApiSchema.extend({
+  legalAccepted: z.boolean().refine(Boolean, 'You must accept the Terms of Service and Privacy Policy before proceeding.'),
 });
 
 export const forgotPasswordSchema = z.object({ email });
@@ -68,7 +72,8 @@ export const verifyEmailSchema = z.object({ token });
 export const resendVerificationSchema = z.object({ email });
 
 export type LoginInput = z.infer<typeof loginSchema>;
-export type SignupInput = z.infer<typeof signupSchema>;
+export type SignupInput = z.infer<typeof signupApiSchema>;
+export type SignupFormInput = z.infer<typeof signupSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
