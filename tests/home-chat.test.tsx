@@ -221,10 +221,10 @@ describe('Home chat', () => {
 
     await user.click(await screen.findByRole('button', { name: /Create journey/ }));
     expect(await screen.findByRole('heading', { name: 'Tell me about your business' })).toBeInTheDocument();
-    await user.type(screen.getByLabelText('Business or product description'), 'A subscription app for teams.');
-    await user.click(screen.getByRole('button', { name: 'Continue' }));
     expect(await screen.findByLabelText('Website URL')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Skip' }));
+    await user.type(screen.getByLabelText('Business or product description'), 'A subscription app for teams.');
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
     expect(await screen.findByText('Do you have an iOS or Android app?')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /No app yet/ }));
     expect(await screen.findByText('Review your business context')).toBeInTheDocument();

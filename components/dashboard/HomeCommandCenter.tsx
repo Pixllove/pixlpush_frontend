@@ -368,8 +368,8 @@ const emptyBusinessContext: AiBusinessContext = {
 };
 
 function firstBusinessContextPhase(context: AiBusinessContext): BusinessContextPhase {
-  if (!context.businessDescription?.trim()) return "description";
   if (!context.websiteUrl?.trim()) return "website";
+  if (!context.businessDescription?.trim()) return "description";
   if (context.hasMobileApp === null) return "app-choice";
   if (context.hasMobileApp && !context.appStoreUrl && !context.googlePlayUrl) return "app-link";
   return "review";
@@ -421,7 +421,7 @@ function BusinessContextCard({
   const saveDescriptionAndContinue = async () => {
     try {
       await applyUpdate({ businessDescription: description.trim() || null });
-      setPhase("website");
+      setPhase("app-choice");
     } catch (cause) {
       setError(apiMessage(cause, "I couldn’t save that business description. Please try again."));
     }
@@ -433,7 +433,7 @@ function BusinessContextCard({
       const updated = await onAnalyze("website", websiteUrl.trim());
       setDraft(updated);
       setWebsiteUrl(updated.websiteUrl ?? websiteUrl.trim());
-      setPhase(updated.hasMobileApp === null ? "app-choice" : firstBusinessContextPhase(updated));
+      setPhase(firstBusinessContextPhase(updated));
     } catch (cause) {
       setError(apiMessage(cause, "I couldn’t analyze that website. Check the URL or skip this question."));
     }
@@ -492,7 +492,7 @@ function BusinessContextCard({
     {phase === "website" && <Box>
       <Typography className="guided-flow-question"><LinkRounded fontSize="small" sx={{ mr: .5, verticalAlign: "middle" }} />What is your website?</Typography>
       <TextField fullWidth value={websiteUrl} onChange={(event) => setWebsiteUrl(event.target.value)} placeholder="https://example.com" label="Website URL" type="url" helperText="I’ll read the public page and save only the relevant business context." />
-      <Stack direction="row" justifyContent="flex-end" gap={.75} sx={{ mt: 1.5 }}><Button className="guided-flow-secondary" onClick={() => setPhase("app-choice")} disabled={saving}>Skip</Button><Button className="guided-flow-next" variant="contained" onClick={() => void analyzeWebsiteAndContinue()} disabled={saving || !websiteUrl.trim()}>{saving ? "Analyzing…" : "Analyze & continue"}</Button></Stack>
+      <Stack direction="row" justifyContent="flex-end" gap={.75} sx={{ mt: 1.5 }}><Button className="guided-flow-secondary" onClick={() => setPhase("description")} disabled={saving}>Skip</Button><Button className="guided-flow-next" variant="contained" onClick={() => void analyzeWebsiteAndContinue()} disabled={saving || !websiteUrl.trim()}>{saving ? "Analyzing…" : "Analyze & continue"}</Button></Stack>
     </Box>}
 
     {phase === "app-choice" && <Box>
