@@ -222,6 +222,7 @@ describe('Home chat', () => {
     await user.click(await screen.findByRole('button', { name: /Create journey/ }));
     expect(await screen.findByRole('heading', { name: 'Tell me about your business' })).toBeInTheDocument();
     expect(await screen.findByLabelText('Website URL')).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'Message Max' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Skip' }));
     await user.type(screen.getByLabelText('Business or product description'), 'A subscription app for teams.');
     await user.click(screen.getByRole('button', { name: 'Continue' }));
@@ -232,5 +233,6 @@ describe('Home chat', () => {
 
     expect(await screen.findByText(/Thanks — I now understand your business, product and audience context\./)).toBeInTheDocument();
     expect(await screen.findByText('What is the purpose of this journey?')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Message Max' })).toBeInTheDocument();
   });
 });

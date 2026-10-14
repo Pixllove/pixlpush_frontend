@@ -976,6 +976,7 @@ export default function HomeCommandCenter() {
   });
 
   const thinking = openingFlow || chatMutation.isPending || draftMutation.isPending;
+  const isBusinessContextStep = activeFlow?.id === "journey" && flowReady && !flowConfirming && !businessContextComplete;
   const aiContext = contextQuery.data;
   const knownEventNames = new Set(aiContext?.project?.activity?.knownEvents?.map((event) => event.name) ?? []);
   const paywallEventsReady = knownEventNames.has("paywall_viewed") && (knownEventNames.has("purchase_completed") || knownEventNames.has("subscription_started"));
@@ -1495,11 +1496,11 @@ export default function HomeCommandCenter() {
           </Stack>;
         })}
         {thinking && <Stack direction="row" gap={1.5} alignItems="center" className="chat-thinking" role="status" aria-live="polite"><Box className="chat-agent-mark is-thinking"><Image src={agentAvatar} alt={`${selectedAgent} avatar`} width={38} height={38} /></Box><Box className="chat-thinking-copy"><Typography>Thinking<span className="thinking-dots">…</span></Typography><Box className="thinking-bars" aria-hidden><span /><span /><span /></Box></Box></Stack>}
-        {activeFlow?.id === "journey" && flowReady && !flowConfirming && !businessContextComplete && <BusinessContextCard key={`business-context-${conversationId ?? "new"}`} context={businessContext} loading={contextQuery.isPending} saving={businessContextSaving} onUpdate={updateBusinessContext} onAnalyze={analyzeBusinessContext} onComplete={completeBusinessContext} onCancel={cancelFlow} />}
+        {isBusinessContextStep && <BusinessContextCard key={`business-context-${conversationId ?? "new"}`} context={businessContext} loading={contextQuery.isPending} saving={businessContextSaving} onUpdate={updateBusinessContext} onAnalyze={analyzeBusinessContext} onComplete={completeBusinessContext} onCancel={cancelFlow} />}
         {activeFlow && flowReady && !flowConfirming && (activeFlow.id !== "journey" || businessContextComplete) && <GuidedFlowCard flow={activeFlow} steps={visibleFlowSteps} step={flowStep} answers={flowAnswers} onSelect={(value) => setFlowAnswers((current) => ({ ...current, [flowStep]: value }))} onNext={() => advanceFlow()} onBack={() => setFlowStep((current) => Math.max(0, current - 1))} onSkip={() => advanceFlow(true)} onCancel={cancelFlow} onContinueWithoutAudience={continueJourneyWithoutAudience} sdkIntegrated={sdkIntegrated} paywallEventsReady={paywallEventsReady} eventActionReady={eventActionReady} pushReady={pushReady} pushUnavailableReason={pushUnavailableReason} purposeRecommendation={purposeRecommendation} />}
         {activeFlow?.id === "journey" && flowConfirming && <JourneySummaryCard steps={visibleFlowSteps} answers={flowAnswers} onApprove={approveJourney} onBack={() => { setFlowConfirming(false); setFlowReady(true); }} onCancel={cancelFlow} />}
       </Stack>
-      <Box className="chat-composer-area">{composer("chat-composer")}<Typography className="chat-disclaimer">{selectedAgent} can make mistakes. Check important growth decisions.</Typography></Box>
+      {!isBusinessContextStep && <Box className="chat-composer-area">{composer("chat-composer")}<Typography className="chat-disclaimer">{selectedAgent} can make mistakes. Check important growth decisions.</Typography></Box>}
     </Box>}
 
     <Menu anchorEl={agentAnchor} open={Boolean(agentAnchor)} onClose={() => setAgentAnchor(null)} className="agent-menu">
