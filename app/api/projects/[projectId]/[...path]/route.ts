@@ -33,13 +33,28 @@ const ALLOWED = [
   "email-deliveries",
   "journeys",
   "analytics",
-  // Home AI workspace: /assistants, /context, /chat, /conversations and
-  // /flows/:flowId/draft. Chat and drafts only return text to review; they
-  // never send or change anything themselves.
+  // Home AI workspace: /assistants, /context, /business-context,
+  // /business-context/analyze, /chat, /conversations and /flows/:flowId/draft.
+  // Chat and drafts only return text to review; they never send or change
+  // anything themselves.
   "ai",
 ];
 
 type Params = { params: { projectId: string; path: string[] } };
+
+function normalizePublicUrl(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return trimmed;
+  if (trimmed.startsWith("//")) return `https:${trimmed}`;
+  return /^[a-z][a-z\d+.-]*:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
+function normalizeBusinessContextAnalyzeBody(path: string[], body: unknown): unknown {
+  if (path[0] !== "ai" || path[1] !== "business-context" || path[2] !== "analyze") return body;
+  if (!body || typeof body !== "object" || Array.isArray(body)) return body;
+  const payload = body as Record<string, unknown>;
+  return typeof payload.url === "string" ? { ...payload, url: normalizePublicUrl(payload.url) } : body;
+}
 
 /** Forwards to /projects/:projectId/<path>. Roles are enforced upstream. */
 async function proxy(request: Request, { params }: Params) {
@@ -67,10 +82,11 @@ async function proxy(request: Request, { params }: Params) {
         : csvType
           ? await request.text()
         : await request.json().catch(() => ({}));
+  const normalizedBody = normalizeBusinessContextAnalyzeBody(params.path, body);
 
   const result = await callBackendWithRefresh(`/projects/${path}${query}`, {
     method: request.method,
-    body,
+    body: normalizedBody,
     contentType: csvType,
   });
   // No body (204 from DELETE): NextResponse.json would throw on a 204.
