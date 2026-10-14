@@ -8,7 +8,7 @@ import { aiApi } from '@/lib/projects/ai';
 vi.mock('next/image', () => ({ default: ({ alt }: { alt: string }) => <img alt={alt} /> }));
 vi.mock('@/hooks/projects/use-active-project', () => ({ useActiveProject: () => ({ projects: [], active: { id: 'p1', name: 'Acme' }, isPending: false }) }));
 vi.mock('@/hooks/auth/use-current-user', () => ({ useCurrentUser: () => ({ account: { name: 'Kamran Ahsan' } }) }));
-vi.mock('@/lib/projects/ai', () => ({ aiApi: { catalog: vi.fn(), context: vi.fn(), chat: vi.fn(), regenerate: vi.fn(), flowDraft: vi.fn(), flowCreate: vi.fn(), createConversation: vi.fn(), cancelConversation: vi.fn(), conversation: vi.fn() } }));
+vi.mock('@/lib/projects/ai', () => ({ aiApi: { catalog: vi.fn(), context: vi.fn(), conversations: vi.fn(), deleteConversation: vi.fn(), chat: vi.fn(), regenerate: vi.fn(), flowDraft: vi.fn(), flowCreate: vi.fn(), createConversation: vi.fn(), cancelConversation: vi.fn(), conversation: vi.fn() } }));
 
 const api = vi.mocked(aiApi);
 const reply = (message: string) => ({ conversationId: 'c1', assistant: 'Max', provider: 'rules', message, nextActions: [], evidence: [], context: { generatedAt: '' } }) as never;
@@ -67,5 +67,109 @@ describe('Home chat', () => {
     const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue();
     await user.click(screen.getAllByRole('button', { name: 'Copy message' }).at(-1)!);
     await waitFor(() => expect(writeText).toHaveBeenCalledWith('3 users are inactive.'));
+  });
+
+  it('searches recent conversations and resumes the selected thread', async () => {
+    const user = userEvent.setup();
+    api.context.mockResolvedValue({
+      recentConversations: [{
+        id: 'c9',
+        assistant: 'Max',
+        title: 'Create a retention journey',
+        flowId: 'journey',
+        createdAt: '2026-10-13T10:00:00.000Z',
+        updatedAt: '2026-10-14T10:00:00.000Z',
+        _count: { messages: 2 },
+        lastMessage: { role: 'assistant', content: 'Earlier answer', createdAt: '2026-10-14T10:00:00.000Z' },
+      }],
+      latestInsight: { title: 'Insight', message: 'Message', metric: { key: 'users', value: 1 }, actions: [] },
+      handoffHistory: [],
+    } as never);
+    api.conversations.mockResolvedValue({
+      items: [{
+        id: 'c9',
+        assistant: 'Max',
+        title: 'Create a retention journey',
+        flowId: 'journey',
+        createdAt: '2026-10-13T10:00:00.000Z',
+        updatedAt: '2026-10-14T10:00:00.000Z',
+        _count: { messages: 2 },
+        lastMessage: { role: 'assistant', content: 'Earlier answer', createdAt: '2026-10-14T10:00:00.000Z' },
+      }],
+      hasMore: false,
+      search: 'retention',
+    } as never);
+    api.conversation.mockResolvedValue({
+      id: 'c9',
+      messages: [
+        { id: 'm1', role: 'user', content: 'Create a retention journey', createdAt: '2026-10-13T10:00:00.000Z' },
+        { id: 'm2', role: 'assistant', content: 'Earlier answer', createdAt: '2026-10-14T10:00:00.000Z' },
+      ],
+    } as never);
+    render(<QueryClientProvider client={new QueryClient()}><HomeCommandCenter /></QueryClientProvider>);
+
+    await user.click(screen.getByRole('button', { name: 'Recent conversations' }));
+    const search = await screen.findByRole('textbox', { name: 'Search conversations' });
+    await user.type(search, 'retention');
+    await user.click(screen.getByRole('button', { name: 'Open conversation Create a retention journey' }));
+
+    expect(api.conversation).toHaveBeenCalledWith('p1', 'c9');
+    expect(await screen.findByText('Earlier answer')).toBeInTheDocument();
+  });
+
+  it('keeps recent conversations searchable when the remote search is unavailable', async () => {
+    const user = userEvent.setup();
+    api.context.mockResolvedValue({
+      recentConversations: [{
+        id: 'c10',
+        assistant: 'Max',
+        title: 'New journey',
+        flowId: 'journey',
+        createdAt: '2026-10-14T10:00:00.000Z',
+        updatedAt: '2026-10-14T10:00:00.000Z',
+        _count: { messages: 2 },
+        lastMessage: { role: 'assistant', content: 'Earlier answer', createdAt: '2026-10-14T10:00:00.000Z' },
+      }],
+      latestInsight: { title: 'Insight', message: 'Message', metric: { key: 'users', value: 1 }, actions: [] },
+      handoffHistory: [],
+    } as never);
+    api.conversations.mockRejectedValue({ status: 500, message: 'Search service unavailable.' });
+    render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><HomeCommandCenter /></QueryClientProvider>);
+
+    await user.click(screen.getByRole('button', { name: 'Recent conversations' }));
+    const search = await screen.findByRole('textbox', { name: 'Search conversations' });
+    await user.type(search, 'New Journey');
+
+    expect(await screen.findByRole('button', { name: 'Open conversation New journey' })).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('Search service unavailable.');
+    expect(screen.queryByText('No matching conversations.')).not.toBeInTheDocument();
+  });
+
+  it('deletes a conversation after confirmation', async () => {
+    const user = userEvent.setup();
+    api.context.mockResolvedValue({
+      recentConversations: [{
+        id: 'c11',
+        assistant: 'Max',
+        title: 'Delete me',
+        flowId: null,
+        createdAt: '2026-10-14T10:00:00.000Z',
+        updatedAt: '2026-10-14T10:00:00.000Z',
+        _count: { messages: 1 },
+        lastMessage: { role: 'user', content: 'Delete me', createdAt: '2026-10-14T10:00:00.000Z' },
+      }],
+      latestInsight: { title: 'Insight', message: 'Message', metric: { key: 'users', value: 1 }, actions: [] },
+      handoffHistory: [],
+    } as never);
+    api.deleteConversation.mockResolvedValue({ conversationId: 'c11', deleted: true } as never);
+    render(<QueryClientProvider client={new QueryClient()}><HomeCommandCenter /></QueryClientProvider>);
+
+    await user.click(screen.getByRole('button', { name: 'Recent conversations' }));
+    await user.click(await screen.findByRole('button', { name: 'Delete conversation Delete me' }));
+    expect(screen.getByRole('heading', { name: 'Are you sure you want to delete?' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+
+    expect(api.deleteConversation).toHaveBeenCalledWith('p1', 'c11');
+    await waitFor(() => expect(screen.queryByText('Delete me')).not.toBeInTheDocument());
   });
 });

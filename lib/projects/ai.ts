@@ -105,6 +105,12 @@ export interface AiProjectContext {
   catalog?: AiCatalog;
 }
 
+export interface AiConversationListResponse {
+  items: AiConversationPreview[];
+  hasMore: boolean;
+  search: string | null;
+}
+
 export interface AiChatResponse {
   conversationId: string;
   assistant: AiAssistantId;
@@ -155,6 +161,17 @@ export const aiApi = {
     input: { assistant: AiAssistantId; title?: string; flowId?: AiFlowId; opening?: { prompt: string; response?: string } },
     signal?: AbortSignal,
   ) => authRequest<AiConversation>(at(projectId, "/conversations"), input, BASE, undefined, { signal }),
+  conversations: (projectId: string, search?: string) => {
+    const query = search?.trim() ? `?search=${encodeURIComponent(search.trim())}` : "";
+    return authRequest<AiConversationListResponse>(at(projectId, `/conversations${query}`), undefined, BASE);
+  },
+  deleteConversation: (projectId: string, conversationId: string) =>
+    authRequest<{ conversationId: string; deleted: true }>(
+      at(projectId, `/conversations/${encodeURIComponent(conversationId)}`),
+      undefined,
+      BASE,
+      "DELETE",
+    ),
   cancelConversation: (projectId: string, conversationId: string, reason = "user_stopped") =>
     authRequest<{ conversationId: string; status: "cancelled"; recordedAt: string }>(
       at(projectId, `/conversations/${encodeURIComponent(conversationId)}/cancel`),

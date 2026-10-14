@@ -1,14 +1,15 @@
 "use client";
 
-import { AddRounded, ArrowForwardRounded, ArrowUpwardRounded, AutoAwesomeRounded, AutoGraphRounded, CampaignRounded, CheckRounded, ContentCopyRounded, EditOutlined, ExpandMoreRounded, HistoryRounded, InsightsRounded, PeopleAltOutlined, PsychologyRounded, ReplayRounded, RouteRounded, StopRounded, TrendingDownRounded } from "@mui/icons-material";
+import { AddRounded, ArrowForwardRounded, ArrowUpwardRounded, AutoAwesomeRounded, AutoGraphRounded, CampaignRounded, CheckRounded, CloseRounded, ContentCopyRounded, DeleteOutlineRounded, EditOutlined, ExpandMoreRounded, HistoryRounded, InsightsRounded, PeopleAltOutlined, PsychologyRounded, ReplayRounded, RouteRounded, SearchRounded, StopRounded, TrendingDownRounded } from "@mui/icons-material";
 import { Box, Button, ButtonBase, Dialog, DialogContent, DialogTitle, IconButton, InputBase, Menu, MenuItem, Stack, Tooltip, Typography } from "@mui/material";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCurrentUser } from "@/hooks/auth/use-current-user";
 import { useActiveProject } from "@/hooks/projects/use-active-project";
 import { accountGreetingName } from "@/lib/auth/display-name";
-import { aiApi, type AiAssistantId, type AiCreatedResource, type AiFlowId, type AiFlowDraftResponse, type AiResourceType } from "@/lib/projects/ai";
+import { aiApi, type AiAssistantId, type AiConversationPreview, type AiCreatedResource, type AiFlowId, type AiFlowDraftResponse, type AiResourceType } from "@/lib/projects/ai";
+import DeleteConfirmDialog from "@/components/dashboard/DeleteConfirmDialog";
 
 /** `flow` marks a guided-flow turn (it is re-run, not edited); `error` an answer that never arrived, so nothing was stored for it. */
 type ChatMessage = {
@@ -369,6 +370,25 @@ function conversationTime(value: string) {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
+function conversationGroup(value: string) {
+  const relative = conversationTime(value);
+  return relative === "Today" || relative === "Yesterday" ? relative : "Older";
+}
+
+function conversationTitle(prompt: string, fallback: string) {
+  const compact = prompt.trim().replace(/\s+/g, " ");
+  return (compact || fallback).slice(0, 160);
+}
+
+function conversationMatches(conversation: AiConversationPreview, search: string) {
+  const tokens = search.toLocaleLowerCase().split(/\s+/).filter(Boolean);
+  const haystack = [conversation.title, conversation.lastMessage?.content, conversation.assistant, conversation.flowId]
+    .filter(Boolean)
+    .join(" ")
+    .toLocaleLowerCase();
+  return tokens.every((token) => haystack.includes(token));
+}
+
 export default function HomeCommandCenter() {
   const { account } = useCurrentUser();
   const { active } = useActiveProject();
@@ -381,6 +401,12 @@ export default function HomeCommandCenter() {
   // fades out instead of flipping to another view for the length of the closing animation.
   const [context, setContext] = useState<"recent" | "insight" | "handoff">("recent");
   const [contextOpen, setContextOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [conversationSearch, setConversationSearch] = useState("");
+  const [openingConversationId, setOpeningConversationId] = useState<string | null>(null);
+  const [deletedConversationIds, setDeletedConversationIds] = useState<Set<string>>(new Set());
+  const [deleteTarget, setDeleteTarget] = useState<AiConversationPreview | null>(null);
+  const [contextError, setContextError] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [conversationId, setConversationId] = useState<string | undefined>();
@@ -402,6 +428,14 @@ export default function HomeCommandCenter() {
     queryFn: () => aiApi.context(projectId!),
     enabled: Boolean(projectId),
     staleTime: 30_000,
+  });
+
+  const deferredConversationSearch = useDeferredValue(conversationSearch.trim());
+  const conversationSearchQuery = useQuery({
+    queryKey: ["projects", projectId, "ai", "conversations", deferredConversationSearch],
+    queryFn: () => aiApi.conversations(projectId!, deferredConversationSearch),
+    enabled: Boolean(projectId) && historyOpen && Boolean(deferredConversationSearch),
+    staleTime: 10_000,
   });
 
   const chatMutation = useMutation({
@@ -502,6 +536,36 @@ export default function HomeCommandCenter() {
     },
   });
 
+  const deleteConversationMutation = useMutation({
+    mutationFn: async (id: string) => {
+      if (!projectId) throw new Error("Select a project before deleting a conversation.");
+      return aiApi.deleteConversation(projectId, id);
+    },
+    onSuccess: (_response, deletedId) => {
+      setDeleteTarget(null);
+      setDeletedConversationIds((current) => new Set(current).add(deletedId));
+      if (conversationId === deletedId) {
+        setMessages([]);
+        setConversationId(undefined);
+        setEditing(null);
+        setLastDraft(null);
+        setActiveFlow(null);
+        setFlowReady(false);
+        setFlowAnswers({});
+        setFlowStep(0);
+        setHistoryOpen(false);
+        setConversationSearch("");
+      }
+      setContextError(null);
+      void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "ai", "context"] });
+      void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "ai", "conversations"] });
+    },
+    onError: (error) => {
+      setDeleteTarget(null);
+      setContextError(apiMessage(error, "That conversation could not be deleted. Please try again."));
+    },
+  });
+
   const thinking = openingFlow || chatMutation.isPending || draftMutation.isPending;
   const aiContext = contextQuery.data;
 
@@ -514,6 +578,8 @@ export default function HomeCommandCenter() {
     setFlowStep(0);
     setEditing(null);
     setLastDraft(null);
+    setDeletedConversationIds(new Set());
+    setDeleteTarget(null);
   }, [projectId]);
 
   const selectAgent = (name: string) => {
@@ -579,6 +645,53 @@ export default function HomeCommandCenter() {
     } catch { /* clipboard blocked by the browser: nothing was copied, so nothing is confirmed */ }
   };
 
+  const startNewChat = () => {
+    if (thinking) return;
+    setHistoryOpen(false);
+    setConversationSearch("");
+    setMessages([]);
+    setConversationId(undefined);
+    setEditing(null);
+    setLastDraft(null);
+    setActiveFlow(null);
+    setFlowReady(false);
+    setFlowAnswers({});
+    setFlowStep(0);
+  };
+
+  const openConversation = async (id: string) => {
+    if (!projectId || thinking || openingConversationId) return;
+    setOpeningConversationId(id);
+    setContextError(null);
+    try {
+      const conversation = await aiApi.conversation(projectId, id);
+      const loadedMessages = conversation.messages
+        .filter((message) => message.role === "user" || message.role === "assistant")
+        .map((message) => ({ id: message.id, role: message.role, text: message.content } as ChatMessage));
+      setMessages(loadedMessages);
+      setConversationId(conversation.id);
+      setEditing(null);
+      setLastDraft(null);
+      setActiveFlow(null);
+      setFlowReady(false);
+      setFlowAnswers({});
+      setFlowStep(0);
+      setContextOpen(false);
+      setHistoryOpen(false);
+      setConversationSearch("");
+    } catch (error) {
+      setContextError(apiMessage(error, "That conversation could not be opened. Please try again."));
+    } finally {
+      setOpeningConversationId(null);
+    }
+  };
+
+  const deleteConversation = (conversation: AiConversationPreview) => {
+    if (deleteConversationMutation.isPending || thinking) return;
+    setContextError(null);
+    setDeleteTarget(conversation);
+  };
+
   const startFlow = (flowId: string, prompt?: string) => {
     const flow = guidedFlows.find((item) => item.id === flowId);
     if (!flow || !projectId || thinking) return;
@@ -594,7 +707,7 @@ export default function HomeCommandCenter() {
     const openingRequest = ++openingRequestRef.current;
     void aiApi.createConversation(projectId!, {
       assistant: selectedAgent as AiAssistantId,
-      title: flow.title,
+      title: conversationTitle(openingPrompt, flow.title),
       flowId: flow.id,
       opening: { prompt: openingPrompt, response: flow.subtitle },
     }).then((conversation) => {
@@ -672,9 +785,99 @@ export default function HomeCommandCenter() {
 
   const openContext = (value: "recent" | "insight" | "handoff") => {
     setContext(value);
-    setContextOpen(true);
+    setConversationSearch("");
+    setContextError(null);
     setContextAnchor(null);
+    if (value === "recent") {
+      setContextOpen(false);
+      setHistoryOpen(true);
+      return;
+    }
+    setHistoryOpen(false);
+    setContextOpen(true);
   };
+
+  const contextConversations = (aiContext?.recentConversations ?? []).filter((conversation) => !deletedConversationIds.has(conversation.id));
+  const localSearchMatches = deferredConversationSearch
+    ? contextConversations.filter((conversation) => conversationMatches(conversation, deferredConversationSearch))
+    : [];
+  const recentConversations = Array.from(new Map(
+    (deferredConversationSearch ? [...(conversationSearchQuery.data?.items ?? []), ...localSearchMatches] : contextConversations)
+      .filter((conversation) => !deletedConversationIds.has(conversation.id))
+      .map((conversation) => [conversation.id, conversation] as const),
+  ).values()).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  const conversationListLoading = contextQuery.isPending || Boolean(deferredConversationSearch && conversationSearchQuery.isPending);
+  const conversationSearchError = deferredConversationSearch && conversationSearchQuery.isError
+    ? apiMessage(conversationSearchQuery.error, "Search is temporarily unavailable. Showing recent conversations.")
+    : null;
+
+  const toggleRecentHistory = () => {
+    const nextOpen = !historyOpen;
+    setHistoryOpen(nextOpen);
+    setContext("recent");
+    setContextError(null);
+    if (!nextOpen) setConversationSearch("");
+  };
+
+  const recentHistoryPanel = historyOpen && <Box className="home-history-panel" role="region" aria-label="Recent conversations">
+    <Stack direction="row" alignItems="flex-start" justifyContent="space-between" gap={2} className="home-history-header">
+      <Box>
+        <Typography className="home-history-heading">Recent conversations</Typography>
+        <Typography className="home-history-subtitle">Search and resume a Home AI thread.</Typography>
+      </Box>
+      <IconButton size="small" aria-label="Close recent conversations" onClick={toggleRecentHistory}><CloseRounded /></IconButton>
+    </Stack>
+    <Box className="context-search-box home-history-search">
+      <SearchRounded aria-hidden />
+      <InputBase
+        fullWidth
+        value={conversationSearch}
+        onChange={(event) => setConversationSearch(event.target.value)}
+        placeholder="Search conversations"
+        inputProps={{ "aria-label": "Search conversations" }}
+      />
+      {conversationSearch && <IconButton size="small" aria-label="Clear conversation search" onClick={() => setConversationSearch("")}><CloseRounded /></IconButton>}
+    </Box>
+    {(contextError || conversationSearchError) && <Typography className="context-dialog-error" role="alert">{contextError || conversationSearchError}</Typography>}
+    {conversationListLoading ? <Typography className="context-dialog-empty" color="text.secondary">{deferredConversationSearch ? "Searching conversations…" : "Loading conversations…"}</Typography> : recentConversations.length ? <Stack className="context-dialog-list home-history-list">
+      {recentConversations.map((item, index) => {
+        const group = conversationGroup(item.updatedAt);
+        const previousGroup = index > 0 ? conversationGroup(recentConversations[index - 1].updatedAt) : null;
+        return <Box key={item.id}>
+          {group !== previousGroup && <Typography className="context-dialog-group">{group}</Typography>}
+          <Box className={`context-dialog-row${conversationId === item.id ? " is-active" : ""}`}>
+            <ButtonBase
+              className="context-dialog-open"
+              onClick={() => void openConversation(item.id)}
+              disabled={Boolean(openingConversationId) || thinking || deleteConversationMutation.isPending}
+              aria-label={`Open conversation ${item.title || item.lastMessage?.content || "AI conversation"}`}
+              aria-current={conversationId === item.id ? "true" : undefined}
+            >
+              <Box className="conversation-icon"><PsychologyRounded /></Box>
+              <Box sx={{ flex: 1, minWidth: 0, textAlign: "left" }}>
+                <Typography fontSize={13} fontWeight={600} noWrap>{item.title || item.lastMessage?.content || "AI conversation"}</Typography>
+                <Typography fontSize={11} color="text.secondary">{item.assistant}{item._count.messages > 1 ? ` · ${item._count.messages} messages` : ""}</Typography>
+              </Box>
+              <Typography className="context-dialog-time" fontSize={11} color="text.secondary">{openingConversationId === item.id ? "Opening…" : conversationTime(item.updatedAt)}</Typography>
+            </ButtonBase>
+            <Tooltip title="Delete conversation">
+              <span>
+                <IconButton
+                  className="context-dialog-delete"
+                  size="small"
+                  aria-label={`Delete conversation ${item.title || "AI conversation"}`}
+                  onClick={() => deleteConversation(item)}
+                  disabled={Boolean(openingConversationId) || thinking || deleteConversationMutation.isPending}
+                >
+                  <DeleteOutlineRounded />
+                </IconButton>
+              </span>
+            </Tooltip>
+          </Box>
+        </Box>;
+      })}
+    </Stack> : <Typography className="context-dialog-empty" color="text.secondary">{conversationSearchQuery.isError ? "Search is temporarily unavailable." : conversationSearch ? "No matching conversations." : "No conversations yet."}</Typography>}
+  </Box>;
 
   return <Box className="home-experience">
     <Box className="home-backdrop" aria-hidden><span className="home-backdrop-mosaic" /></Box>
@@ -689,7 +892,9 @@ export default function HomeCommandCenter() {
         {prompts.map(([label, Icon]) => <Button key={label} className="home-prompt" startIcon={<Icon />} onClick={() => sendMessage(label)}>{label}</Button>)}
       </Stack>
 
-      <Button className="home-recent-link" startIcon={<HistoryRounded />} onClick={(event) => setContextAnchor(event.currentTarget)}>Recent conversations &amp; context</Button>
+      <Button className={`home-recent-link${historyOpen ? " is-active" : ""}`} startIcon={<HistoryRounded />} onClick={toggleRecentHistory}>{historyOpen ? "Hide recent conversations" : "Recent conversations"}</Button>
+
+      {recentHistoryPanel}
 
       <Stack className="home-feature-intro" alignItems="center" gap={.5}>
         <Typography>What would you like Max to create for you?</Typography>
@@ -702,9 +907,10 @@ export default function HomeCommandCenter() {
       <Typography className="home-disclaimer">AI can make mistakes. Check important growth decisions.</Typography>
     </Box> : <Box className="chat-experience">
       <Stack direction="row" justifyContent="space-between" className="chat-topbar">
-        <Button className="home-recent-link" startIcon={<AddRounded />} disabled={thinking} onClick={() => { setMessages([]); setConversationId(undefined); setEditing(null); setLastDraft(null); setActiveFlow(null); setFlowReady(false); setFlowAnswers({}); setFlowStep(0); }}>New chat</Button>
+        <Button className="home-recent-link" startIcon={<AddRounded />} disabled={thinking} onClick={startNewChat}>New chat</Button>
         <Button className="home-recent-link" startIcon={<HistoryRounded />} onClick={(event) => setContextAnchor(event.currentTarget)}>Context</Button>
       </Stack>
+      {recentHistoryPanel}
       <Stack className="chat-thread" gap={2.5}>
         {messages.map((message, index) => {
           const copyButton = <Tooltip title={copied === message.id ? "Copied" : "Copy"}><IconButton size="small" aria-label="Copy message" onClick={() => void copyMessage(message)}>{copied === message.id ? <CheckRounded /> : <ContentCopyRounded />}</IconButton></Tooltip>;
@@ -769,13 +975,22 @@ export default function HomeCommandCenter() {
       <MenuItem onClick={() => openContext("handoff")}><PsychologyRounded /> Handoff history</MenuItem>
     </Menu>
 
-    <Dialog open={contextOpen} onClose={() => setContextOpen(false)} maxWidth="sm" fullWidth>
-      <DialogTitle>{context === "recent" ? "Recent conversations" : context === "insight" ? "Ben’s latest insight" : "Handoff history"}</DialogTitle>
+    <Dialog open={contextOpen && context !== "recent"} onClose={() => setContextOpen(false)} maxWidth="sm" fullWidth>
+      <DialogTitle className="context-dialog-title">
+        {context === "recent" ? <Box><Typography component="span" className="context-dialog-heading">Recent conversations</Typography><Typography className="context-dialog-subtitle">Search and resume a Home AI thread.</Typography></Box> : context === "insight" ? "Ben’s latest insight" : "Handoff history"}
+      </DialogTitle>
       <DialogContent>
-        {context === "recent" && <Stack className="context-dialog-list">{aiContext?.recentConversations?.length ? aiContext.recentConversations.map((item) => <Stack direction="row" alignItems="center" gap={1.5} className="context-dialog-row" key={item.id}><Box className="conversation-icon"><PsychologyRounded /></Box><Box sx={{ flex: 1 }}><Typography fontSize={13} fontWeight={600}>{item.title || item.lastMessage?.content || "AI conversation"}</Typography><Typography fontSize={11} color="text.secondary">{item.assistant}</Typography></Box><Typography fontSize={11} color="text.secondary">{conversationTime(item.updatedAt)}</Typography></Stack>) : <Typography color="text.secondary">No conversations yet.</Typography>}</Stack>}
         {context === "insight" && <Box className="insight-callout"><Typography fontSize={14} fontWeight={650}>{aiContext?.latestInsight.title ?? "No insight yet"}</Typography><Typography fontSize={13} color="text.secondary" sx={{ mt: .7 }}>{aiContext?.latestInsight.message ?? "The latest project insight will appear here."}</Typography><Stack direction="row" gap={1} sx={{ mt: 2 }}><Button variant="contained" size="small" href="/dashboard/journeys/create">Send insights to Nova</Button><Button size="small" href="/dashboard/users">Review audience</Button></Stack></Box>}
         {context === "handoff" && <Stack className="context-dialog-list">{aiContext?.handoffHistory?.length ? aiContext.handoffHistory.map((item) => <Stack direction="row" gap={1.5} className="context-dialog-row" key={`${item.assistant}-${item.action}`}><Box className="handoff-dot" /><Box><Typography fontSize={13} fontWeight={600}>{item.assistant} <span className="handoff-action">{item.action}</span></Typography><Typography fontSize={11} color="text.secondary">{item.status}</Typography></Box></Stack>) : <Typography color="text.secondary">No handoff history yet.</Typography>}</Stack>}
       </DialogContent>
     </Dialog>
+    <DeleteConfirmDialog
+      open={Boolean(deleteTarget)}
+      onClose={() => { if (!deleteConversationMutation.isPending) setDeleteTarget(null); }}
+      loading={deleteConversationMutation.isPending}
+      onConfirm={() => { if (deleteTarget) deleteConversationMutation.mutate(deleteTarget.id); }}
+      title="Are you sure you want to delete?"
+      description="This action cannot be undone."
+    />
   </Box>;
 }
