@@ -80,7 +80,7 @@ async function rawRequest(path: string, body?: unknown, base = '/api/auth', meth
 }
 
 /** Paths that must never trigger a refresh, or the retry could recurse. */
-const NO_REFRESH = ['/refresh', '/login', '/google', '/logout', '/signup'];
+const NO_REFRESH = ['/refresh', '/login', '/google', '/logout', '/signup', '/mfa/login/verify'];
 
 export async function authRequest<T>(path: string, body?: unknown, base?: string, method?: string, options?: AuthRequestOptions): Promise<T> {
   let response: Response;

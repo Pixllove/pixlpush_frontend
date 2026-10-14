@@ -10,12 +10,16 @@ const API_URL = process.env.BACKEND_API_URL ?? 'http://localhost:3000/api/v1';
 
 export const SESSION_COOKIE = 'pixlpush_session';
 export const REFRESH_COOKIE = 'pixlpush_refresh';
+export const MFA_PENDING_COOKIE = 'pixlpush_mfa_pending';
+export const MFA_ENROLLMENT_COOKIE = 'pixlpush_mfa_enrollment';
 
 /** Matches the backend's JWT_EXPIRES_IN (15m). */
 const SESSION_MAX_AGE = 15 * 60;
 
 /** Matches the backend's REFRESH_TOKEN_TTL_DAYS (30d). */
 const REFRESH_MAX_AGE = 30 * 24 * 60 * 60;
+const MFA_PENDING_MAX_AGE = 5 * 60;
+const MFA_ENROLLMENT_MAX_AGE = 10 * 60;
 
 const cookieOptions = (maxAge: number) =>
   ({
@@ -38,6 +42,32 @@ export function setSessionCookies(accessToken: string, refreshToken?: string): v
 export function clearSessionCookies(): void {
   cookies().delete(SESSION_COOKIE);
   cookies().delete(REFRESH_COOKIE);
+}
+
+const transientCookieOptions = (maxAge: number) => ({ ...cookieOptions(maxAge), sameSite: 'strict' as const });
+
+export function setMfaPendingCookie(token: string): void {
+  cookies().set(MFA_PENDING_COOKIE, token, transientCookieOptions(MFA_PENDING_MAX_AGE));
+}
+
+export function clearMfaPendingCookie(): void {
+  cookies().delete(MFA_PENDING_COOKIE);
+}
+
+export function getMfaPendingToken(): string | undefined {
+  return cookies().get(MFA_PENDING_COOKIE)?.value;
+}
+
+export function setMfaEnrollmentCookie(token: string): void {
+  cookies().set(MFA_ENROLLMENT_COOKIE, token, transientCookieOptions(MFA_ENROLLMENT_MAX_AGE));
+}
+
+export function clearMfaEnrollmentCookie(): void {
+  cookies().delete(MFA_ENROLLMENT_COOKIE);
+}
+
+export function getMfaEnrollmentToken(): string | undefined {
+  return cookies().get(MFA_ENROLLMENT_COOKIE)?.value;
 }
 
 export function getSessionToken(): string | undefined {

@@ -10,7 +10,7 @@ export interface Account {
   /** False for Google-only accounts: they can set a first password without a current one. */
   hasPassword?: boolean;
   googleLinked?: boolean;
-  /** Present once the account API exposes authenticator-based 2FA enrollment. */
+  /** Public MFA status; optional only for legacy fixtures and older API responses. */
   twoFactorEnabled?: boolean;
   /** Google profile photo; null or absent for accounts that never signed in with Google. */
   avatarUrl?: string | null;
@@ -29,6 +29,17 @@ export interface AccountProject {
 export interface CurrentUser {
   account: Account;
   projects: AccountProject[];
+}
+
+export interface LoginResult {
+  account: Account;
+  mfaRequired?: boolean;
+}
+
+export interface MfaEnrollment {
+  secret: string;
+  otpauthUri: string;
+  qrCodeDataUrl: string;
 }
 
 /** Every backend success response is `{ data: ... }`. */

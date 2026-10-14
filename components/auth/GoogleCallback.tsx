@@ -43,8 +43,13 @@ export default function GoogleCallback() {
         if (!idToken) return backWith();
 
         setStep(1);
-        const { account } = await googleLogin.mutateAsync(idToken);
+        const { account, mfaRequired } = await googleLogin.mutateAsync(idToken);
         setStep(2);
+        if (mfaRequired) {
+          const redirect = searchParams.get('redirect');
+          router.replace(`/login/mfa${redirect ? `?redirect=${encodeURIComponent(redirect)}` : ''}`);
+          return;
+        }
         // Verified addresses go to the app, unverified ones to the verify screen.
         router.replace(postLoginPath(account, searchParams.get('redirect')));
         router.refresh();

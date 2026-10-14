@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { authApi, authKeys } from '@/lib/auth/api';
 import { projectKeys } from '@/lib/projects/api';
-import type { Account, ApiError } from '@/types/auth';
+import type { Account, ApiError, LoginResult } from '@/types/auth';
 import type { LoginInput } from '@/schemas/auth.schema';
 
 /**
@@ -19,7 +19,7 @@ async function startSession(queryClient: QueryClient): Promise<void> {
 export function useLogin() {
   const queryClient = useQueryClient();
 
-  return useMutation<{ account: Account }, ApiError, LoginInput>({
+  return useMutation<LoginResult, ApiError, LoginInput>({
     mutationFn: authApi.login,
     onSuccess: async () => {
       // The session cookie is now set; pull the real user from the server
@@ -32,7 +32,7 @@ export function useLogin() {
 export function useGoogleLogin() {
   const queryClient = useQueryClient();
 
-  return useMutation<{ account: Account }, ApiError, string>({
+  return useMutation<LoginResult, ApiError, string>({
     mutationFn: authApi.loginWithGoogle,
     onSuccess: () => startSession(queryClient),
   });

@@ -1,5 +1,5 @@
 import { authRequest } from './client';
-import type { Account, CurrentUser } from '@/types/auth';
+import type { Account, CurrentUser, LoginResult, MfaEnrollment } from '@/types/auth';
 import type {
   ForgotPasswordInput,
   LoginInput,
@@ -12,9 +12,16 @@ import type {
  * handler under app/api/auth, which forwards to Fastify.
  */
 export const authApi = {
-  login: (input: LoginInput) => authRequest<{ account: Account }>('/login', input),
+  login: (input: LoginInput) => authRequest<LoginResult>('/login', input),
 
-  loginWithGoogle: (idToken: string) => authRequest<{ account: Account }>('/google', { idToken }),
+  loginWithGoogle: (idToken: string) => authRequest<LoginResult>('/google', { idToken }),
+
+  mfaStatus: () => authRequest<{ enabled: boolean; enabledAt: string | null }>('/mfa/status'),
+  startMfaEnrollment: () => authRequest<MfaEnrollment>('/mfa/enrollment/start', {}),
+  confirmMfaEnrollment: (code: string) => authRequest<{ recoveryCodes: string[] }>('/mfa/enrollment/confirm', { code }),
+  verifyMfaLogin: (input: { method: 'totp' | 'recovery'; code: string }) => authRequest<{ account: Account; recoveryUsed: boolean }>('/mfa/login/verify', input),
+  regenerateMfaRecoveryCodes: (currentPassword?: string) => authRequest<{ recoveryCodes: string[] }>('/mfa/recovery-codes/regenerate', { currentPassword }),
+  disableMfa: (currentPassword?: string) => authRequest<{ account: Account }>('/mfa/disable', { currentPassword }),
 
   /** Returns only a generic message: the response is identical for an address
    *  that already has an account (anti-enumeration). */
