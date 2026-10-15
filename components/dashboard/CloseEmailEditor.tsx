@@ -83,7 +83,7 @@ export default function CloseEmailEditor({ onDiscard, onSaveDraft, snapshot }: {
       </DialogContent>
       <DialogActions sx={{ px: 2, pb: 2, gap: 1 }}>
         <Button variant="outlined" onClick={onDiscard} sx={{ borderRadius: '7px', color: '#334155', borderColor: '#dfe5ee' }}>Discard</Button>
-        <Button variant="contained" onClick={onSaveDraft} sx={{ borderRadius: '7px', bgcolor: '#1d9854', '&:hover': { bgcolor: '#178047' } }}>Save as draft</Button>
+        <Button variant="contained" onClick={onSaveDraft} sx={{ borderRadius: '7px', bgcolor: '#5b18bc', '&:hover': { bgcolor: '#43108e' } }}>Save as draft</Button>
       </DialogActions>
     </Dialog>
     <Dialog open={reloadOpen} onClose={keepEditing} aria-labelledby="reload-email-title" sx={{ zIndex: 1400 }} PaperProps={{ sx: { width: 448, maxWidth: 'calc(100% - 32px)', m: 2, borderRadius: '8px', p: 1 } }}>
@@ -97,7 +97,7 @@ export default function CloseEmailEditor({ onDiscard, onSaveDraft, snapshot }: {
       </DialogContent>
       <DialogActions sx={{ px: 2, pb: 2, gap: 1 }}>
         <Button variant="outlined" onClick={keepEditing} sx={{ borderRadius: '7px', color: '#334155', borderColor: '#dfe5ee' }}>Cancel</Button>
-        <Button variant="contained" onClick={reload} sx={{ borderRadius: '7px', bgcolor: '#1d9854', '&:hover': { bgcolor: '#178047' } }}>Continue</Button>
+        <Button variant="contained" onClick={reload} sx={{ borderRadius: '7px', bgcolor: '#5b18bc', '&:hover': { bgcolor: '#43108e' } }}>Continue</Button>
       </DialogActions>
     </Dialog>
   </>;

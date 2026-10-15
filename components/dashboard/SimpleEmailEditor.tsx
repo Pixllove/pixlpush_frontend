@@ -7,7 +7,7 @@ import EmailLanguageSettings from "./EmailLanguageSettings";
 import { languageName } from "./EmailLanguageSettings";
 import { emailApi } from "@/lib/projects/api";
 import Image from "next/image";
-import aiIcon from "../../assets/ai.png";
+import aiIcon from "../../assets/ai-translation-rail.png";
 
 import {
   ChangeEvent,
@@ -722,6 +722,19 @@ export default function SimpleEmailEditor({
       setAiLoading(false);
     }
   };
+  const applyAllAiSuggestion = () => {
+    if (!aiResult) return;
+    setSubject(aiResult.subject);
+    updateContent(
+      aiResult.content
+        .split("\n")
+        .map((line) => (line ? `<p>${line}</p>` : ""))
+        .join(""),
+    );
+    setAiOpen(false);
+    setAiResult(null);
+    onNotice("AI suggestion applied");
+  };
   const drawSignature = (event: ReactPointerEvent<HTMLCanvasElement>) => {
     const canvas = signatureCanvasRef.current;
     if (!canvas) return;
@@ -785,7 +798,7 @@ export default function SimpleEmailEditor({
             <MenuItem onClick={() => { setPreview(true); setPreviewAnchor(null); }}>Preview mode</MenuItem>
             <MenuItem onClick={() => { setPreview(true); setPreviewAnchor(null); }}>Send a test email</MenuItem>
           </Menu>
-          <Button variant="contained" color="success" endIcon={<KeyboardArrowDownRounded />} onClick={(event) => setSaveAnchor(event.currentTarget)}>
+          <Button variant="contained" sx={{ bgcolor: "#5b18bc", color: "#fff", "&:hover": { bgcolor: "#43108e" } }} endIcon={<KeyboardArrowDownRounded />} onClick={(event) => setSaveAnchor(event.currentTarget)}>
             Save
           </Button>
           <Menu anchorEl={saveAnchor} open={Boolean(saveAnchor)} onClose={() => setSaveAnchor(null)}>
@@ -799,7 +812,7 @@ export default function SimpleEmailEditor({
       <Box className="admin-simple-layout">
         <Box className="admin-editor-rail">
           <IconButton
-            className={panel === "ai" ? "active" : ""}
+            className={`ai-translation-rail-button ${panel === "ai" ? "active" : ""}`}
             onClick={() => setPanel("ai")}
             aria-label="AI translation"
           >
@@ -1334,8 +1347,13 @@ export default function SimpleEmailEditor({
           >
             Cancel
           </Button>
+          {aiResult && (
+            <Button variant="contained" onClick={applyAllAiSuggestion}>
+              Use all
+            </Button>
+          )}
           <Button
-            variant="contained"
+            variant={aiResult ? "outlined" : "contained"}
             onClick={generateAiSuggestion}
             disabled={!aiPrompt.trim() || aiLoading}
           >

@@ -6,7 +6,7 @@ import Image from "next/image";
 import EmailTranslationPanel from "./EmailTranslationPanel";
 import EmailLanguageSettings from "./EmailLanguageSettings";
 import { languageName } from "./EmailLanguageSettings";
-import aiIcon from "../../assets/ai.png";
+import aiIcon from "../../assets/ai-translation-rail.png";
 import dragDropPreview from "../../assets/email-drag-drop-editor-preview.png";
 import simpleEditorPreview from "../../assets/email-simple-editor-preview.png";
 import KeyboardArrowDownRounded from "@mui/icons-material/KeyboardArrowDownRounded";
@@ -1510,7 +1510,7 @@ function EditorToolbar({
       </Button>
       <Button
         variant="contained"
-        color="success"
+        sx={{ bgcolor: "#5b18bc", color: "#fff", "&:hover": { bgcolor: "#43108e" } }}
         endIcon={<KeyboardArrowDownRounded />}
         onClick={(event) => setSaveAnchor(event.currentTarget)}
       >
@@ -1623,7 +1623,7 @@ function SimpleEditor({
       <Stack direction="row" className="simple-editor-body">
         <Box className="editor-rail">
           <IconButton
-            className={panel === "ai" ? "active" : ""}
+            className={`ai-translation-rail-button ${panel === "ai" ? "active" : ""}`}
             onClick={() => setPanel("ai")}
             aria-label="AI translation"
           >
@@ -1658,8 +1658,7 @@ function SimpleEditor({
               <Chip
                 label="English"
                 size="small"
-                color="success"
-                sx={{ mt: 1 }}
+                sx={{ mt: 1, bgcolor: "#6b21c8", color: "#fff" }}
               />
               <Typography fontWeight={600} sx={{ mt: 3 }}>
                 Translate into
@@ -1687,8 +1686,7 @@ function SimpleEditor({
               <Button
                 fullWidth
                 variant="contained"
-                color="success"
-                sx={{ mt: 2 }}
+                sx={{ mt: 2, bgcolor: "#5b18bc", color: "#fff", "&:hover": { bgcolor: "#43108e" } }}
                 onClick={() => onNotice("Translation copied locally")}
               >
                 Translate selected languages
@@ -2303,7 +2301,7 @@ function DragEditor({
             <GridViewRounded />
           </IconButton>
           <IconButton
-            className={panel === "ai" ? "active" : ""}
+            className={`ai-translation-rail-button ${panel === "ai" ? "active" : ""}`}
             onClick={() => setPanel("ai")}
             aria-label="AI translation"
           >
@@ -2524,7 +2522,7 @@ function DragEditor({
             {selectedHasLogo && <Paper className="inspector-upload-card" sx={{mt:2}}>
               <Typography fontWeight={500} fontSize={12}>Logo</Typography>
               <Stack direction="row" gap={1} sx={{mt:1}}>
-                <Button component="label" variant="contained" color="success" size="small" disabled={uploading}>{uploading ? "Uploading…" : selectedBlock.imageSrc ? "Replace" : "Upload logo"}<input ref={imageInputRef} hidden type="file" accept="image/*" onChange={event=>{void uploadImage(event.target.files?.[0],"logo");event.currentTarget.value=""}} /></Button>
+                <Button component="label" variant="contained" size="small" disabled={uploading} sx={{ bgcolor: "#5b18bc", color: "#fff", "&:hover": { bgcolor: "#43108e" } }}>{uploading ? "Uploading…" : selectedBlock.imageSrc ? "Replace" : "Upload logo"}<input ref={imageInputRef} hidden type="file" accept="image/*" onChange={event=>{void uploadImage(event.target.files?.[0],"logo");event.currentTarget.value=""}} /></Button>
                 {selectedBlock.imageSrc && selected !== null && <Button variant="outlined" size="small" onClick={()=>removeSelectedImage(selected)}>Remove</Button>}
               </Stack>
               {selectedBlock.imageSrc ? <>
@@ -2540,7 +2538,7 @@ function DragEditor({
             {selectedHasImage && <Paper className="inspector-upload-card" sx={{mt:2}}>
               <Typography fontWeight={500} fontSize={12}>Image</Typography>
               <Stack direction="row" gap={1} sx={{mt:1}}>
-                <Button component="label" variant="contained" color="success" size="small" disabled={uploading}>{uploading ? "Uploading…" : selectedBlock.imageSrc ? "Replace" : "Upload image"}<input ref={imageInputRef} hidden type="file" accept="image/*" onChange={event=>{void uploadImage(event.target.files?.[0],"image");event.currentTarget.value=""}} /></Button>
+                <Button component="label" variant="contained" size="small" disabled={uploading} sx={{ bgcolor: "#5b18bc", color: "#fff", "&:hover": { bgcolor: "#43108e" } }}>{uploading ? "Uploading…" : selectedBlock.imageSrc ? "Replace" : "Upload image"}<input ref={imageInputRef} hidden type="file" accept="image/*" onChange={event=>{void uploadImage(event.target.files?.[0],"image");event.currentTarget.value=""}} /></Button>
                 {selectedBlock.imageSrc && selected !== null && <Button variant="outlined" size="small" onClick={()=>removeSelectedImage(selected)}>Remove</Button>}
               </Stack>
               {selectedBlock.imageSrc ? (() => {

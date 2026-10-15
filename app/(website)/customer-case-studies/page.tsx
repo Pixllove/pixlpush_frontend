@@ -1,5 +1,40 @@
-import { Box, Container, Grid, Typography } from '@mui/material';
+import { Box, Container, Divider, Grid, Stack, Typography } from '@mui/material';
 import { SiteShell, PageHero, SectionIntro } from '@/components/website/SiteShell';
 import { CTA } from '@/components/website/PageBlocks';
-const stories = [['PixlLove','Dating app','35%','less paywall drop-off'],['PixlTrace','AR drawing app','27%','higher D7 retention'],['AuraMagie','Manifestation app','3.2×','more re-engaged users']];
-export default function CaseStudiesPage() { return <SiteShell><PageHero dark eyebrow="CUSTOMER CASE STUDIES" title="Real results from real digital products." description="See how teams use behavior-based communication to create better customer experiences and stronger business outcomes." /><Container maxWidth="lg" sx={{ py:{ xs:9, md:14 } }}><SectionIntro eyebrow="CUSTOMER PROOF" title="Retention is a team sport. Results are shared." /><Grid container spacing={2}>{stories.map(([brand,type,stat,label]) => <Grid item xs={12} md={4} key={brand}><Box sx={{ p:3.5, minHeight:290, borderRadius:4, bgcolor:'#fff7f2', border:'1px solid #f2e4dd' }}><Typography fontWeight={600}>{brand}</Typography><Typography color="text.secondary" fontSize={13} sx={{ mt:.5 }}>{type}</Typography><Typography sx={{ mt:6, fontSize:56, color:'#ec5b2d', fontWeight:600, letterSpacing:'-.06em' }}>{stat}</Typography><Typography fontSize={16} fontWeight={600}>{label}</Typography><Typography color="primary" fontWeight={600} sx={{ mt:4 }}>Read the story →</Typography></Box></Grid>)}</Grid></Container><Box sx={{ bgcolor:'#f3eafa', py:10 }}><Container maxWidth="md"><Typography variant="h3" textAlign="center">Your next retention win could be the one your team talks about.</Typography></Container></Box><CTA /></SiteShell>; }
+
+const stories = [
+  { brand: 'Pixllove', type: 'Dating app', metric: '24%', result: 'less paywall drop-off', quote: 'Nova and Ben helped our dating app reduce paywall drop-off by 24% through journey analysis and optimization.', image: '/assets/case-pixllove.png', imageFit: 'contain', imageBackground: '#10070e', href: 'https://pixllove.com/' },
+  { brand: 'AI1-Media', type: 'Creative studio', metric: '+32%', result: 'revenue over six months', quote: 'We use PixlPush to manage our email campaigns. Over the past six months, we increased revenue by 32% while tracking and optimizing campaign performance.', image: '/assets/case-auramagi.avif', imageFit: 'cover', href: 'https://ai1-media.de/en' },
+  { brand: 'Auramagie', type: 'Manifestation app', metric: '3% → 27%', result: 'D7 retention', quote: 'We struggled with D7 retention, which was just 3%. With targeted content and behavior-based campaigns, we increased it to 27%.', image: '/assets/case-ai1-media.webp', imageFit: 'cover', href: 'https://auramagie.de/' },
+];
+
+export default function CaseStudiesPage() {
+  return <SiteShell>
+    <PageHero dark eyebrow="CUSTOMER CASE STUDIES" title="From user behavior to measurable results." description="See how PixlPush helps digital teams improve retention and grow revenue with behavior-based campaigns." />
+    <Container maxWidth="lg" sx={{ py: { xs: 9, md: 14 } }}>
+      <SectionIntro eyebrow="CUSTOMER STORIES" title="Results shaped by real user behavior." />
+      <Grid container spacing={2} sx={{ mt: 2 }}>
+        {stories.map((story) => <Grid item xs={12} md={4} key={story.brand}>
+          <Box sx={{ height: '100%', overflow: 'hidden', borderRadius: 4, bgcolor: '#fff', border: '1px solid #eee7f1', boxShadow: '0 8px 28px rgba(40,20,54,.06)' }}>
+            <Box sx={{ height: { xs: 210, md: 190 }, display: 'grid', placeItems: 'center', overflow: 'hidden', bgcolor: story.imageBackground ?? '#f6f3f7' }}>
+              <Box component="img" src={story.image} alt={`${story.brand} customer story`} sx={{ display: 'block', width: '100%', height: '100%', objectFit: story.imageFit === 'contain' ? 'contain' : 'cover', objectPosition: 'center' }} />
+            </Box>
+            <Box sx={{ p: 3 }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap={1}>
+                <Box><Typography fontWeight={700}>{story.brand}</Typography><Box component="a" href={story.href} target="_blank" rel="noopener noreferrer" sx={{ display: 'inline-block', mt: .35, color: '#5b18bc', fontSize: 11, fontWeight: 700, textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}>Visit website ↗</Box></Box>
+                <Typography color="text.secondary" fontSize={12}>{story.type}</Typography>
+              </Stack>
+              <Box sx={{ mt: 2, display: 'inline-flex', px: 1.2, py: .4, borderRadius: 1, bgcolor: '#e6ffd8', color: '#263b25', fontSize: 10, fontWeight: 700, letterSpacing: '.04em' }}>CUSTOMER RESULT</Box>
+              <Typography sx={{ mt: 1.5, fontSize: { xs: 36, md: 42 }, color: '#5b18bc', fontWeight: 750, letterSpacing: '-.06em', lineHeight: 1 }}>{story.metric}</Typography>
+              <Typography fontSize={16} fontWeight={650} sx={{ mt: .5 }}>{story.result}</Typography>
+              <Divider sx={{ my: 2 }} />
+              <Typography component="blockquote" sx={{ m: 0, color: 'text.secondary', fontSize: 13, lineHeight: 1.65 }}>&ldquo;{story.quote}&rdquo;</Typography>
+            </Box>
+          </Box>
+        </Grid>)}
+      </Grid>
+    </Container>
+    <Box sx={{ bgcolor: '#f3eafa', py: 10 }}><Container maxWidth="md"><Typography variant="h3" textAlign="center">Your next retention win could be the one your team talks about.</Typography></Container></Box>
+    <CTA />
+  </SiteShell>;
+}

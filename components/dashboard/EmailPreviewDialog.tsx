@@ -121,7 +121,7 @@ export default function EmailPreviewDialog({
           variant="contained"
           startIcon={<SendRounded />}
           disabled={sending}
-          sx={{ flexShrink: 0, whiteSpace: 'nowrap', color: '#fff', bgcolor: '#1d9854', boxShadow: 'none', '&:hover': { bgcolor: '#178047', boxShadow: 'none' }, '&.Mui-disabled': { color: '#7a869a', bgcolor: '#e8ecf3' } }}
+          sx={{ flexShrink: 0, whiteSpace: 'nowrap', color: '#fff', bgcolor: '#5b18bc', boxShadow: 'none', '&:hover': { bgcolor: '#43108e', boxShadow: 'none' }, '&.Mui-disabled': { color: '#7a869a', bgcolor: '#e8ecf3' } }}
         >
           {sending ? "Sending…" : "Send test"}
         </Button>

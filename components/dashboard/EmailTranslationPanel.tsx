@@ -159,7 +159,7 @@ export default function EmailTranslationPanel({
           {selected.map((code) => <MenuItem key={code} value={code}>{languageNames[code] || code}</MenuItem>)}
         </Select>
         <Stack direction="row" gap={0.7} flexWrap="wrap" sx={{ mt: 1 }}>
-          {selected.map((code) => <Chip key={code} label={languageNames[code] || code} size="small" onClick={() => chooseLanguage(code)} sx={{ cursor: "pointer", color: "#fff", backgroundColor: code === currentLanguage ? "#249b57" : "#36373d", border: "1px solid rgba(255,255,255,.16)", "& .MuiChip-label": { color: "#fff" }, "& .MuiChip-icon": { color: "#fff" } }} icon={code !== sourceLanguage && translatedLanguages.includes(code) ? <CheckRounded /> : undefined} />)}
+          {selected.map((code) => <Chip key={code} label={languageNames[code] || code} size="small" onClick={() => chooseLanguage(code)} sx={{ cursor: "pointer", color: "#fff", backgroundColor: code === currentLanguage ? "#6b21c8" : "#36373d", border: "1px solid rgba(255,255,255,.16)", "& .MuiChip-label": { color: "#fff" }, "& .MuiChip-icon": { color: "#fff" } }} icon={code !== sourceLanguage && translatedLanguages.includes(code) ? <CheckRounded /> : undefined} />)}
         </Stack>
       </Box>
       <Typography className="admin-side-section">Translate into</Typography>
@@ -171,7 +171,7 @@ export default function EmailTranslationPanel({
           </label>
         ))}
       </Box>
-      <Button fullWidth variant="contained" color="success" sx={{ mt: 2 }} onClick={translate} disabled={loading}>
+      <Button fullWidth variant="contained" sx={{ mt: 2, bgcolor: "#5b18bc", color: "#fff", "&:hover": { bgcolor: "#43108e" }, "&.Mui-disabled": { bgcolor: "#d8c7f0", color: "rgba(255,255,255,.8)" } }} onClick={translate} disabled={loading}>
         {loading ? "Translating…" : "Translate selected languages"}
       </Button>
       <Box className="admin-side-card">

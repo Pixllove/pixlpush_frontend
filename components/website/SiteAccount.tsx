@@ -55,8 +55,8 @@ export function SiteAccount() {
   if (!isAuthenticated || !account) {
     return (
       <>
-        <Link href="/login" underline="none" sx={{ px: 1.5, fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,.88)', '&:hover': { color: '#ffab8e' } }}>Log in</Link>
-        <Button variant="contained" href="/get-started" endIcon={<ArrowOutwardRounded />}>Get started</Button>
+        <Link href="/login" underline="none" sx={{ px: 1.5, fontSize: 16, fontWeight: 700, color: 'rgba(255,255,255,.92)', '&:hover': { color: '#ffab8e' } }}>Log in</Link>
+        <Button variant="contained" href="/get-started" endIcon={<ArrowOutwardRounded />}>Start for free</Button>
       </>
     );
   }
