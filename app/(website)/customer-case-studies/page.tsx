@@ -4,7 +4,7 @@ import { CTA } from '@/components/website/PageBlocks';
 
 const stories = [
   { brand: 'Pixllove', type: 'Dating app', metric: '24%', result: 'less paywall drop-off', quote: 'Nova and Ben helped our dating app reduce paywall drop-off by 24% through journey analysis and optimization.', image: '/assets/case-pixllove.png', imageFit: 'contain', imageBackground: '#10070e', href: 'https://pixllove.com/' },
-  { brand: 'AI1-Media', type: 'Creative studio', metric: '+32%', result: 'revenue over six months', quote: 'We use PixlPush to manage our email campaigns. Over the past six months, we increased revenue by 32% while tracking and optimizing campaign performance.', image: '/assets/case-auramagi.avif', imageFit: 'cover', href: 'https://ai1-media.de/en' },
+  { brand: 'All in 1 - Media', type: 'Creative studio', metric: '+32%', result: 'revenue over six months', quote: 'We use PixlPush to manage our email campaigns. Over the past six months, we increased revenue by 32% while tracking and optimizing campaign performance.', image: '/assets/case-auramagi.avif', imageFit: 'cover', href: 'https://ai1-media.de/en' },
   { brand: 'Auramagie', type: 'Manifestation app', metric: '3% → 27%', result: 'D7 retention', quote: 'We struggled with D7 retention, which was just 3%. With targeted content and behavior-based campaigns, we increased it to 27%.', image: '/assets/case-ai1-media.webp', imageFit: 'cover', href: 'https://auramagie.de/' },
 ];
 
