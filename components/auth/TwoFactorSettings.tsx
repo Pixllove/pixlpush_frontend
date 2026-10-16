@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Stack, TextField, Typography } from '@mui/material';
 import ContentCopyRounded from '@mui/icons-material/ContentCopyRounded';
 import SecurityRounded from '@mui/icons-material/SecurityRounded';
 import WarningAmberRounded from '@mui/icons-material/WarningAmberRounded';
@@ -11,6 +11,7 @@ import { useCurrentUser } from '@/hooks/auth/use-current-user';
 import type { ApiError } from '@/types/auth';
 
 type DialogMode = 'enroll' | 'recovery' | 'disable' | 'regenerate' | null;
+type LoadingAction = 'start' | 'confirm' | 'disable' | 'regenerate' | null;
 
 const errorMessage = (error: unknown) => (error as ApiError)?.message ?? 'Something went wrong. Please try again.';
 
@@ -29,8 +30,9 @@ export default function TwoFactorSettings() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [error, setError] = useState<string>();
   const [copied, setCopied] = useState(false);
+  const [loadingAction, setLoadingAction] = useState<LoadingAction>(null);
   const enabled = status.data?.enabled ?? account?.twoFactorEnabled;
-  const pending = start.isPending || confirm.isPending || regenerate.isPending || disable.isPending;
+  const pending = Boolean(loadingAction) || start.isPending || confirm.isPending || regenerate.isPending || disable.isPending;
 
   const invalidate = async () => {
     await queryClient.invalidateQueries({ queryKey: authKeys.all });
@@ -40,11 +42,14 @@ export default function TwoFactorSettings() {
   const openEnrollment = async () => {
     setError(undefined);
     setMode('enroll');
+    setLoadingAction('start');
     try {
       const data = await start.mutateAsync();
       setEnrollment({ secret: data.secret, qrCodeDataUrl: data.qrCodeDataUrl });
     } catch (reason) {
       setError(errorMessage(reason));
+    } finally {
+      setLoadingAction(null);
     }
   };
 
@@ -61,6 +66,7 @@ export default function TwoFactorSettings() {
 
   const confirmEnrollment = async () => {
     setError(undefined);
+    setLoadingAction('confirm');
     try {
       const result = await confirm.mutateAsync(code.trim());
       setRecoveryCodes(result.recoveryCodes);
@@ -69,6 +75,8 @@ export default function TwoFactorSettings() {
       await invalidate();
     } catch (reason) {
       setError(errorMessage(reason));
+    } finally {
+      setLoadingAction(null);
     }
   };
 
@@ -79,6 +87,7 @@ export default function TwoFactorSettings() {
 
   const regenerateCodes = async () => {
     setError(undefined);
+    setLoadingAction('regenerate');
     try {
       const result = await regenerate.mutateAsync(account?.hasPassword ? currentPassword : undefined);
       setRecoveryCodes(result.recoveryCodes);
@@ -86,17 +95,22 @@ export default function TwoFactorSettings() {
       setCurrentPassword('');
     } catch (reason) {
       setError(errorMessage(reason));
+    } finally {
+      setLoadingAction(null);
     }
   };
 
   const disableMfa = async () => {
     setError(undefined);
+    setLoadingAction('disable');
     try {
       await disable.mutateAsync(account?.hasPassword ? currentPassword : undefined);
       await invalidate();
+      setLoadingAction(null);
       close();
     } catch (reason) {
       setError(errorMessage(reason));
+      setLoadingAction(null);
     }
   };
 
@@ -115,8 +129,8 @@ export default function TwoFactorSettings() {
       <Stack alignItems="flex-start" gap={1.25}>
         <Chip size="small" label={`2FA: ${statusLabel}`} color={enabled ? 'success' : 'default'} />
         {!enabled ? (
-          <Button variant="outlined" startIcon={<SecurityRounded />} onClick={openEnrollment} disabled={pending || status.isPending}>
-            Set up an authenticator
+          <Button variant="outlined" startIcon={loadingAction === 'start' ? <CircularProgress size={16} thickness={5} sx={{ color: 'inherit' }} /> : <SecurityRounded />} onClick={openEnrollment} disabled={pending || status.isPending}>
+            {loadingAction === 'start' ? 'Preparing…' : 'Set up an authenticator'}
           </Button>
         ) : (
           <Stack direction={{ xs: 'column', sm: 'row' }} gap={1}>
@@ -156,7 +170,9 @@ export default function TwoFactorSettings() {
             </DialogContent>
             <DialogActions>
               <Button onClick={close} disabled={pending}>Cancel</Button>
-              <Button variant="contained" onClick={confirmEnrollment} disabled={!enrollment || code.trim().length < 6 || pending}>Confirm setup</Button>
+              <Button variant="contained" onClick={confirmEnrollment} disabled={!enrollment || code.trim().length < 6 || pending} startIcon={loadingAction === 'confirm' ? <CircularProgress size={16} thickness={5} sx={{ color: 'inherit' }} /> : undefined}>
+                {loadingAction === 'confirm' ? 'Confirming…' : 'Confirm setup'}
+              </Button>
             </DialogActions>
           </>
         )}
@@ -188,7 +204,15 @@ export default function TwoFactorSettings() {
             </DialogContent>
             <DialogActions>
               <Button onClick={close} disabled={pending}>Cancel</Button>
-              {mode === 'disable' ? <Button color="error" variant="contained" onClick={disableMfa} disabled={actionBlocked || pending}>Turn off 2FA</Button> : <Button variant="contained" onClick={regenerateCodes} disabled={actionBlocked || pending}>Generate new codes</Button>}
+              {mode === 'disable' ? (
+                <Button color="error" variant="contained" onClick={disableMfa} disabled={actionBlocked || pending} startIcon={loadingAction === 'disable' ? <CircularProgress size={16} thickness={5} sx={{ color: 'inherit' }} /> : undefined}>
+                  {loadingAction === 'disable' ? 'Turning off…' : 'Turn off 2FA'}
+                </Button>
+              ) : (
+                <Button variant="contained" onClick={regenerateCodes} disabled={actionBlocked || pending} startIcon={loadingAction === 'regenerate' ? <CircularProgress size={16} thickness={5} sx={{ color: 'inherit' }} /> : undefined}>
+                  {loadingAction === 'regenerate' ? 'Generating…' : 'Generate new codes'}
+                </Button>
+              )}
             </DialogActions>
           </>
         )}
