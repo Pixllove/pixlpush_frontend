@@ -32,7 +32,12 @@ export const authApi = {
   me: () => authRequest<CurrentUser>('/me'),
 
   setActiveProject: (projectId: string) =>
-    authRequest<{ activeProjectId: string; project: AccountProject }>('/me/active-project', { projectId }),
+    authRequest<{ activeProjectId: string; project: AccountProject }>(
+      '/me/active-project',
+      { projectId },
+      undefined,
+      'PATCH',
+    ),
 
   forgotPassword: (input: ForgotPasswordInput) =>
     authRequest<{ message: string }>('/forgot-password', input),
