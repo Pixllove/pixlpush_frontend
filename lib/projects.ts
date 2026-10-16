@@ -40,6 +40,6 @@ export const projects: Record<ProjectId, ProjectContext> = {
  * real id falls back to the first deck so the dashboard keeps rendering instead
  * of reading undefined.
  */
-export function projectContext(selected: string): ProjectContext {
+export function projectContext(selected: string | null): ProjectContext {
   return projects[selected as ProjectId] ?? projects.PixlTrace;
 }
