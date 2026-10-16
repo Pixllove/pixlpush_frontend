@@ -48,13 +48,14 @@ export function useActiveProject() {
     }
   }, [projects, selectedId, currentUser?.activeProjectId, dispatch]);
 
-  const selectProject = (projectId: string): void => {
+  const selectProject = async (projectId: string): Promise<void> => {
     if (!projects?.some((project) => project.id === projectId)) return;
-    dispatch(setSelectedProject(projectId));
-    void authApi.setActiveProject(projectId).catch(() => {
-      // The selection remains in memory; the next authenticated refresh will
-      // reconcile with the server if the preference request failed.
-    });
+    try {
+      await authApi.setActiveProject(projectId);
+      dispatch(setSelectedProject(projectId));
+    } catch {
+      // Keep the previous selection when the server rejects or cannot save it.
+    }
   };
 
   const active = projects?.find((p) => p.id === selectedId);
