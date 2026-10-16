@@ -8,6 +8,7 @@ import {
   WorkspacePremiumRounded,
 } from "@mui/icons-material";
 import {
+  Alert,
   Box,
   Button,
   IconButton,
@@ -104,6 +105,26 @@ export default function DashboardFrame({
           </Stack>
         </Box>
         <Box component="main" className="dashboard-content">
+          {activeProject?.status === "deactivated" && (
+            <Alert
+              severity="warning"
+              variant="standard"
+              sx={{
+                mb: 2.5,
+                border: "1px solid",
+                borderColor: "warning.light",
+                borderRadius: 2,
+                alignItems: "center",
+                "& .MuiAlert-message": { width: "100%" },
+              }}
+            >
+              <Typography component="span" fontWeight={700}>
+                {projectName} is deactivated.
+              </Typography>{" "}
+              This project is currently read-only. Restore it from Project Settings
+              before using project features again.
+            </Alert>
+          )}
           {!hideHeader && (
             <Stack
               direction={{ xs: "column", sm: "row" }}
