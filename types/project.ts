@@ -236,7 +236,34 @@ export interface EndUser {
   lifecycleSegment: { id: string; name: string } | null;
 }
 
+/** Per-user delivery performance from GET /users/:id. Rates are percentages. */
+export interface UserEngagement {
+  email: {
+    sent: number;
+    delivered: number;
+    opened: number;
+    clicked: number;
+    openRate: number;
+    clickRate: number;
+    deliveryRate: number;
+    bounceRate: number;
+    unsubscribeRate: number;
+    complaintRate: number;
+  };
+  push: {
+    sent: number;
+    delivered: number;
+    failed: number;
+    clicked: number;
+    clickRate: number;
+    noToken: number;
+    noTokenRate: number;
+  };
+  sdkEvents: number;
+}
+
 export interface UserProfile extends EndUser {
+  engagement?: UserEngagement;
   emailConsent?: boolean | null;
   accountStatus?: string | null;
   userType?: string | null;
@@ -261,7 +288,8 @@ export interface UserActivity {
   category?: string;
   title?: string;
   description?: string | null;
-  details?: Record<string, unknown> | null;
+  /** Label/value lines, e.g. { label: "Title", value: "Complete your profile" }. */
+  details?: Array<{ label: string; value: string }> | null;
   occurredAt?: string;
   createdAt?: string;
   [key: string]: unknown;

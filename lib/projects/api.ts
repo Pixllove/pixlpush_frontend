@@ -641,11 +641,27 @@ export const usersApi = {
   activity: (
     projectId: string,
     userId: string,
-    params: { limit?: number; cursor?: string | null } = {},
+    params: {
+      page?: number;
+      limit?: number;
+      order?: "desc" | "asc";
+      category?: string | null;
+    } = {},
   ) => {
-    const query = new URLSearchParams({ limit: String(params.limit ?? 50) });
-    if (params.cursor) query.set("cursor", params.cursor);
-    return authRequest<{ activity: UserActivity[]; nextCursor: string | null }>(
+    const query = new URLSearchParams({
+      page: String(params.page ?? 1),
+      limit: String(params.limit ?? 20),
+      order: params.order ?? "desc",
+    });
+    if (params.category) query.set("category", params.category);
+    return authRequest<{
+      activity: UserActivity[];
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      categories: string[];
+    }>(
       at(
         projectId,
         `/users/${encodeURIComponent(userId)}/activity?${query.toString()}`,
