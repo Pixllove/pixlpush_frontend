@@ -19,6 +19,7 @@ import {
   PublicRounded,
   RouteRounded,
   SendRounded,
+  SortRounded,
   TimelineRounded,
 } from "@mui/icons-material";
 import {
@@ -33,6 +34,8 @@ import {
   Divider,
   Grid,
   IconButton,
+  MenuItem,
+  Select,
   Skeleton,
   Stack,
   Typography,
@@ -57,12 +60,18 @@ const display = (value: unknown) =>
         : "No"
       : String(value);
 
+const count = (n?: number) => (n === undefined ? "…" : n.toLocaleString());
+const percent = (n?: number) => (n === undefined ? "…" : `${n}%`);
+
+const ACTIVITY_PAGE_SIZE = 10;
+
 export default function UserDetailsWorkspace({ userId }: { userId: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { active } = useActiveProject();
-  const [activityCursor, setActivityCursor] = useState<string | null>(null);
-  const [history, setHistory] = useState<string[]>([]);
+  const [activityPage, setActivityPage] = useState(1);
+  const [activityOrder, setActivityOrder] = useState<"desc" | "asc">("desc");
+  const [activityCategory, setActivityCategory] = useState("");
   const [json, setJson] = useState<unknown>(null);
   const [copied, setCopied] = useState(false);
   const profileQuery = useQuery({
@@ -77,14 +86,20 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
       active?.id,
       userId,
       "activity",
-      activityCursor,
+      activityPage,
+      activityOrder,
+      activityCategory,
     ],
     queryFn: () =>
       usersApi.activity(active!.id, userId, {
-        limit: 20,
-        cursor: activityCursor,
+        page: activityPage,
+        limit: ACTIVITY_PAGE_SIZE,
+        order: activityOrder,
+        category: activityCategory || null,
       }),
     enabled: Boolean(active?.id && userId),
+    // Keep the current page on screen while the next one loads.
+    placeholderData: (previous) => previous,
   });
   const eventsQuery = useQuery({
     queryKey: ["projects", "events", active?.id, userId],
@@ -96,20 +111,10 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
   const device = user?.installations?.[0];
   const activePush = user?.pushSubscriptions?.find((sub) => sub.active);
   const activities = activityQuery.data?.activity ?? [];
+  const email = user?.engagement?.email;
+  const push = user?.engagement?.push;
   const events = eventsQuery.data?.events ?? [];
-  const goNext = () => {
-    if (activityQuery.data?.nextCursor) {
-      setHistory((current) => [...current, activityCursor ?? ""]);
-      setActivityCursor(activityQuery.data.nextCursor);
-    }
-  };
-  const goPrevious = () => {
-    const previous = history[history.length - 1];
-    if (previous !== undefined) {
-      setHistory((current) => current.slice(0, -1));
-      setActivityCursor(previous || null);
-    }
-  };
+  const totalPages = activityQuery.data?.totalPages ?? 1;
 
   return (
     <Stack gap={2.2} className="user-details-workspace">
@@ -273,10 +278,10 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
               Email and push performance are calculated independently by channel
             </Typography>
             <Grid container spacing={1.2} sx={{ mt: 1 }}>
-              {metric(EmailRounded, "Emails sent", "0")}
-              {metric(EmailRounded, "Emails opened", "0")}
-              {metric(NotificationsActiveRounded, "Pushes sent", "0")}
-              {metric(SendRounded, "Pushes clicked", "0")}
+              {metric(EmailRounded, "Emails sent", count(email?.sent))}
+              {metric(EmailRounded, "Emails opened", count(email?.opened))}
+              {metric(NotificationsActiveRounded, "Pushes sent", count(push?.sent))}
+              {metric(SendRounded, "Pushes clicked", count(push?.clicked))}
             </Grid>
             <Divider sx={{ my: 1.5 }} />
             <Grid container spacing={2}>
@@ -285,12 +290,12 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
                 <Typography fontWeight={600}>Email engagement</Typography>
                 <MetricRows
                   rows={[
-                    "Open rate|0%",
-                    "Click rate|0%",
-                    "Delivery rate|0%",
-                    "Bounce rate|0%",
-                    "Unsubscribe rate|0%",
-                    "Spam complaint rate|0%",
+                    `Open rate|${percent(email?.openRate)}`,
+                    `Click rate|${percent(email?.clickRate)}`,
+                    `Delivery rate|${percent(email?.deliveryRate)}`,
+                    `Bounce rate|${percent(email?.bounceRate)}`,
+                    `Unsubscribe rate|${percent(email?.unsubscribeRate)}`,
+                    `Spam complaint rate|${percent(email?.complaintRate)}`,
                   ]}
                 />
                 </Box>
@@ -300,11 +305,11 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
                 <Typography fontWeight={600}>Push engagement</Typography>
                 <MetricRows
                   rows={[
-                    "Sent|0",
-                    "Delivered|0",
-                    "Failed|0",
-                    "Click rate|0%",
-                    "No token|0%",
+                    `Sent|${count(push?.sent)}`,
+                    `Delivered|${count(push?.delivered)}`,
+                    `Failed|${count(push?.failed)}`,
+                    `Click rate|${percent(push?.clickRate)}`,
+                    `No token|${percent(push?.noTokenRate)}`,
                   ]}
                 />
                 </Box>
@@ -333,16 +338,29 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
             </Grid>
             <Typography color="text.secondary" fontSize={11} sx={{ mt: 1 }}>
               SDK events recorded:{" "}
-              {eventsQuery.isLoading ? "…" : events.length.toLocaleString()}
+              {count(user?.engagement?.sdkEvents ?? (eventsQuery.isLoading ? undefined : events.length))}
             </Typography>
           </Card>
           <ActivityCard
             activities={activities}
             loading={activityQuery.isLoading}
-            hasPrevious={history.length > 0}
-            hasNext={Boolean(activityQuery.data?.nextCursor)}
-            onPrevious={goPrevious}
-            onNext={goNext}
+            fetching={activityQuery.isFetching}
+            page={activityPage}
+            totalPages={totalPages}
+            total={activityQuery.data?.total ?? 0}
+            order={activityOrder}
+            category={activityCategory}
+            categories={activityQuery.data?.categories ?? []}
+            onPrevious={() => setActivityPage((p) => Math.max(1, p - 1))}
+            onNext={() => setActivityPage((p) => Math.min(totalPages, p + 1))}
+            onToggleOrder={() => {
+              setActivityOrder((o) => (o === "desc" ? "asc" : "desc"));
+              setActivityPage(1);
+            }}
+            onCategoryChange={(value) => {
+              setActivityCategory(value);
+              setActivityPage(1);
+            }}
             onViewJson={setJson}
           />
         </>
@@ -420,27 +438,76 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
 function ActivityCard({
   activities,
   loading,
-  hasPrevious,
-  hasNext,
+  fetching,
+  page,
+  totalPages,
+  total,
+  order,
+  category,
+  categories,
   onPrevious,
   onNext,
+  onToggleOrder,
+  onCategoryChange,
   onViewJson,
 }: {
   activities: UserActivity[];
   loading: boolean;
-  hasPrevious: boolean;
-  hasNext: boolean;
+  fetching: boolean;
+  page: number;
+  totalPages: number;
+  total: number;
+  order: "desc" | "asc";
+  category: string;
+  categories: string[];
   onPrevious: () => void;
   onNext: () => void;
+  onToggleOrder: () => void;
+  onCategoryChange: (value: string) => void;
   onViewJson: (value: unknown) => void;
 }) {
   return (
     <Card className="saas-card activity-history-card">
-      <DetailHeader
-        icon={TimelineRounded}
-        title="Activity History"
-        subtitle="App, account, segment, group, journey, email, push, and SDK activity"
-      />
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        justifyContent="space-between"
+        alignItems={{ xs: "flex-start", sm: "center" }}
+        gap={1.5}
+      >
+        <DetailHeader
+          icon={TimelineRounded}
+          title="Activity History"
+          subtitle="App, account, segment, group, journey, email, push, and SDK activity"
+        />
+        <Stack direction="row" gap={1}>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={
+              <SortRounded
+                sx={{ transform: order === "asc" ? "scaleY(-1)" : undefined }}
+              />
+            }
+            onClick={onToggleOrder}
+          >
+            {order === "desc" ? "Newest first" : "Oldest first"}
+          </Button>
+          <Select
+            size="small"
+            value={category}
+            displayEmpty
+            onChange={(event) => onCategoryChange(String(event.target.value))}
+            sx={{ minWidth: 150, fontSize: 13 }}
+          >
+            <MenuItem value="">All activity</MenuItem>
+            {categories.map((name) => (
+              <MenuItem key={name} value={name}>
+                {name}
+              </MenuItem>
+            ))}
+          </Select>
+        </Stack>
+      </Stack>
       <Stack gap={2} sx={{ mt: 2 }}>
         {loading ? (
           Array.from({ length: 2 }, (_, index) => (
@@ -476,9 +543,20 @@ function ActivityCard({
                   <Typography color="text.secondary" fontSize={11}>
                     {formatDate(activity.occurredAt || activity.createdAt)}
                   </Typography>
-                  <Typography color="text.secondary" fontSize={11}>
-                    {activity.description || "No additional details available"}
-                  </Typography>
+                  {activity.details?.length ? (
+                    activity.details.map((item) => (
+                      <Typography key={item.label} fontSize={11}>
+                        <Box component="span" sx={{ color: "text.secondary" }}>
+                          {item.label}:
+                        </Box>{" "}
+                        {item.value}
+                      </Typography>
+                    ))
+                  ) : activity.description ? (
+                    <Typography color="text.secondary" fontSize={11}>
+                      {activity.description}
+                    </Typography>
+                  ) : null}
                   <Button
                     size="small"
                     variant="outlined"
@@ -499,13 +577,14 @@ function ActivityCard({
       </Stack>
       <Stack direction="row" justifyContent="space-between" sx={{ mt: 2 }}>
         <Typography color="text.secondary" fontSize={11}>
-          Activity is paginated by the backend
+          Page {page} of {totalPages} • {total.toLocaleString()}{" "}
+          {total === 1 ? "activity" : "activities"}
         </Typography>
         <Stack direction="row" gap={1}>
           <Button
             size="small"
             variant="outlined"
-            disabled={!hasPrevious || loading}
+            disabled={page <= 1 || fetching}
             onClick={onPrevious}
           >
             Previous
@@ -513,7 +592,7 @@ function ActivityCard({
           <Button
             size="small"
             variant="outlined"
-            disabled={!hasNext || loading}
+            disabled={page >= totalPages || fetching}
             onClick={onNext}
           >
             Next
