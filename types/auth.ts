@@ -23,6 +23,8 @@ export interface AccountProject {
   name: string;
   slug: string;
   status: 'active' | 'deactivated';
+  deactivatedAt: string | null;
+  recoveryUntil: string | null;
   role: 'owner' | 'admin' | 'developer' | 'analyst' | 'read_only' | 'billing';
 }
 
