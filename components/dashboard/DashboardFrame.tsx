@@ -15,8 +15,6 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { useDispatch } from "react-redux";
-import { setSelectedProject } from "@/lib/uiSlice";
 import { useActiveProject } from "@/hooks/projects/use-active-project";
 import CreateProjectDialog from "./CreateProjectDialog";
 import DashboardSidebar from "./DashboardSidebar";
@@ -43,14 +41,13 @@ export default function DashboardFrame({
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const dispatch = useDispatch();
-  const { active: activeProject, isEmpty } = useActiveProject();
+  const { active: activeProject, isEmpty, selectProject } = useActiveProject();
 
   const [createOpen, setCreateOpen] = useState(false);
   const changeProject = (value: string) => {
     value === "create"
       ? setCreateOpen(true)
-      : dispatch(setSelectedProject(value));
+      : selectProject(value);
   };
 
   // Only once the list has loaded and is truly empty; while loading the page renders as usual.
