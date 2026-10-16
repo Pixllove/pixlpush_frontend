@@ -1,5 +1,5 @@
 import { authRequest } from './client';
-import type { Account, CurrentUser, LoginResult, MfaEnrollment } from '@/types/auth';
+import type { Account, AccountProject, CurrentUser, LoginResult, MfaEnrollment } from '@/types/auth';
 import type {
   ForgotPasswordInput,
   LoginInput,
@@ -30,6 +30,9 @@ export const authApi = {
   logout: () => authRequest<{ message: string }>('/logout', {}),
 
   me: () => authRequest<CurrentUser>('/me'),
+
+  setActiveProject: (projectId: string) =>
+    authRequest<{ activeProjectId: string; project: AccountProject }>('/me/active-project', { projectId }),
 
   forgotPassword: (input: ForgotPasswordInput) =>
     authRequest<{ message: string }>('/forgot-password', input),

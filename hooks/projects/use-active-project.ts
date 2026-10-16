@@ -6,6 +6,7 @@ import { RootState } from '@/lib/store';
 import { setSelectedProject } from '@/lib/uiSlice';
 import { useProjects } from './use-projects';
 import type { Project } from '@/types/project';
+import { authApi } from '@/lib/auth/api';
 
 /** The secondary label beside a Project name: its plan, e.g. "Pro". */
 export function planLabel(project: Pick<Project, 'subscription'>): string {
@@ -31,12 +32,16 @@ export function useActiveProject() {
   useEffect(() => {
     const linked = new URLSearchParams(window.location.search).get('project');
     const saved = linked ?? window.localStorage.getItem('pixlpush:selectedProject');
-    if (saved) dispatch(setSelectedProject(saved));
+    if (saved) window.localStorage.setItem('pixlpush:selectedProject', saved);
   }, [dispatch]);
 
   useEffect(() => {
-    if (selectedId) window.localStorage.setItem('pixlpush:selectedProject', selectedId);
-  }, [selectedId]);
+    if (!selectedId || !projects?.some((project) => project.id === selectedId)) return;
+    window.localStorage.setItem('pixlpush:selectedProject', selectedId);
+    void authApi.setActiveProject(selectedId).catch(() => {
+      // Local selection remains usable if the preference request is unavailable.
+    });
+  }, [selectedId, projects]);
 
   /**
    * Selecting the first Project when the remembered one is gone covers both a
@@ -44,7 +49,14 @@ export function useActiveProject() {
    */
   useEffect(() => {
     if (!projects?.length) return;
-    if (!projects.some((p) => p.id === selectedId)) dispatch(setSelectedProject(projects[0].id));
+    const linked = new URLSearchParams(window.location.search).get('project');
+    const saved = linked ?? window.localStorage.getItem('pixlpush:selectedProject');
+    const preferred = saved && projects.some((project) => project.id === saved) ? saved : null;
+    if (preferred && preferred !== selectedId) {
+      dispatch(setSelectedProject(preferred));
+    } else if (!projects.some((p) => p.id === selectedId)) {
+      dispatch(setSelectedProject(projects[0].id));
+    }
   }, [projects, selectedId, dispatch]);
 
   const active = projects?.find((p) => p.id === selectedId);

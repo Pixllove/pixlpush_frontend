@@ -29,6 +29,7 @@ export interface AccountProject {
 export interface CurrentUser {
   account: Account;
   projects: AccountProject[];
+  activeProjectId: string | null;
 }
 
 export interface LoginResult {
