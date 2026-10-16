@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Alert, Box, Button, Card, Dialog, DialogContent, DialogTitle, Skeleton, Stack, TextField, Typography } from '@mui/material';
-import { EditOutlined, DownloadRounded, OpenInNewRounded } from '@mui/icons-material';
+import { EditOutlined, DownloadRounded, OpenInNewRounded, ContentCopyRounded } from '@mui/icons-material';
 import { jsPDF } from 'jspdf';
 import { useQuery } from '@tanstack/react-query';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
@@ -151,6 +151,7 @@ export default function ProjectDetailsPanel({ showHeading = true }: { showHeadin
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [saved, setSaved] = useState(false);
+  const [idCopied, setIdCopied] = useState(false);
   const [error, setError] = useState<string>();
 
   // Load the server's values once they arrive, and again when the Project
@@ -211,7 +212,22 @@ export default function ProjectDetailsPanel({ showHeading = true }: { showHeadin
               <>
             <TextField label="Project name" value={name} onChange={(e) => setName(e.target.value)} disabled={disabled} />
             {/* The slug is assigned at creation and is not editable. */}
-            <TextField label="Project ID" value={project?.slug ?? ''} fullWidth disabled />
+            <Stack direction="row" gap={1} alignItems="center">
+              <TextField label="Project ID" value={project?.slug ?? ''} fullWidth InputProps={{ readOnly: true }} />
+              <Button
+                startIcon={<ContentCopyRounded />}
+                disabled={!project?.slug}
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(project?.slug ?? '');
+                    setIdCopied(true);
+                    window.setTimeout(() => setIdCopied(false), 2000);
+                  } catch { /* clipboard blocked: nothing copied */ }
+                }}
+              >
+                {idCopied ? 'Copied' : 'Copy'}
+              </Button>
+            </Stack>
             <TextField label="Description" value={description} onChange={(e) => setDescription(e.target.value)} disabled={disabled} multiline minRows={3} />
             <SubmitButton type="submit" variant="contained" pending={updateProject.isPending} disabled={disabled || !name.trim()} sx={{ alignSelf: 'flex-start' }}>
               Save changes

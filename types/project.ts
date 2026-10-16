@@ -247,6 +247,9 @@ export interface UserProfile extends EndUser {
   deletedAt?: string | null;
   device?: Record<string, unknown> | null;
   push?: Record<string, unknown> | null;
+  installations?: Array<{ installationId: string; platform: string | null; osVersion?: string | null; appVersion?: string | null; lastActiveAt?: string | null }>;
+  pushSubscriptions?: Array<{ id: string; provider: string; active: boolean; permission: string | null; lastSeenAt?: string | null }>;
+  reachable?: boolean;
   audienceGroups?: Array<{ id: string; name: string }>;
   properties?: Record<string, unknown> | null;
   [key: string]: unknown;

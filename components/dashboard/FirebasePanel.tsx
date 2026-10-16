@@ -42,6 +42,9 @@ export default function FirebasePanel() {
       projectId = parsed.project_id;
       // Firebase's default Admin SDK account can do far more than send push.
       adminKey = typeof parsed.client_email === 'string' && parsed.client_email.startsWith('firebase-adminsdk');
+      if (!projectId) setError(parsed.project_info
+        ? 'This is google-services.json (app config). Upload the service account key JSON instead.'
+        : 'This is not a service account key. It has no project_id.');
     } catch { setError('This file is not valid JSON.'); }
     setFile({ name: picked.name, text, projectId, adminKey });
   };

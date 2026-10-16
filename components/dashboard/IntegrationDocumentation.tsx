@@ -28,20 +28,20 @@ import {
 } from "@mui/material";
 import { useActiveProject } from "@/hooks/projects/use-active-project";
 
-const sdkInstall = `npm install @pixlpush/react`;
-const sdkSetup = `import { PixlPush } from "@pixlpush/react";
+const sdkInstall = `npx expo install @pixlpush/react-native @react-native-async-storage/async-storage`;
+const sdkSetup = `import PixlPush from "@pixlpush/react-native";
 
-PixlPush.initialize({
+await PixlPush.configure({
+  sdkKey: "YOUR_SDK_KEY",
   projectId: "YOUR_PROJECT_ID",
-  publicKey: "YOUR_PUBLIC_SDK_KEY",
   environment: "production",
 });
 
-PixlPush.identify({
-  userId: "customer_123",
+await PixlPush.identify({
+  externalUserId: "customer_123",
   email: "customer@example.com",
   name: "Alex Morgan",
-  plan: "pro",
+  properties: { plan: "pro" },
 });`;
 const eventSetup = `PixlPush.track("purchase_completed", {
   orderId: "order_123",
@@ -49,25 +49,25 @@ const eventSetup = `PixlPush.track("purchase_completed", {
   currency: "USD",
   plan: "pro",
 });`;
-const consentSetup = `PixlPush.updateConsent({
+const consentSetup = `PixlPush.setConsent({
   email: true,
   push: true,
 });
 
 PixlPush.reset(); // call on logout`;
-const aiPrompt = `You are integrating PixlPush into a production React application. Build a complete, maintainable integration for behavioral analytics, lifecycle segmentation, audience management, email marketing, and push notifications.
+const aiPrompt = `You are integrating PixlPush into a production React Native / Expo application. Build a complete, maintainable integration for behavioral analytics, lifecycle segmentation, audience management, email marketing, and push notifications.
 
 PRODUCT CONTEXT
 PixlPush turns product behavior into retention. It receives identified users and product events, then uses those signals to power lifecycle segments, audience groups, email campaigns, and push notification journeys.
 
 PROJECT CONFIGURATION
 Project ID: YOUR_PROJECT_ID
-Public SDK key: YOUR_PUBLIC_SDK_KEY
+SDK key: YOUR_SDK_KEY
 Environment: production
 
 IMPLEMENTATION REQUIREMENTS
-1. Install and initialize the React SDK once at the application entry point. Do not initialize it on every render.
-2. Read the Project ID and public key from environment variables or the app configuration layer. Never hard-code private credentials.
+1. Install @pixlpush/react-native and @react-native-async-storage/async-storage, then call PixlPush.configure once at the application entry point. Do not configure it on every render. Only sdkKey and projectId are required; the SDK already knows the PixlPush server URL.
+2. Read the Project ID and SDK key from environment variables or the app configuration layer. Never hard-code private credentials.
 3. After a successful login or signup, identify the user with a stable customer ID. Include email, name, company, plan, locale, timezone, and consent fields when available.
 4. Reset the identity on logout so events from different users cannot be merged.
 5. Track meaningful events only once per user action. Add a small event helper with consistent names and typed payloads.
@@ -78,23 +78,24 @@ IMPLEMENTATION REQUIREMENTS
 10. Make the integration resilient to React Strict Mode, route changes, duplicate browser tabs, and offline recovery.
 
 REFERENCE SETUP
-import { PixlPush } from "@pixlpush/react";
+import PixlPush from "@pixlpush/react-native";
 
-PixlPush.initialize({
-  projectId: process.env.REACT_APP_PIXLPUSH_PROJECT_ID,
-  publicKey: process.env.REACT_APP_PIXLPUSH_PUBLIC_KEY,
+await PixlPush.configure({
+  sdkKey: process.env.EXPO_PUBLIC_PIXLPUSH_SDK_KEY,
+  projectId: process.env.EXPO_PUBLIC_PIXLPUSH_PROJECT_ID,
   environment: "production",
 });
 
 PixlPush.identify({
-  userId: user.id,
+  externalUserId: user.id,
   email: user.email,
   name: user.name,
-  company: user.company,
-  plan: user.plan,
-  locale: user.locale,
-  timezone: user.timezone,
-  emailConsent: user.emailConsent,
+  properties: {
+    company: user.company,
+    plan: user.plan,
+    locale: user.locale,
+    timezone: user.timezone,
+  },
 });
 
 PixlPush.track("onboarding_completed", {
@@ -112,7 +113,7 @@ DELIVERABLES
 - Add event calls to the key product flows listed above.
 - Add tests proving initialization happens once and duplicate events are prevented.
 - Add a short README table documenting every event, when it fires, and its payload properties.
-- Explain how to verify events in the PixlPush dashboard and how to rotate a public SDK key safely.
+- Explain how to verify events in the PixlPush dashboard and how to rotate an SDK key safely.
 
 Before finishing, show the files changed, list the event names implemented, and call out any backend or server-side work that is still required.`;
 
@@ -262,7 +263,7 @@ function SectionHeading({
 export default function IntegrationDocumentation() {
   const { active } = useActiveProject();
   const [copied, setCopied] = useState<string>();
-  const projectId = active?.id ?? "YOUR_PROJECT_ID";
+  const projectId = active?.slug ?? "YOUR_PROJECT_ID";
   const copy = async (value: string, label: string) => {
     await navigator.clipboard.writeText(
       value.replaceAll("YOUR_PROJECT_ID", projectId),
@@ -538,12 +539,12 @@ export default function IntegrationDocumentation() {
                   sx={{ mt: 0.5 }}
                 >
                   Create or select a Project, then open Settings → SDK keys to
-                  create a public key for this environment.
+                  create an SDK key for this environment.
                 </Typography>
               </Box>
               {[
                 ["Project ID", projectId],
-                ["Public SDK key", "YOUR_PUBLIC_SDK_KEY"],
+                ["SDK key", "YOUR_SDK_KEY"],
                 ["Environment", "production"],
               ].map(([label, value]) => (
                 <Box
@@ -558,13 +559,24 @@ export default function IntegrationDocumentation() {
                   <Typography color="text.secondary" fontSize={12}>
                     {label}
                   </Typography>
-                  <Typography
-                    fontSize={13}
-                    fontWeight={600}
-                    sx={{ mt: 0.4, wordBreak: "break-all" }}
-                  >
-                    {value}
-                  </Typography>
+                  <Stack direction="row" alignItems="center" gap={1} sx={{ mt: 0.4 }}>
+                    <Typography
+                      fontSize={13}
+                      fontWeight={600}
+                      sx={{ wordBreak: "break-all", flex: 1 }}
+                    >
+                      {value}
+                    </Typography>
+                    {label === "Project ID" && active && (
+                      <Button
+                        size="small"
+                        startIcon={<ContentCopyRounded />}
+                        onClick={() => copy(value, label)}
+                      >
+                        {copied === label ? "Copied" : "Copy"}
+                      </Button>
+                    )}
+                  </Stack>
                 </Box>
               ))}
             </Stack>
@@ -805,7 +817,7 @@ export default function IntegrationDocumentation() {
               {[
                 [
                   "No events",
-                  "Check initialization, Project ID, public key, and network requests.",
+                  "Check initialization, Project ID, SDK key, and network requests.",
                 ],
                 [
                   "Wrong user",

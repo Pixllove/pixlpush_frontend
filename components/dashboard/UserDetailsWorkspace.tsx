@@ -92,6 +92,9 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
     enabled: Boolean(active?.id && userId),
   });
   const user = profileQuery.data;
+  // The API returns devices and push subscriptions as lists; show the most relevant one.
+  const device = user?.installations?.[0];
+  const activePush = user?.pushSubscriptions?.find((sub) => sub.active);
   const activities = activityQuery.data?.activity ?? [];
   const events = eventsQuery.data?.events ?? [];
   const goNext = () => {
@@ -119,7 +122,7 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
       </Button>
       <Box className="user-detail-breadcrumb">
         <Typography color="text.secondary" fontSize={11}>
-          Users&nbsp; › &nbsp;{user?.email || userId}
+          Users&nbsp; › &nbsp;{user?.email || user?.externalUserId || userId}
         </Typography>
         <Stack
           direction={{ xs: "column", sm: "row" }}
@@ -127,7 +130,7 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
           gap={1}
         >
           <Typography className="user-detail-email-title">
-            {user?.email || userId}
+            {user?.email || user?.externalUserId || userId}
           </Typography>
           <Chip
             label={user?.deletedAt ? "Deleted" : "Active"}
@@ -181,7 +184,7 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
               <DetailItem
                 icon={CodeRounded}
                 label="User ID"
-                value={display(user?.id)}
+                value={display(user?.externalUserId ?? user?.id)}
               />
               <DetailItem
                 icon={EmailRounded}
@@ -207,7 +210,7 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
               <DetailItem
                 icon={RouteRounded}
                 label="Signup source"
-                value={display(user?.signupSource)}
+                value={display(user?.signupSource ?? user?.properties?.signupSource)}
               />
               <DetailItem
                 icon={LocationOnRounded}
@@ -224,19 +227,17 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
               <DetailItem
                 icon={NotificationsActiveRounded}
                 label="Push permission"
-                value={display(user?.pushPermission ?? user?.push?.permission)}
+                value={display(activePush?.permission ?? user?.pushSubscriptions?.[0]?.permission)}
               />
               <DetailItem
                 icon={PhoneAndroidRounded}
                 label="Platform"
-                value={display(user?.platform ?? user?.device?.platform)}
+                value={display(device ? [device.platform, device.osVersion].filter(Boolean).join(" ") : null)}
               />
               <DetailItem
                 icon={NotificationsActiveRounded}
                 label="Push token"
-                value={display(
-                  user?.push?.token ? "Available" : "Not available",
-                )}
+                value={activePush ? `Available (${activePush.provider.toUpperCase()})` : "Not available"}
               />
             </UserDetailSection>
             <UserDetailSection title="Location & Preferences">

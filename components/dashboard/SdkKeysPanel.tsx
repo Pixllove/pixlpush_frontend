@@ -67,7 +67,7 @@ export default function SdkKeysPanel() {
             <KeyRounded /><Typography sx={{ wordBreak: 'break-all' }}>{fresh.key}</Typography>
             <Button size="small" startIcon={<ContentCopyRounded />} onClick={copy}>{copied ? 'Copied' : 'Copy'}</Button>
           </Box>
-          <Typography fontSize={12} sx={{ mt: 1 }}>Project ID for the SDK: <b>{active?.id}</b></Typography>
+          <Typography fontSize={12} sx={{ mt: 1 }}>Project ID for the SDK: <b>{active?.slug}</b></Typography>
         </Alert>
       )}
 
