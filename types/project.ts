@@ -47,6 +47,7 @@ export interface BillingContact {
   city?: string | null;
   state?: string | null;
   country?: string | null;
+  region?: string | null;
   vatId?: string | null;
   /** After a save: whether the VAT id could be put on Stripe invoices (false for a country Stripe has no type for here). */
   taxIdSent?: boolean;
@@ -332,6 +333,7 @@ export interface LifecycleSegmentMember {
   email: string | null;
   name: string | null;
   country?: string | null;
+  region?: string | null;
   accountStatus?: string | null;
   createdAt: string;
   lastActiveAt?: string | null;
