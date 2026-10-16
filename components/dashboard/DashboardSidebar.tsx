@@ -61,7 +61,7 @@ export default function DashboardSidebar({ active, setActive, mobileOpen, collap
       <header className="sidebar-brand">
         <Link className="sidebar-brand-lockup" href="/dashboard" aria-label="PixlPush home">
           <Image className="sidebar-brand-mark" src="/assets/site-icon.png" alt="" aria-hidden="true" width={21} height={31} priority />
-          <Image className="sidebar-brand-wordmark" src="/assets/logo.png" alt="PixlPush" width={104} height={37} priority />
+          <Image className="sidebar-brand-wordmark" src="/assets/logo-header.png" alt="PixlPush" width={104} height={37} priority />
         </Link>
         <IconButton
           className="sidebar-collapse-toggle"
