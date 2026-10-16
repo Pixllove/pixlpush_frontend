@@ -43,7 +43,12 @@ export default function LoginForm({ active = true, onSwitch }: { active?: boolea
   const onSubmit = handleSubmit(async (values) => {
     setFormError(undefined);
     try {
-      const { account } = await login.mutateAsync(values);
+      const { account, mfaRequired } = await login.mutateAsync(values);
+      if (mfaRequired) {
+        const redirect = searchParams.get('redirect');
+        router.replace(`/login/mfa${redirect ? `?redirect=${encodeURIComponent(redirect)}` : ''}`);
+        return;
+      }
       router.replace(postLoginPath(account, searchParams.get('redirect')));
       router.refresh();
     } catch (error) {
