@@ -137,7 +137,13 @@ export default function TwoFactorSettings() {
             <Button variant="outlined" onClick={() => { setError(undefined); setMode('regenerate'); }} disabled={pending}>
               Regenerate recovery codes
             </Button>
-            <Button color="error" variant="text" onClick={() => { setError(undefined); setMode('disable'); }} disabled={pending}>
+            <Button
+              color="error"
+              variant="contained"
+              onClick={() => { setError(undefined); setMode('disable'); }}
+              disabled={pending}
+              sx={{ color: '#fff', fontWeight: 700, boxShadow: 'none', '&:hover': { color: '#fff', boxShadow: 'none' } }}
+            >
               Turn off 2FA
             </Button>
           </Stack>
