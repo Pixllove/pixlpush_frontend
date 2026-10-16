@@ -7,6 +7,7 @@ import { setSelectedProject } from '@/lib/uiSlice';
 import { useProjects } from './use-projects';
 import type { Project } from '@/types/project';
 import { authApi } from '@/lib/auth/api';
+import { useCurrentUser } from '@/hooks/auth/use-current-user';
 
 /** The secondary label beside a Project name: its plan, e.g. "Pro". */
 export function planLabel(project: Pick<Project, 'subscription'>): string {
@@ -25,39 +26,36 @@ export function useActiveProject() {
   const dispatch = useDispatch();
   const selectedId = useSelector((state: RootState) => state.ui.selectedProject);
   const { data: projects, isPending, isError } = useProjects();
+  const { data: currentUser } = useCurrentUser();
 
   // Restore the last selection before the list arrives, so switching pages
   // does not momentarily fall back to a different Project. A ?project= link
   // (e.g. from an access email) wins; an id without access falls back below.
-  useEffect(() => {
-    const linked = new URLSearchParams(window.location.search).get('project');
-    const saved = linked ?? window.localStorage.getItem('pixlpush:selectedProject');
-    if (saved) window.localStorage.setItem('pixlpush:selectedProject', saved);
-  }, [dispatch]);
-
-  useEffect(() => {
-    if (!selectedId || !projects?.some((project) => project.id === selectedId)) return;
-    window.localStorage.setItem('pixlpush:selectedProject', selectedId);
-    void authApi.setActiveProject(selectedId).catch(() => {
-      // Local selection remains usable if the preference request is unavailable.
-    });
-  }, [selectedId, projects]);
-
   /**
    * Selecting the first Project when the remembered one is gone covers both a
    * first sign-in and a Project the Account has lost access to.
    */
   useEffect(() => {
     if (!projects?.length) return;
-    const linked = new URLSearchParams(window.location.search).get('project');
-    const saved = linked ?? window.localStorage.getItem('pixlpush:selectedProject');
-    const preferred = saved && projects.some((project) => project.id === saved) ? saved : null;
+    if (selectedId && projects.some((project) => project.id === selectedId)) return;
+    const preferred = currentUser?.activeProjectId && projects.some((project) => project.id === currentUser.activeProjectId)
+      ? currentUser.activeProjectId
+      : null;
     if (preferred && preferred !== selectedId) {
       dispatch(setSelectedProject(preferred));
     } else if (!projects.some((p) => p.id === selectedId)) {
       dispatch(setSelectedProject(projects[0].id));
     }
-  }, [projects, selectedId, dispatch]);
+  }, [projects, selectedId, currentUser?.activeProjectId, dispatch]);
+
+  const selectProject = (projectId: string): void => {
+    if (!projects?.some((project) => project.id === projectId)) return;
+    dispatch(setSelectedProject(projectId));
+    void authApi.setActiveProject(projectId).catch(() => {
+      // The selection remains in memory; the next authenticated refresh will
+      // reconcile with the server if the preference request failed.
+    });
+  };
 
   const active = projects?.find((p) => p.id === selectedId);
 
@@ -68,5 +66,6 @@ export function useActiveProject() {
     isEmpty: !isPending && !isError && projects?.length === 0,
     isPending,
     isError,
+    selectProject,
   };
 }
