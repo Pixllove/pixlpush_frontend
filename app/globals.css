@@ -15364,6 +15364,86 @@ body {
 .pp-segmented-tabs-wide .MuiTab-root {
   min-width: 58px;
 }
+.premium-workspace-tabs {
+  width: 100%;
+  overflow-x: auto;
+  border-bottom: 1px solid #e7e3eb;
+  background: transparent;
+}
+.premium-workspace-tabs .MuiTabs-root {
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 58px !important;
+  margin-bottom: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+.premium-workspace-tabs .MuiTabs-flexContainer {
+  min-width: max-content;
+  gap: 8px;
+}
+.premium-workspace-tabs .MuiTabs-indicator {
+  top: auto !important;
+  bottom: 0 !important;
+  height: 3px !important;
+  border-radius: 4px 4px 0 0;
+  background: #4f46e5;
+  box-shadow: none !important;
+}
+.premium-workspace-tabs .MuiTab-root {
+  min-height: 58px !important;
+  min-width: auto;
+  padding: 8px 20px 10px !important;
+  border-radius: 0;
+  color: #6d6478;
+  text-transform: none;
+  font-size: 18px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: color 0.18s ease;
+}
+.premium-workspace-tabs .MuiTab-root:hover {
+  color: #34254a;
+}
+.premium-workspace-tabs .MuiTab-root.Mui-selected {
+  color: #4f46e5;
+  font-weight: 700;
+}
+.premium-workspace-tabs .MuiTab-iconWrapper {
+  color: #746a80;
+}
+.premium-workspace-tabs .MuiTab-root.Mui-selected .MuiTab-iconWrapper {
+  color: #4f46e5;
+}
+.premium-workspace-tab-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+.premium-workspace-tab-label .MuiChip-root {
+  height: 28px;
+  min-width: 28px;
+  border-radius: 999px;
+  background: #ebe7ef;
+  color: #756b81;
+  font-size: 13px;
+  font-weight: 600;
+}
+.premium-workspace-tabs
+  .MuiTab-root.Mui-selected
+  .premium-workspace-tab-label
+  .MuiChip-root {
+  background: #f4f1ff;
+  color: #4f46e5;
+}
+.journey-workspace > .premium-workspace-tabs {
+  margin-top: -0.25rem;
+}
+.premium-workspace-tabs-spaced {
+  margin-bottom: 24px;
+}
 .analytics-table-empty {
   min-height: 180px;
   display: grid;

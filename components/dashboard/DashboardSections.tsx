@@ -74,8 +74,6 @@ import {
   TableHead,
   TableRow,
   Typography,
-  Tab,
-  Tabs,
   ToggleButton,
   ToggleButtonGroup,
 } from "@mui/material";
@@ -89,11 +87,7 @@ import {
   userStatsApi,
   usersApi,
 } from "@/lib/projects/api";
-import type {
-  AudienceGroup,
-  EndUser,
-  LifecycleSegment,
-} from "@/types/project";
+import type { AudienceGroup, EndUser, LifecycleSegment } from "@/types/project";
 import type {
   EmailCampaign,
   EmailTemplate,
@@ -113,6 +107,7 @@ import { Toast } from "@/components/auth/AuthFeedback";
 import SearchField from "./SearchField";
 import EmptyState, { listEmpty } from "./EmptyState";
 import HomeCommandCenter from "./HomeCommandCenter";
+import PremiumWorkspaceTabs from "./PremiumWorkspaceTabs";
 
 export function StatCard({
   label,
@@ -167,7 +162,12 @@ export function LegacyOverviewSection() {
     shownProject.current = selectedProject;
     // A switch is from one real Project to another. The stored selection replacing the placeholder on
     // reload is not one, and fading for it dimmed the whole page on every load.
-    if (!previous || previous === selectedProject || !projects.some((p) => p.id === previous)) return;
+    if (
+      !previous ||
+      previous === selectedProject ||
+      !projects.some((p) => p.id === previous)
+    )
+      return;
     setSwitching(true);
     const timer = window.setTimeout(() => setSwitching(false), 260);
     return () => window.clearTimeout(timer);
@@ -332,7 +332,12 @@ export function LegacyOverviewSection() {
                   {projectName}
                 </Typography>
               </Box>
-              <ToggleButtonGroup exclusive size="small" value="reachable" aria-label="Chart series">
+              <ToggleButtonGroup
+                exclusive
+                size="small"
+                value="reachable"
+                aria-label="Chart series"
+              >
                 <ToggleButton value="reachable">Reachable</ToggleButton>
                 <ToggleButton value="engaged">Engaged</ToggleButton>
               </ToggleButtonGroup>
@@ -678,7 +683,9 @@ export function UsersSection() {
   const requestedTab = searchParams.get("tab");
   const highlightedId = searchParams.get("highlight");
   const [tab, setTab] = useState<"users" | "segments" | "groups">(
-    requestedTab === "segments" || requestedTab === "groups" ? requestedTab : "users",
+    requestedTab === "segments" || requestedTab === "groups"
+      ? requestedTab
+      : "users",
   );
   const [createGroupOpen, setCreateGroupOpen] = useState(false);
   const [createSegmentOpen, setCreateSegmentOpen] = useState(false);
@@ -781,11 +788,23 @@ export function UsersSection() {
   });
   useEffect(() => setUserCursors([]), [appliedUserSearch, active?.id]);
   useEffect(() => {
-    if (requestedTab === "users" || requestedTab === "segments" || requestedTab === "groups") setTab(requestedTab);
+    if (
+      requestedTab === "users" ||
+      requestedTab === "segments" ||
+      requestedTab === "groups"
+    )
+      setTab(requestedTab);
   }, [requestedTab]);
   useEffect(() => {
     if (!highlightedId) return;
-    const timer = window.setTimeout(() => router.replace(`/dashboard/users?tab=${encodeURIComponent(requestedTab === "segments" || requestedTab === "groups" ? requestedTab : tab)}`, { scroll: false }), 4600);
+    const timer = window.setTimeout(
+      () =>
+        router.replace(
+          `/dashboard/users?tab=${encodeURIComponent(requestedTab === "segments" || requestedTab === "groups" ? requestedTab : tab)}`,
+          { scroll: false },
+        ),
+      4600,
+    );
     return () => window.clearTimeout(timer);
   }, [highlightedId, requestedTab, router, tab]);
   const statsQuery = useQuery({
@@ -936,7 +955,9 @@ export function UsersSection() {
           className="segment-table-link"
           role="link"
           tabIndex={0}
-          onClick={() => router.push(`/dashboard/users/segments/${row.id}?tab=segments`)}
+          onClick={() =>
+            router.push(`/dashboard/users/segments/${row.id}?tab=segments`)
+          }
           onKeyDown={(event) => {
             if (event.key === "Enter" || event.key === " ")
               router.push(`/dashboard/users/segments/${row.id}?tab=segments`);
@@ -1039,7 +1060,9 @@ export function UsersSection() {
           className="group-table-link"
           role="link"
           tabIndex={0}
-          onClick={() => router.push(`/dashboard/users/groups/${row.id}?tab=groups`)}
+          onClick={() =>
+            router.push(`/dashboard/users/groups/${row.id}?tab=groups`)
+          }
           onKeyDown={(event) => {
             if (event.key === "Enter" || event.key === " ") {
               event.preventDefault();
@@ -1103,7 +1126,9 @@ export function UsersSection() {
             size="small"
             variant="outlined"
             className="group-view-button"
-            onClick={() => router.push(`/dashboard/users/groups/${row.id}?tab=groups`)}
+            onClick={() =>
+              router.push(`/dashboard/users/groups/${row.id}?tab=groups`)
+            }
           >
             View group
           </Button>
@@ -1125,11 +1150,12 @@ export function UsersSection() {
   ];
   return (
     <Stack gap={2.5} className="users-workspace">
-      <Tabs value={tab} onChange={(_, value) => { setTab(value); }}>
-        {tabs.map(({ id, label, icon: Icon, count }) => (
-          <Tab key={id} value={id} icon={<Icon />} iconPosition="start" label={<>{label}<Chip label={count} size="small" /></>} />
-        ))}
-      </Tabs>
+      <PremiumWorkspaceTabs
+        value={tab}
+        onChange={setTab}
+        ariaLabel="User views"
+        options={tabs.map(({ id, ...option }) => ({ value: id, ...option }))}
+      />
       {tab === "users" && (
         <Stack gap={2}>
           <Grid container spacing={2}>
@@ -1196,7 +1222,12 @@ export function UsersSection() {
               gap={1.2}
               className="data-toolbar"
             >
-              <SearchField value={userSearch} onChange={setUserSearch} onSearch={setAppliedUserSearch} placeholder="Search by user ID, email or country" />
+              <SearchField
+                value={userSearch}
+                onChange={setUserSearch}
+                onSearch={setAppliedUserSearch}
+                placeholder="Search by user ID, email or country"
+              />
               <Select
                 size="small"
                 defaultValue="all"
@@ -1217,16 +1248,37 @@ export function UsersSection() {
               </Select>
             </Stack>
             {usersQuery.isError ? (
-              <EmptyState size="compact" {...listEmpty({ noun: "users", error: "Could not load users", onRetry: () => usersQuery.refetch() })} />
+              <EmptyState
+                size="compact"
+                {...listEmpty({
+                  noun: "users",
+                  error: "Could not load users",
+                  onRetry: () => usersQuery.refetch(),
+                })}
+              />
             ) : (
               <ReusableDataTable
                 columns={userColumns}
                 rows={users}
                 totalCount={users.length}
                 noun="users"
-                empty={listEmpty({ icon: <PeopleAltOutlined />, noun: "users", description: "Users appear here once your app sends them through the SDK or you import them.", search: appliedUserSearch, onClear: () => { setUserSearch(""); setAppliedUserSearch(""); } })}
+                empty={listEmpty({
+                  icon: <PeopleAltOutlined />,
+                  noun: "users",
+                  description:
+                    "Users appear here once your app sends them through the SDK or you import them.",
+                  search: appliedUserSearch,
+                  onClear: () => {
+                    setUserSearch("");
+                    setAppliedUserSearch("");
+                  },
+                })}
                 showMenu={false}
-                loading={usersQuery.isPending || usersQuery.isFetching || userSearch.trim() !== appliedUserSearch}
+                loading={
+                  usersQuery.isPending ||
+                  usersQuery.isFetching ||
+                  userSearch.trim() !== appliedUserSearch
+                }
                 hasNextPage={Boolean(usersQuery.data?.nextCursor)}
                 hasPreviousPage={userCursors.length > 0}
                 onNextPage={() =>
@@ -1370,7 +1422,11 @@ export function UsersSection() {
               gap={1.2}
               className="data-toolbar"
             >
-              <SearchField value={segmentSearch} onChange={setSegmentSearch} placeholder="Search segments" />
+              <SearchField
+                value={segmentSearch}
+                onChange={setSegmentSearch}
+                placeholder="Search segments"
+              />
               <Select
                 size="small"
                 defaultValue="updated"
@@ -1387,7 +1443,14 @@ export function UsersSection() {
               </Select>
             </Stack>
             {segmentsQuery.isError ? (
-              <EmptyState size="compact" {...listEmpty({ noun: "segments", error: "Could not load lifecycle segments", onRetry: () => segmentsQuery.refetch() })} />
+              <EmptyState
+                size="compact"
+                {...listEmpty({
+                  noun: "segments",
+                  error: "Could not load lifecycle segments",
+                  onRetry: () => segmentsQuery.refetch(),
+                })}
+              />
             ) : (
               <ReusableDataTable
                 columns={segmentColumns}
@@ -1395,7 +1458,18 @@ export function UsersSection() {
                 totalCount={segments.length}
                 noun="segments"
                 highlightedRowId={highlightedId}
-                empty={listEmpty({ icon: <DonutLargeOutlined />, noun: "segments", description: "Segments group users by where they are in their lifecycle.", search: segmentSearch, onClear: () => setSegmentSearch(""), create: { label: "Create segment", onClick: () => setCreateSegmentOpen(true) } })}
+                empty={listEmpty({
+                  icon: <DonutLargeOutlined />,
+                  noun: "segments",
+                  description:
+                    "Segments group users by where they are in their lifecycle.",
+                  search: segmentSearch,
+                  onClear: () => setSegmentSearch(""),
+                  create: {
+                    label: "Create segment",
+                    onClick: () => setCreateSegmentOpen(true),
+                  },
+                })}
                 showMenu={false}
                 loading={segmentsQuery.isPending || segmentsQuery.isFetching}
               />
@@ -1429,7 +1503,11 @@ export function UsersSection() {
             gap={1.2}
             className="data-toolbar"
           >
-            <SearchField value={groupSearch} onChange={setGroupSearch} placeholder="Search audience groups" />
+            <SearchField
+              value={groupSearch}
+              onChange={setGroupSearch}
+              placeholder="Search audience groups"
+            />
             <Select
               size="small"
               defaultValue="created"
@@ -1446,15 +1524,33 @@ export function UsersSection() {
             </Select>
           </Stack>
           {groupsQuery.isError ? (
-            <EmptyState size="compact" {...listEmpty({ noun: "audience groups", error: "Could not load audience groups", onRetry: () => groupsQuery.refetch() })} />
+            <EmptyState
+              size="compact"
+              {...listEmpty({
+                noun: "audience groups",
+                error: "Could not load audience groups",
+                onRetry: () => groupsQuery.refetch(),
+              })}
+            />
           ) : (
             <ReusableDataTable
               columns={groupColumns}
               rows={groups}
               totalCount={groups.length}
               noun="groups"
-                highlightedRowId={highlightedId}
-              empty={listEmpty({ icon: <GroupsOutlined />, noun: "audience groups", description: "Groups are saved audiences you can target in campaigns and journeys.", search: groupSearch, onClear: () => setGroupSearch(""), create: { label: "Create group", onClick: () => setCreateGroupOpen(true) } })}
+              highlightedRowId={highlightedId}
+              empty={listEmpty({
+                icon: <GroupsOutlined />,
+                noun: "audience groups",
+                description:
+                  "Groups are saved audiences you can target in campaigns and journeys.",
+                search: groupSearch,
+                onClear: () => setGroupSearch(""),
+                create: {
+                  label: "Create group",
+                  onClick: () => setCreateGroupOpen(true),
+                },
+              })}
               showMenu={false}
               loading={groupsQuery.isPending || groupsQuery.isFetching}
             />
@@ -1519,53 +1615,102 @@ function EmailDataSection() {
   const [appliedSearch, setAppliedSearch] = useState("");
   const templatesQuery = useQuery({
     queryKey: ["email", "templates", active?.id, page, appliedSearch],
-    queryFn: () => emailApi.templates.list(active!.id, {
-      page, limit: 25, search: appliedSearch, category: "template",
-    }),
+    queryFn: () =>
+      emailApi.templates.list(active!.id, {
+        page,
+        limit: 25,
+        search: appliedSearch,
+        category: "template",
+      }),
     enabled: Boolean(active?.id),
   });
   const draftsQuery = useQuery({
     queryKey: ["email", "campaigns", active?.id, "draft", page, appliedSearch],
-    queryFn: () => emailApi.campaigns.list(active!.id, {
-      tab: "draft", page, limit: 25, search: appliedSearch,
-    }),
+    queryFn: () =>
+      emailApi.campaigns.list(active!.id, {
+        tab: "draft",
+        page,
+        limit: 25,
+        search: appliedSearch,
+      }),
     enabled: Boolean(active?.id),
   });
   const sentQuery = useQuery({
     queryKey: ["email", "campaigns", active?.id, "sent", page, appliedSearch],
-    queryFn: () => emailApi.campaigns.list(active!.id, {
-      tab: "sent", page, limit: 25, search: appliedSearch,
-    }),
+    queryFn: () =>
+      emailApi.campaigns.list(active!.id, {
+        tab: "sent",
+        page,
+        limit: 25,
+        search: appliedSearch,
+      }),
     enabled: Boolean(active?.id),
   });
-  type EmailRow = { id: string; name: string; detail: string; meta: string; status: string };
-  const date = (value?: string) => value
-    ? new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
-    : "—";
-  const templateRows: EmailRow[] = (templatesQuery.data?.items ?? []).map((item: EmailTemplate) => ({
-    id: item.id,
-    name: item.name,
-    detail: item.subject || "No subject",
-    meta: `${item.category === "template" ? "Reusable template" : item.category ?? "Email template"} · Updated ${date(item.updatedAt)}`,
-    status: "Reusable template",
-  }));
-  const campaignRows: EmailRow[] = ((tab === "drafts" ? draftsQuery.data?.items : sentQuery.data?.items) ?? [])
-    .map((item: EmailCampaign) => ({
+  type EmailRow = {
+    id: string;
+    name: string;
+    detail: string;
+    meta: string;
+    status: string;
+  };
+  const date = (value?: string) =>
+    value
+      ? new Date(value).toLocaleDateString(undefined, {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        })
+      : "—";
+  const templateRows: EmailRow[] = (templatesQuery.data?.items ?? []).map(
+    (item: EmailTemplate) => ({
       id: item.id,
       name: item.name,
-      detail: item.template?.subject || "No subject",
-      meta: tab === "drafts"
+      detail: item.subject || "No subject",
+      meta: `${item.category === "template" ? "Reusable template" : (item.category ?? "Email template")} · Updated ${date(item.updatedAt)}`,
+      status: "Reusable template",
+    }),
+  );
+  const campaignRows: EmailRow[] = (
+    (tab === "drafts" ? draftsQuery.data?.items : sentQuery.data?.items) ?? []
+  ).map((item: EmailCampaign) => ({
+    id: item.id,
+    name: item.name,
+    detail: item.template?.subject || "No subject",
+    meta:
+      tab === "drafts"
         ? `Draft · Updated ${date(item.updatedAt)}`
         : `${item.stats?.sent?.toLocaleString() ?? "—"} sent · ${item.stats?.openRate?.toFixed(1) ?? "—"}% open rate`,
-      status: item.status ? item.status.charAt(0).toUpperCase() + item.status.slice(1) : "Sent",
-    }));
-  const activeQuery = tab === "templates" ? templatesQuery : tab === "drafts" ? draftsQuery : sentQuery;
+    status: item.status
+      ? item.status.charAt(0).toUpperCase() + item.status.slice(1)
+      : "Sent",
+  }));
+  const activeQuery =
+    tab === "templates"
+      ? templatesQuery
+      : tab === "drafts"
+        ? draftsQuery
+        : sentQuery;
   const rows: EmailRow[] = tab === "templates" ? templateRows : campaignRows;
   const campaignCounts = sentQuery.data?.tabCounts;
   const emailTabs = [
-    { id: "send" as const, label: "Send", count: campaignCounts?.send ?? sentQuery.data?.total ?? 0, icon: SendRounded },
-    { id: "drafts" as const, label: "Drafts", count: campaignCounts?.drafts ?? draftsQuery.data?.total ?? 0, icon: EditRounded },
-    { id: "templates" as const, label: "My Templates", count: templatesQuery.data?.total ?? 0, icon: GridViewRounded },
+    {
+      id: "send" as const,
+      label: "Send",
+      count: campaignCounts?.send ?? sentQuery.data?.total ?? 0,
+      icon: SendRounded,
+    },
+    {
+      id: "drafts" as const,
+      label: "Drafts",
+      count: campaignCounts?.drafts ?? draftsQuery.data?.total ?? 0,
+      icon: EditRounded,
+    },
+    {
+      id: "templates" as const,
+      label: "My Templates",
+      count: templatesQuery.data?.total ?? 0,
+      icon: GridViewRounded,
+    },
   ];
   const columns: DataTableColumn<EmailRow>[] = [
     {
@@ -1573,71 +1718,192 @@ function EmailDataSection() {
       label: "Email",
       render: (row) => (
         <Stack direction="row" alignItems="center" gap={1.5}>
-          <Box className="email-preview"><Box /><Box /><Box /></Box>
+          <Box className="email-preview">
+            <Box />
+            <Box />
+            <Box />
+          </Box>
           <Box>
             <Stack direction="row" alignItems="center" gap={1}>
-              <Typography fontSize={12} fontWeight={500}>{row.name}</Typography>
-              <Chip label={row.status} size="small" className={row.status === "Sent" || row.status === "Delivered" ? "active-chip" : "neutral-chip"} />
+              <Typography fontSize={12} fontWeight={500}>
+                {row.name}
+              </Typography>
+              <Chip
+                label={row.status}
+                size="small"
+                className={
+                  row.status === "Sent" || row.status === "Delivered"
+                    ? "active-chip"
+                    : "neutral-chip"
+                }
+              />
             </Stack>
-            <Typography color="text.secondary" fontSize={11}>{row.detail}</Typography>
-            <Typography color="text.secondary" fontSize={11} sx={{ mt: 0.5 }}>{row.meta}</Typography>
+            <Typography color="text.secondary" fontSize={11}>
+              {row.detail}
+            </Typography>
+            <Typography color="text.secondary" fontSize={11} sx={{ mt: 0.5 }}>
+              {row.meta}
+            </Typography>
           </Box>
         </Stack>
       ),
     },
-    { key: "status", label: "Type", render: (row) => <Typography color="text.secondary" fontSize={11}>{row.status}</Typography> },
-    { key: "meta", label: "Updated", render: (row) => <Typography color="text.secondary" fontSize={11}>{row.meta.split(" · ")[1] ?? row.meta}</Typography> },
+    {
+      key: "status",
+      label: "Type",
+      render: (row) => (
+        <Typography color="text.secondary" fontSize={11}>
+          {row.status}
+        </Typography>
+      ),
+    },
+    {
+      key: "meta",
+      label: "Updated",
+      render: (row) => (
+        <Typography color="text.secondary" fontSize={11}>
+          {row.meta.split(" · ")[1] ?? row.meta}
+        </Typography>
+      ),
+    },
     {
       key: "action",
       label: "",
       align: "right",
-      render: () => <Button size="small" variant="contained">{tab === "drafts" ? "Continue editing" : tab === "templates" ? "Edit" : "View"}</Button>,
+      render: () => (
+        <Button size="small" variant="contained">
+          {tab === "drafts"
+            ? "Continue editing"
+            : tab === "templates"
+              ? "Edit"
+              : "View"}
+        </Button>
+      ),
     },
   ];
   return (
     <Stack gap={2.5} className="email-workspace">
-      <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" alignItems={{ md: "center" }} gap={2}>
+      <Stack
+        direction={{ xs: "column", md: "row" }}
+        justifyContent="space-between"
+        alignItems={{ md: "center" }}
+        gap={2}
+      >
         <Box>
           <Typography variant="h3">Email workspace</Typography>
-          <Typography color="text.secondary" fontSize={12}>Create, manage, and reuse email content for {project.name} campaigns and journeys.</Typography>
+          <Typography color="text.secondary" fontSize={12}>
+            Create, manage, and reuse email content for {project.name} campaigns
+            and journeys.
+          </Typography>
         </Box>
         <Stack direction="row" gap={1}>
-          <Button variant="contained" startIcon={<AddRounded />}>Create email campaign</Button>
-          <Button variant="outlined" startIcon={<GridViewRounded />}>Create email template</Button>
+          <Button variant="contained" startIcon={<AddRounded />}>
+            Create email campaign
+          </Button>
+          <Button variant="outlined" startIcon={<GridViewRounded />}>
+            Create email template
+          </Button>
         </Stack>
       </Stack>
-      <Tabs value={tab} onChange={(_, value) => { setTab(value); setPage(1); void queryClient.invalidateQueries({ queryKey: ["email"], refetchType: "active" }); }}>
-        {emailTabs.map(({ id, label, count: tabCount, icon: Icon }) => (
-          <Tab key={id} value={id} icon={<Icon />} iconPosition="start" label={<>{label}<Chip label={tabCount} size="small" /></>} />
-        ))}
-      </Tabs>
+      <PremiumWorkspaceTabs
+        value={tab}
+        onChange={(value) => {
+          setTab(value);
+          setPage(1);
+          void queryClient.invalidateQueries({
+            queryKey: ["email"],
+            refetchType: "active",
+          });
+        }}
+        ariaLabel="Email views"
+        options={emailTabs.map(({ id, ...option }) => ({
+          value: id,
+          ...option,
+        }))}
+      />
       <Card className="saas-card data-panel email-data-panel">
-        <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ sm: "center" }} gap={2}>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          justifyContent="space-between"
+          alignItems={{ sm: "center" }}
+          gap={2}
+        >
           <Box>
-            <Typography variant="h3">{tab === "templates" ? "My Templates" : tab === "drafts" ? "Draft emails" : "Sent campaigns"}</Typography>
-            <Typography color="text.secondary" fontSize={12}>{tab === "templates" ? "Reusable content blocks ready for your next campaign." : tab === "drafts" ? "Continue editing saved email drafts." : "Track the latest email campaigns and their performance."}</Typography>
+            <Typography variant="h3">
+              {tab === "templates"
+                ? "My Templates"
+                : tab === "drafts"
+                  ? "Draft emails"
+                  : "Sent campaigns"}
+            </Typography>
+            <Typography color="text.secondary" fontSize={12}>
+              {tab === "templates"
+                ? "Reusable content blocks ready for your next campaign."
+                : tab === "drafts"
+                  ? "Continue editing saved email drafts."
+                  : "Track the latest email campaigns and their performance."}
+            </Typography>
           </Box>
           <Stack direction="row" gap={1} className="data-toolbar email-toolbar">
-            <SearchField value={search} onChange={setSearch} onSearch={(value) => { setAppliedSearch(value); setPage(1); }} placeholder={`Search ${tab === "templates" ? "templates" : tab === "drafts" ? "drafts" : "campaigns"}`} />
-            <Select size="small" defaultValue="recent" className="filter-select"><MenuItem value="recent">Recently updated</MenuItem><MenuItem value="name">Name</MenuItem></Select>
+            <SearchField
+              value={search}
+              onChange={setSearch}
+              onSearch={(value) => {
+                setAppliedSearch(value);
+                setPage(1);
+              }}
+              placeholder={`Search ${tab === "templates" ? "templates" : tab === "drafts" ? "drafts" : "campaigns"}`}
+            />
+            <Select
+              size="small"
+              defaultValue="recent"
+              className="filter-select"
+            >
+              <MenuItem value="recent">Recently updated</MenuItem>
+              <MenuItem value="name">Name</MenuItem>
+            </Select>
           </Stack>
         </Stack>
         <ReusableDataTable
           columns={columns}
           rows={rows}
           totalCount={String(activeQuery.data?.total ?? 0)}
-          noun={tab === "templates" ? "templates" : tab === "drafts" ? "drafts" : "campaigns"}
+          noun={
+            tab === "templates"
+              ? "templates"
+              : tab === "drafts"
+                ? "drafts"
+                : "campaigns"
+          }
           empty={listEmpty({
             icon: <MailOutlineRounded />,
-            noun: tab === "templates" ? "templates" : tab === "drafts" ? "drafts" : "sent campaigns",
-            description: tab === "templates" ? "Templates you save are kept here to reuse in campaigns and journeys." : tab === "drafts" ? "Emails you start and save appear here until they are sent." : "Campaigns appear here once they have been sent.",
+            noun:
+              tab === "templates"
+                ? "templates"
+                : tab === "drafts"
+                  ? "drafts"
+                  : "sent campaigns",
+            description:
+              tab === "templates"
+                ? "Templates you save are kept here to reuse in campaigns and journeys."
+                : tab === "drafts"
+                  ? "Emails you start and save appear here until they are sent."
+                  : "Campaigns appear here once they have been sent.",
             search: appliedSearch,
-            onClear: () => { setSearch(""); setAppliedSearch(""); setPage(1); },
+            onClear: () => {
+              setSearch("");
+              setAppliedSearch("");
+              setPage(1);
+            },
             error: activeQuery.isError && "Could not load emails",
             onRetry: () => activeQuery.refetch(),
           })}
           showMenu={false}
-          loading={activeQuery.isPending || (activeQuery.isFetching && !activeQuery.data) || search.trim() !== appliedSearch}
+          loading={
+            activeQuery.isPending ||
+            (activeQuery.isFetching && !activeQuery.data) ||
+            search.trim() !== appliedSearch
+          }
           page={page}
           serverPageSize={25}
           hasPreviousPage={page > 1}
@@ -1825,11 +2091,15 @@ function EmailSection() {
           </Button>
         </Stack>
       </Stack>
-      <Tabs value={tab} onChange={(_, value) => { setTab(value); }}>
-        {emailTabs.map(({ id, label, count, icon: Icon }) => (
-          <Tab key={id} value={id} icon={<Icon />} iconPosition="start" label={<>{label}<Chip label={count} size="small" /></>} />
-        ))}
-      </Tabs>
+      <PremiumWorkspaceTabs
+        value={tab}
+        onChange={setTab}
+        ariaLabel="Email views"
+        options={emailTabs.map(({ id, ...option }) => ({
+          value: id,
+          ...option,
+        }))}
+      />
       <Card className="saas-card data-panel email-data-panel">
         <Stack
           direction={{ xs: "column", sm: "row" }}
@@ -1854,7 +2124,9 @@ function EmailSection() {
             </Typography>
           </Box>
           <Stack direction="row" gap={1} className="data-toolbar email-toolbar">
-            <SearchField placeholder={`Search ${tab === "templates" ? "templates" : tab === "drafts" ? "drafts" : "campaigns"}`} />
+            <SearchField
+              placeholder={`Search ${tab === "templates" ? "templates" : tab === "drafts" ? "drafts" : "campaigns"}`}
+            />
             <Select
               size="small"
               defaultValue="recent"
@@ -1890,7 +2162,13 @@ function PushSection() {
   const searchParams = useSearchParams();
   const highlightedId = searchParams.get("highlight");
   const requestedTab = searchParams.get("tab");
-  const [tab, setTab] = useState<"send" | "drafts" | "templates">(requestedTab === "send" || requestedTab === "drafts" || requestedTab === "templates" ? requestedTab : "templates");
+  const [tab, setTab] = useState<"send" | "drafts" | "templates">(
+    requestedTab === "send" ||
+      requestedTab === "drafts" ||
+      requestedTab === "templates"
+      ? requestedTab
+      : "templates",
+  );
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [composer, setComposer] = useState<"campaign" | "template" | null>(
@@ -1907,7 +2185,10 @@ function PushSection() {
   const [appliedSearch, setAppliedSearch] = useState("");
   useEffect(() => {
     if (!highlightedId) return;
-    const timer = window.setTimeout(() => window.history.replaceState(null, "", `/dashboard/push?tab=${tab}`), 4600);
+    const timer = window.setTimeout(
+      () => window.history.replaceState(null, "", `/dashboard/push?tab=${tab}`),
+      4600,
+    );
     return () => window.clearTimeout(timer);
   }, [highlightedId, tab]);
   const templatesQuery = useQuery({
@@ -2062,7 +2343,26 @@ function PushSection() {
       label: "Notification name",
       render: (row) => (
         <Box>
-          <Typography component="button" type="button" fontSize={12} fontWeight={500} onClick={() => router.push(`/dashboard/push?tab=${tab}&highlight=${row.id}`)} sx={{ display: "block", p: 0, border: 0, background: "transparent", color: "inherit", font: "inherit", textAlign: "left", cursor: "pointer", "&:hover": { color: "#4775de", textDecoration: "underline" } }}>
+          <Typography
+            component="button"
+            type="button"
+            fontSize={12}
+            fontWeight={500}
+            onClick={() =>
+              router.push(`/dashboard/push?tab=${tab}&highlight=${row.id}`)
+            }
+            sx={{
+              display: "block",
+              p: 0,
+              border: 0,
+              background: "transparent",
+              color: "inherit",
+              font: "inherit",
+              textAlign: "left",
+              cursor: "pointer",
+              "&:hover": { color: "#4775de", textDecoration: "underline" },
+            }}
+          >
             {row.name}
           </Typography>
           <Typography color="text.secondary" fontSize={11}>
@@ -2238,11 +2538,23 @@ function PushSection() {
           </Button>
         </Stack>
       </Stack>
-      <Tabs value={tab} onChange={(_, value) => { setTab(value); setPage(1); void queryClient.invalidateQueries({ queryKey: ["push"], refetchType: "active" }); }}>
-        {pushTabs.map(({ id, label, count, icon: Icon }) => (
-          <Tab key={id} value={id} icon={<Icon />} iconPosition="start" label={<>{label}<Chip label={count} size="small" /></>} />
-        ))}
-      </Tabs>
+      <PremiumWorkspaceTabs
+        value={tab}
+        onChange={(value) => {
+          setTab(value);
+          setPage(1);
+          void queryClient.invalidateQueries({
+            queryKey: ["push"],
+            refetchType: "active",
+          });
+        }}
+        ariaLabel="Push notification views"
+        className="premium-workspace-tabs-spaced"
+        options={pushTabs.map(({ id, ...option }) => ({
+          value: id,
+          ...option,
+        }))}
+      />
       <Card className="saas-card data-panel email-data-panel">
         <Stack
           direction={{ xs: "column", sm: "row" }}
@@ -2267,7 +2579,15 @@ function PushSection() {
             </Typography>
           </Box>
           <Stack direction="row" gap={1} className="data-toolbar email-toolbar">
-            <SearchField value={search} onChange={setSearch} onSearch={(value) => { setAppliedSearch(value); setPage(1); }} placeholder="Search by name, title or message" />
+            <SearchField
+              value={search}
+              onChange={setSearch}
+              onSearch={(value) => {
+                setAppliedSearch(value);
+                setPage(1);
+              }}
+              placeholder="Search by name, title or message"
+            />
             <Select
               size="small"
               defaultValue="recent"
@@ -2299,10 +2619,24 @@ function PushSection() {
           }
           empty={listEmpty({
             icon: <NotificationsNoneRounded />,
-            noun: tab === "templates" ? "templates" : tab === "drafts" ? "drafts" : "sent notifications",
-            description: tab === "templates" ? "Templates you save are kept here to reuse in campaigns and journeys." : tab === "drafts" ? "Notifications you start and save appear here until they are sent." : "Notifications appear here once they have been sent.",
+            noun:
+              tab === "templates"
+                ? "templates"
+                : tab === "drafts"
+                  ? "drafts"
+                  : "sent notifications",
+            description:
+              tab === "templates"
+                ? "Templates you save are kept here to reuse in campaigns and journeys."
+                : tab === "drafts"
+                  ? "Notifications you start and save appear here until they are sent."
+                  : "Notifications appear here once they have been sent.",
             search: appliedSearch,
-            onClear: () => { setSearch(""); setAppliedSearch(""); setPage(1); },
+            onClear: () => {
+              setSearch("");
+              setAppliedSearch("");
+              setPage(1);
+            },
             error: activeQuery.isError && "Could not load push notifications",
             onRetry: () => activeQuery.refetch(),
           })}
@@ -2328,9 +2662,16 @@ function PushSection() {
         open={Boolean(deleteTarget)}
         onClose={() => setDeleteTarget(null)}
         loading={actionMutation.isPending}
-        onConfirm={() => { if (deleteTarget) actionMutation.mutate({ kind: "remove", id: deleteTarget.id }); }}
+        onConfirm={() => {
+          if (deleteTarget)
+            actionMutation.mutate({ kind: "remove", id: deleteTarget.id });
+        }}
       />
-      <Toast message={toast?.message ?? null} severity={toast?.severity} onClose={() => setToast(null)} />
+      <Toast
+        message={toast?.message ?? null}
+        severity={toast?.severity}
+        onClose={() => setToast(null)}
+      />
     </Stack>
   );
 }
