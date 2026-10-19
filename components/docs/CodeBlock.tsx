@@ -21,10 +21,13 @@ export const syntax = {
 
 /** Thin themed scrollbars for anything that scrolls on the code surface. */
 export const codeScrollbar = {
-  scrollbarWidth: "thin", scrollbarColor: `${syntax.line} transparent`,
+  // Hidden until the code is hovered or focused; still scrollable by touch, trackpad and keyboard.
+  scrollbarWidth: "thin", scrollbarColor: "transparent transparent",
+  "&:hover, &:focus-visible": { scrollbarColor: `${syntax.line} transparent` },
   "&::-webkit-scrollbar": { width: 10, height: 10 },
   "&::-webkit-scrollbar-track": { background: "transparent" },
-  "&::-webkit-scrollbar-thumb": { background: syntax.line, borderRadius: 999, border: `3px solid ${syntax.bg}` },
+  "&::-webkit-scrollbar-thumb": { background: "transparent", borderRadius: 999, border: `3px solid ${syntax.bg}` },
+  "&:hover::-webkit-scrollbar-thumb, &:focus-visible::-webkit-scrollbar-thumb": { background: syntax.line },
   "&::-webkit-scrollbar-thumb:hover": { background: "#5A4675" },
   "&::-webkit-scrollbar-corner": { background: "transparent" },
 } as const;

@@ -10,7 +10,7 @@ import { Box, Button, Drawer, IconButton, ListSubheader, MenuItem, Select, Stack
 import { tokens } from "@/lib/theme";
 import DocsSearchDialog from "./DocsSearchDialog";
 import { useDocsProject } from "./DocsProject";
-import { lightScrollbar } from "./DocsPrimitives";
+import { hiddenScrollbar } from "./DocsPrimitives";
 import { availablePlatforms, buildSearchIndex, guideHref, platforms } from "./registry";
 
 const BAR = 56;
@@ -88,7 +88,7 @@ export default function DocsLayout({ base, variant, children }: { base: string; 
     </Stack>
 
     <Box sx={{ display: "grid", gridTemplateColumns: { xs: "minmax(0,1fr)", lg: "248px minmax(0,1fr)" }, maxWidth: variant === "site" ? 1440 : undefined, mx: "auto" }}>
-      <Box component="aside" sx={{ display: { xs: "none", lg: "block" }, position: "sticky", top: `calc(var(--docs-top) + ${BAR}px)`, alignSelf: "start", maxHeight: `calc(100vh - var(--docs-top) - ${BAR}px)`, overflowY: "auto", ...lightScrollbar, p: 2, pt: 3, borderRight: `1px solid ${tokens.border}` }}>
+      <Box component="aside" sx={{ display: { xs: "none", lg: "block" }, position: "sticky", top: `calc(var(--docs-top) + ${BAR}px)`, alignSelf: "start", maxHeight: `calc(100vh - var(--docs-top) - ${BAR}px)`, overflowY: "auto", ...hiddenScrollbar, p: 2, pt: 3, borderRight: `1px solid ${tokens.border}` }}>
         <GuideNav base={base} platformId={platformId} pathname={pathname} />
       </Box>
       <Box component={variant === "site" ? "main" : "div"} id="docs-content" tabIndex={-1} sx={{ minWidth: 0, outline: 0 }}>{children}</Box>

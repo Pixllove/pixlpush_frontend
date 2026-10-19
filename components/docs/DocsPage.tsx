@@ -3,7 +3,7 @@ import { Box, Stack, Typography } from "@mui/material";
 import { tokens } from "@/lib/theme";
 import { LinkBox } from "./links";
 import TableOfContents from "./TableOfContents";
-import { lightScrollbar } from "./DocsPrimitives";
+import { hiddenScrollbar } from "./DocsPrimitives";
 import { getGuide, getPlatform, guideHref, guideNeighbours } from "./registry";
 
 function Pager({ href, label, direction }: { href: string; label: string; direction: "Previous" | "Next" }) {
@@ -43,7 +43,7 @@ export default function DocsPage({ base, platformId, slug, tocFrom = "lg", child
       </Stack>
       <Typography sx={{ mt: 3, color: tokens.textMuted, fontSize: "var(--fs-12)" }}>Written against the source of @pixlpush/{platform.id} {platform.version}. If behaviour differs in a newer version, the SDK’s changelog takes precedence.</Typography>
     </Box>
-    <Box component="aside" sx={{ display: { xs: "none", [tocFrom]: "block" }, position: "sticky", top: "calc(var(--docs-top) + 80px)", alignSelf: "start", maxHeight: "calc(100vh - var(--docs-top) - 100px)", overflowY: "auto", ...lightScrollbar }}>
+    <Box component="aside" sx={{ display: { xs: "none", [tocFrom]: "block" }, position: "sticky", top: "calc(var(--docs-top) + 80px)", alignSelf: "start", maxHeight: "calc(100vh - var(--docs-top) - 100px)", overflowY: "auto", ...hiddenScrollbar }}>
       <TableOfContents items={guide.sections} />
     </Box>
   </Box>;

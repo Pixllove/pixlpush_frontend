@@ -17,12 +17,18 @@ const inlineSx = {
   "& p a, & li a, & td a": { color: tokens.accent, fontWeight: 500, textUnderlineOffset: 3 },
 } as const;
 
+/** Side navigation columns: still scrollable, never shows a bar. */
+export const hiddenScrollbar = { scrollbarWidth: "none", "&::-webkit-scrollbar": { display: "none" } } as const;
+
 /** Thin scrollbars for light surfaces (tables, side navigation), matching the code blocks. */
 export const lightScrollbar = {
-  scrollbarWidth: "thin", scrollbarColor: `${tokens.borderStrong} transparent`,
+  // Invisible until the area is hovered or focused, so it never sits on the page as a grey bar.
+  scrollbarWidth: "thin", scrollbarColor: "transparent transparent", transition: "scrollbar-color var(--pp-ease)",
+  "&:hover, &:focus-within": { scrollbarColor: `${tokens.borderStrong} transparent` },
   "&::-webkit-scrollbar": { width: 10, height: 10 },
   "&::-webkit-scrollbar-track": { background: "transparent" },
-  "&::-webkit-scrollbar-thumb": { background: tokens.borderStrong, borderRadius: 999, border: "3px solid transparent", backgroundClip: "padding-box" },
+  "&::-webkit-scrollbar-thumb": { background: "transparent", borderRadius: 999, border: "3px solid transparent", backgroundClip: "padding-box" },
+  "&:hover::-webkit-scrollbar-thumb, &:focus-within::-webkit-scrollbar-thumb": { background: tokens.borderStrong, backgroundClip: "padding-box" },
   "&::-webkit-scrollbar-thumb:hover": { background: tokens.textMuted, backgroundClip: "padding-box" },
 } as const;
 
