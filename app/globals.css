@@ -3651,6 +3651,14 @@ a {
   color: #64748b;
   background: #fff;
 }
+.journey-metric-link {
+  cursor: pointer;
+  text-underline-offset: 3px;
+}
+.journey-metric-link:hover,
+.journey-metric-link:focus-visible {
+  text-decoration: underline;
+}
 .journey-settings-panel {
   position: fixed;
   z-index: 5;
