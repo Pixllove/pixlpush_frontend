@@ -27,7 +27,7 @@ const steps = [
 
 function AnalysisVisual() {
   return (
-    <Box className="retention-scene retention-scene-analysis">
+    <Box className="retention-scene retention-scene-analysis" aria-hidden="true">
       <Box className="retention-window analysis-window">
         <Box className="retention-window-bar"><i /><i /><i /><span>BUSINESS SNAPSHOT</span></Box>
         <Box className="analysis-window-body">
@@ -44,7 +44,7 @@ function AnalysisVisual() {
 
 function JourneyVisual() {
   return (
-    <Box className="retention-scene retention-scene-journey">
+    <Box className="retention-scene retention-scene-journey" aria-hidden="true">
       <Box className="retention-window journey-window">
         <Box className="retention-window-bar"><i /><i /><i /><span>JOURNEY BUILDER</span></Box>
         <Box className="journey-window-body">
@@ -63,7 +63,7 @@ function JourneyVisual() {
 
 function ResultsVisual() {
   return (
-    <Box className="retention-scene retention-scene-results">
+    <Box className="retention-scene retention-scene-results" aria-hidden="true">
       <Box className="results-window">
         <Box className="retention-window-bar"><i /><i /><i /><span>RETENTION PERFORMANCE</span></Box>
         <Box className="results-header"><Box><small>DAY 7 RETENTION</small><b>+27%</b></Box><Box className="results-range">Last 30 days⌄</Box></Box>
@@ -109,7 +109,7 @@ export default function RetentionScrollStory() {
         <Box className="retention-story-visual">
           <Box className="retention-story-sticky">
             <Typography className="retention-story-kicker">THE PIXLPUSH RETENTION LOOP</Typography>
-            <Box className="retention-scenes" aria-live="polite">
+            <Box className="retention-scenes">
               {visuals.map((Visual, index) => <Box key={index} className={`retention-scene-layer${active === index ? ' is-active' : ''}`}><Visual /></Box>)}
             </Box>
             <Stack direction="row" className="retention-story-progress" aria-hidden="true">

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   AddRounded,
@@ -17,6 +17,7 @@ import {
   PlayArrowRounded,
   ReplayRounded,
   SaveRounded,
+  SearchRounded,
   SettingsRounded,
   StopCircleRounded,
   TimerRounded,
@@ -35,6 +36,7 @@ import {
   FormControlLabel,
   Grid,
   IconButton,
+  InputAdornment,
   MenuItem,
   Radio,
   Select,
@@ -49,7 +51,10 @@ import {
   journeysApi,
   lifecycleSegmentsApi,
   pushApi,
+  type JourneyMetricUser,
+  type JourneyUsersMetric,
 } from "@/lib/projects/api";
+import Link from "next/link";
 import { useActiveProject } from "@/hooks/projects/use-active-project";
 import {
   ENTRANCE,
@@ -176,6 +181,15 @@ export default function JourneyBuilder() {
   >({});
   const [blocks, setBlocks] = useState<Block[]>([ENTRANCE, EXIT]);
   const [selected, setSelected] = useState<Block | null>(null);
+  // One users panel for the whole builder: opening another counter replaces it.
+  const [metricPanel, setMetricPanel] = useState<OpenMetric | null>(null);
+  useEffect(() => {
+    if (selected) setMetricPanel(null);
+  }, [selected]);
+  const openMetric = (open: OpenMetric) => {
+    setSelected(null);
+    setMetricPanel(open);
+  };
   const [addTarget, setAddTarget] = useState<AddTarget | null>(null);
   const [stopOpen, setStopOpen] = useState(false);
   const [toast, setToast] = useState("");
@@ -445,6 +459,7 @@ export default function JourneyBuilder() {
     };
   };
   return (
+    <MetricPanelContext.Provider value={openMetric}>
     <Box className="journey-builder-page">
       {toast && (
         <Box className="journey-toast">
@@ -544,7 +559,7 @@ export default function JourneyBuilder() {
         </Stack>
       </Box>
       <Box
-        className={`journey-builder-canvas ${selected ? "with-settings" : ""}`}
+        className={`journey-builder-canvas ${selected || metricPanel ? "with-settings" : ""}`}
       >
         <Stack alignItems="center" gap={0} className="journey-flow">
           {builderLoading ? (
@@ -555,7 +570,7 @@ export default function JourneyBuilder() {
             >
               <CircularProgress size={34} />
               <Typography fontWeight={600}>Loading your journey</Typography>
-              <Typography color="text.secondary" fontSize={13}>
+              <Typography color="text.secondary" fontSize="var(--fs-13)">
                 Fetching the steps and message templates…
               </Typography>
             </Box>
@@ -643,7 +658,15 @@ export default function JourneyBuilder() {
           </Button>
         </DialogActions>
       </Dialog>
+      {metricPanel && (
+        <MetricUsersPanel
+          key={`${metricPanel.blockId}:${metricPanel.label}`}
+          {...metricPanel}
+          onClose={() => setMetricPanel(null)}
+        />
+      )}
     </Box>
+    </MetricPanelContext.Provider>
   );
 }
 
@@ -798,7 +821,7 @@ function JourneyBlock({
           <Typography fontWeight={600}>{block.title}</Typography>
           <Typography
             color="text.secondary"
-            fontSize={11}
+            fontSize="var(--fs-11)"
             sx={{ whiteSpace: "pre-line" }}
           >
             {block.description}
@@ -823,17 +846,266 @@ function JourneyBlock({
         </Stack>
       </Stack>
       <Divider sx={{ my: 1.5 }} />
-      <BlockMetrics type={block.type} stats={block.stats} />
+      <BlockMetrics blockId={block.id} blockTitle={block.title} type={block.type} stats={block.stats} />
     </Card>
   );
 }
+// Card label → `metric` of GET /journeys/:id/users. Rates are not lists.
+const METRIC_KEYS: Record<string, JourneyUsersMetric> = {
+  Sent: "sent",
+  Opens: "opened",
+  Clicks: "clicked",
+  Waiting: "waiting",
+  "Users waiting": "waiting",
+  Completed: "completed",
+  "Exited early": "exitedEarly",
+  Paused: "paused",
+  Deleted: "deleted",
+  "Users entered": "entered",
+  "Unreachable users": "unreachable",
+};
+type OpenMetric = { blockId: string; blockTitle: string; type: BlockType; label: string };
+const MetricPanelContext = createContext<(open: OpenMetric) => void>(() => {});
+
+const when = (date?: string | null) =>
+  date
+    ? new Date(date).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+    : null;
+const number = (value: number) => value.toLocaleString();
+const JOURNEY_STATUS: Record<string, [string, string]> = {
+  active: ["In progress", "green"],
+  completed: ["Finished", "blue"],
+  exited: ["Left early", "orange"],
+  failed: ["Stopped", "red"],
+};
+const MESSAGE_STATUS: Record<string, [string, string]> = {
+  sent: ["Received", "green"],
+  queued: ["Scheduled", "grey"],
+  processing: ["Sending", "grey"],
+  failed: ["Not delivered", "red"],
+  skipped: ["Not sent", "orange"],
+  canceled: ["Canceled", "orange"],
+};
+const CHIP: Record<string, { color: string; background: string }> = {
+  green: { color: "#1b5e20", background: "#e8f5e9" },
+  blue: { color: "#0d47a1", background: "#e3f2fd" },
+  orange: { color: "#8a4b00", background: "#fff3e0" },
+  red: { color: "#b71c1c", background: "#ffebee" },
+  grey: { color: "#455a64", background: "#eceff1" },
+};
+/** One sentence under the title, so nobody has to guess what the number counts. */
+function metricHelp(metric: JourneyUsersMetric, type: BlockType) {
+  const push = type === "notification";
+  const what = push ? "notification" : "email";
+  return {
+    entered: "Everyone who has started this journey.",
+    unreachable: "In the audience, but we have no way to reach them yet (no push permission and no email).",
+    waiting: "People paused on this step right now. They move on when the wait is over.",
+    completed: "People who have gone past this step.",
+    exitedEarly: "People who left the journey at this step, before reaching the end.",
+    sent: `People this ${what} was sent to.`,
+    opened: `People who opened this ${what}.`,
+    clicked: push ? "People who tapped this notification." : "People who clicked a link in this email.",
+    paused: `${push ? "Notifications" : "Emails"} that were held back and not sent, for example because the user turned them off.`,
+    deleted: `${push ? "Notifications" : "Emails"} sent to users who have since been deleted.`,
+  }[metric];
+}
+/** The few facts that matter for this list, in plain words. */
+function rowSummary({ user, journey, message }: JourneyMetricUser) {
+  const facts: (string | null)[] = [];
+  if (message) {
+    facts.push(message.sentAt && `Sent ${when(message.sentAt)}`);
+    facts.push(message.openedAt && `${message.clickedAt !== undefined ? "Opened" : "Tapped"} ${when(message.openedAt)}`);
+    facts.push(message.clickedAt ? `Clicked ${when(message.clickedAt)}` : null);
+    facts.push(message.bouncedAt ? `Bounced ${when(message.bouncedAt)}` : null);
+  } else if (journey) {
+    facts.push(`Joined ${when(journey.enteredAt)}`);
+    facts.push(journey.completedAt && `Finished ${when(journey.completedAt)}`);
+    facts.push(journey.exitedAt && `Left ${when(journey.exitedAt)}${journey.exitReason ? ` (${journey.exitReason.replace(/_/g, " ")})` : ""}`);
+  } else {
+    facts.push(user.lastActiveAt ? `Last active ${when(user.lastActiveAt)}` : "Never active");
+  }
+  const location = [user.region, user.country].filter(Boolean).join(", ");
+  if (location) facts.push(location);
+  return facts.filter(Boolean).join(" · ");
+}
+function MetricUsersPanel({ blockId, blockTitle, type, label, onClose }: OpenMetric & { onClose: () => void }) {
+  const metric = METRIC_KEYS[label];
+  const journeyId = useSearchParams().get("id");
+  const projectId = useActiveProject().active?.id;
+  const [query, setQuery] = useState("");
+  const [search, setSearch] = useState("");
+  useEffect(() => {
+    const timer = setTimeout(() => setSearch(query.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [query]);
+  const limit = 50;
+  const users = useInfiniteQuery({
+    queryKey: ["projects", projectId, "journeys", journeyId, "users", blockId, metric, search],
+    queryFn: ({ pageParam }) =>
+      journeysApi.users(projectId!, journeyId!, {
+        metric,
+        step: blockId === ENTRANCE.id ? undefined : blockId,
+        search: search || undefined,
+        page: pageParam,
+        limit,
+      }),
+    initialPageParam: 1,
+    getNextPageParam: (last) => (last.page * last.limit < last.total ? last.page + 1 : undefined),
+    enabled: Boolean(projectId && journeyId),
+  });
+  const rows = users.data?.pages.flatMap((page) => page.items) ?? [];
+  const total = users.data?.pages[0]?.total ?? 0;
+  // Load the next 50 as the list scrolls to its end.
+  const sentinel = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const node = sentinel.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && users.hasNextPage && !users.isFetchingNextPage) users.fetchNextPage();
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [users]);
+
+  return (
+    <Box
+      className="journey-settings-panel"
+      sx={{ zIndex: 6, width: { xs: "min(92vw, 420px)", sm: 420 }, display: "flex", flexDirection: "column" }}
+    >
+      <Box className="journey-settings-title">
+        <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+          <Box>
+            <Typography fontSize="var(--fs-11)" color="#4775de" fontWeight={500} letterSpacing=".08em">
+              {blockTitle.toUpperCase()}
+            </Typography>
+            <Typography variant="h3">{label}</Typography>
+          </Box>
+          <IconButton onClick={onClose} aria-label="Close">
+            <CloseRounded />
+          </IconButton>
+        </Stack>
+        <Typography fontSize="var(--fs-12)" color="text.secondary" sx={{ mt: 0.5 }}>
+          {metricHelp(metric, type)}
+        </Typography>
+        <TextField
+          size="small"
+          fullWidth
+          placeholder="Search by name, email or user ID"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          sx={{ mt: 1.5 }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchRounded fontSize="small" />
+              </InputAdornment>
+            ),
+          }}
+        />
+        <Typography fontSize="var(--fs-12)" color="text.secondary" sx={{ mt: 1 }}>
+          {users.isLoading
+            ? "Loading…"
+            : search
+              ? `${number(total)} ${total === 1 ? "match" : "matches"}`
+              : `${number(total)} ${total === 1 ? "person" : "people"}${total > rows.length ? ` · showing ${number(rows.length)}` : ""}`}
+        </Typography>
+      </Box>
+      <Box sx={{ flex: 1, overflowY: "auto", px: 1 }}>
+        {users.isLoading ? (
+          <Stack alignItems="center" sx={{ py: 4 }}>
+            <CircularProgress size={24} />
+          </Stack>
+        ) : users.isError ? (
+          <Typography color="error" sx={{ p: 2 }}>
+            {journeyError(users.error)}
+          </Typography>
+        ) : !rows.length ? (
+          <Typography color="text.secondary" sx={{ p: 2 }}>
+            {search ? `No one matches “${search}”.` : "No one here yet."}
+          </Typography>
+        ) : (
+          <>
+            {rows.map((row, index) => {
+              const { user } = row;
+              const [statusText, tone] = user.deletedAt
+                ? ["Deleted", "red"]
+                : (row.message && MESSAGE_STATUS[row.message.status]) || (row.journey && JOURNEY_STATUS[row.journey.status]) || [];
+              return (
+                <Link
+                  key={`${user.id}-${index}`}
+                  href={`/dashboard/users/${encodeURIComponent(user.id)}?tab=users`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Open this user's profile in a new tab"
+                  style={{ color: "inherit", textDecoration: "none", display: "block" }}
+                >
+                  <Box
+                    sx={{
+                      px: 1,
+                      py: 1.1,
+                      borderRadius: 1,
+                      borderBottom: "1px solid #edf0f5",
+                      "&:hover": { background: "#f5f7fb" },
+                    }}
+                  >
+                    <Stack direction="row" alignItems="center" gap={1}>
+                      <Typography fontWeight={600} fontSize="var(--fs-14)" noWrap sx={{ flex: 1, minWidth: 0 }}>
+                        {user.name || user.email || user.externalUserId || "Unnamed user"}
+                      </Typography>
+                      {statusText && (
+                        <Box
+                          component="span"
+                          sx={{ ...CHIP[tone ?? "grey"], fontSize: "var(--fs-11)", fontWeight: 600, px: 1, py: 0.25, borderRadius: 10, whiteSpace: "nowrap" }}
+                        >
+                          {statusText}
+                        </Box>
+                      )}
+                    </Stack>
+                    {(user.name || user.email) && (
+                      <Typography fontSize="var(--fs-12)" color="text.secondary" noWrap>
+                        {[user.name && user.email, user.externalUserId && `ID ${user.externalUserId}`].filter(Boolean).join(" · ")}
+                      </Typography>
+                    )}
+                    <Typography fontSize="var(--fs-12)" color="text.secondary" noWrap>
+                      {rowSummary(row)}
+                    </Typography>
+                  </Box>
+                </Link>
+              );
+            })}
+            <Box ref={sentinel} sx={{ py: 2, textAlign: "center" }}>
+              {users.isFetchingNextPage ? (
+                <CircularProgress size={20} />
+              ) : users.hasNextPage ? (
+                <Button size="small" onClick={() => users.fetchNextPage()}>
+                  Show more
+                </Button>
+              ) : rows.length > limit ? (
+                <Typography fontSize="var(--fs-12)" color="text.secondary">
+                  That&apos;s everyone.
+                </Typography>
+              ) : null}
+            </Box>
+          </>
+        )}
+      </Box>
+    </Box>
+  );
+}
 function BlockMetrics({
+  blockId,
+  blockTitle,
   type,
   stats = {},
 }: {
+  blockId: string;
+  blockTitle: string;
   type: BlockType;
   stats?: BlockStats;
 }) {
+  const openMetric = useContext(MetricPanelContext);
+  const setOpen = (label: string) => openMetric({ blockId, blockTitle, type, label });
   // Every counter comes from GET /journeys/:id; a journey that has not been saved yet shows zeros.
   const rate = (part?: number) =>
     stats.sent ? `${Math.round(((part ?? 0) / stats.sent) * 100)}%` : 0;
@@ -913,12 +1185,36 @@ function BlockMetrics({
       gap={1}
       className="journey-metrics"
     >
-      {metrics.map(([label, color]) => (
-        <span key={label}>
-          {label}{" "}
-          <b className={`journey-count ${color}`}>{count[label] ?? 0}</b>
-        </span>
-      ))}
+      {metrics.map(([label, color]) => {
+        const clickable = METRIC_KEYS[label] && Number(count[label]) > 0;
+        return (
+          <span
+            key={label}
+            className={clickable ? "journey-metric-link" : undefined}
+            {...(clickable
+              ? {
+                  role: "button",
+                  tabIndex: 0,
+                  title: `View ${label.toLowerCase()}`,
+                  onClick: (event: React.MouseEvent) => {
+                    event.stopPropagation();
+                    setOpen(label);
+                  },
+                  onKeyDown: (event: React.KeyboardEvent) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setOpen(label);
+                    }
+                  },
+                }
+              : {})}
+          >
+            {label}{" "}
+            <b className={`journey-count ${color}`}>{count[label] ?? 0}</b>
+          </span>
+        );
+      })}
     </Stack>
   );
   const messages = messageMetrics[type] || [];
@@ -983,7 +1279,7 @@ function AddStepPopover({
                 </Box>
                 <Box sx={{ textAlign: "left" }}>
                   <Typography fontWeight={600}>{title}</Typography>
-                  <Typography color="text.secondary" fontSize={11}>
+                  <Typography color="text.secondary" fontSize="var(--fs-11)">
                     {description}
                   </Typography>
                 </Box>
@@ -1026,7 +1322,7 @@ function SettingsPanel({
       >
         <Box>
           <Typography
-            fontSize={11}
+            fontSize="var(--fs-11)"
             color="#4775de"
             fontWeight={500}
             letterSpacing=".08em"
@@ -1132,7 +1428,7 @@ function EntranceSettings({
         <Typography className="journey-field-label">
           Entrance trigger (OR)
         </Typography>
-        <Typography color="text.secondary" fontSize={12}>
+        <Typography color="text.secondary" fontSize="var(--fs-12)">
           Choose how subscribers should enter this journey.
         </Typography>
       </Box>
@@ -1374,10 +1670,10 @@ function ConditionSettings({
         }
         label={
           <Box>
-            <Typography fontWeight={600} fontSize={13}>
+            <Typography fontWeight={600} fontSize="var(--fs-13)">
               {title}
             </Typography>
-            <Typography fontSize={11} color="text.secondary">
+            <Typography fontSize="var(--fs-11)" color="text.secondary">
               {description}
             </Typography>
           </Box>
@@ -1391,7 +1687,7 @@ function ConditionSettings({
         <Typography className="journey-field-label">
           Create a condition
         </Typography>
-        <Typography color="text.secondary" fontSize={12}>
+        <Typography color="text.secondary" fontSize="var(--fs-12)">
           Add up to 5 conditions. Define whether any or all of them must be
           applicable, for the condition to be met.
         </Typography>
@@ -1410,7 +1706,7 @@ function ConditionSettings({
       </Stack>
       {rules.map((rule, index) => (
         <Box key={index} className="journey-condition-rule">
-          <Typography fontWeight={500} fontSize={12}>
+          <Typography fontWeight={500} fontSize="var(--fs-12)">
             Condition {index + 1}
           </Typography>
           <PanelSelect

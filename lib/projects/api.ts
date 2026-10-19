@@ -478,7 +478,49 @@ export const journeysApi = {
   /** activate (draft → live), pause, resume, archive (stops for good), duplicate (new draft copy). */
   action: (projectId: string, journeyId: string, action: "activate" | "pause" | "resume" | "archive" | "duplicate") =>
     authRequest<Journey>(at(projectId, journeyPath(journeyId, `/${action}`)), {}, BASE, "POST"),
+  /** The users behind one builder counter. `step` is the step key; Entrance metrics take none. */
+  users: (projectId: string, journeyId: string, params: { metric: JourneyUsersMetric; step?: string; search?: string; page?: number; limit?: number }) => {
+    const query = new URLSearchParams({ metric: params.metric, page: String(params.page ?? 1), limit: String(params.limit ?? 25) });
+    if (params.step) query.set("step", params.step);
+    if (params.search) query.set("search", params.search);
+    return authRequest<PushPaginated<JourneyMetricUser>>(at(projectId, journeyPath(journeyId, `/users?${query.toString()}`)), undefined, BASE);
+  },
 };
+
+export type JourneyUsersMetric =
+  | "entered" | "unreachable" | "waiting" | "completed" | "exitedEarly"
+  | "sent" | "opened" | "clicked" | "paused" | "deleted";
+export interface JourneyMetricUser {
+  user: {
+    id: string;
+    externalUserId: string | null;
+    email: string | null;
+    name: string | null;
+    country: string | null;
+    region: string | null;
+    lastActiveAt: string | null;
+    deletedAt: string | null;
+  };
+  /** Participant metrics: where the user stands in this journey. */
+  journey?: {
+    status: "active" | "completed" | "exited" | "failed";
+    enteredAt: string;
+    completedAt: string | null;
+    exitedAt: string | null;
+    exitReason: string | null;
+  };
+  /** Message metrics: what happened to the message this user was sent. */
+  message?: {
+    status: "queued" | "processing" | "sent" | "failed" | "skipped" | "canceled";
+    sentAt: string | null;
+    openedAt: string | null;
+    deliveredCount?: number;
+    openCount?: number;
+    deliveredAt?: string | null;
+    clickedAt?: string | null;
+    bouncedAt?: string | null;
+  };
+}
 
 export const billingApi = {
   subscription: (projectId: string) =>

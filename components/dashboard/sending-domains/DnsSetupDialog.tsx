@@ -194,7 +194,7 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
               </Alert>
             )}
 
-            <Stack component="ul" gap={0.5} sx={{ m: 0, pl: 2.5, color: 'text.secondary', fontSize: 13 }}>
+            <Stack component="ul" gap={0.5} sx={{ m: 0, pl: 2.5, color: 'text.secondary', fontSize: "var(--fs-13)" }}>
               <li>DNS changes can take several hours to take effect.</li>
               <li><code>@</code> stands for the root domain ({domain.domain}). Some providers want the name left empty instead.</li>
               <li>Copy CNAME and TXT values exactly, without extra spaces or quotes.</li>
@@ -212,7 +212,7 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
 
             {providerDkim && !providerDkim.verified && (
               <Stack gap={1}>
-                <Typography fontSize={13} color="text.secondary">
+                <Typography fontSize="var(--fs-13)" color="text.secondary">
                   DKIM is enabled at your email provider, not here. We look for the key under the usual selectors. If your provider uses a different one, enter it.
                 </Typography>
                 <Stack direction="row" gap={1} alignItems="flex-start">
@@ -234,18 +234,18 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
             {domain.status !== 'verified' && displayRecords.length > 0 && (
               <Stack gap={0.75} sx={{ pt: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
                 <Typography fontWeight={600}>Wait for the records to become active</Typography>
-                <Typography color="text.secondary" fontSize={13}>
+                <Typography color="text.secondary" fontSize="var(--fs-13)">
                   It can take up to 24 hours, but usually takes only a couple of hours. We will let you know when your domain is ready.
                 </Typography>
-                <Stack direction="row" alignItems="center" gap={1} sx={{ bgcolor: '#eef0f3', color: 'text.secondary', px: 1.25, py: 0.85, borderRadius: 0.5, fontSize: 13 }}>
+                <Stack direction="row" alignItems="center" gap={1} sx={{ bgcolor: '#eef0f3', color: 'text.secondary', px: 1.25, py: 0.85, borderRadius: 0.5, fontSize: "var(--fs-13)" }}>
                   <AccessTimeRounded sx={{ fontSize: 16 }} />
-                  <Typography fontSize={13}>Your records haven’t been authenticated yet.</Typography>
+                  <Typography fontSize="var(--fs-13)">Your records haven’t been authenticated yet.</Typography>
                 </Stack>
               </Stack>
             )}
 
             {domain.lastCheckedAt && (
-              <Typography color="text.secondary" fontSize={12}>Last checked {new Date(domain.lastCheckedAt).toLocaleString()}</Typography>
+              <Typography color="text.secondary" fontSize="var(--fs-12)">Last checked {new Date(domain.lastCheckedAt).toLocaleString()}</Typography>
             )}
           </Stack>
         )}

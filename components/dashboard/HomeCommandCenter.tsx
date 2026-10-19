@@ -630,7 +630,7 @@ function BusinessContextCard({
       </Box>
     </Stack>
 
-    {error && <Alert severity="error" sx={{ mt: 2, fontSize: 12 }}>{error}</Alert>}
+    {error && <Alert severity="error" sx={{ mt: 2, fontSize: "var(--fs-12)" }}>{error}</Alert>}
 
     {phase === "description" && <Box>
       <Typography className="guided-flow-question">Would you like to add anything about your business?</Typography>
@@ -638,12 +638,12 @@ function BusinessContextCard({
       <Stack direction="row" justifyContent="space-between" gap={.75} sx={{ mt: 1.5 }}><Button className="guided-flow-secondary" onClick={() => goToPhase(draft.businessAnalysis ? "analysis" : "website")} disabled={saving}>Back</Button><Stack direction="row" gap={.75}><Button className="guided-flow-secondary" onClick={() => goToPhase("review")} disabled={saving}>Skip</Button><Button className="guided-flow-next" variant="contained" onClick={() => void saveDescriptionAndContinue()} disabled={saving}>{saving ? "Saving…" : "Continue"}</Button></Stack></Stack>
     </Box>}
 
-    {phase === "website" && (saving || checkingLinks) && <Stack alignItems="center" sx={{ py: 1.5 }} role="status" aria-live="polite"><BusinessAnalysisPulse /><Typography fontSize={22} fontWeight={600}>{checkingLinks ? "Checking your website for app links…" : "Analyzing your business…"}</Typography><Typography fontSize={16} fontWeight={500}>{websiteUrl}</Typography><Typography color="text.secondary" fontSize={13}>{checkingLinks ? "Looking for App Store and Google Play links." : "I’m using your website and app information to build your profile."}</Typography></Stack>}
+    {phase === "website" && (saving || checkingLinks) && <Stack alignItems="center" sx={{ py: 1.5 }} role="status" aria-live="polite"><BusinessAnalysisPulse /><Typography fontSize="var(--fs-24)" fontWeight={600}>{checkingLinks ? "Checking your website for app links…" : "Analyzing your business…"}</Typography><Typography fontSize="var(--fs-16)" fontWeight={500}>{websiteUrl}</Typography><Typography color="text.secondary" fontSize="var(--fs-13)">{checkingLinks ? "Looking for App Store and Google Play links." : "I’m using your website and app information to build your profile."}</Typography></Stack>}
 
     {phase === "website" && !saving && !checkingLinks && <Box>
       <Typography className="guided-flow-question"><LinkRounded fontSize="small" sx={{ mr: .5, verticalAlign: "middle" }} />What is your website?</Typography>
       <TextField fullWidth value={websiteUrl} onChange={(event) => setWebsiteUrl(event.target.value)} placeholder="https://example.com" label="Website URL" type="url" helperText="I’ll read the public page and save only the relevant business context." />
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mt: 1.5 }}><Typography className="business-context-optional-label">Optional app links</Typography><Button className="guided-flow-secondary" onClick={() => void checkWebsiteLinks()} disabled={checkingLinks || saving || !websiteUrl.trim()} sx={{ minHeight: 30, px: 1.25, fontSize: 12 }}>Check website for links</Button></Stack>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mt: 1.5 }}><Typography className="business-context-optional-label">Optional app links</Typography><Button className="guided-flow-secondary" onClick={() => void checkWebsiteLinks()} disabled={checkingLinks || saving || !websiteUrl.trim()} sx={{ minHeight: 30, px: 1.25, fontSize: "var(--fs-12)" }}>Check website for links</Button></Stack>
       <Stack gap={1}>
         <TextField fullWidth value={appStoreUrl} onChange={(event) => setAppStoreUrl(event.target.value)} placeholder="https://apps.apple.com/..." label="App Store link" type="url" />
         <TextField fullWidth value={googlePlayUrl} onChange={(event) => setGooglePlayUrl(event.target.value)} placeholder="https://play.google.com/..." label="Google Play link" type="url" />
@@ -712,7 +712,7 @@ function GuidedFlowCard({ flow, steps, step, answers, onSelect, onNext, onBack, 
     <Typography component="h2" className="guided-flow-title">{flow.title}</Typography>
     <Typography className="guided-flow-subtitle">{journeySubtitle}</Typography>
     <Typography className="guided-flow-question">{current.question}</Typography>
-    {step === 1 && purposeRecommendation && <Alert severity="info" sx={{ mb: 1.25, fontSize: 12 }}>
+    {step === 1 && purposeRecommendation && <Alert severity="info" sx={{ mb: 1.25, fontSize: "var(--fs-12)" }}>
       <strong>Recommended:</strong> {purposeRecommendation}{' '}
       <a className="paywall-doc-link" href="/dashboard/developer-docs/engagement" target="_blank" rel="noreferrer">View developer documentation</a>
     </Alert>}
@@ -722,25 +722,25 @@ function GuidedFlowCard({ flow, steps, step, answers, onSelect, onNext, onBack, 
           <span className="guided-choice-check">{selected === choice.label && <CheckRounded />}</span>
           <Box className="guided-choice-copy"><Stack direction="row" alignItems="center" gap={.35}><Typography>{choice.label}</Typography>{journeyChoiceExplanations[choice.label] && <Tooltip title={journeyChoiceExplanations[choice.label]} arrow><IconButton aria-label={`More information about ${choice.label}`} size="small" onClick={(event) => event.stopPropagation()} onMouseDown={(event) => event.stopPropagation()} sx={{ p: 0, color: "#6f5a82" }}><InfoOutlined sx={{ fontSize: 16 }} /></IconButton></Tooltip>}</Stack><span>{choice.description}</span></Box>
         </ButtonBase>
-        {choice.label === "Lifecycle segment entry" && showLifecycleUnavailable && <Typography component="div" className="sdk-unavailable-message" fontSize={11.5} sx={{ mt: .75, px: 1 }}>
+        {choice.label === "Lifecycle segment entry" && showLifecycleUnavailable && <Typography component="div" className="sdk-unavailable-message" fontSize="var(--fs-12)" sx={{ mt: .75, px: 1 }}>
           Lifecycle segment entry is unavailable until the SDK is integrated.{' '}
           <a className="paywall-doc-link" href="/dashboard/developer-docs/engagement" target="_blank" rel="noreferrer">View developer documentation</a>
         </Typography>}
-        {choice.label === "An event or action" && showEventActionUnavailable && <Typography component="div" className="sdk-unavailable-message" fontSize={11.5} sx={{ mt: .75, px: 1 }}>
+        {choice.label === "An event or action" && showEventActionUnavailable && <Typography component="div" className="sdk-unavailable-message" fontSize="var(--fs-12)" sx={{ mt: .75, px: 1 }}>
           {!sdkIntegrated ? "Event or action is unavailable until the SDK is integrated." : "The SDK is integrated, but no relevant events have been received yet. Ask your developer to add and verify the required events."}{' '}
           <a className="paywall-doc-link" href="/dashboard/developer-docs/engagement" target="_blank" rel="noreferrer">View developer documentation</a>
         </Typography>}
-        {(choice.label === "Push" || choice.label === "Multichannel") && showPushUnavailable && <Typography component="div" className="sdk-unavailable-message" fontSize={11.5} sx={{ mt: .75, px: 1 }}>
+        {(choice.label === "Push" || choice.label === "Multichannel") && showPushUnavailable && <Typography component="div" className="sdk-unavailable-message" fontSize="var(--fs-12)" sx={{ mt: .75, px: 1 }}>
           {pushUnavailableReason} <a className="paywall-doc-link" href="/dashboard/settings/firebase">Open Firebase / FCM settings</a>
         </Typography>}
       </Box>)}
     </Stack>
-    {paywallNeedsSetup && <Alert severity="warning" sx={{ mt: 1.5, fontSize: 12 }}>
+    {paywallNeedsSetup && <Alert severity="warning" sx={{ mt: 1.5, fontSize: "var(--fs-12)" }}>
       {!sdkIntegrated
         ? <>Your SDK isn’t integrated yet, so paywall drop-off events aren’t available. Ask your developer to integrate the SDK before using this trigger.</>
         : <>We haven’t received the events needed to detect paywall drop-off yet. Ask your developer to add them before using this trigger.</>}
       <Box component="div" sx={{ mt: .5 }}><a className="paywall-doc-link" href="/dashboard/developer-docs/paywall-drop-off" target="_blank" rel="noreferrer">View developer documentation</a></Box>
-      <Typography component="div" fontSize={12} sx={{ mt: .9 }}>You can continue without an audience for now and add the lifecycle segment later.</Typography>
+      <Typography component="div" fontSize="var(--fs-12)" sx={{ mt: .9 }}>You can continue without an audience for now and add the lifecycle segment later.</Typography>
       <Button className="paywall-continue-button" size="small" variant="outlined" onClick={onContinueWithoutAudience}>Continue without an audience for now</Button>
     </Alert>}
     <Stack direction="row" alignItems="center" gap={1.5} className="guided-flow-footer">
@@ -788,7 +788,7 @@ function AnalysisRequestCard({ phase, selectedType, selectedResourceId, selected
     </>}
     {phase === "resource" && <>
       <Typography className="guided-flow-question">Which concrete {typeLabel} should I analyze?</Typography>
-      <Stack gap={1}>{items.length ? items.map((item) => <ButtonBase key={item.id} className={`guided-flow-choice ${selectedResourceId === item.id ? "is-selected" : ""}`} onClick={() => onResource(item.id, item.name)}><span className="guided-choice-check">{selectedResourceId === item.id && <CheckRounded />}</span><Box className="guided-choice-copy"><Typography>{item.name}</Typography><span>Select this {typeLabel} for analysis.</span></Box></ButtonBase>) : <Typography color="text.secondary" fontSize={13}>No {typeLabel}s are available yet.</Typography>}</Stack>
+      <Stack gap={1}>{items.length ? items.map((item) => <ButtonBase key={item.id} className={`guided-flow-choice ${selectedResourceId === item.id ? "is-selected" : ""}`} onClick={() => onResource(item.id, item.name)}><span className="guided-choice-check">{selectedResourceId === item.id && <CheckRounded />}</span><Box className="guided-choice-copy"><Typography>{item.name}</Typography><span>Select this {typeLabel} for analysis.</span></Box></ButtonBase>) : <Typography color="text.secondary" fontSize="var(--fs-13)">No {typeLabel}s are available yet.</Typography>}</Stack>
     </>}
     {phase === "period" && <>
       <Typography className="guided-flow-question">Which time period?</Typography>
@@ -797,7 +797,7 @@ function AnalysisRequestCard({ phase, selectedType, selectedResourceId, selected
     {phase === "confirm" && <>
       <Typography className="guided-flow-question">Ready to start Ben’s analysis?</Typography>
       <Stack gap={1} sx={{ mt: 1.5 }}><Box className="analysis-confirm-row"><Typography color="text.secondary">Type</Typography><Typography fontWeight={600}>{typeLabel}</Typography></Box><Box className="analysis-confirm-row"><Typography color="text.secondary">Item</Typography><Typography fontWeight={600}>{selectedResourceName}</Typography></Box><Box className="analysis-confirm-row"><Typography color="text.secondary">Period</Typography><Typography fontWeight={600}>{selectedPeriod}</Typography></Box></Stack>
-      <Typography color="text.secondary" fontSize={12} sx={{ mt: 2 }}>This starts one AI analysis using Ben’s selected scope. Nothing will be changed automatically.</Typography>
+      <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: 2 }}>This starts one AI analysis using Ben’s selected scope. Nothing will be changed automatically.</Typography>
     </>}
     <Stack direction="row" justifyContent="space-between" alignItems="center" className="guided-flow-footer">
       <Button className="guided-flow-cancel" onClick={onCancel}>Cancel</Button>
@@ -812,7 +812,7 @@ function JourneySummaryCard({ steps, answers, onApprove, onBack, onCancel, gener
     <Typography className="guided-flow-subtitle">Nova is creating the journey structure, timing, messages and templates using your business context.</Typography>
     <Stack alignItems="center" gap={1.25} sx={{ py: 4 }}>
       <Box className="chat-agent-mark is-thinking"><Image src="/assets/agent-avatar-nova-v2.png" alt="Nova avatar" width={42} height={42} /></Box>
-      <Typography color="text.secondary" fontSize={13}>Preparing your editable journey draft<span className="thinking-dots">…</span></Typography>
+      <Typography color="text.secondary" fontSize="var(--fs-13)">Preparing your editable journey draft<span className="thinking-dots">…</span></Typography>
       <Box className="thinking-bars" aria-hidden><span /><span /><span /></Box>
     </Stack>
   </Box>;
@@ -820,9 +820,9 @@ function JourneySummaryCard({ steps, answers, onApprove, onBack, onCancel, gener
     <Typography component="h2" className="guided-flow-title">Review your journey</Typography>
     <Typography className="guided-flow-subtitle">Here’s what I’ll use to recommend and create your editable journey draft.</Typography>
     <Stack gap={1.1} sx={{ mt: 2 }}>
-      {steps.map((step, index) => answers[index] ? <Box key={step.question} sx={{ borderBottom: "1px solid rgba(92, 61, 120, .12)", pb: 1 }}><Typography fontSize={12} color="text.secondary">{step.question}</Typography><Typography fontSize={14} fontWeight={600}>{answers[index]}</Typography></Box> : null)}
+      {steps.map((step, index) => answers[index] ? <Box key={step.question} sx={{ borderBottom: "1px solid rgba(92, 61, 120, .12)", pb: 1 }}><Typography fontSize="var(--fs-12)" color="text.secondary">{step.question}</Typography><Typography fontSize="var(--fs-14)" fontWeight={600}>{answers[index]}</Typography></Box> : null)}
     </Stack>
-    <Typography fontSize={12} color="text.secondary" sx={{ mt: 2 }}>You can continue the conversation afterward to adjust any step or change the journey goal.</Typography>
+    <Typography fontSize="var(--fs-12)" color="text.secondary" sx={{ mt: 2 }}>You can continue the conversation afterward to adjust any step or change the journey goal.</Typography>
     <Stack direction="row" justifyContent="flex-end" gap={.75} sx={{ mt: 2 }}>
       <Button className="guided-flow-cancel" onClick={onCancel}>Cancel</Button>
       <Button className="guided-flow-secondary" onClick={onBack}>Edit</Button>
@@ -837,14 +837,14 @@ function JourneyRecommendationCard({ draft, onCreate, onEdit, onRegenerate, crea
   if (creating) return <Box className="guided-flow-card" role="status" aria-live="polite">
     <Typography component="h2" className="guided-flow-title">Creating your journey draft</Typography>
     <Typography className="guided-flow-subtitle">Nova is creating the journey steps and saving the email and push templates.</Typography>
-    <Stack alignItems="center" gap={1.25} sx={{ py: 4 }}><Box className="chat-agent-mark is-thinking"><Image src="/assets/agent-avatar-nova-v2.png" alt="Nova avatar" width={42} height={42} /></Box><Typography color="text.secondary" fontSize={13}>Saving your editable draft<span className="thinking-dots">…</span></Typography><Box className="thinking-bars" aria-hidden><span /><span /><span /></Box></Stack>
+    <Stack alignItems="center" gap={1.25} sx={{ py: 4 }}><Box className="chat-agent-mark is-thinking"><Image src="/assets/agent-avatar-nova-v2.png" alt="Nova avatar" width={42} height={42} /></Box><Typography color="text.secondary" fontSize="var(--fs-13)">Saving your editable draft<span className="thinking-dots">…</span></Typography><Box className="thinking-bars" aria-hidden><span /><span /><span /></Box></Stack>
   </Box>;
   return <Box className="guided-flow-card">
     <Typography component="h2" className="guided-flow-title">Nova’s recommended journey</Typography>
     <Typography className="guided-flow-subtitle">Review the proposed steps before Nova creates the journey and its message templates.</Typography>
-    {draft.recommendations && typeof draft.recommendations === "object" && !Array.isArray(draft.recommendations) ? (() => { const recommendations = draft.recommendations as Record<string, unknown>; return <Box sx={{ mt: 1.5, mb: .5, p: 1.25, borderRadius: 1.5, bgcolor: "rgba(92, 61, 120, .045)" }}><Typography fontSize={12} fontWeight={700}>Why Nova recommends this</Typography><Typography fontSize={12} color="text.secondary" sx={{ mt: .35 }}>{String(recommendations.strategy ?? "The sequence is based on the selected goal and saved business context.")}</Typography><Stack gap={.25} sx={{ mt: .75 }}><Typography fontSize={11} color="text.secondary">Timing: {String(recommendations.delays ?? "Behavior-based timing")}</Typography><Typography fontSize={11} color="text.secondary">Frequency: {String(recommendations.frequencyCap ?? "Protected against over-messaging")}</Typography><Typography fontSize={11} color="text.secondary">Stops after: {Array.isArray(recommendations.exitCriteria) ? recommendations.exitCriteria.join(", ") : String(recommendations.exitCriteria ?? "the intended action")}</Typography></Stack></Box>; })() : null}
-    <Stack gap={1} sx={{ mt: 2 }}>{steps.map((raw, index) => { const step = raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, unknown> : {}; const copy = step.copy && typeof step.copy === "object" && !Array.isArray(step.copy) ? step.copy as Record<string, unknown> : {}; const isPush = step.channel === "push"; const body = String(copy.text ?? copy.html ?? copy.body ?? "").replace(/<br\s*\/?>/gi, "\n").replace(/<\/p\s*>/gi, "\n\n").replace(/<li\s*>/gi, "• ").replace(/<[^>]+>/g, "").replace(/\n{3,}/g, "\n\n").trim(); return <Box key={`${stepLabel(step)}-${index}`} sx={{ border: "1px solid rgba(92, 61, 120, .14)", borderRadius: 1.5, px: 1.5, py: 1.25 }}><Typography fontSize={12} color="primary" fontWeight={700}>Step {index + 1}</Typography>{step.kind === "delay" ? <><Typography fontSize={14} fontWeight={600}>{stepLabel(step)}</Typography><Typography fontSize={12} color="text.secondary">Pause before the next touchpoint.</Typography></> : <Stack gap={.75} sx={{ mt: .5 }}><Typography fontSize={14} fontWeight={600}>{isPush ? "Push notification" : "Email"}</Typography><Box><Typography fontSize={10} color="text.secondary" textTransform="uppercase" letterSpacing=".08em">Template name</Typography><Typography fontSize={12}>{String(step.templateName ?? `Journey step ${index + 1}`)}</Typography></Box>{isPush ? <><Box><Typography fontSize={10} color="text.secondary" textTransform="uppercase" letterSpacing=".08em">Title</Typography><Typography fontSize={12}>{String(copy.title ?? "—")}</Typography></Box><Box sx={{ mt: .25 }}><Typography fontSize={10} color="text.secondary" textTransform="uppercase" letterSpacing=".08em">Body</Typography><Box sx={{ mt: .5, p: 1.25, border: "1px solid rgba(92, 61, 120, .1)", borderRadius: 1, bgcolor: "#fff" }}><Typography fontSize={12} color="text.secondary" sx={{ whiteSpace: "pre-line", lineHeight: 1.55 }}>{String(copy.body ?? "—")}</Typography></Box></Box></> : <><Box><Typography fontSize={10} color="text.secondary" textTransform="uppercase" letterSpacing=".08em">Subject</Typography><Box sx={{ mt: .35, px: 1.1, py: .8, border: "1px solid rgba(92, 61, 120, .1)", borderRadius: 1, bgcolor: "#fff" }}><Typography fontSize={12} fontWeight={600}>{String(copy.subject ?? "—")}</Typography></Box></Box><Box sx={{ mt: .25 }}><Typography fontSize={10} color="text.secondary" textTransform="uppercase" letterSpacing=".08em">Body</Typography><Box sx={{ mt: .5, p: 1.25, border: "1px solid rgba(92, 61, 120, .1)", borderRadius: 1, bgcolor: "#fff" }}><Typography fontSize={12} color="text.secondary" sx={{ whiteSpace: "pre-line", lineHeight: 1.65 }}>{body || "—"}</Typography></Box></Box></>}</Stack>}</Box>; })}</Stack>
-    <Typography fontSize={12} color="text.secondary" sx={{ mt: 2 }}>These are recommendations based on the selected goal and saved business context. You can edit the journey after it is created.</Typography>
+    {draft.recommendations && typeof draft.recommendations === "object" && !Array.isArray(draft.recommendations) ? (() => { const recommendations = draft.recommendations as Record<string, unknown>; return <Box sx={{ mt: 1.5, mb: .5, p: 1.25, borderRadius: 1.5, bgcolor: "rgba(92, 61, 120, .045)" }}><Typography fontSize="var(--fs-12)" fontWeight={600}>Why Nova recommends this</Typography><Typography fontSize="var(--fs-12)" color="text.secondary" sx={{ mt: .35 }}>{String(recommendations.strategy ?? "The sequence is based on the selected goal and saved business context.")}</Typography><Stack gap={.25} sx={{ mt: .75 }}><Typography fontSize="var(--fs-11)" color="text.secondary">Timing: {String(recommendations.delays ?? "Behavior-based timing")}</Typography><Typography fontSize="var(--fs-11)" color="text.secondary">Frequency: {String(recommendations.frequencyCap ?? "Protected against over-messaging")}</Typography><Typography fontSize="var(--fs-11)" color="text.secondary">Stops after: {Array.isArray(recommendations.exitCriteria) ? recommendations.exitCriteria.join(", ") : String(recommendations.exitCriteria ?? "the intended action")}</Typography></Stack></Box>; })() : null}
+    <Stack gap={1} sx={{ mt: 2 }}>{steps.map((raw, index) => { const step = raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, unknown> : {}; const copy = step.copy && typeof step.copy === "object" && !Array.isArray(step.copy) ? step.copy as Record<string, unknown> : {}; const isPush = step.channel === "push"; const body = String(copy.text ?? copy.html ?? copy.body ?? "").replace(/<br\s*\/?>/gi, "\n").replace(/<\/p\s*>/gi, "\n\n").replace(/<li\s*>/gi, "• ").replace(/<[^>]+>/g, "").replace(/\n{3,}/g, "\n\n").trim(); return <Box key={`${stepLabel(step)}-${index}`} sx={{ border: "1px solid rgba(92, 61, 120, .14)", borderRadius: 1.5, px: 1.5, py: 1.25 }}><Typography fontSize="var(--fs-12)" color="primary" fontWeight={600}>Step {index + 1}</Typography>{step.kind === "delay" ? <><Typography fontSize="var(--fs-14)" fontWeight={600}>{stepLabel(step)}</Typography><Typography fontSize="var(--fs-12)" color="text.secondary">Pause before the next touchpoint.</Typography></> : <Stack gap={.75} sx={{ mt: .5 }}><Typography fontSize="var(--fs-14)" fontWeight={600}>{isPush ? "Push notification" : "Email"}</Typography><Box><Typography fontSize="var(--fs-11)" color="text.secondary" textTransform="uppercase" letterSpacing=".08em">Template name</Typography><Typography fontSize="var(--fs-12)">{String(step.templateName ?? `Journey step ${index + 1}`)}</Typography></Box>{isPush ? <><Box><Typography fontSize="var(--fs-11)" color="text.secondary" textTransform="uppercase" letterSpacing=".08em">Title</Typography><Typography fontSize="var(--fs-12)">{String(copy.title ?? "—")}</Typography></Box><Box sx={{ mt: .25 }}><Typography fontSize="var(--fs-11)" color="text.secondary" textTransform="uppercase" letterSpacing=".08em">Body</Typography><Box sx={{ mt: .5, p: 1.25, border: "1px solid rgba(92, 61, 120, .1)", borderRadius: 1, bgcolor: "#fff" }}><Typography fontSize="var(--fs-12)" color="text.secondary" sx={{ whiteSpace: "pre-line", lineHeight: 1.55 }}>{String(copy.body ?? "—")}</Typography></Box></Box></> : <><Box><Typography fontSize="var(--fs-11)" color="text.secondary" textTransform="uppercase" letterSpacing=".08em">Subject</Typography><Box sx={{ mt: .35, px: 1.1, py: .8, border: "1px solid rgba(92, 61, 120, .1)", borderRadius: 1, bgcolor: "#fff" }}><Typography fontSize="var(--fs-12)" fontWeight={600}>{String(copy.subject ?? "—")}</Typography></Box></Box><Box sx={{ mt: .25 }}><Typography fontSize="var(--fs-11)" color="text.secondary" textTransform="uppercase" letterSpacing=".08em">Body</Typography><Box sx={{ mt: .5, p: 1.25, border: "1px solid rgba(92, 61, 120, .1)", borderRadius: 1, bgcolor: "#fff" }}><Typography fontSize="var(--fs-12)" color="text.secondary" sx={{ whiteSpace: "pre-line", lineHeight: 1.65 }}>{body || "—"}</Typography></Box></Box></>}</Stack>}</Box>; })}</Stack>
+    <Typography fontSize="var(--fs-12)" color="text.secondary" sx={{ mt: 2 }}>These are recommendations based on the selected goal and saved business context. You can edit the journey after it is created.</Typography>
     <Stack direction={{ xs: "column", sm: "row" }} justifyContent="flex-end" gap={.75} sx={{ mt: 2 }}><Button className="guided-flow-secondary" startIcon={<ReplayRounded />} onClick={onRegenerate} disabled={regenerating || creating}>{regenerating ? "Regenerating…" : "Regenerate recommendation"}</Button><Button className="guided-flow-secondary" onClick={onEdit} disabled={regenerating || creating}>Edit answers</Button><Button className="guided-flow-next" variant="contained" onClick={onCreate} disabled={regenerating}>Create journey draft</Button></Stack>
   </Box>;
 }
@@ -856,12 +856,12 @@ function JourneyGenerationOverlay({ phase }: { phase: "recommendation" | "creati
     <Typography className="guided-flow-subtitle">{creation ? "Nova is creating the journey, writing the message templates and saving everything as an editable draft." : "Nova is turning your answers and saved business context into a best-practice journey recommendation."}</Typography>
     <Stack alignItems="center" gap={1.25} sx={{ py: 4 }}>
       <Box className="chat-agent-mark is-thinking"><Image src="/assets/agent-avatar-nova-v2.png" alt="Nova avatar" width={52} height={52} /></Box>
-      <Typography color="text.secondary" fontSize={13}>{creation ? "Saving your journey and templates" : "Building your recommendation"}<span className="thinking-dots">…</span></Typography>
+      <Typography color="text.secondary" fontSize="var(--fs-13)">{creation ? "Saving your journey and templates" : "Building your recommendation"}<span className="thinking-dots">…</span></Typography>
       <Box className="thinking-bars" aria-hidden><span /><span /><span /></Box>
       {creation && <Stack gap={.5} sx={{ mt: 1, width: "min(100%, 360px)" }}>
-        {["Planning the journey steps", "Creating the email and push templates", "Saving the editable draft"].map((label) => <Typography key={label} fontSize={12} color="text.secondary" sx={{ display: "flex", alignItems: "center", gap: .75 }}><CheckRounded sx={{ fontSize: 15, color: "primary.main" }} />{label}</Typography>)}
+        {["Planning the journey steps", "Creating the email and push templates", "Saving the editable draft"].map((label) => <Typography key={label} fontSize="var(--fs-12)" color="text.secondary" sx={{ display: "flex", alignItems: "center", gap: .75 }}><CheckRounded sx={{ fontSize: 15, color: "primary.main" }} />{label}</Typography>)}
       </Stack>}
-      <Typography fontSize={12} color="text.secondary" sx={{ mt: 1, textAlign: "center" }}>Please don’t close this page or click anything while Nova finishes.</Typography>
+      <Typography fontSize="var(--fs-12)" color="text.secondary" sx={{ mt: 1, textAlign: "center" }}>Please don’t close this page or click anything while Nova finishes.</Typography>
     </Stack>
   </Box>;
 }
@@ -1817,10 +1817,10 @@ export default function HomeCommandCenter() {
             >
               <Box className="conversation-icon"><PsychologyRounded /></Box>
               <Box sx={{ flex: 1, minWidth: 0, textAlign: "left" }}>
-                <Typography fontSize={13} fontWeight={600} noWrap>{item.title || item.lastMessage?.content || "AI conversation"}</Typography>
-                <Typography fontSize={11} color="text.secondary">{item.assistant}{item._count.messages > 1 ? ` · ${item._count.messages} messages` : ""}</Typography>
+                <Typography fontSize="var(--fs-13)" fontWeight={600} noWrap>{item.title || item.lastMessage?.content || "AI conversation"}</Typography>
+                <Typography fontSize="var(--fs-11)" color="text.secondary">{item.assistant}{item._count.messages > 1 ? ` · ${item._count.messages} messages` : ""}</Typography>
               </Box>
-              <Typography className="context-dialog-time" fontSize={11} color="text.secondary">{openingConversationId === item.id ? "Opening…" : conversationTime(item.updatedAt)}</Typography>
+              <Typography className="context-dialog-time" fontSize="var(--fs-11)" color="text.secondary">{openingConversationId === item.id ? "Opening…" : conversationTime(item.updatedAt)}</Typography>
             </ButtonBase>
             <Tooltip title="Delete conversation">
               <span>
@@ -1949,8 +1949,8 @@ export default function HomeCommandCenter() {
         {context === "recent" ? <Box><Typography component="span" className="context-dialog-heading">Recent conversations</Typography><Typography className="context-dialog-subtitle">Search and resume a Home AI thread.</Typography></Box> : context === "insight" ? "Ben’s latest insight" : "Handoff history"}
       </DialogTitle>
       <DialogContent>
-        {context === "insight" && <Box className="insight-callout"><Typography fontSize={14} fontWeight={650}>{aiContext?.latestInsight.title ?? "No insight yet"}</Typography><Typography fontSize={13} color="text.secondary" sx={{ mt: .7 }}>{aiContext?.latestInsight.message ?? "The latest project insight will appear here."}</Typography><Stack direction="row" gap={1} sx={{ mt: 2 }}><Button variant="contained" size="small" href="/dashboard/journeys/create">Send insights to Nova</Button><Button size="small" href="/dashboard/users">Review audience</Button></Stack></Box>}
-        {context === "handoff" && <Stack className="context-dialog-list">{aiContext?.handoffHistory?.length ? aiContext.handoffHistory.map((item) => <Stack direction="row" gap={1.5} className="context-dialog-row" key={`${item.assistant}-${item.action}`}><Box className="handoff-dot" /><Box><Typography fontSize={13} fontWeight={600}>{item.assistant} <span className="handoff-action">{item.action}</span></Typography><Typography fontSize={11} color="text.secondary">{item.status}</Typography></Box></Stack>) : <Typography color="text.secondary">No handoff history yet.</Typography>}</Stack>}
+        {context === "insight" && <Box className="insight-callout"><Typography fontSize="var(--fs-14)" fontWeight={600}>{aiContext?.latestInsight.title ?? "No insight yet"}</Typography><Typography fontSize="var(--fs-13)" color="text.secondary" sx={{ mt: .7 }}>{aiContext?.latestInsight.message ?? "The latest project insight will appear here."}</Typography><Stack direction="row" gap={1} sx={{ mt: 2 }}><Button variant="contained" size="small" href="/dashboard/journeys/create">Send insights to Nova</Button><Button size="small" href="/dashboard/users">Review audience</Button></Stack></Box>}
+        {context === "handoff" && <Stack className="context-dialog-list">{aiContext?.handoffHistory?.length ? aiContext.handoffHistory.map((item) => <Stack direction="row" gap={1.5} className="context-dialog-row" key={`${item.assistant}-${item.action}`}><Box className="handoff-dot" /><Box><Typography fontSize="var(--fs-13)" fontWeight={600}>{item.assistant} <span className="handoff-action">{item.action}</span></Typography><Typography fontSize="var(--fs-11)" color="text.secondary">{item.status}</Typography></Box></Stack>) : <Typography color="text.secondary">No handoff history yet.</Typography>}</Stack>}
       </DialogContent>
     </Dialog>
     <DeleteConfirmDialog

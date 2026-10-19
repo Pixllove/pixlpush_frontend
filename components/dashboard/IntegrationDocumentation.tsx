@@ -150,7 +150,7 @@ function CodeBlock({
         }}
       >
         <Typography
-          fontSize={11}
+          fontSize="var(--fs-11)"
           fontWeight={500}
           letterSpacing={1.2}
           color="#ffd166"
@@ -185,7 +185,7 @@ function CodeBlock({
           overflow: "auto",
           color: "#dce3ff",
           fontFamily: "var(--pp-mono)",
-          fontSize: 12,
+          fontSize: "var(--fs-12)",
           lineHeight: 1.7,
           whiteSpace: "pre-wrap",
         }}
@@ -229,7 +229,7 @@ function SectionHeading({
         {eyebrow && (
           <Typography
             color={dark ? "#ffd166" : "#6544e8"}
-            fontSize={11}
+            fontSize="var(--fs-11)"
             fontWeight={500}
             letterSpacing={1.4}
           >
@@ -241,7 +241,7 @@ function SectionHeading({
           sx={{
             mt: eyebrow ? 0.2 : 0,
             color: dark ? "#fff" : undefined,
-            fontSize: { xs: 20, md: 24 },
+            fontSize: { xs: "var(--fs-20)", md: "var(--fs-24)" },
             lineHeight: 1.2,
             fontWeight: 600,
           }}
@@ -250,7 +250,7 @@ function SectionHeading({
         </Typography>
         <Typography
           color={dark ? "rgba(255,255,255,.68)" : "text.secondary"}
-          fontSize={13}
+          fontSize="var(--fs-13)"
           sx={{ mt: 0.6, lineHeight: 1.6 }}
         >
           {description}
@@ -295,7 +295,7 @@ export default function IntegrationDocumentation() {
           boxShadow: "0 8px 22px rgba(28,39,92,.05)",
         },
         "& .integration-code-block": { borderRadius: "12px !important" },
-        "& .integration-main .MuiTypography-body1": { fontSize: "14px" },
+        "& .integration-main .MuiTypography-body1": { fontSize: "var(--fs-14)" },
       }}
     >
       <Stack
@@ -342,7 +342,7 @@ export default function IntegrationDocumentation() {
                 sx={{
                   bgcolor: "rgba(255,255,255,.14)",
                   color: "#fff",
-                  fontSize: 11,
+                  fontSize: "var(--fs-11)",
                   fontWeight: 500,
                   letterSpacing: 1,
                 }}
@@ -351,13 +351,13 @@ export default function IntegrationDocumentation() {
                 label="React + React Native"
                 size="small"
                 variant="outlined"
-                sx={{ fontSize: 11, fontWeight: 500, color: "rgba(255,255,255,.82)", borderColor: "rgba(255,255,255,.35)" }}
+                sx={{ fontSize: "var(--fs-11)", fontWeight: 500, color: "rgba(255,255,255,.82)", borderColor: "rgba(255,255,255,.35)" }}
               />
             </Stack>
             <Typography
               variant="h2"
               sx={{
-                fontSize: { xs: 20, md: 24 },
+                fontSize: { xs: "var(--fs-20)", md: "var(--fs-24)" },
                 lineHeight: 1.08,
                 fontWeight: 600,
                 maxWidth: 690,
@@ -367,7 +367,7 @@ export default function IntegrationDocumentation() {
             </Typography>
             <Typography
               color="rgba(255,255,255,.78)"
-              fontSize={14}
+              fontSize="var(--fs-14)"
               sx={{ mt: 1.35, maxWidth: 650, lineHeight: 1.7 }}
             >
               A practical implementation guide for product analytics, lifecycle
@@ -408,7 +408,7 @@ export default function IntegrationDocumentation() {
           >
             <Typography
               color="#ffd36a"
-              fontSize={11}
+              fontSize="var(--fs-11)"
               fontWeight={500}
               letterSpacing={1.3}
             >
@@ -419,7 +419,7 @@ export default function IntegrationDocumentation() {
             </Typography>
             <Typography
               color="rgba(255,255,255,.62)"
-              fontSize={12}
+              fontSize="var(--fs-12)"
               sx={{ mt: 0.4, wordBreak: "break-all" }}
             >
               {projectId}
@@ -427,18 +427,18 @@ export default function IntegrationDocumentation() {
             <Divider sx={{ my: 1.8, borderColor: "rgba(255,255,255,.14)" }} />
             <Stack gap={1}>
               <Stack direction="row" justifyContent="space-between">
-                <Typography fontSize={12} color="rgba(255,255,255,.62)">
+                <Typography fontSize="var(--fs-12)" color="rgba(255,255,255,.62)">
                   SDK status
                 </Typography>
-                <Typography fontSize={12} color="#9bf2bd" fontWeight={500}>
+                <Typography fontSize="var(--fs-12)" color="#9bf2bd" fontWeight={500}>
                   Ready to connect
                 </Typography>
               </Stack>
               <Stack direction="row" justifyContent="space-between">
-                <Typography fontSize={12} color="rgba(255,255,255,.62)">
+                <Typography fontSize="var(--fs-12)" color="rgba(255,255,255,.62)">
                   Data destination
                 </Typography>
-                <Typography fontSize={12} fontWeight={500}>
+                <Typography fontSize="var(--fs-12)" fontWeight={500}>
                   PixlPush Cloud
                 </Typography>
               </Stack>
@@ -447,10 +447,10 @@ export default function IntegrationDocumentation() {
         </Stack>
       </Card>
       <Box>
-        <Typography variant="h3" sx={{ fontSize: { xs: 20, md: 24 }, fontWeight: 600 }}>
+        <Typography variant="h3" sx={{ fontSize: { xs: "var(--fs-20)", md: "var(--fs-24)" }, fontWeight: 600 }}>
           What you’ll need
         </Typography>
-        <Typography color="text.secondary" fontSize={13} sx={{ mt: 0.5 }}>
+        <Typography color="text.secondary" fontSize="var(--fs-13)" sx={{ mt: 0.5 }}>
           Make sure you have these essentials ready before starting the integration.
         </Typography>
       </Box>
@@ -497,14 +497,14 @@ export default function IntegrationDocumentation() {
                 >
                   <Icon />
                 </Box>
-                <Chip label={label as string} size="small" sx={{ height: 24, color: "#7132d3", bgcolor: "#f5edff", fontSize: 11, fontWeight: 500 }} />
+                <Chip label={label as string} size="small" sx={{ height: 24, color: "#7132d3", bgcolor: "#f5edff", fontSize: "var(--fs-11)", fontWeight: 500 }} />
               </Stack>
-              <Typography fontWeight={600} fontSize={14} sx={{ mt: 1.7 }}>
+              <Typography fontWeight={600} fontSize="var(--fs-14)" sx={{ mt: 1.7 }}>
                 {title as string}
               </Typography>
               <Typography
                 color="text.secondary"
-                fontSize={13}
+                fontSize="var(--fs-13)"
                 lineHeight={1.6}
                 sx={{ mt: 0.6 }}
               >
@@ -535,7 +535,7 @@ export default function IntegrationDocumentation() {
                 <Typography fontWeight={600}>What you need</Typography>
                 <Typography
                   color="text.secondary"
-                  fontSize={13}
+                  fontSize="var(--fs-13)"
                   sx={{ mt: 0.5 }}
                 >
                   Create or select a Project, then open Settings → SDK keys to
@@ -556,12 +556,12 @@ export default function IntegrationDocumentation() {
                     border: "1px solid #eee7f3",
                   }}
                 >
-                  <Typography color="text.secondary" fontSize={12}>
+                  <Typography color="text.secondary" fontSize="var(--fs-12)">
                     {label}
                   </Typography>
                   <Stack direction="row" alignItems="center" gap={1} sx={{ mt: 0.4 }}>
                     <Typography
-                      fontSize={13}
+                      fontSize="var(--fs-13)"
                       fontWeight={600}
                       sx={{ wordBreak: "break-all", flex: 1 }}
                     >
@@ -645,17 +645,17 @@ export default function IntegrationDocumentation() {
                     }}
                   />
                   <Box sx={{ flex: 1 }}>
-                    <Typography fontSize={12} fontWeight={500}>
+                    <Typography fontSize="var(--fs-12)" fontWeight={500}>
                       {event}
                     </Typography>
-                    <Typography fontSize={11} color="text.secondary">
+                    <Typography fontSize="var(--fs-11)" color="text.secondary">
                       {meaning}
                     </Typography>
                   </Box>
                   <Chip
                     label={use}
                     size="small"
-                    sx={{ height: 22, fontSize: 11, fontWeight: 500 }}
+                    sx={{ height: 22, fontSize: "var(--fs-11)", fontWeight: 500 }}
                   />
                 </Stack>
               ))}
@@ -716,16 +716,16 @@ export default function IntegrationDocumentation() {
                       color: "#7132d3",
                       bgcolor: "#eee2ff",
                       fontWeight: 500,
-                      fontSize: 11,
+                      fontSize: "var(--fs-11)",
                     }}
                   />
                 </Stack>
-                <Typography fontSize={12} fontWeight={500} sx={{ mt: 1 }}>
+                <Typography fontSize="var(--fs-12)" fontWeight={500} sx={{ mt: 1 }}>
                   {audience}
                 </Typography>
                 <Typography
                   color="text.secondary"
-                  fontSize={12}
+                  fontSize="var(--fs-12)"
                   lineHeight={1.55}
                   sx={{ mt: 0.5 }}
                 >
@@ -797,7 +797,7 @@ export default function IntegrationDocumentation() {
                   <CheckRounded
                     sx={{ color: "#23a26d", fontSize: 18, mt: 0.1 }}
                   />
-                  <Typography fontSize={13}>{item}</Typography>
+                  <Typography fontSize="var(--fs-13)">{item}</Typography>
                 </Stack>
               ))}
             </Stack>
@@ -833,11 +833,11 @@ export default function IntegrationDocumentation() {
                 ],
               ].map(([title, description]) => (
                 <Box key={title}>
-                  <Typography fontSize={13} fontWeight={600} color="#ffd36a">
+                  <Typography fontSize="var(--fs-13)" fontWeight={600} color="#ffd36a">
                     {title}
                   </Typography>
                   <Typography
-                    fontSize={12}
+                    fontSize="var(--fs-12)"
                     color="rgba(255,255,255,.68)"
                     sx={{ mt: 0.3 }}
                   >
@@ -854,13 +854,13 @@ export default function IntegrationDocumentation() {
           <LockRounded sx={{ color: "#bd7b00", mt: 0.2 }} />
           <Box>
             <Typography fontWeight={600}>Security boundary</Typography>
-            <Typography color="text.secondary" fontSize={13} sx={{ mt: 0.4 }}>
+            <Typography color="text.secondary" fontSize="var(--fs-13)" sx={{ mt: 0.4 }}>
               Public SDK keys identify the Project and are safe for client apps.
               Firebase service accounts, private API keys, campaign secrets, and
               backend credentials must stay in environment secrets or your
               server.
             </Typography>
-            <Typography fontSize={13} sx={{ mt: 1, color: "#725000" }}>
+            <Typography fontSize="var(--fs-13)" sx={{ mt: 1, color: "#725000" }}>
               Active Project ID: <b>{projectId}</b>
             </Typography>
           </Box>

@@ -139,7 +139,7 @@ function MegaMenu({ kind }: { kind: "product" | "resources" }) {
               sx={{
                 color: "#ffab8e",
                 fontWeight: 500,
-                fontSize: 12,
+                fontSize: "var(--fs-12)",
                 letterSpacing: ".12em",
                 textTransform: "uppercase",
                 mb: 2,
@@ -161,12 +161,12 @@ function MegaMenu({ kind }: { kind: "product" | "resources" }) {
                     "&:hover": { bgcolor: "rgba(255,255,255,.08)" },
                   }}
                 >
-                  <Typography fontWeight={600} fontSize={14}>
+                  <Typography fontWeight={600} fontSize="var(--fs-14)">
                     {title}
                   </Typography>
                   <Typography
                     sx={{ color: "rgba(255,255,255,.58)" }}
-                    fontSize={12}
+                    fontSize="var(--fs-12)"
                     component="div"
                     mt={0.35}
                   >
@@ -205,7 +205,7 @@ function MegaMenu({ kind }: { kind: "product" | "resources" }) {
                 p: 1,
               }}
             >
-              <Typography fontSize={11} fontWeight={500}>
+              <Typography fontSize="var(--fs-12)" fontWeight={500}>
                 PIXLPUSH /{" "}
                 {kind === "product" ? "JOURNEY BUILDER" : "ANALYTICS"}
               </Typography>
@@ -230,7 +230,7 @@ function MegaMenu({ kind }: { kind: "product" | "resources" }) {
           </Typography>
           <Typography
             sx={{ color: "rgba(255,255,255,.62)" }}
-            fontSize={12}
+            fontSize="var(--fs-12)"
             component="div"
             mt={0.5}
             lineHeight={1.5}
@@ -246,7 +246,7 @@ function MegaMenu({ kind }: { kind: "product" | "resources" }) {
               mt: 1.5,
               color: "#ffab8e",
               fontWeight: 500,
-              fontSize: 13,
+              fontSize: "var(--fs-13)",
             }}
           >
             Explore {kind === "product" ? "product" : "resources"} →
@@ -277,7 +277,7 @@ export function SiteHeader() {
           minHeight: 48,
           px: 2.8,
           borderRadius: 999,
-          fontSize: 16,
+          fontSize: "var(--fs-16)",
           fontWeight: 700,
         },
         "& .MuiButton-contained": { color: "#fff" },
@@ -318,7 +318,7 @@ export function SiteHeader() {
                     display: "inline-flex",
                     alignItems: "center",
                     gap: 0.35,
-                    fontSize: 16,
+                    fontSize: "var(--fs-16)",
                     fontWeight: 700,
                     color: mega === value ? "#ffab8e" : "rgba(255,255,255,.92)",
                     "&:hover": { color: "#ffab8e" },
@@ -340,7 +340,7 @@ export function SiteHeader() {
                 href={value}
                 underline="none"
                 sx={{
-                  fontSize: 16,
+                  fontSize: "var(--fs-16)",
                   fontWeight: 700,
                   color: "rgba(255,255,255,.92)",
                   "&:hover": { color: "#ffab8e" },
@@ -470,7 +470,7 @@ export function SiteFooter() {
             />
             <Typography
               color="rgba(255,255,255,.62)"
-              fontSize={13}
+              fontSize="var(--fs-13)"
               sx={{ mt: 1.5, maxWidth: 220, lineHeight: 1.6 }}
             >
               Behavior-aware journeys for digital products that want retention
@@ -489,7 +489,7 @@ export function SiteFooter() {
                   color: "#fff",
                   border: "1px solid rgba(255,255,255,.2)",
                   textDecoration: "none",
-                  fontSize: 12,
+                  fontSize: "var(--fs-12)",
                   fontWeight: 500,
                 }}
               >
@@ -507,7 +507,7 @@ export function SiteFooter() {
                   color: "#fff",
                   border: "1px solid rgba(255,255,255,.2)",
                   textDecoration: "none",
-                  fontSize: 14,
+                  fontSize: "var(--fs-14)",
                 }}
               >
                 𝕏
@@ -517,7 +517,7 @@ export function SiteFooter() {
           {columns.map((column) => (
             <Box key={column.title}>
               <Typography
-                fontSize={11}
+                fontSize="var(--fs-12)"
                 fontWeight={500}
                 letterSpacing=".14em"
                 sx={{ color: "#ffab8e", textTransform: "uppercase", mb: 2 }}
@@ -532,7 +532,7 @@ export function SiteFooter() {
                     underline="none"
                     sx={{
                       color: "rgba(255,255,255,.68)",
-                      fontSize: 13,
+                      fontSize: "var(--fs-13)",
                       "&:hover": { color: "#fff" },
                     }}
                   >
@@ -553,7 +553,7 @@ export function SiteFooter() {
             gap: 2,
             justifyContent: "space-between",
             color: "rgba(255,255,255,.48)",
-            fontSize: 12,
+            fontSize: "var(--fs-12)",
           }}
         >
           <span>© 2026 PixlPush. All rights reserved.</span>
@@ -631,13 +631,13 @@ export function PageHero({
           </Typography>
           <Typography
             variant="h1"
-            sx={{ fontSize: { xs: 48, md: 56 }, lineHeight: 0.96, mt: 1 }}
+            sx={{ fontSize: { xs: "var(--fs-48)", md: "var(--fs-56)" }, lineHeight: 0.96, mt: 1 }}
           >
             {title}
           </Typography>
           <Typography
             sx={{
-              fontSize: { xs: 16, md: 20 },
+              fontSize: { xs: "var(--fs-16)", md: "var(--fs-20)" },
               lineHeight: 1.5,
               mt: 3,
               maxWidth: 620,
@@ -673,12 +673,12 @@ export function SectionIntro({
       </Typography>
       <Typography
         variant="h2"
-        sx={{ fontSize: { xs: 40, md: 56 }, lineHeight: 1 }}
+        sx={{ fontSize: { xs: "var(--fs-40)", md: "var(--fs-56)" }, lineHeight: 1 }}
       >
         {title}
       </Typography>
       {description && (
-        <Typography color="text.secondary" fontSize={16} lineHeight={1.6}>
+        <Typography color="text.secondary" fontSize="var(--fs-16)" lineHeight={1.6}>
           {description}
         </Typography>
       )}

@@ -85,21 +85,23 @@ export const theme = createTheme({
   shape: { borderRadius: 4 },
   typography: {
     fontFamily: t.font,
-    h1: { fontSize: 24, lineHeight: 1.33, fontWeight: 600, letterSpacing: '-0.02em' },
-    h2: { fontSize: 20, lineHeight: 1.4, fontWeight: 600, letterSpacing: '-0.015em' },
-    h3: { fontSize: 16, lineHeight: 1.5, fontWeight: 600, letterSpacing: '-0.01em' },
-    h4: { fontSize: 16, lineHeight: 1.5, fontWeight: 600 },
-    h5: { fontSize: 14, lineHeight: 1.57, fontWeight: 600 },
-    h6: { fontSize: 12, lineHeight: 1.33, fontWeight: 600, letterSpacing: '0.01em' },
-    subtitle1: { fontSize: 14, lineHeight: 1.57, fontWeight: 500 },
-    subtitle2: { fontSize: 13, lineHeight: 1.54, fontWeight: 500 },
-    body1: { fontSize: 14, lineHeight: 1.57 },
-    body2: { fontSize: 13, lineHeight: 1.54 },
-    caption: { fontSize: 12, lineHeight: 1.33 },
-    overline: { fontSize: 11, lineHeight: 1.33, fontWeight: 600, letterSpacing: '0.06em' },
-    button: { fontSize: 14, lineHeight: 1.54, fontWeight: 600, textTransform: 'none', letterSpacing: 0 },
+    // Sizes are CSS roles from app/globals.css: dashboard scale by default, marketing scale inside .website-shell.
+    h1: { fontSize: 'var(--type-h1)', lineHeight: 'var(--type-heading-lh)', fontWeight: 'var(--type-h1-weight)', letterSpacing: '-0.02em' },
+    h2: { fontSize: 'var(--type-h2)', lineHeight: 'var(--type-h2-lh)', fontWeight: 'var(--type-h2-weight)', letterSpacing: '-0.015em' },
+    h3: { fontSize: 'var(--type-h3)', lineHeight: 1.5, fontWeight: 600, letterSpacing: '-0.01em' },
+    h4: { fontSize: 'var(--type-h4)', lineHeight: 1.5, fontWeight: 600 },
+    h5: { fontSize: 'var(--type-h5)', lineHeight: 1.57, fontWeight: 600 },
+    h6: { fontSize: 'var(--type-h6)', lineHeight: 1.33, fontWeight: 600, letterSpacing: '0.01em' },
+    subtitle1: { fontSize: 'var(--type-subtitle1)', lineHeight: 1.57, fontWeight: 500 },
+    subtitle2: { fontSize: 'var(--type-subtitle2)', lineHeight: 1.54, fontWeight: 500 },
+    body1: { fontSize: 'var(--type-body1)', lineHeight: 'var(--type-body1-lh)' },
+    body2: { fontSize: 'var(--type-body2)', lineHeight: 1.54 },
+    caption: { fontSize: 'var(--type-caption)', lineHeight: 1.33 },
+    overline: { fontSize: 'var(--type-overline)', lineHeight: 1.33, fontWeight: 600, letterSpacing: '0.06em' },
+    button: { fontSize: 'var(--type-button)', lineHeight: 1.54, fontWeight: 600, textTransform: 'none', letterSpacing: 0 },
   },
   components: {
+    MuiTypography: { defaultProps: { variantMapping: { subtitle1: 'p', subtitle2: 'p' } } },
     MuiCssBaseline: { styleOverrides: { body: { fontFeatureSettings: '"calt", "cv11", "ss01"', WebkitFontSmoothing: 'antialiased' } } },
     // Any MUI `href` goes through Next's router; a plain <a> reloads the page and wipes the query cache.
     MuiButtonBase: { defaultProps: { LinkComponent: NextLink, disableRipple: true } },
@@ -115,8 +117,8 @@ export const theme = createTheme({
           '&:active': { transform: 'translateY(.5px)' },
           '&:focus-visible': { boxShadow: ring },
         },
-        sizeSmall: { minHeight: 32, padding: '0 12px', fontSize: 13 },
-        sizeLarge: { minHeight: 44, padding: '0 20px', fontSize: 14 },
+        sizeSmall: { minHeight: 32, padding: '0 12px', fontSize: 'var(--fs-13)' },
+        sizeLarge: { minHeight: 44, padding: '0 20px', fontSize: 'var(--fs-14)' },
         containedPrimary: { '&:hover': { backgroundColor: t.accentHover } },
         // secondary: white with a hairline, never a coloured outline
         outlined: { color: t.text, borderColor: t.borderStrong, backgroundColor: t.surface, '&:hover': { borderColor: '#C9C1D4', backgroundColor: t.subtle } },
@@ -146,7 +148,7 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           color: t.textSecondary,
-          fontSize: 14,
+          fontSize: 'var(--fs-14)',
           lineHeight: '20px',
           '&.Mui-focused': { color: t.accent },
           // resting: centred in the 40px box; shrunk: 12px text sitting on the outline
@@ -163,7 +165,7 @@ export const theme = createTheme({
         root: {
           borderRadius: t.radius.control,
           backgroundColor: t.surface,
-          fontSize: 14,
+          fontSize: 'var(--fs-14)',
           transition: `box-shadow ${ease}`,
           // No transition: a field must look active the instant it is clicked.
           '& .MuiOutlinedInput-notchedOutline': { borderColor: t.borderStrong },
@@ -177,7 +179,7 @@ export const theme = createTheme({
           '&.MuiInputBase-adornedStart': { paddingLeft: 12 },
           '&.MuiInputBase-adornedEnd': { paddingRight: 12 },
           '&.MuiInputBase-multiline': { minHeight: 88, padding: '10px 12px', alignItems: 'flex-start' },
-          '&.compact, .compact > &': { fontSize: 13, '& .MuiOutlinedInput-input': { paddingTop: 6, paddingBottom: 6 } },
+          '&.compact, .compact > &': { fontSize: 'var(--fs-13)', '& .MuiOutlinedInput-input': { paddingTop: 6, paddingBottom: 6 } },
           '& input::placeholder, & textarea::placeholder': { color: t.textMuted, opacity: 1 },
           '&:has(input:-webkit-autofill) .MuiOutlinedInput-notchedOutline legend': {
             maxWidth: '100%',
@@ -188,13 +190,13 @@ export const theme = createTheme({
         inputMultiline: { height: 'auto', padding: 0 },
         inputAdornedStart: { paddingLeft: 0 },
         inputAdornedEnd: { paddingRight: 0 },
-        notchedOutline: { '& legend': { fontSize: 12 } },
+        notchedOutline: { '& legend': { fontSize: 'var(--fs-12)' } },
       },
     },
     MuiInputAdornment: {
       styleOverrides: { root: { color: t.textMuted, '& .MuiSvgIcon-root': { fontSize: 18 } }, positionStart: { marginRight: 8 }, positionEnd: { marginLeft: 8 } },
     },
-    MuiFormHelperText: { styleOverrides: { root: { margin: '4px 2px 0', fontSize: 12 } } },
+    MuiFormHelperText: { styleOverrides: { root: { margin: '4px 2px 0', fontSize: 'var(--fs-12)' } } },
     MuiSelect: {
       defaultProps: { size: 'small', MenuProps: { PaperProps: { sx: { maxHeight: 320 } } } },
       styleOverrides: { select: { '&.MuiSelect-select': { minHeight: 20, lineHeight: '20px' } }, icon: { right: 8, fontSize: 20, color: t.textMuted } },
@@ -204,15 +206,15 @@ export const theme = createTheme({
     MuiMenuItem: {
       styleOverrides: {
         root: {
-          minHeight: '36px !important', padding: '8px 10px', gap: 8, borderRadius: t.radius.dense, fontSize: 14, lineHeight: '20px', transition: `background-color ${ease}`,
+          minHeight: '36px !important', padding: '8px 10px', gap: 8, borderRadius: t.radius.dense, fontSize: 'var(--fs-14)', lineHeight: '20px', transition: `background-color ${ease}`,
           '&:hover': { backgroundColor: t.subtle },
           '&.Mui-selected, &.Mui-selected:hover, &.Mui-selected.Mui-focusVisible': { color: t.text, backgroundColor: t.accentSoft, fontWeight: 500 },
         },
       },
     },
-    MuiTooltip: { styleOverrides: { tooltip: { padding: '6px 8px', borderRadius: t.radius.dense, backgroundColor: t.plum, fontSize: 12, fontWeight: 500 } } },
+    MuiTooltip: { styleOverrides: { tooltip: { padding: '6px 8px', borderRadius: t.radius.dense, backgroundColor: t.plum, fontSize: 'var(--fs-12)', fontWeight: 500 } } },
     MuiDialog: { styleOverrides: { paper: { borderRadius: t.radius.overlay, border: `1px solid ${t.border}`, boxShadow: dialogShadow } } },
-    MuiDialogTitle: { styleOverrides: { root: { padding: '24px 24px 8px', fontSize: 16, lineHeight: 1.5, fontWeight: 600, letterSpacing: '-0.01em' } } },
+    MuiDialogTitle: { styleOverrides: { root: { padding: '24px 24px 8px', fontSize: 'var(--fs-16)', lineHeight: 1.5, fontWeight: 600, letterSpacing: '-0.01em' } } },
     MuiDialogContent: { styleOverrides: { root: { padding: '8px 24px 16px' } } },
     MuiDialogActions: { styleOverrides: { root: { padding: '12px 24px 24px', gap: 4 } } },
     MuiBackdrop: { styleOverrides: { root: { backgroundColor: 'rgba(30,20,41,.45)' }, invisible: { backgroundColor: 'transparent' } } },
@@ -235,7 +237,7 @@ export const theme = createTheme({
     MuiTab: {
       styleOverrides: {
         root: {
-          zIndex: 1, flexDirection: 'row', alignItems: 'center', minWidth: 0, minHeight: 36, padding: '0 14px', borderRadius: t.radius.card, fontSize: 14, fontWeight: 500, lineHeight: 1.57,
+          zIndex: 1, flexDirection: 'row', alignItems: 'center', minWidth: 0, minHeight: 36, padding: '0 14px', borderRadius: t.radius.card, fontSize: 'var(--fs-14)', fontWeight: 500, lineHeight: 1.57,
           textTransform: 'none', whiteSpace: 'nowrap', color: t.textSecondary, transition: `color ${ease}`,
           '&:hover': { color: t.text },
           '&.Mui-selected': { color: t.text, fontWeight: 600 },
@@ -243,7 +245,7 @@ export const theme = createTheme({
           '&.Mui-focusVisible': { boxShadow: ring },
           '&.MuiTab-labelIcon': { minHeight: 36, paddingTop: 0, paddingBottom: 0 },
           '& > .MuiTab-iconWrapper': { marginRight: 6, marginBottom: 0, fontSize: 16 },
-          '& .MuiChip-root': { height: 20, marginLeft: 6, fontSize: 11, fontWeight: 500, cursor: 'inherit', transition: `color ${ease}, background-color ${ease}` },
+          '& .MuiChip-root': { height: 20, marginLeft: 6, fontSize: 'var(--fs-11)', fontWeight: 500, cursor: 'inherit', transition: `color ${ease}, background-color ${ease}` },
           // Count chips are neutral and turn accent on the active tab; a chip given its own colour keeps it.
           '& .MuiChip-colorDefault': { color: t.textSecondary, backgroundColor: 'rgba(30,20,41,.06)' },
           '&.Mui-selected .MuiChip-colorDefault': { color: t.accent, backgroundColor: t.accentSoft },
@@ -253,8 +255,8 @@ export const theme = createTheme({
     // Pills are for status and tags only.
     MuiChip: {
       styleOverrides: {
-        root: { height: 22, borderRadius: t.radius.pill, fontSize: 12, fontWeight: 500 },
-        sizeSmall: { height: 20, fontSize: 11 },
+        root: { height: 22, borderRadius: t.radius.pill, fontSize: 'var(--fs-12)', fontWeight: 500 },
+        sizeSmall: { height: 20, fontSize: 'var(--fs-11)' },
         filled: { backgroundColor: t.subtle, color: t.textSecondary },
         outlined: { borderColor: t.border },
         // Doubled selector so a colour beats the neutral `filled` style above, whatever order MUI emits them in.
@@ -267,8 +269,8 @@ export const theme = createTheme({
     },
     MuiTableCell: {
       styleOverrides: {
-        root: { padding: '12px 16px', borderBottom: `1px solid ${t.border}`, fontSize: 13, lineHeight: 1.54 },
-        head: { color: t.textMuted, fontSize: 12, fontWeight: 500, letterSpacing: '0.01em', whiteSpace: 'nowrap', backgroundColor: 'transparent' },
+        root: { padding: '12px 16px', borderBottom: `1px solid ${t.border}`, fontSize: 'var(--fs-13)', lineHeight: 1.54 },
+        head: { color: t.textMuted, fontSize: 'var(--fs-12)', fontWeight: 500, letterSpacing: '0.01em', whiteSpace: 'nowrap', backgroundColor: 'transparent' },
       },
     },
     MuiTableRow: {
@@ -286,17 +288,17 @@ export const theme = createTheme({
         track: { borderRadius: t.radius.pill, opacity: 1, backgroundColor: t.borderStrong, transition: `background-color ${ease}` },
       },
     },
-    MuiFormControlLabel: { styleOverrides: { label: { fontSize: 14 } } },
+    MuiFormControlLabel: { styleOverrides: { label: { fontSize: 'var(--fs-14)' } } },
     MuiAlert: {
       styleOverrides: {
-        root: { padding: '6px 12px', borderRadius: t.radius.control, border: '1px solid', fontSize: 13, alignItems: 'center' },
+        root: { padding: '6px 12px', borderRadius: t.radius.control, border: '1px solid', fontSize: 'var(--fs-13)', alignItems: 'center' },
         standardSuccess: { backgroundColor: t.successSoft, color: '#0D5C43', borderColor: alpha(t.success, 0.22) },
         standardWarning: { backgroundColor: t.warningSoft, color: '#7A4504', borderColor: alpha(t.warning, 0.24) },
         standardError: { backgroundColor: t.errorSoft, color: '#8F251D', borderColor: alpha(t.error, 0.22) },
         standardInfo: { backgroundColor: t.infoSoft, color: '#184A96', borderColor: alpha(t.info, 0.2) },
       },
     },
-    MuiSnackbarContent: { styleOverrides: { root: { borderRadius: t.radius.control, backgroundColor: t.plum, fontSize: 13, boxShadow: menuShadow } } },
+    MuiSnackbarContent: { styleOverrides: { root: { borderRadius: t.radius.control, backgroundColor: t.plum, fontSize: 'var(--fs-13)', boxShadow: menuShadow } } },
     MuiSkeleton: { defaultProps: { animation: 'wave' }, styleOverrides: { root: { backgroundColor: '#EEEAF2' }, rounded: { borderRadius: t.radius.control } } },
     MuiLinearProgress: { styleOverrides: { root: { height: 4, borderRadius: t.radius.pill, backgroundColor: '#EEEAF2' }, bar: { borderRadius: t.radius.pill } } },
     MuiToggleButtonGroup: {
@@ -308,18 +310,18 @@ export const theme = createTheme({
     MuiToggleButton: {
       styleOverrides: {
         root: {
-          minHeight: 36, padding: '0 14px', color: t.textSecondary, fontSize: 14, fontWeight: 500, lineHeight: 1.57, textTransform: 'none', whiteSpace: 'nowrap',
+          minHeight: 36, padding: '0 14px', color: t.textSecondary, fontSize: 'var(--fs-14)', fontWeight: 500, lineHeight: 1.57, textTransform: 'none', whiteSpace: 'nowrap',
           transition: `color ${ease}, background-color ${ease}, box-shadow ${ease}`,
           '&:hover': { color: t.text, backgroundColor: 'transparent' },
           '&.Mui-selected, &.Mui-selected:hover': { color: t.text, backgroundColor: t.surface, fontWeight: 600, boxShadow: '0 1px 2px rgba(30,20,41,.08), 0 1px 3px rgba(30,20,41,.06)' },
           '&.Mui-disabled': { color: t.textMuted },
           '&.Mui-focusVisible': { boxShadow: ring },
-          '& .MuiChip-root': { height: 20, marginLeft: 8, fontSize: 11, fontWeight: 500, color: t.success, backgroundColor: t.successSoft, cursor: 'inherit' },
+          '& .MuiChip-root': { height: 20, marginLeft: 8, fontSize: 'var(--fs-11)', fontWeight: 500, color: t.success, backgroundColor: t.successSoft, cursor: 'inherit' },
         },
-        sizeSmall: { minHeight: 30, padding: '0 12px', fontSize: 13 },
+        sizeSmall: { minHeight: 30, padding: '0 12px', fontSize: 'var(--fs-13)' },
       },
     },
-    MuiAvatar: { styleOverrides: { root: { fontSize: 13, fontWeight: 600 } } },
+    MuiAvatar: { styleOverrides: { root: { fontSize: 'var(--fs-13)', fontWeight: 600 } } },
     MuiLink: { defaultProps: { underline: 'hover', component: RouterLink } as object, styleOverrides: { root: { color: t.accent, fontWeight: 500 } } },
   },
 });

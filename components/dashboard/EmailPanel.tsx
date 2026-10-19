@@ -58,14 +58,14 @@ export default function EmailPanel() {
 
       <Card className="saas-card">
         <Typography variant="h3">PixlPush email delivery</Typography>
-        <Typography color="text.secondary" fontSize={12} sx={{ mt: .5 }}>
+        <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: .5 }}>
           PixlPush manages the delivery infrastructure, bounce protection, and spam-complaint suppression for every Project. Authenticate a sending domain above and we handle the rest automatically.
         </Typography>
       </Card>
 
       <Card className="saas-card" component="form" onSubmit={sendTestEmail} aria-label="Test email">
         <Typography variant="h3">Send a test email</Typography>
-        <Typography color="text.secondary" fontSize={12} sx={{ mt: .5 }}>
+        <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: .5 }}>
           {ready ? 'Send one message through PixlPush to see it arrive.' : 'Available once your domain and PixlPush delivery checks pass.'}
         </Typography>
         <Stack direction={{ xs: 'column', sm: 'row' }} gap={1.5} sx={{ mt: 2 }}>

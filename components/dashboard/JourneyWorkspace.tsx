@@ -246,7 +246,7 @@ export default function JourneyWorkspace() {
           <Typography
             component="button"
             type="button"
-            fontSize={12}
+            fontSize="var(--fs-12)"
             fontWeight={500}
             onClick={() =>
               router.push(`/dashboard/journeys/builder?id=${row.id}`)
@@ -265,7 +265,7 @@ export default function JourneyWorkspace() {
           >
             {row.name}
           </Typography>
-          <Typography color="text.secondary" fontSize={11}>
+          <Typography color="text.secondary" fontSize="var(--fs-11)">
             Automated journey
           </Typography>
         </Box>
@@ -291,7 +291,7 @@ export default function JourneyWorkspace() {
           alignItems="center"
           gap={0.7}
           color="text.secondary"
-          fontSize={11}
+          fontSize="var(--fs-11)"
         >
           {row.type === "Email" ? (
             <EmailRounded fontSize="small" />
@@ -329,7 +329,7 @@ export default function JourneyWorkspace() {
             }
           />
           <Typography
-            fontSize={11}
+            fontSize="var(--fs-11)"
             color={canToggle(row) ? "#4775de" : "#a59bb2"}
             fontWeight={500}
           >
@@ -344,7 +344,7 @@ export default function JourneyWorkspace() {
       key: "created",
       label: "Created at",
       render: (row) => (
-        <Typography color="text.secondary" fontSize={11}>
+        <Typography color="text.secondary" fontSize="var(--fs-11)">
           {row.created}
         </Typography>
       ),
@@ -353,7 +353,7 @@ export default function JourneyWorkspace() {
       key: "live",
       label: "Went live",
       render: (row) => (
-        <Typography color="text.secondary" fontSize={11}>
+        <Typography color="text.secondary" fontSize="var(--fs-11)">
           {row.live}
         </Typography>
       ),
@@ -431,7 +431,7 @@ export default function JourneyWorkspace() {
               Get started with Journey Automations{" "}
               <AutoGraphRounded className="journey-sparkle" />
             </Typography>
-            <Typography color="text.secondary" fontSize={12}>
+            <Typography color="text.secondary" fontSize="var(--fs-12)">
               Build automated journeys that send the right message to the right
               user at the right time.
             </Typography>
@@ -450,12 +450,12 @@ export default function JourneyWorkspace() {
                     <Icon fontSize="small" />
                   </Box>
                 </Stack>
-                <Typography fontWeight={500} fontSize={12} sx={{ mt: 1.5 }}>
+                <Typography fontWeight={500} fontSize="var(--fs-12)" sx={{ mt: 1.5 }}>
                   {title}
                 </Typography>
                 <Typography
                   color="text.secondary"
-                  fontSize={11}
+                  fontSize="var(--fs-11)"
                   lineHeight={1.45}
                   sx={{ mt: 0.6 }}
                 >

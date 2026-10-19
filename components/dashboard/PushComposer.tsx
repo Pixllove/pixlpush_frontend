@@ -435,7 +435,7 @@ export default function PushComposer({
   return (
     <Stack className="push-composer" gap={2.5}>
       {error && (
-        <Typography color="error" fontSize={12}>
+        <Typography color="error" fontSize="var(--fs-12)">
           {error}
         </Typography>
       )}
@@ -465,7 +465,7 @@ export default function PushComposer({
       </Stack>
 
       <Card className="push-type-card">
-        <Typography fontSize={12} fontWeight={500} color="text.secondary">
+        <Typography fontSize="var(--fs-12)" fontWeight={500} color="text.secondary">
           Notification type
         </Typography>
         <Stack direction="row" className="push-type-toggle">
@@ -570,7 +570,7 @@ export default function PushComposer({
                 </Button>
               )}
               {country !== "All Countries" && (
-                <Typography color="text.secondary" fontSize={11} sx={{ mt: 1 }}>
+                <Typography color="text.secondary" fontSize="var(--fs-11)" sx={{ mt: 1 }}>
                   Country targeting is managed through an audience group. Select
                   a group that contains this country before sending.
                 </Typography>
@@ -711,7 +711,7 @@ export default function PushComposer({
                 title="Platforms"
                 disabled={disabled}
               />
-              <Typography color="text.secondary" fontSize={12} sx={{ mb: 1.5 }}>
+              <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mb: 1.5 }}>
                 Select which platforms to send this notification to.
               </Typography>
               <Grid container spacing={1.5}>
@@ -865,7 +865,7 @@ export default function PushComposer({
                 <Typography className="push-preview-title" variant="h3">
                   Live preview
                 </Typography>
-                <Typography color="text.secondary" fontSize={12}>
+                <Typography color="text.secondary" fontSize="var(--fs-12)">
                   Previewing {activeLanguage}
                 </Typography>
               </Box>
@@ -952,7 +952,7 @@ export default function PushComposer({
           </IconButton>
         </DialogTitle>
         <DialogContent>
-          <Typography color="text.secondary" fontSize={12} sx={{ mb: 1 }}>
+          <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mb: 1 }}>
             The backend sends the test to an end user with an active push
             subscription.
           </Typography>
@@ -1133,7 +1133,7 @@ export default function PushComposer({
           </IconButton>
         </DialogTitle>
         <DialogContent>
-          <Typography color="text.secondary" fontSize={13} sx={{ mb: 2 }}>
+          <Typography color="text.secondary" fontSize="var(--fs-13)" sx={{ mb: 2 }}>
             English is the default language. Add translations for the languages
             your audience uses.
           </Typography>
@@ -1202,11 +1202,11 @@ function PushHeading({
       <Box className="push-number-badge" sx={{ bgcolor: color }}>
         {number}
       </Box>
-      <Typography fontSize={20} fontWeight={600}>
+      <Typography fontSize="var(--fs-20)" fontWeight={600}>
         {title}
       </Typography>
       {disabled && (
-        <Typography fontSize={11} color="text.secondary">
+        <Typography fontSize="var(--fs-11)" color="text.secondary">
           (disabled for templates)
         </Typography>
       )}
@@ -1233,10 +1233,10 @@ function PlatformCard({
       <Stack direction="row" alignItems="center" gap={1.2}>
         <Box className="push-platform-icon">{icon}</Box>
         <Box sx={{ flex: 1 }}>
-          <Typography fontWeight={600} fontSize={13}>
+          <Typography fontWeight={600} fontSize="var(--fs-13)">
             {title}
           </Typography>
-          <Typography color="text.secondary" fontSize={11}>
+          <Typography color="text.secondary" fontSize="var(--fs-11)">
             {subtitle}
           </Typography>
         </Box>
@@ -1247,7 +1247,7 @@ function PlatformCard({
         />
       </Stack>
       {checked && (
-        <Typography color="#477fe4" fontSize={11} sx={{ mt: 1 }}>
+        <Typography color="#477fe4" fontSize="var(--fs-11)" sx={{ mt: 1 }}>
           ✓ Enabled for this platform
         </Typography>
       )}

@@ -114,7 +114,7 @@ export default function TeamAccessPanel() {
   return (
     <Stack gap={2.5}>
       <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} gap={1.5} sx={{ minHeight: 40 }}>
-        <Typography color="text.secondary" fontSize={13}>
+        <Typography color="text.secondary" fontSize="var(--fs-13)">
           Access is granted per project. Members only see the projects they were added to.
         </Typography>
         {canManage && (
@@ -157,11 +157,11 @@ export default function TeamAccessPanel() {
                       <Stack direction="row" alignItems="center" gap={1.25}>
                         <UserAvatar account={m.account} />
                         <Box sx={{ minWidth: 0 }}>
-                          <Typography fontWeight={500} fontSize={12}>
+                          <Typography fontWeight={500} fontSize="var(--fs-12)">
                             {m.account.name ?? m.account.email}
-                            {m.account.id === me && <Chip size="small" label="You" sx={{ ml: 1, height: 18, fontSize: 11 }} />}
+                            {m.account.id === me && <Chip size="small" label="You" sx={{ ml: 1, height: 18, fontSize: "var(--fs-11)" }} />}
                           </Typography>
-                          <Typography color="text.secondary" fontSize={11}>{m.account.email}</Typography>
+                          <Typography color="text.secondary" fontSize="var(--fs-11)">{m.account.email}</Typography>
                         </Box>
                       </Stack>
                     </TableCell>
@@ -180,7 +180,7 @@ export default function TeamAccessPanel() {
                           {ROLES.filter((r) => isOwner || r !== 'owner').map((r) => <MenuItem key={r} value={r}>{ROLE_LABEL[r]}</MenuItem>)}
                         </Select>
                       ) : (
-                        <Typography fontSize={12}>{ROLE_LABEL[m.role]}</Typography>
+                        <Typography fontSize="var(--fs-12)">{ROLE_LABEL[m.role]}</Typography>
                       )}
                     </TableCell>
                     <TableCell>
@@ -193,8 +193,8 @@ export default function TeamAccessPanel() {
                         color={m.account.twoFactorEnabled ? 'success' : 'default'}
                       />
                     </TableCell>
-                    <TableCell sx={{ fontSize: 12 }}>{person(m.invitedBy)}</TableCell>
-                    <TableCell sx={{ fontSize: 12 }}>{m.joinedAt ? date(m.joinedAt) : '—'}</TableCell>
+                    <TableCell sx={{ fontSize: "var(--fs-12)" }}>{person(m.invitedBy)}</TableCell>
+                    <TableCell sx={{ fontSize: "var(--fs-12)" }}>{m.joinedAt ? date(m.joinedAt) : '—'}</TableCell>
                     <TableCell align="right">
                       {canEdit(m) && (
                         <Button size="small" color="error" disabled={busy !== null} onClick={() => setConfirm({ kind: 'remove', member: m })}>
@@ -214,7 +214,7 @@ export default function TeamAccessPanel() {
         <Card className="saas-card">
           <Typography variant="h3">Pending invitations</Typography>
           {invitations.isError && <Alert severity="error" sx={{ mt: 1 }}>{teamError(invitations.error)}</Alert>}
-          {invitations.isPending && <Skeleton variant="text" width={360} sx={{ mt: 1, fontSize: 12, lineHeight: '19px' }} />}
+          {invitations.isPending && <Skeleton variant="text" width={360} sx={{ mt: 1, fontSize: "var(--fs-12)", lineHeight: '19px' }} />}
           {invitations.data && pending.length === 0 && (
             <EmptyState size="compact" icon={<MailOutlineRounded />} title="No pending invitations" description="Invitees join once they accept the emailed invitation." />
           )}
@@ -234,11 +234,11 @@ export default function TeamAccessPanel() {
                 <TableBody>
                   {pending.map((i) => (
                     <TableRow key={i.id} data-testid={`invitation-${i.email}`}>
-                      <TableCell sx={{ fontSize: 12 }}>{i.email}</TableCell>
-                      <TableCell sx={{ fontSize: 12 }}>{ROLE_LABEL[i.role]}</TableCell>
+                      <TableCell sx={{ fontSize: "var(--fs-12)" }}>{i.email}</TableCell>
+                      <TableCell sx={{ fontSize: "var(--fs-12)" }}>{ROLE_LABEL[i.role]}</TableCell>
                       <TableCell><Chip size="small" label={i.status === 'expired' ? 'Expired' : 'Pending'} className="paused-chip" /></TableCell>
-                      <TableCell sx={{ fontSize: 12 }}>{person(i.invitedBy)}</TableCell>
-                      <TableCell sx={{ fontSize: 12 }}>{date(i.expiresAt)}</TableCell>
+                      <TableCell sx={{ fontSize: "var(--fs-12)" }}>{person(i.invitedBy)}</TableCell>
+                      <TableCell sx={{ fontSize: "var(--fs-12)" }}>{date(i.expiresAt)}</TableCell>
                       <TableCell align="right">
                         {(isOwner || i.role !== 'owner') && (
                           <Stack direction="row" gap={0.5} justifyContent="flex-end">
@@ -269,7 +269,7 @@ export default function TeamAccessPanel() {
 
       <Card className="saas-card">
         <Typography variant="h3">Project roles</Typography>
-        <Typography color="text.secondary" fontSize={12}>
+        <Typography color="text.secondary" fontSize="var(--fs-12)">
           Owner and Admin manage members and settings. Developer and Analyst work in the Workspace. Read-only can view. Billing manages billing. Only owners can grant or remove ownership.
         </Typography>
       </Card>
@@ -363,7 +363,7 @@ function InviteDialog({
         <DialogTitle>Invite member</DialogTitle>
         <DialogContent>
           <Stack gap={2} sx={{ pt: 1 }}>
-            <Typography color="text.secondary" fontSize={13}>
+            <Typography color="text.secondary" fontSize="var(--fs-13)">
               We email an invitation. Existing PixlPush users sign in to accept; new users create an account. Access starts once they accept.
             </Typography>
             {error && <Alert severity="error">{error}</Alert>}

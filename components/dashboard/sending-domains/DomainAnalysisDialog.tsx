@@ -85,7 +85,7 @@ export default function DomainAnalysisDialog({ projectId, domain, onClose, onCha
         </IconButton>
         {phase.kind !== 'analyzing' && <>
           <Stack className="domain-connect-domain-pill" direction="row" alignItems="center" gap={1}>
-            <Avatar className={host?.toLowerCase() === 'ionos' ? 'domain-connect-provider-avatar ionos' : 'domain-connect-provider-avatar'}>
+            <Avatar aria-hidden="true" className={host?.toLowerCase() === 'ionos' ? 'domain-connect-provider-avatar ionos' : 'domain-connect-provider-avatar'}>
               {host?.toLowerCase() === 'ionos' ? 'IONOS' : host ? host.slice(0, 4).toUpperCase() : <LanguageRounded fontSize="small" />}
             </Avatar>
             <Typography component="span">{domain.domain}</Typography>
@@ -112,9 +112,9 @@ export default function DomainAnalysisDialog({ projectId, domain, onClose, onCha
           {phase.kind === 'analyzing' && (
             <Stack alignItems="center" gap={1.25} sx={{ py: 2.5 }} role="status">
               <AnalysisPulse />
-              <Typography fontSize={25} fontWeight={500} sx={{ mt: 1 }}>Analyzing…</Typography>
-              <Typography fontSize={23} fontWeight={500}>{domain.domain}</Typography>
-              <Typography color="text.secondary" fontSize={13}>This usually takes a few seconds</Typography>
+              <Typography fontSize="var(--fs-24)" fontWeight={500} sx={{ mt: 1 }}>Analyzing…</Typography>
+              <Typography fontSize="var(--fs-24)" fontWeight={500}>{domain.domain}</Typography>
+              <Typography color="text.secondary" fontSize="var(--fs-13)">This usually takes a few seconds</Typography>
             </Stack>
           )}
 
@@ -130,7 +130,7 @@ export default function DomainAnalysisDialog({ projectId, domain, onClose, onCha
             <Stack alignItems="center" gap={1.5} sx={{ py: 3 }} role="status">
               <CircularProgress size={28} />
               <Typography>Automatic connection pending</Typography>
-              <Typography color="text.secondary" fontSize={12}>Redirecting you to your provider to approve the DNS changes…</Typography>
+              <Typography color="text.secondary" fontSize="var(--fs-12)">Redirecting you to your provider to approve the DNS changes…</Typography>
             </Stack>
           )}
 

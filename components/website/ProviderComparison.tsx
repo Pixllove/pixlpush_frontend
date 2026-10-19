@@ -123,8 +123,8 @@ function Brand({ name, logo, subtitle }: { name: string; logo?: string; subtitle
       <Stack direction="row" alignItems="center" gap={1.2} sx={{ minHeight: 48 }}>
         <Box component="img" src="/assets/site-icon.png" alt="" sx={{ display: 'block', width: 38, height: 38, flex: '0 0 38px', borderRadius: '8px', objectFit: 'contain' }} />
         <Box>
-          <Typography fontSize={14} fontWeight={600}>PixlPush</Typography>
-          {subtitle && <Typography color="text.secondary" fontSize={11}>{subtitle}</Typography>}
+          <Typography fontSize="var(--fs-14)" fontWeight={600}>PixlPush</Typography>
+          {subtitle && <Typography color="text.secondary" fontSize="var(--fs-12)">{subtitle}</Typography>}
         </Box>
       </Stack>
     );
@@ -134,8 +134,8 @@ function Brand({ name, logo, subtitle }: { name: string; logo?: string; subtitle
       {logo && <Box component="img" src={logo} alt={`${name} logo`} loading="lazy" sx={{ width: 38, height: 38, borderRadius: '8px', objectFit: 'contain', objectPosition: 'center', backgroundColor: '#fff' }} />}
       {!logo && <Box sx={{ display: 'grid', width: 38, height: 38, flex: '0 0 38px', placeItems: 'center', borderRadius: '8px', color: 'var(--pp-text-2)', backgroundColor: 'var(--pp-border)' }}><BusinessRounded fontSize="small" /></Box>}
       <Box>
-        <Typography fontSize={14} fontWeight={600}>{name}</Typography>
-        {subtitle && <Typography color="text.secondary" fontSize={11}>{subtitle}</Typography>}
+        <Typography fontSize="var(--fs-14)" fontWeight={600}>{name}</Typography>
+        {subtitle && <Typography color="text.secondary" fontSize="var(--fs-12)">{subtitle}</Typography>}
       </Box>
     </Stack>
   );
@@ -196,7 +196,7 @@ export function ProviderComparison({ onScenarioChange }: { onScenarioChange?: (u
     <Box component="section" className="pp-compare" aria-labelledby="provider-comparison-title" sx={{ mt: 5 }}>
       <Stack gap={{ xs: 3, md: 5 }}>
         <Box sx={{ maxWidth: 850, mx: 'auto', textAlign: 'center' }}>
-          <Typography id="provider-comparison-title" variant="h1" className="pp-compare-title" sx={{ mt: 1 }}>
+          <Typography id="provider-comparison-title" variant="h1" component="h2" className="pp-compare-title" sx={{ mt: 1 }}>
             Compare PixlPush<br /><span>with leading competitors.</span>
           </Typography>
           <Typography color="text.secondary" className="pp-compare-lede" sx={{ mt: 2, mx: 'auto', maxWidth: 640 }}>

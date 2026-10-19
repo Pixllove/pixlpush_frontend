@@ -392,9 +392,9 @@ export function BillingSection() {
           <Card className="saas-card" sx={{ p: 0, overflow: "hidden", display: "grid", gridTemplateColumns: { xs: "1fr", md: "1.8fr 1fr" }, minHeight: 320 }}>
             <Skeleton variant="rectangular" sx={{ height: "100%", minHeight: { xs: 180, md: 320 } }} />
             <Stack gap={1.5} sx={{ p: 3 }}>
-              <Skeleton variant="text" width={140} sx={{ fontSize: 11 }} />
-              <Skeleton variant="text" width={170} sx={{ fontSize: 32 }} />
-              <Skeleton variant="text" width="90%" sx={{ fontSize: 12 }} />
+              <Skeleton variant="text" width={140} sx={{ fontSize: "var(--fs-11)" }} />
+              <Skeleton variant="text" width={170} sx={{ fontSize: "var(--fs-32)" }} />
+              <Skeleton variant="text" width="90%" sx={{ fontSize: "var(--fs-12)" }} />
               <Divider sx={{ my: 0.5 }} />
               <Stack direction="row" justifyContent="space-between"><Skeleton variant="text" width={90} /><Skeleton variant="text" width={90} /></Stack>
               <Skeleton variant="rounded" height={40} />
@@ -405,15 +405,15 @@ export function BillingSection() {
           <Card className="saas-card" sx={{ p: 2.5, display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(3, 1fr)" }, gap: 3, minHeight: 138 }}>
             {[0, 1, 2].map((column) => (
               <Stack key={column} gap={0.5}>
-                <Skeleton variant="text" width={110} sx={{ fontSize: 11 }} />
+                <Skeleton variant="text" width={110} sx={{ fontSize: "var(--fs-11)" }} />
                 <Skeleton variant="text" width={140} />
-                <Skeleton variant="text" width={170} sx={{ fontSize: 12 }} />
+                <Skeleton variant="text" width={170} sx={{ fontSize: "var(--fs-12)" }} />
               </Stack>
             ))}
           </Card>
           <Box>
-            <Skeleton variant="text" width={200} sx={{ fontSize: 16 }} />
-            <Skeleton variant="text" width={300} sx={{ fontSize: 12 }} />
+            <Skeleton variant="text" width={200} sx={{ fontSize: "var(--fs-16)" }} />
+            <Skeleton variant="text" width={300} sx={{ fontSize: "var(--fs-12)" }} />
           </Box>
           {/* Usage: one tile per limit. */}
           <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", lg: "repeat(5, 1fr)" }, gap: 2 }}>
@@ -460,16 +460,16 @@ export function BillingSection() {
             <Box sx={{ p: { xs: 2.5, md: 3.25 }, color: "#fff", background: "var(--pp-hero)" }}>
               <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap={2}>
                 <Box>
-                  <Typography fontSize={11} fontWeight={500} sx={{ letterSpacing: 1.6, color: "rgba(255,255,255,.68)" }}>
+                  <Typography fontSize="var(--fs-11)" fontWeight={500} sx={{ letterSpacing: 1.6, color: "rgba(255,255,255,.68)" }}>
                     CURRENT PLAN
                   </Typography>
-                  <Typography fontSize={{ xs: 28, md: 32 }} fontWeight={600} sx={{ mt: 0.5 }}>
+                  <Typography fontSize={{ xs: "var(--fs-28)", md: "var(--fs-32)" }} fontWeight={600} sx={{ mt: 0.5 }}>
                     {plan.label}
                   </Typography>
                 </Box>
                 <Chip icon={<CheckCircleRounded />} label={state.label} size="small" sx={{ color: "#fff", backgroundColor: "rgba(255,255,255,.14)", "& .MuiChip-icon": { color: toneColor[state.tone] } }} />
               </Stack>
-              <Typography sx={{ color: "rgba(255,255,255,.76)", maxWidth: 500, mt: 1 }} fontSize={13}>
+              <Typography sx={{ color: "rgba(255,255,255,.76)", maxWidth: 500, mt: 1 }} fontSize="var(--fs-13)">
                 {plan.description}
               </Typography>
               <Stack direction="row" gap={1} flexWrap="wrap" sx={{ mt: 2.5 }}>
@@ -480,23 +480,23 @@ export function BillingSection() {
               </Stack>
             </Box>
             <Box sx={{ p: { xs: 2.5, md: 3.25 }, backgroundColor: "#fff" }}>
-              <Typography fontSize={11} fontWeight={500} sx={{ letterSpacing: 1.3, color: "#8e8798" }}>
+              <Typography fontSize="var(--fs-11)" fontWeight={500} sx={{ letterSpacing: 1.3, color: "#8e8798" }}>
                 {currentInterval === "year" ? "YEARLY" : "MONTHLY"} INVESTMENT
               </Typography>
-              <Typography fontSize={{ xs: 28, md: 32 }} fontWeight={600} sx={{ mt: 0.35, color: "#241434" }}>
+              <Typography fontSize={{ xs: "var(--fs-28)", md: "var(--fs-32)" }} fontWeight={600} sx={{ mt: 0.35, color: "#241434" }}>
                 {currentPlan === "enterprise" ? "Custom" : formatMoney(subscribed ? subscription?.unitAmount ?? 0 : 0, subscription?.currency ?? "aed")}
-                {currentPlan !== "enterprise" && <Typography component="span" fontSize={13} color="text.secondary"> / {currentInterval}</Typography>}
+                {currentPlan !== "enterprise" && <Typography component="span" fontSize="var(--fs-13)" color="text.secondary"> / {currentInterval}</Typography>}
               </Typography>
-              {subscribed && <Typography fontSize={11} color="text.secondary">Excluding tax. Tax is added by Stripe from your billing location.</Typography>}
+              {subscribed && <Typography fontSize="var(--fs-11)" color="text.secondary">Excluding tax. Tax is added by Stripe from your billing location.</Typography>}
               <Divider sx={{ my: 2 }} />
               <Stack direction="row" justifyContent="space-between" gap={2}>
                 <Box>
-                  <Typography fontSize={11} color="text.secondary">{subscription?.cancelAtPeriodEnd ? "Access until" : "Next billing date"}</Typography>
-                  <Typography fontSize={13} fontWeight={600} sx={{ mt: 0.35 }}>{subscribed ? formatBillingDate(subscription?.currentPeriodEnd) : "—"}</Typography>
+                  <Typography fontSize="var(--fs-11)" color="text.secondary">{subscription?.cancelAtPeriodEnd ? "Access until" : "Next billing date"}</Typography>
+                  <Typography fontSize="var(--fs-13)" fontWeight={600} sx={{ mt: 0.35 }}>{subscribed ? formatBillingDate(subscription?.currentPeriodEnd) : "—"}</Typography>
                 </Box>
                 <Box sx={{ textAlign: "right" }}>
-                  <Typography fontSize={11} color="text.secondary">Period started</Typography>
-                  <Typography fontSize={13} fontWeight={600} sx={{ mt: 0.35 }}>{formatBillingDate(subscription?.currentPeriodStart ?? usage?.periodStart)}</Typography>
+                  <Typography fontSize="var(--fs-11)" color="text.secondary">Period started</Typography>
+                  <Typography fontSize="var(--fs-13)" fontWeight={600} sx={{ mt: 0.35 }}>{formatBillingDate(subscription?.currentPeriodStart ?? usage?.periodStart)}</Typography>
                 </Box>
               </Stack>
               {canManage && (
@@ -521,23 +521,23 @@ export function BillingSection() {
           {canManage && hasBillingAccount && (
             <Card className="saas-card" sx={{ p: 2.5, borderRadius: 2, display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(3, minmax(0,1fr))" }, gap: 2.5 }}>
               <Box>
-                <Typography fontSize={11} fontWeight={500} sx={{ letterSpacing: 1.3, color: "#8e8798" }}>SUBSCRIPTION</Typography>
-                <Typography fontWeight={600} fontSize={14} sx={{ mt: 0.75 }}>{plan.label} · {currentInterval === "year" ? "Yearly" : "Monthly"}</Typography>
-                <Typography color="text.secondary" fontSize={12}>
+                <Typography fontSize="var(--fs-11)" fontWeight={500} sx={{ letterSpacing: 1.3, color: "#8e8798" }}>SUBSCRIPTION</Typography>
+                <Typography fontWeight={600} fontSize="var(--fs-14)" sx={{ mt: 0.75 }}>{plan.label} · {currentInterval === "year" ? "Yearly" : "Monthly"}</Typography>
+                <Typography color="text.secondary" fontSize="var(--fs-12)">
                   {state.label}{subscription?.cancelAtPeriodEnd ? ` · ends ${formatBillingDate(subscription.currentPeriodEnd)}` : subscribed ? ` · renews ${formatBillingDate(subscription?.currentPeriodEnd)}` : ""}
                 </Typography>
               </Box>
               <Box>
-                <Typography fontSize={11} fontWeight={500} sx={{ letterSpacing: 1.3, color: "#8e8798" }}>PAYMENT METHOD</Typography>
-                <Typography fontWeight={600} fontSize={14} sx={{ mt: 0.75, textTransform: "capitalize" }}>
+                <Typography fontSize="var(--fs-11)" fontWeight={500} sx={{ letterSpacing: 1.3, color: "#8e8798" }}>PAYMENT METHOD</Typography>
+                <Typography fontWeight={600} fontSize="var(--fs-14)" sx={{ mt: 0.75, textTransform: "capitalize" }}>
                   {paymentMethodQuery.data ? `${paymentMethodQuery.data.brand ?? paymentMethodQuery.data.type} •••• ${paymentMethodQuery.data.last4 ?? ""}` : paymentMethodQuery.isPending ? "Loading…" : "None saved"}
                 </Typography>
                 <Button size="small" disabled={Boolean(busy)} onClick={updateCard} sx={{ px: 0, minWidth: 0, textTransform: "none" }}>{busy === "card" ? "Opening…" : "Update card"}</Button>
               </Box>
               <Box>
-                <Typography fontSize={11} fontWeight={500} sx={{ letterSpacing: 1.3, color: "#8e8798" }}>BILLING ADDRESS</Typography>
-                <Typography fontWeight={600} fontSize={14} sx={{ mt: 0.75 }}>{profile.company || profile.name || "—"}</Typography>
-                <Typography color="text.secondary" fontSize={12}>
+                <Typography fontSize="var(--fs-11)" fontWeight={500} sx={{ letterSpacing: 1.3, color: "#8e8798" }}>BILLING ADDRESS</Typography>
+                <Typography fontWeight={600} fontSize="var(--fs-14)" sx={{ mt: 0.75 }}>{profile.company || profile.name || "—"}</Typography>
+                <Typography color="text.secondary" fontSize="var(--fs-12)">
                   {[profile.addressLine1, profile.city, profile.postalCode, profile.country].filter(Boolean).join(", ") || "No address yet"}
                 </Typography>
                 <Button size="small" onClick={() => setTab("profile")} sx={{ px: 0, minWidth: 0, textTransform: "none" }}>Edit details</Button>
@@ -548,7 +548,7 @@ export function BillingSection() {
           <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ sm: "end" }} gap={1.5}>
             <Box>
               <Typography variant="h3">Usage this billing cycle</Typography>
-              <Typography color="text.secondary" fontSize={12}>Keep an eye on the limits that matter to your project.</Typography>
+              <Typography color="text.secondary" fontSize="var(--fs-12)">Keep an eye on the limits that matter to your project.</Typography>
             </Box>
             <Stack direction="row" gap={1} flexWrap="wrap" sx={{ alignSelf: { xs: "flex-start", sm: "auto" } }}>
               {overCount > 0 && <Chip label={`${overCount} limit${overCount > 1 ? "s need" : " needs"} attention`} size="small" sx={{ backgroundColor: "#fff0f1", color: "#d72f48", fontWeight: 500 }} />}
@@ -586,7 +586,7 @@ export function BillingSection() {
                       <Box sx={{ width: 34, height: 34, flexShrink: 0, display: "grid", placeItems: "center", borderRadius: 1.25, color, backgroundColor: color + "18" }}>
                         <UsageIcon fontSize="small" />
                       </Box>
-                      <Typography fontWeight={600} fontSize={13} sx={{ lineHeight: 1.25 }}>{label}</Typography>
+                      <Typography fontWeight={600} fontSize="var(--fs-13)" sx={{ lineHeight: 1.25 }}>{label}</Typography>
                     </Stack>
                     <Box
                       sx={{
@@ -600,17 +600,17 @@ export function BillingSection() {
                       }}
                     >
                       <Box sx={{ width: 34, height: 34, borderRadius: "50%", display: "grid", placeItems: "center", backgroundColor: "#fff" }}>
-                        <Typography fontSize={11} fontWeight={500} sx={{ color }}>{limit ? percent + "%" : "∞"}</Typography>
+                        <Typography fontSize="var(--fs-11)" fontWeight={500} sx={{ color }}>{limit ? percent + "%" : "∞"}</Typography>
                       </Box>
                     </Box>
                   </Stack>
                   <Box sx={{ mt: 1.5 }}>
-                    <Typography fontSize={16} fontWeight={600} sx={{ color: "#261735" }}>
+                    <Typography fontSize="var(--fs-16)" fontWeight={600} sx={{ color: "#261735" }}>
                       {number(value)}
-                      <Typography component="span" fontSize={11} fontWeight={500} color="text.secondary"> / {limit ? number(limit) : "Unlimited"}</Typography>
+                      <Typography component="span" fontSize="var(--fs-11)" fontWeight={500} color="text.secondary"> / {limit ? number(limit) : "Unlimited"}</Typography>
                     </Typography>
                     <LinearProgress variant="determinate" value={Math.min(percent, 100)} sx={{ mt: 1, "& .MuiLinearProgress-bar": { backgroundColor: color } }} />
-                    <Typography color={over ? "error.main" : "text.secondary"} fontSize={11} fontWeight={over ? 500 : 400} sx={{ mt: 0.8 }}>
+                    <Typography color={over ? "error.main" : "text.secondary"} fontSize="var(--fs-11)" fontWeight={over ? 500 : 400} sx={{ mt: 0.8 }}>
                       {over ? "Over limit" : limit ? percent + "% used this period" : "No limit on this plan"}
                     </Typography>
                   </Box>
@@ -659,12 +659,12 @@ export function BillingSection() {
                       <AutoGraphRounded />
                     </Box>
                     <Box>
-                      <Typography fontSize={11} fontWeight={500} letterSpacing=".14em" sx={{ color: "#e7c5ff" }}>PLAN BUILDER</Typography>
-                      <Typography fontSize={{ xs: 20, md: 24 }} fontWeight={600} sx={{ mt: 0.25, lineHeight: 1.1 }}>Scale with confidence</Typography>
+                      <Typography fontSize="var(--fs-11)" fontWeight={500} letterSpacing=".14em" sx={{ color: "#e7c5ff" }}>PLAN BUILDER</Typography>
+                      <Typography fontSize={{ xs: "var(--fs-20)", md: "var(--fs-24)" }} fontWeight={600} sx={{ mt: 0.25, lineHeight: 1.1 }}>Scale with confidence</Typography>
                     </Box>
                   </Stack>
                   <Stack alignItems={{ xs: "flex-start", sm: "flex-end" }} gap={0.75}>
-                    <Typography fontSize={11} fontWeight={500} letterSpacing=".12em" sx={{ color: "#ddc9fa" }}>BILLING CYCLE</Typography>
+                    <Typography fontSize="var(--fs-11)" fontWeight={500} letterSpacing=".12em" sx={{ color: "#ddc9fa" }}>BILLING CYCLE</Typography>
                     <ToggleButtonGroup
                       exclusive
                       size="small"
@@ -678,7 +678,7 @@ export function BillingSection() {
                   </Stack>
                 </Stack>
                 <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ sm: "center" }} gap={1} sx={{ position: "relative", zIndex: 1, mt: 2 }}>
-                  <Typography fontSize={13} sx={{ color: "rgba(255,255,255,.78)", maxWidth: 560 }}>
+                  <Typography fontSize="var(--fs-13)" sx={{ color: "rgba(255,255,255,.78)", maxWidth: 560 }}>
                     Pick the plan that matches your audience, messaging volume, and journey goals. You can change your plan whenever your project grows.
                   </Typography>
                   {interval === "year" && <Chip label="Yearly billing saves 2 months" size="small" sx={{ color: "#204b35", backgroundColor: "#baf3cf", fontWeight: 500 }} />}
@@ -688,8 +688,8 @@ export function BillingSection() {
               <Box sx={{ p: { xs: 2, md: 2.75 } }}>
                 <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ sm: "center" }} gap={1}>
                   <Box>
-                    <Typography fontSize={16} fontWeight={600} sx={{ color: "#241434" }}>Plans for your next stage</Typography>
-                    <Typography color="text.secondary" fontSize={12}>Compare limits and choose the right amount of room to grow.</Typography>
+                    <Typography fontSize="var(--fs-16)" fontWeight={600} sx={{ color: "#241434" }}>Plans for your next stage</Typography>
+                    <Typography color="text.secondary" fontSize="var(--fs-12)">Compare limits and choose the right amount of room to grow.</Typography>
                   </Box>
                   <Chip icon={<ShieldRounded sx={{ fontSize: 16 }} />} label="Secure billing" size="small" sx={{ width: "fit-content", color: "#5c2ab5", backgroundColor: "#eee6ff", fontWeight: 500 }} />
                 </Stack>
@@ -726,29 +726,29 @@ export function BillingSection() {
                           }}
                         >
                           {(isCurrent || isHighlighted) && (
-                            <Chip label={isCurrent ? "Your current plan" : "Best for growing teams"} size="small" sx={{ position: "absolute", top: 14, right: 14, color: isCurrent ? "#19743c" : "#6422c5", backgroundColor: isCurrent ? "#e6f8ed" : "#eee6ff", fontWeight: 500, fontSize: 11 }} />
+                            <Chip label={isCurrent ? "Your current plan" : "Best for growing teams"} size="small" sx={{ position: "absolute", top: 14, right: 14, color: isCurrent ? "#19743c" : "#6422c5", backgroundColor: isCurrent ? "#e6f8ed" : "#eee6ff", fontWeight: 500, fontSize: "var(--fs-11)" }} />
                           )}
                           <Stack direction="row" alignItems="center" gap={1.25}>
                             <Box sx={{ width: 36, height: 36, display: "grid", placeItems: "center", borderRadius: 1.25, color: isHighlighted ? "#6422c5" : "#4f2a8f", backgroundColor: isHighlighted ? "#eee6ff" : "#f1ecfb" }}>
                               {index === 0 ? <CreditCardRounded fontSize="small" /> : <AutoGraphRounded fontSize="small" />}
                             </Box>
                             <Box>
-                              <Typography fontSize={16} fontWeight={600} sx={{ color: "#241434" }}>{planCopy[option].label}</Typography>
-                              <Typography fontSize={11} color="text.secondary">{option === "pro" ? "For teams ready to scale" : "A simple start for growing teams"}</Typography>
+                              <Typography fontSize="var(--fs-16)" fontWeight={600} sx={{ color: "#241434" }}>{planCopy[option].label}</Typography>
+                              <Typography fontSize="var(--fs-11)" color="text.secondary">{option === "pro" ? "For teams ready to scale" : "A simple start for growing teams"}</Typography>
                             </Box>
                           </Stack>
                           <Stack direction="row" alignItems="baseline" gap={0.5} sx={{ mt: 2 }}>
-                            <Typography fontSize={24} fontWeight={600} sx={{ color: "#241434", lineHeight: 1 }}>{formatMoney(price.unitAmount, price.currency)}</Typography>
-                            <Typography fontSize={12} color="text.secondary">/ {interval}</Typography>
+                            <Typography fontSize="var(--fs-24)" fontWeight={600} sx={{ color: "#241434", lineHeight: 1 }}>{formatMoney(price.unitAmount, price.currency)}</Typography>
+                            <Typography fontSize="var(--fs-12)" color="text.secondary">/ {interval}</Typography>
                           </Stack>
-                          <Typography color="text.secondary" fontSize={12} sx={{ mt: 0.8, minHeight: 34 }}>{planCopy[option].description}</Typography>
+                          <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: 0.8, minHeight: 34 }}>{planCopy[option].description}</Typography>
                           {metrics.length > 0 && (
                             <Stack direction="row" flexWrap="wrap" gap={0.75} sx={{ mt: 1.5 }}>
-                              {metrics.map((metric) => <Chip key={metric} icon={<CheckCircleRounded sx={{ fontSize: 14 }} />} label={metric} size="small" sx={{ color: "#51435f", backgroundColor: "#f6f3fa", fontSize: 11, fontWeight: 500, "& .MuiChip-icon": { color: "#25a365" } }} />)}
+                              {metrics.map((metric) => <Chip key={metric} icon={<CheckCircleRounded sx={{ fontSize: 14 }} />} label={metric} size="small" sx={{ color: "#51435f", backgroundColor: "#f6f3fa", fontSize: "var(--fs-11)", fontWeight: 500, "& .MuiChip-icon": { color: "#25a365" } }} />)}
                             </Stack>
                           )}
                           {interval === "year" && (
-                            <Typography fontSize={11} fontWeight={500} sx={{ mt: 1.25, color: "#16814d" }}>
+                            <Typography fontSize="var(--fs-11)" fontWeight={500} sx={{ mt: 1.25, color: "#16814d" }}>
                               Save {formatMoney(yearlySaving(prices, option), price.currency)} a year
                             </Typography>
                           )}
@@ -764,9 +764,9 @@ export function BillingSection() {
                 </Grid>
 
                 <Stack direction={{ xs: "column", sm: "row" }} justifyContent="flex-end" gap={0.75} sx={{ mt: 2, pt: 1.75, borderTop: "1px solid #e9e3f2" }}>
-                  <Button href="/pricing" variant="contained" sx={{ px: 2.5, minHeight: 42, borderRadius: 1.5, textTransform: "none", fontWeight: 650, color: "#fff", background: "linear-gradient(105deg, #5315b8 0%, #762be0 100%)", boxShadow: "0 5px 14px rgba(96, 35, 191, .22)", "&:hover": { background: "linear-gradient(105deg, #45109f 0%, #6420c5 100%)", boxShadow: "0 7px 18px rgba(96, 35, 191, .3)" } }}>Contact sales for Enterprise</Button>
+                  <Button href="/pricing" variant="contained" sx={{ px: 2.5, minHeight: 42, borderRadius: 1.5, textTransform: "none", fontWeight: 600, color: "#fff", background: "linear-gradient(105deg, #5315b8 0%, #762be0 100%)", boxShadow: "0 5px 14px rgba(96, 35, 191, .22)", "&:hover": { background: "linear-gradient(105deg, #45109f 0%, #6420c5 100%)", boxShadow: "0 7px 18px rgba(96, 35, 191, .3)" } }}>Contact sales for Enterprise</Button>
                 </Stack>
-                {!canManage && <Typography color="text.secondary" fontSize={11} sx={{ mt: 0.75 }}>Ask an owner, admin or billing member of this project to change the plan.</Typography>}
+                {!canManage && <Typography color="text.secondary" fontSize="var(--fs-11)" sx={{ mt: 0.75 }}>Ask an owner, admin or billing member of this project to change the plan.</Typography>}
               </Box>
             </Card>
           )}
@@ -776,25 +776,25 @@ export function BillingSection() {
               <Stack direction="row" gap={1.25} alignItems="center">
                 <Box>
                   <Typography variant="h3">AI Credits</Typography>
-                  <Typography color="text.secondary" fontSize={12}>One shared pool for PixlPush AI features. Credits are actions, not raw AI-provider tokens.</Typography>
+                  <Typography color="text.secondary" fontSize="var(--fs-12)">One shared pool for PixlPush AI features. Credits are actions, not raw AI-provider tokens.</Typography>
                 </Box>
               </Stack>
               {creditCurrencies.length > 0 && (
                 <Box sx={{ alignSelf: { xs: "stretch", sm: "auto" }, textAlign: { sm: "right" } }}>
-                  <Typography fontSize={11} color="text.secondary" sx={{ mb: 0.35 }}>Package currency</Typography>
+                  <Typography fontSize="var(--fs-11)" color="text.secondary" sx={{ mb: 0.35 }}>Package currency</Typography>
                   <Tabs
                     value={creditCurrencyMode}
                     onChange={(_, mode: "usd" | "location" | null) => {
                       if (mode) setCreditCurrencyMode(mode);
                     }}
                     aria-label="AI Credit package currency"
-                    sx={{ minHeight: 40, "& .MuiTab-root": { minHeight: 40, px: 1.5, fontSize: 13 } }}
+                    sx={{ minHeight: 40, "& .MuiTab-root": { minHeight: 40, px: 1.5, fontSize: "var(--fs-13)" } }}
                   >
                     <Tab value="usd" label="USD" />
                     <Tab value="location" label={(detectedCreditCurrency ?? preferredLocationCurrency ?? "USD").toUpperCase()} />
                   </Tabs>
                   {pkrUsesUsdCheckout && (
-                    <Typography fontSize={10} color="text.secondary" sx={{ mt: 0.4 }}>PKR prices are estimates; checkout is charged in USD.</Typography>
+                    <Typography fontSize="var(--fs-11)" color="text.secondary" sx={{ mt: 0.4 }}>PKR prices are estimates; checkout is charged in USD.</Typography>
                   )}
                 </Box>
               )}
@@ -806,14 +806,14 @@ export function BillingSection() {
             <Grid container spacing={1.5} sx={{ mt: 0.5 }}>
               <Grid item xs={12} md={5}>
                 <Box sx={{ height: "100%", p: 2, border: "1px solid #ebe5f3", borderRadius: 1.75, backgroundColor: "#fff" }}>
-                  <Typography fontSize={11} fontWeight={500} letterSpacing=".08em" color="text.secondary">PURCHASED CREDITS · DO NOT EXPIRE</Typography>
-                  <Typography fontSize={30} fontWeight={600} sx={{ mt: 0.25, color: "#261735", lineHeight: 1.25 }}>
+                  <Typography fontSize="var(--fs-11)" fontWeight={500} letterSpacing=".08em" color="text.secondary">PURCHASED CREDITS · DO NOT EXPIRE</Typography>
+                  <Typography fontSize="var(--fs-32)" fontWeight={600} sx={{ mt: 0.25, color: "#261735", lineHeight: 1.25 }}>
                     {aiCreditsQuery.isPending ? "—" : number(aiCreditsQuery.data?.balance ?? 0)}
                   </Typography>
                   <Divider sx={{ my: 1.5 }} />
                   <Stack direction="row" justifyContent="space-between" gap={1}>
-                    <Typography fontSize={12} color="text.secondary">Usage</Typography>
-                    <Typography fontSize={12} fontWeight={600}>{monthlyAiLimit ? `${number(monthlyAiRemaining)} credits left` : "—"}</Typography>
+                    <Typography fontSize="var(--fs-12)" color="text.secondary">Usage</Typography>
+                    <Typography fontSize="var(--fs-12)" fontWeight={600}>{monthlyAiLimit ? `${number(monthlyAiRemaining)} credits left` : "—"}</Typography>
                   </Stack>
                   {monthlyAiLimit > 0 && <LinearProgress variant="determinate" value={Math.min((monthlyAiUsed / monthlyAiLimit) * 100, 100)} sx={{ mt: 1, height: 7, borderRadius: 9, backgroundColor: "#eeeaf5", "& .MuiLinearProgress-bar": { borderRadius: 9, backgroundColor: "#7a3be0" } }} />}
                   {monthlyAiLimit > 0 && monthlyAiRemaining <= monthlyAiLimit * 0.2 && (
@@ -831,8 +831,8 @@ export function BillingSection() {
                 <Box sx={{ p: 2, border: "1px solid #ebe5f3", borderRadius: 1.75, backgroundColor: "#fff", height: "100%" }}>
                   <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1}>
                     <Box>
-                      <Typography fontSize={14} fontWeight={600}>Top up AI Credits</Typography>
-                      <Typography fontSize={11} color="text.secondary">One-time purchases. No auto-renewal or silent charges.</Typography>
+                      <Typography fontSize="var(--fs-14)" fontWeight={600}>Top up AI Credits</Typography>
+                      <Typography fontSize="var(--fs-11)" color="text.secondary">One-time purchases. No auto-renewal or silent charges.</Typography>
                     </Box>
                   </Stack>
                   {aiCreditsQuery.isPending ? (
@@ -844,15 +844,15 @@ export function BillingSection() {
                       {selectedCreditPackages.map((item) => (
                         <Grid item xs={12} sm={4} key={item.package}>
                           <Box sx={{ height: "100%", p: 1.5, border: "1px solid #e9e3f2", borderRadius: 1.5, backgroundColor: item.package === "growth" ? "#f8f4ff" : "#fff" }}>
-                            {item.package === "growth" && <Chip label="Popular" size="small" sx={{ mb: 0.5, height: 20, color: "#6422c5", backgroundColor: "#eee6ff", fontSize: 10 }} />}
-                            <Typography fontSize={12} fontWeight={600}>{creditPackageNames[item.package]}</Typography>
-                            <Typography fontSize={20} fontWeight={600} sx={{ mt: 0.5, color: "#261735" }}>{number(item.credits)}</Typography>
-                            <Typography fontSize={11} color="text.secondary">credits · {formatAiCreditPackagePrice(item.unitAmount, item.currency, displayCreditCurrency)}</Typography>
+                            {item.package === "growth" && <Chip label="Popular" size="small" sx={{ mb: 0.5, height: 20, color: "#6422c5", backgroundColor: "#eee6ff", fontSize: "var(--fs-11)" }} />}
+                            <Typography fontSize="var(--fs-12)" fontWeight={600}>{creditPackageNames[item.package]}</Typography>
+                            <Typography fontSize="var(--fs-20)" fontWeight={600} sx={{ mt: 0.5, color: "#261735" }}>{number(item.credits)}</Typography>
+                            <Typography fontSize="var(--fs-11)" color="text.secondary">credits · {formatAiCreditPackagePrice(item.unitAmount, item.currency, displayCreditCurrency)}</Typography>
                             {canManage ? (
                               <Button fullWidth size="small" variant={item.package === "growth" ? "contained" : "outlined"} disabled={creditCheckoutMutation.isPending} onClick={() => creditCheckoutMutation.mutate({ pkg: item.package, currency: item.currency })} sx={{ mt: 1.25, textTransform: "none", whiteSpace: "nowrap" }}>
                                 {creditCheckoutMutation.isPending && creditCheckoutMutation.variables?.pkg === item.package ? "Opening…" : pkrUsesUsdCheckout ? "Buy once · USD" : "Buy once"}
                               </Button>
-                            ) : <Typography fontSize={10} color="text.secondary" sx={{ mt: 1.25 }}>Ask a billing manager to purchase.</Typography>}
+                            ) : <Typography fontSize="var(--fs-11)" color="text.secondary" sx={{ mt: 1.25 }}>Ask a billing manager to purchase.</Typography>}
                           </Box>
                         </Grid>
                       ))}
@@ -881,8 +881,8 @@ export function BillingSection() {
                 sx={{ px: { xs: 1.75, sm: 2.25 }, minHeight: 68, "& .MuiAccordionSummary-content": { my: 1.5 } }}
               >
                 <Box>
-                  <Typography fontSize={14} fontWeight={600} sx={{ color: "#28183b" }}>How AI Credits work</Typography>
-                  <Typography fontSize={11} color="text.secondary" sx={{ mt: 0.25 }}>See the credit cost for each AI feature and how your balance is used.</Typography>
+                  <Typography fontSize="var(--fs-14)" fontWeight={600} sx={{ color: "#28183b" }}>How AI Credits work</Typography>
+                  <Typography fontSize="var(--fs-11)" color="text.secondary" sx={{ mt: 0.25 }}>See the credit cost for each AI feature and how your balance is used.</Typography>
                 </Box>
               </AccordionSummary>
               <AccordionDetails id="ai-credit-guide-content" sx={{ px: { xs: 1.75, sm: 2.25 }, pt: 0, pb: 2.25 }}>
@@ -896,13 +896,13 @@ export function BillingSection() {
                   ].map(([feature, amount, unit]) => (
                     <Grid item xs={12} sm={6} md={4} key={feature}>
                       <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1.5} sx={{ minHeight: 54, px: 1.5, py: 1, border: "1px solid #ebe5f3", borderRadius: 1.5, backgroundColor: "rgba(255,255,255,.82)" }}>
-                        <Typography fontSize={12} fontWeight={500} sx={{ color: "#51445f" }}>{feature}</Typography>
-                        <Typography fontSize={12} fontWeight={600} whiteSpace="nowrap" sx={{ color: "#382354" }}>{amount} <Box component="span" fontWeight={400} color="text.secondary">credits {unit}</Box></Typography>
+                        <Typography fontSize="var(--fs-12)" fontWeight={500} sx={{ color: "#51445f" }}>{feature}</Typography>
+                        <Typography fontSize="var(--fs-12)" fontWeight={600} whiteSpace="nowrap" sx={{ color: "#382354" }}>{amount} <Box component="span" fontWeight={400} color="text.secondary">credits {unit}</Box></Typography>
                       </Stack>
                     </Grid>
                   ))}
                 </Grid>
-                <Typography fontSize={11} color="text.secondary" sx={{ mt: 1.5, lineHeight: 1.6 }}>
+                <Typography fontSize="var(--fs-11)" color="text.secondary" sx={{ mt: 1.5, lineHeight: 1.6 }}>
                   Your monthly included credits are used first and reset each month. Purchased credits are used afterward, do not expire, and stay with this project.
                 </Typography>
               </AccordionDetails>
@@ -916,7 +916,7 @@ export function BillingSection() {
           <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" gap={1}>
             <Box>
               <Typography variant="h3">Billing history</Typography>
-              <Typography color="text.secondary" fontSize={12}>Invoices and payment activity for this project.</Typography>
+              <Typography color="text.secondary" fontSize="var(--fs-12)">Invoices and payment activity for this project.</Typography>
             </Box>
           </Stack>
           <Divider sx={{ my: 2 }} />
@@ -954,11 +954,11 @@ export function BillingSection() {
                 <TableBody>
                   {invoicesQuery.data.map((invoice) => (
                     <TableRow key={invoice.id} hover>
-                      <TableCell sx={{ fontSize: 12, whiteSpace: "nowrap" }}>{formatBillingDate(invoice.createdAt)}</TableCell>
-                      <TableCell sx={{ fontSize: 12, fontWeight: 500 }}>{invoice.number ?? "—"}</TableCell>
-                      <TableCell sx={{ fontSize: 12 }}>{formatMoney(invoice.subtotalExcludingTax, invoice.currency)}</TableCell>
-                      <TableCell sx={{ fontSize: 12 }}>{formatMoney(invoice.tax, invoice.currency)}</TableCell>
-                      <TableCell sx={{ fontSize: 12, fontWeight: 500 }}>{formatMoney(invoice.total, invoice.currency)}</TableCell>
+                      <TableCell sx={{ fontSize: "var(--fs-12)", whiteSpace: "nowrap" }}>{formatBillingDate(invoice.createdAt)}</TableCell>
+                      <TableCell sx={{ fontSize: "var(--fs-12)", fontWeight: 500 }}>{invoice.number ?? "—"}</TableCell>
+                      <TableCell sx={{ fontSize: "var(--fs-12)" }}>{formatMoney(invoice.subtotalExcludingTax, invoice.currency)}</TableCell>
+                      <TableCell sx={{ fontSize: "var(--fs-12)" }}>{formatMoney(invoice.tax, invoice.currency)}</TableCell>
+                      <TableCell sx={{ fontSize: "var(--fs-12)", fontWeight: 500 }}>{formatMoney(invoice.total, invoice.currency)}</TableCell>
                       <TableCell>
                         <Chip
                           label={invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
@@ -966,12 +966,12 @@ export function BillingSection() {
                           sx={{
                             color: invoice.status === "paid" ? "#19743c" : invoice.status === "open" ? "#a15c07" : "#5c5568",
                             backgroundColor: invoice.status === "paid" ? "#e7f8ed" : invoice.status === "open" ? "#fff4df" : "#f1eef5",
-                            fontSize: 11,
+                            fontSize: "var(--fs-11)",
                             fontWeight: 500,
                           }}
                         />
                       </TableCell>
-                      <TableCell align="right" sx={{ fontSize: 12, whiteSpace: "nowrap" }}>
+                      <TableCell align="right" sx={{ fontSize: "var(--fs-12)", whiteSpace: "nowrap" }}>
                         {invoice.hostedInvoiceUrl && <Link href={invoice.hostedInvoiceUrl} target="_blank" rel="noopener noreferrer" underline="hover">{invoice.status === "open" ? "Pay" : "View"}</Link>}
                         {invoice.hostedInvoiceUrl && invoice.invoicePdf && " · "}
                         {invoice.invoicePdf && <Link href={invoice.invoicePdf} target="_blank" rel="noopener noreferrer" underline="hover">PDF</Link>}
@@ -991,7 +991,7 @@ export function BillingSection() {
             <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ sm: "center" }} gap={2}>
               <Box>
                 <Typography variant="h3">Payment methods</Typography>
-                <Typography color="text.secondary" fontSize={12}>Cards saved for this project. Renewals are charged to the default card; a new card is checked by Stripe and also pays any unpaid invoice.</Typography>
+                <Typography color="text.secondary" fontSize="var(--fs-12)">Cards saved for this project. Renewals are charged to the default card; a new card is checked by Stripe and also pays any unpaid invoice.</Typography>
               </Box>
               {projectId && (
                 <Button variant="contained" disabled={Boolean(busy)} onClick={updateCard} sx={{ textTransform: "none", borderRadius: 1.25 }}>
@@ -1022,7 +1022,7 @@ export function BillingSection() {
       {tab === "profile" && (!canManage ? managersOnly : (
         <Card className="saas-card" sx={{ p: 2.5 }}>
           <Typography variant="h3">Billing details</Typography>
-          <Typography color="text.secondary" fontSize={12}>
+          <Typography color="text.secondary" fontSize="var(--fs-12)">
             Keep your invoice recipient and tax information up to date. Tax is calculated from the billing/business address and tax information provided at checkout.
           </Typography>
           <Grid container spacing={2} sx={{ mt: 0.5 }}>
@@ -1065,7 +1065,7 @@ export function BillingSection() {
       <Dialog open={confirmCancel} onClose={() => setConfirmCancel(false)} maxWidth="xs" fullWidth>
         <DialogTitle>Cancel subscription?</DialogTitle>
         <DialogContent>
-          <Typography fontSize={14} color="text.secondary">
+          <Typography fontSize="var(--fs-14)" color="text.secondary">
             Your {plan.label} plan stays active until {formatBillingDate(subscription?.currentPeriodEnd)}. It will not renew after that date, and you can resume it any time before then.
           </Typography>
         </DialogContent>
@@ -1080,7 +1080,7 @@ export function BillingSection() {
       <Dialog open={Boolean(change)} onClose={() => setChange(null)} maxWidth="xs" fullWidth>
         <DialogTitle>Change to {change ? planCopy[change.plan].label : ""} ({change?.interval}ly)?</DialogTitle>
         <DialogContent>
-          <Typography fontSize={14} color="text.secondary">
+          <Typography fontSize="var(--fs-14)" color="text.secondary">
             {change?.upgrade
               ? "The prorated difference is charged to your payment method now. Your plan will upgrade after Stripe confirms the payment."
               : `Your plan will change on ${formatBillingDate(subscription?.currentPeriodEnd)}. Your current plan remains active until then, with no refund or credit.`}

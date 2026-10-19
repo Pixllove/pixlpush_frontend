@@ -168,7 +168,7 @@ export default function SendingDomainsPanel() {
         <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" gap={1.5} sx={{ p: 2.5, borderBottom: '1px solid', borderColor: 'divider' }}>
           <Box>
             <Typography variant="h3">Sending domains</Typography>
-            <Typography color="text.secondary" fontSize={12}>Manage your sending domains. Add a domain and authenticate it before sending.</Typography>
+            <Typography color="text.secondary" fontSize="var(--fs-12)">Manage your sending domains. Add a domain and authenticate it before sending.</Typography>
           </Box>
           {canManage && <Button variant="contained" startIcon={<AddRounded />} onClick={() => setDialog({ kind: 'add' })} sx={{ alignSelf: 'flex-start' }}>Add domain</Button>}
         </Stack>
@@ -181,7 +181,7 @@ export default function SendingDomainsPanel() {
 
         {list.data && list.data.length > 0 && <Box sx={{ overflowX: 'auto' }}>
           <Table size="small" sx={{ tableLayout: 'fixed', minWidth: 980 }}>
-            <TableHead><TableRow><TableCell sx={{ width: '24%', color: 'text.secondary', fontSize: 12 }}>Domain</TableCell><TableCell sx={{ width: '24%', color: 'text.secondary', fontSize: 12 }}>Status</TableCell><TableCell sx={{ width: '24%', color: 'text.secondary', fontSize: 12 }}>Action</TableCell><TableCell sx={{ width: '24%', color: 'text.secondary', fontSize: 12 }}>Domain alignment</TableCell><TableCell sx={{ width: 56 }} align="right" /></TableRow></TableHead>
+            <TableHead><TableRow><TableCell sx={{ width: '24%', color: 'text.secondary', fontSize: "var(--fs-12)" }}>Domain</TableCell><TableCell sx={{ width: '24%', color: 'text.secondary', fontSize: "var(--fs-12)" }}>Status</TableCell><TableCell sx={{ width: '24%', color: 'text.secondary', fontSize: "var(--fs-12)" }}>Action</TableCell><TableCell sx={{ width: '24%', color: 'text.secondary', fontSize: "var(--fs-12)" }}>Domain alignment</TableCell><TableCell sx={{ width: 56 }} align="right" /></TableRow></TableHead>
             <TableBody>
               {list.data.map((domain) => <TableRow key={domain.id} data-testid={`domain-row-${domain.domain}`}>
                 <TableCell sx={{ verticalAlign: 'middle' }}><Typography fontWeight={600} color="text.secondary" noWrap>{domain.domain}</Typography></TableCell>

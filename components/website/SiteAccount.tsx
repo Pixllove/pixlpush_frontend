@@ -55,7 +55,7 @@ export function SiteAccount() {
   if (!isAuthenticated || !account) {
     return (
       <>
-        <Link href="/login" underline="none" sx={{ px: 1.5, fontSize: 16, fontWeight: 700, color: 'rgba(255,255,255,.92)', '&:hover': { color: '#ffab8e' } }}>Log in</Link>
+        <Link href="/login" underline="none" sx={{ px: 1.5, fontSize: "var(--fs-16)", fontWeight: 700, color: 'rgba(255,255,255,.92)', '&:hover': { color: '#ffab8e' } }}>Log in</Link>
         <Button variant="contained" href="/get-started" endIcon={<ArrowOutwardRounded />}>Start for free</Button>
       </>
     );
@@ -99,8 +99,8 @@ export function SiteAccount() {
         <Stack direction="row" alignItems="center" gap={1.5} sx={{ px: 2.2, py: 1.8, background: 'linear-gradient(135deg, #f5edff 0%, #fff5f1 100%)' }}>
           <UserAvatar account={account} size={40} />
           <Box sx={{ minWidth: 0 }}>
-            <Typography fontSize={13} fontWeight={600} noWrap>{name}</Typography>
-            <Typography fontSize={12} color="text.secondary" noWrap>{account.email}</Typography>
+            <Typography fontSize="var(--fs-13)" fontWeight={600} noWrap>{name}</Typography>
+            <Typography fontSize="var(--fs-12)" color="text.secondary" noWrap>{account.email}</Typography>
           </Box>
         </Stack>
         <Divider />
@@ -142,8 +142,8 @@ export function SiteAccountDrawer({ onNavigate }: { onNavigate: () => void }) {
       <Stack direction="row" alignItems="center" gap={1.5} sx={{ pt: 2, borderTop: '1px solid rgba(255,255,255,.14)' }}>
         <UserAvatar account={account} size={40} />
         <Box sx={{ minWidth: 0 }}>
-          <Typography fontSize={13} fontWeight={600} noWrap>{name}</Typography>
-          <Typography fontSize={12} noWrap sx={{ color: 'rgba(255,255,255,.6)' }}>{account.email}</Typography>
+          <Typography fontSize="var(--fs-13)" fontWeight={600} noWrap>{name}</Typography>
+          <Typography fontSize="var(--fs-12)" noWrap sx={{ color: 'rgba(255,255,255,.6)' }}>{account.email}</Typography>
         </Box>
       </Stack>
       <Button variant="contained" href="/dashboard">Go to dashboard</Button>

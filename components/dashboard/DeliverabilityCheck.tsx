@@ -43,7 +43,7 @@ export default function DeliverabilityCheck({ findings, sender }: { findings: Fi
   return (
     <Paper className="campaign-review-card" component="section" aria-label="Deliverability check">
       <Typography variant="h3">Deliverability check</Typography>
-      <Typography color="text.secondary" fontSize={12}>What we checked before this campaign goes out.</Typography>
+      <Typography color="text.secondary" fontSize="var(--fs-12)">What we checked before this campaign goes out.</Typography>
 
       {blocked && (
         <Alert severity="error" action={sender.ready ? undefined : <Button color="inherit" size="small" href="/dashboard/settings">Open settings</Button>}>
@@ -70,14 +70,14 @@ export default function DeliverabilityCheck({ findings, sender }: { findings: Fi
 
       {risks.length > 0 && (
         <>
-          <Typography fontWeight={600} fontSize={13}>Deliverability recommendations</Typography>
+          <Typography fontWeight={600} fontSize="var(--fs-13)">Deliverability recommendations</Typography>
           <Stack component="ul" gap={1} sx={{ m: 0, p: 0, listStyle: 'none' }}>
             {risks.map((f) => <FindingRow key={f.code} finding={f} />)}
           </Stack>
         </>
       )}
 
-      <Typography color="text.secondary" fontSize={12}>
+      <Typography color="text.secondary" fontSize="var(--fs-12)">
         These recommendations may improve delivery. They cannot guarantee which folder the recipient’s email provider will use.
       </Typography>
     </Paper>

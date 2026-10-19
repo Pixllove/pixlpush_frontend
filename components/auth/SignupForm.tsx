@@ -69,7 +69,7 @@ export default function SignupForm({ active = true, onSwitch }: { active?: boole
   return (
     <Box className={`auth-block${active ? ' is-active' : ''}`}>
       <Box sx={{ textAlign: 'center' }}>
-        <Typography component="h1" variant="h1">Get Started Today</Typography>
+        <Typography component={active ? "h1" : "h2"} variant="h1">Get Started Today</Typography>
         <Typography color="text.secondary" sx={{ mt: 0.5 }}>Quick setup, no credit card required.</Typography>
       </Box>
 
@@ -126,7 +126,7 @@ export default function SignupForm({ active = true, onSwitch }: { active?: boole
         <FormControlLabel
           control={<Checkbox color="primary" disabled={pending} {...register('legalAccepted')} />}
           label={<>I agree to PixlPush&apos;s <MuiLink href="/legal/terms" target="_blank" rel="noreferrer">Terms of Service</MuiLink> and <MuiLink href="/privacy" target="_blank" rel="noreferrer">Privacy Policy</MuiLink>.</>}
-          sx={{ alignItems: 'center', '& .MuiFormControlLabel-label': { fontSize: 12, lineHeight: 1.5 } }}
+          sx={{ alignItems: 'center', '& .MuiFormControlLabel-label': { fontSize: "var(--fs-12)", lineHeight: 1.5 } }}
         />
 
         <SubmitButton type="submit" variant="contained" size="large" fullWidth pending={pending}>

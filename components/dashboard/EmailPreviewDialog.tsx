@@ -72,8 +72,8 @@ export default function EmailPreviewDialog({
     >
       <Stack direction="row" alignItems="center" gap={1.5} sx={{ px: { xs: 2, sm: 3 }, py: 1.75, borderBottom: '1px solid #e6eaf1' }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography id="email-preview-title" sx={{ fontSize: 16, fontWeight: 600, color: '#11131a', lineHeight: 1.3 }}>Preview and test</Typography>
-          <Typography noWrap sx={{ fontSize: 12, color: '#64748b', mt: 0.25 }}>{subject ? `Subject: ${subject}` : title}</Typography>
+          <Typography id="email-preview-title" sx={{ fontSize: "var(--fs-16)", fontWeight: 600, color: '#11131a', lineHeight: 1.3 }}>Preview and test</Typography>
+          <Typography noWrap sx={{ fontSize: "var(--fs-12)", color: '#64748b', mt: 0.25 }}>{subject ? `Subject: ${subject}` : title}</Typography>
         </Box>
         <ToggleButtonGroup
           exclusive
@@ -103,7 +103,7 @@ export default function EmailPreviewDialog({
         onSubmit={(event: React.FormEvent) => { event.preventDefault(); void sendTest(); }}
         sx={{ px: { xs: 2, sm: 3 }, py: 1.75, borderTop: '1px solid #e6eaf1', bgcolor: '#fff' }}
       >
-        <Typography role="status" sx={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: 500, color: !result ? '#64748b' : result.ok ? '#0d7a48' : '#c0352b' }}>
+        <Typography role="status" sx={{ flex: 1, minWidth: 0, fontSize: "var(--fs-12)", fontWeight: 500, color: !result ? '#64748b' : result.ok ? '#0d7a48' : '#c0352b' }}>
           {result ? result.message : "Send this email to yourself to see it in a real inbox."}
         </Typography>
         <TextField

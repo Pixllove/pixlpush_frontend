@@ -141,7 +141,7 @@ export default function AuthShell({ children, mode, back = true }: { children: R
           <Box className="auth-glimpse">
             <Box className="auth-glimpse-head">
               <Box>
-                <Typography variant="h5">Onboarding journey</Typography>
+                <Typography variant="h5" component="h3">Onboarding journey</Typography>
                 <Typography variant="caption" color="text.secondary">Automated journey</Typography>
               </Box>
               <Chip label="Running" color="success" size="small" />
@@ -150,7 +150,7 @@ export default function AuthShell({ children, mode, back = true }: { children: R
               <Box className="auth-step" key={step.title}>
                 <Box className="auth-step-icon">{step.icon}</Box>
                 <Box sx={{ minWidth: 0 }}>
-                  <Typography variant="h5">{step.title}</Typography>
+                  <Typography variant="h5" component="h4">{step.title}</Typography>
                   <Typography variant="caption" color="text.secondary">{step.detail}</Typography>
                 </Box>
               </Box>
