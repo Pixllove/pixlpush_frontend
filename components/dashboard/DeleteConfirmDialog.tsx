@@ -31,7 +31,7 @@ export default function DeleteConfirmDialog({
     <Dialog open={open} onClose={loading ? undefined : onClose} maxWidth="xs" fullWidth>
       <DialogTitle>{title}</DialogTitle>
       <DialogContent>
-        <Typography color="text.secondary" fontSize={13}>
+        <Typography color="text.secondary" fontSize="var(--fs-13)">
           {description}
         </Typography>
       </DialogContent>

@@ -51,7 +51,7 @@ const CATEGORY_COLOR: Record<AuditCategory, { color: string; bg: string }> = {
 };
 
 const border = '1px solid #e7e5ec';
-const headCell = { fontSize: 11, fontWeight: 500, letterSpacing: 0.6, textTransform: 'uppercase', color: '#6b6577', py: 1.2, bgcolor: '#fafafb' } as const;
+const headCell = { fontSize: "var(--fs-11)", fontWeight: 500, letterSpacing: 0.6, textTransform: 'uppercase', color: '#6b6577', py: 1.2, bgcolor: '#fafafb' } as const;
 
 const errorText = (e: unknown) =>
   (e as ApiError)?.code === 'NETWORK_ERROR' ? 'Cannot reach the server. Check your connection.' : 'Audit logs could not be loaded. Please try again.';
@@ -72,7 +72,7 @@ const actorName = (e: AuditLogEntry) => (e.actor ? e.actor.name ?? e.actor.email
 
 function CategoryChip({ category }: { category: AuditCategory }) {
   const c = CATEGORY_COLOR[category] ?? CATEGORY_COLOR.auth;
-  return <Chip size="small" label={CATEGORY_LABEL[category] ?? category} sx={{ color: c.color, bgcolor: c.bg, fontWeight: 500, fontSize: 11, height: 22 }} />;
+  return <Chip size="small" label={CATEGORY_LABEL[category] ?? category} sx={{ color: c.color, bgcolor: c.bg, fontWeight: 500, fontSize: "var(--fs-11)", height: 22 }} />;
 }
 
 /** Event code as a small badge, e.g. "resource_deleted". */
@@ -81,7 +81,7 @@ export function EventBadge({ action }: { action: string }) {
     <Chip
       size="small"
       label={action.toLowerCase()}
-      sx={{ height: 20, fontSize: 11, fontFamily: 'var(--pp-mono)', color: '#4a4556', bgcolor: '#f0eef3', borderRadius: 1 }}
+      sx={{ height: 20, fontSize: "var(--fs-11)", fontFamily: 'var(--pp-mono)', color: '#4a4556', bgcolor: '#f0eef3', borderRadius: 1 }}
     />
   );
 }
@@ -192,18 +192,18 @@ export default function AuditLogsPanel() {
                 hover
                 data-testid="audit-row"
                 onClick={() => setSelected(entry)}
-                sx={{ cursor: 'pointer', '& td': { fontSize: 13, py: 1.3, borderColor: '#efeef3' } }}
+                sx={{ cursor: 'pointer', '& td': { fontSize: "var(--fs-13)", py: 1.3, borderColor: '#efeef3' } }}
               >
                 <TableCell sx={{ whiteSpace: 'nowrap' }}>
                   <Tooltip title={fullDate(entry.createdAt)}><span>{relative(entry.createdAt)}</span></Tooltip>
                 </TableCell>
                 <TableCell>
-                  <Typography fontSize={13} fontWeight={600}>{actorName(entry)}</Typography>
-                  {entry.actor?.name && <Typography fontSize={11} color="text.secondary">{entry.actor.email}</Typography>}
+                  <Typography fontSize="var(--fs-13)" fontWeight={600}>{actorName(entry)}</Typography>
+                  {entry.actor?.name && <Typography fontSize="var(--fs-11)" color="text.secondary">{entry.actor.email}</Typography>}
                 </TableCell>
                 <TableCell sx={{ maxWidth: 420 }}>{entry.description}</TableCell>
                 <TableCell><CategoryChip category={entry.category} /></TableCell>
-                <TableCell>{entry.project?.name ?? <Typography component="span" fontSize={13} color="text.secondary">Account</Typography>}</TableCell>
+                <TableCell>{entry.project?.name ?? <Typography component="span" fontSize="var(--fs-13)" color="text.secondary">Account</Typography>}</TableCell>
                 <TableCell align="right">
                   <IconButton size="small" aria-label={`View details: ${entry.description}`} sx={{ border, borderRadius: '8px' }}>
                     <ChevronRightRounded fontSize="small" />
@@ -216,7 +216,7 @@ export default function AuditLogsPanel() {
       </Box>
 
       <Stack direction="row" justifyContent="space-between" alignItems="center">
-        <Typography color="text.secondary" fontSize={12}>{items.length ? `Showing ${items.length} ${items.length === 1 ? 'entry' : 'entries'}` : ''}</Typography>
+        <Typography color="text.secondary" fontSize="var(--fs-12)">{items.length ? `Showing ${items.length} ${items.length === 1 ? 'entry' : 'entries'}` : ''}</Typography>
         {feed.hasNextPage && (
           <Button variant="outlined" size="small" onClick={() => feed.fetchNextPage()} disabled={feed.isFetchingNextPage}>
             {feed.isFetchingNextPage ? 'Loading…' : 'Load more'}
@@ -235,8 +235,8 @@ const label = (key: string) => key.replace(/([A-Z])/g, ' $1').replace(/^./, (c) 
 function DetailRow({ k, v }: { k: string; v: React.ReactNode }) {
   return (
     <Stack direction="row" gap={2} sx={{ py: 1, borderBottom: '1px solid #f1f0f4' }}>
-      <Typography fontSize={12} color="text.secondary" sx={{ width: 110, flexShrink: 0 }}>{k}</Typography>
-      <Box sx={{ fontSize: 13, minWidth: 0, wordBreak: 'break-word' }}>{v}</Box>
+      <Typography fontSize="var(--fs-12)" color="text.secondary" sx={{ width: 110, flexShrink: 0 }}>{k}</Typography>
+      <Box sx={{ fontSize: "var(--fs-13)", minWidth: 0, wordBreak: 'break-word' }}>{v}</Box>
     </Stack>
   );
 }
@@ -256,14 +256,14 @@ function DetailsDrawer({ entry, onClose }: { entry: AuditLogEntry | null; onClos
         <Stack sx={{ p: 3 }} gap={2} role="dialog" aria-label="Activity details">
           <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap={1}>
             <Box>
-              <Typography fontSize={11} fontWeight={500} letterSpacing={1} color="text.secondary">ACTIVITY DETAILS</Typography>
-              <Typography fontSize={16} fontWeight={600} sx={{ mt: 0.5 }}>{entry.description}</Typography>
+              <Typography fontSize="var(--fs-11)" fontWeight={500} letterSpacing={1} color="text.secondary">ACTIVITY DETAILS</Typography>
+              <Typography fontSize="var(--fs-16)" fontWeight={600} sx={{ mt: 0.5 }}>{entry.description}</Typography>
             </Box>
             <IconButton aria-label="Close details" onClick={onClose}><CloseRounded /></IconButton>
           </Stack>
           <Box>
-            <DetailRow k="When" v={<>{fullDate(entry.createdAt)} <Typography component="span" fontSize={12} color="text.secondary">· {relative(entry.createdAt)}</Typography></>} />
-            <DetailRow k="User" v={<>{actorName(entry)}{entry.actor?.name && <Typography fontSize={12} color="text.secondary">{entry.actor.email}</Typography>}</>} />
+            <DetailRow k="When" v={<>{fullDate(entry.createdAt)} <Typography component="span" fontSize="var(--fs-12)" color="text.secondary">· {relative(entry.createdAt)}</Typography></>} />
+            <DetailRow k="User" v={<>{actorName(entry)}{entry.actor?.name && <Typography fontSize="var(--fs-12)" color="text.secondary">{entry.actor.email}</Typography>}</>} />
             <DetailRow k="Project" v={entry.project?.name ?? 'Account-level'} />
             <DetailRow k="Category" v={<CategoryChip category={entry.category} />} />
             <DetailRow k="Event" v={<EventBadge action={entry.action} />} />
@@ -272,7 +272,7 @@ function DetailsDrawer({ entry, onClose }: { entry: AuditLogEntry | null; onClos
 
           {changeKeys.length > 0 && (
             <Box>
-              <Typography fontWeight={600} fontSize={13} sx={{ mb: 1 }}>Changes</Typography>
+              <Typography fontWeight={600} fontSize="var(--fs-13)" sx={{ mb: 1 }}>Changes</Typography>
               <Box sx={{ border, borderRadius: '8px' }}>
                 <Table size="small">
                   <TableHead>
@@ -284,7 +284,7 @@ function DetailsDrawer({ entry, onClose }: { entry: AuditLogEntry | null; onClos
                   </TableHead>
                   <TableBody>
                     {changeKeys.map((k) => (
-                      <TableRow key={k} sx={{ '& td': { fontSize: 12 } }}>
+                      <TableRow key={k} sx={{ '& td': { fontSize: "var(--fs-12)" } }}>
                         <TableCell>{label(k)}</TableCell>
                         <TableCell sx={{ color: '#b3261e' }}>{pretty(before[k])}</TableCell>
                         <TableCell sx={{ color: '#15965e' }}>{pretty(after[k])}</TableCell>
@@ -298,17 +298,17 @@ function DetailsDrawer({ entry, onClose }: { entry: AuditLogEntry | null; onClos
 
           {changedFields.length > 0 && (
             <Box>
-              <Typography fontWeight={600} fontSize={13} sx={{ mb: 1 }}>Fields changed</Typography>
+              <Typography fontWeight={600} fontSize="var(--fs-13)" sx={{ mb: 1 }}>Fields changed</Typography>
               <Stack direction="row" gap={0.8} flexWrap="wrap">
                 {changedFields.map((f) => <Chip key={f} size="small" variant="outlined" label={label(f)} />)}
               </Stack>
-              <Typography fontSize={11} color="text.secondary" sx={{ mt: 1 }}>Values are not stored for these changes, so secrets never reach the log.</Typography>
+              <Typography fontSize="var(--fs-11)" color="text.secondary" sx={{ mt: 1 }}>Values are not stored for these changes, so secrets never reach the log.</Typography>
             </Box>
           )}
 
           {extra.length > 0 && (
             <Box>
-              <Typography fontWeight={600} fontSize={13} sx={{ mb: 0.5 }}>More information</Typography>
+              <Typography fontWeight={600} fontSize="var(--fs-13)" sx={{ mb: 0.5 }}>More information</Typography>
               {extra.map(([k, v]) => <DetailRow key={k} k={label(k)} v={pretty(v)} />)}
             </Box>
           )}

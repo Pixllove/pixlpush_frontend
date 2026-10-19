@@ -570,7 +570,7 @@ export default function JourneyBuilder() {
             >
               <CircularProgress size={34} />
               <Typography fontWeight={600}>Loading your journey</Typography>
-              <Typography color="text.secondary" fontSize={13}>
+              <Typography color="text.secondary" fontSize="var(--fs-13)">
                 Fetching the steps and message templates…
               </Typography>
             </Box>
@@ -821,7 +821,7 @@ function JourneyBlock({
           <Typography fontWeight={600}>{block.title}</Typography>
           <Typography
             color="text.secondary"
-            fontSize={11}
+            fontSize="var(--fs-11)"
             sx={{ whiteSpace: "pre-line" }}
           >
             {block.description}
@@ -976,7 +976,7 @@ function MetricUsersPanel({ blockId, blockTitle, type, label, onClose }: OpenMet
       <Box className="journey-settings-title">
         <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
           <Box>
-            <Typography fontSize={11} color="#4775de" fontWeight={500} letterSpacing=".08em">
+            <Typography fontSize="var(--fs-11)" color="#4775de" fontWeight={500} letterSpacing=".08em">
               {blockTitle.toUpperCase()}
             </Typography>
             <Typography variant="h3">{label}</Typography>
@@ -985,7 +985,7 @@ function MetricUsersPanel({ blockId, blockTitle, type, label, onClose }: OpenMet
             <CloseRounded />
           </IconButton>
         </Stack>
-        <Typography fontSize={12} color="text.secondary" sx={{ mt: 0.5 }}>
+        <Typography fontSize="var(--fs-12)" color="text.secondary" sx={{ mt: 0.5 }}>
           {metricHelp(metric, type)}
         </Typography>
         <TextField
@@ -1003,7 +1003,7 @@ function MetricUsersPanel({ blockId, blockTitle, type, label, onClose }: OpenMet
             ),
           }}
         />
-        <Typography fontSize={12} color="text.secondary" sx={{ mt: 1 }}>
+        <Typography fontSize="var(--fs-12)" color="text.secondary" sx={{ mt: 1 }}>
           {users.isLoading
             ? "Loading…"
             : search
@@ -1050,24 +1050,24 @@ function MetricUsersPanel({ blockId, blockTitle, type, label, onClose }: OpenMet
                     }}
                   >
                     <Stack direction="row" alignItems="center" gap={1}>
-                      <Typography fontWeight={600} fontSize={14} noWrap sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography fontWeight={600} fontSize="var(--fs-14)" noWrap sx={{ flex: 1, minWidth: 0 }}>
                         {user.name || user.email || user.externalUserId || "Unnamed user"}
                       </Typography>
                       {statusText && (
                         <Box
                           component="span"
-                          sx={{ ...CHIP[tone ?? "grey"], fontSize: 11, fontWeight: 600, px: 1, py: 0.25, borderRadius: 10, whiteSpace: "nowrap" }}
+                          sx={{ ...CHIP[tone ?? "grey"], fontSize: "var(--fs-11)", fontWeight: 600, px: 1, py: 0.25, borderRadius: 10, whiteSpace: "nowrap" }}
                         >
                           {statusText}
                         </Box>
                       )}
                     </Stack>
                     {(user.name || user.email) && (
-                      <Typography fontSize={12} color="text.secondary" noWrap>
+                      <Typography fontSize="var(--fs-12)" color="text.secondary" noWrap>
                         {[user.name && user.email, user.externalUserId && `ID ${user.externalUserId}`].filter(Boolean).join(" · ")}
                       </Typography>
                     )}
-                    <Typography fontSize={12} color="text.secondary" noWrap>
+                    <Typography fontSize="var(--fs-12)" color="text.secondary" noWrap>
                       {rowSummary(row)}
                     </Typography>
                   </Box>
@@ -1082,7 +1082,7 @@ function MetricUsersPanel({ blockId, blockTitle, type, label, onClose }: OpenMet
                   Show more
                 </Button>
               ) : rows.length > limit ? (
-                <Typography fontSize={12} color="text.secondary">
+                <Typography fontSize="var(--fs-12)" color="text.secondary">
                   That&apos;s everyone.
                 </Typography>
               ) : null}
@@ -1279,7 +1279,7 @@ function AddStepPopover({
                 </Box>
                 <Box sx={{ textAlign: "left" }}>
                   <Typography fontWeight={600}>{title}</Typography>
-                  <Typography color="text.secondary" fontSize={11}>
+                  <Typography color="text.secondary" fontSize="var(--fs-11)">
                     {description}
                   </Typography>
                 </Box>
@@ -1322,7 +1322,7 @@ function SettingsPanel({
       >
         <Box>
           <Typography
-            fontSize={11}
+            fontSize="var(--fs-11)"
             color="#4775de"
             fontWeight={500}
             letterSpacing=".08em"
@@ -1428,7 +1428,7 @@ function EntranceSettings({
         <Typography className="journey-field-label">
           Entrance trigger (OR)
         </Typography>
-        <Typography color="text.secondary" fontSize={12}>
+        <Typography color="text.secondary" fontSize="var(--fs-12)">
           Choose how subscribers should enter this journey.
         </Typography>
       </Box>
@@ -1670,10 +1670,10 @@ function ConditionSettings({
         }
         label={
           <Box>
-            <Typography fontWeight={600} fontSize={13}>
+            <Typography fontWeight={600} fontSize="var(--fs-13)">
               {title}
             </Typography>
-            <Typography fontSize={11} color="text.secondary">
+            <Typography fontSize="var(--fs-11)" color="text.secondary">
               {description}
             </Typography>
           </Box>
@@ -1687,7 +1687,7 @@ function ConditionSettings({
         <Typography className="journey-field-label">
           Create a condition
         </Typography>
-        <Typography color="text.secondary" fontSize={12}>
+        <Typography color="text.secondary" fontSize="var(--fs-12)">
           Add up to 5 conditions. Define whether any or all of them must be
           applicable, for the condition to be met.
         </Typography>
@@ -1706,7 +1706,7 @@ function ConditionSettings({
       </Stack>
       {rules.map((rule, index) => (
         <Box key={index} className="journey-condition-rule">
-          <Typography fontWeight={500} fontSize={12}>
+          <Typography fontWeight={500} fontSize="var(--fs-12)">
             Condition {index + 1}
           </Typography>
           <PanelSelect

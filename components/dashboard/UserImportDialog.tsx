@@ -110,7 +110,7 @@ export function ImportConsentConfirmation({ checked, disabled, onChange }: { che
           </Typography>
         }
       />
-      <Typography component="ul" color="text.secondary" fontSize={12} sx={{ m: 0, pl: 5.5 }}>
+      <Typography component="ul" color="text.secondary" fontSize="var(--fs-12)" sx={{ m: 0, pl: 5.5 }}>
         <li>This confirmation applies to every contact in this import.</li>
         <li>Contacts who have unsubscribed or complained will not be contacted, even if they are in this file.</li>
         <li>You are responsible for holding valid consent for these contacts.</li>
@@ -469,7 +469,7 @@ export default function UserImportDialog({
           <Stack gap={2.5}>
             <Box>
               <Typography variant="h3">Choose how to import users</Typography>
-              <Typography color="text.secondary" fontSize={13}>
+              <Typography color="text.secondary" fontSize="var(--fs-13)">
                 Upload a CSV list of users and map the columns before importing
                 them into PixlPush.
               </Typography>
@@ -481,7 +481,7 @@ export default function UserImportDialog({
                     <Icon />
                   </Box>
                   <Typography fontWeight={600}>{label}</Typography>
-                  <Typography color="text.secondary" fontSize={11}>
+                  <Typography color="text.secondary" fontSize="var(--fs-11)">
                     {description}
                   </Typography>
                 </Box>
@@ -512,13 +512,13 @@ export default function UserImportDialog({
                     variant="determinate"
                     value={uploadProgress}
                   />
-                  <Typography color="text.secondary" fontSize={12}>
+                  <Typography color="text.secondary" fontSize="var(--fs-12)">
                     {uploadProgress}% complete · Preparing import settings
                   </Typography>
                 </Stack>
               ) : (
                 <>
-                  <Typography color="text.secondary" fontSize={12}>
+                  <Typography color="text.secondary" fontSize="var(--fs-12)">
                     {fileName
                       ? `${totalRows} user rows detected · ${fileSize}`
                       : "Drag and drop your file here, or browse from your computer"}
@@ -543,7 +543,7 @@ export default function UserImportDialog({
                   </Box>
                   <Box>
                     <Typography fontWeight={600}>{fileName}</Typography>
-                    <Typography color="text.secondary" fontSize={12}>
+                    <Typography color="text.secondary" fontSize="var(--fs-12)">
                       {fileSize} · {totalRows} records detected
                     </Typography>
                   </Box>
@@ -563,7 +563,7 @@ export default function UserImportDialog({
                       <Typography fontWeight={600}>
                         Create and update users
                       </Typography>
-                      <Typography color="text.secondary" fontSize={12}>
+                      <Typography color="text.secondary" fontSize="var(--fs-12)">
                         Update existing users with this import. In the next
                         step, you can select a unique field—such as a customer
                         ID, email address, phone number, or CRM ID—to match
@@ -578,7 +578,7 @@ export default function UserImportDialog({
                   <Typography fontWeight={600}>
                     Select the language of column headers in your file
                   </Typography>
-                  <Typography color="text.secondary" fontSize={12}>
+                  <Typography color="text.secondary" fontSize="var(--fs-12)">
                     Choose the language used by your CSV headers so PixlPush can
                     map them accurately.
                   </Typography>
@@ -604,11 +604,11 @@ export default function UserImportDialog({
                 >
                   <Box>
                     <Typography variant="h3">Previous imports</Typography>
-                    <Typography color="text.secondary" fontSize={12}>
+                    <Typography color="text.secondary" fontSize="var(--fs-12)">
                       Review files imported into this project.
                     </Typography>
                   </Box>
-                  <Typography color="text.secondary" fontSize={11}>
+                  <Typography color="text.secondary" fontSize="var(--fs-11)">
                     {importHistory.length} import
                     {importHistory.length === 1 ? "" : "s"}
                   </Typography>
@@ -700,7 +700,7 @@ export default function UserImportDialog({
                 </Box>
                 {notice && (
                   <Typography
-                    fontSize={12}
+                    fontSize="var(--fs-12)"
                     color="text.secondary"
                     sx={{ mt: 1 }}
                     role="status"
@@ -716,7 +716,7 @@ export default function UserImportDialog({
           <Stack gap={2}>
             <Box>
               <Typography variant="h3">Map CSV fields</Typography>
-              <Typography color="text.secondary" fontSize={13}>
+              <Typography color="text.secondary" fontSize="var(--fs-13)">
                 Match each column from your file to a PixlPush user field.
                 Choose which fields can overwrite existing values and select one
                 unique identifier.
@@ -724,7 +724,7 @@ export default function UserImportDialog({
             </Box>
             <Box className="import-map-toolbar">
               <Typography fontWeight={600}>{fileName}</Typography>
-              <Typography color="text.secondary" fontSize={12}>
+              <Typography color="text.secondary" fontSize="var(--fs-12)">
                 {totalRows} rows · {headers.length} columns
               </Typography>
             </Box>
@@ -732,7 +732,7 @@ export default function UserImportDialog({
               <Typography className="unique-matching-title">
                 Select a unique field for matching users
               </Typography>
-              <Typography color="text.secondary" fontSize={13}>
+              <Typography color="text.secondary" fontSize="var(--fs-13)">
                 Choose the field that contains a unique value for each user,
                 such as a customer ID, email address, phone number, CRM ID, or
                 another custom property. PixlPush will use this field to match
@@ -771,7 +771,7 @@ export default function UserImportDialog({
                     <Typography fontWeight={600}>
                       Use this field as the unique identifier for future imports
                     </Typography>
-                    <Typography color="text.secondary" fontSize={12}>
+                    <Typography color="text.secondary" fontSize="var(--fs-12)">
                       When enabled, matching users will be updated instead of
                       imported as duplicates. Users without a matching value
                       will receive a new PixlPush ID.
@@ -800,7 +800,7 @@ export default function UserImportDialog({
                       <TableCell>
                         <Stack>
                           {rows.slice(0, 3).map((row, rowIndex) => (
-                            <Typography key={rowIndex} fontSize={12}>
+                            <Typography key={rowIndex} fontSize="var(--fs-12)">
                               {row[index] || "—"}
                             </Typography>
                           ))}
@@ -873,7 +873,7 @@ export default function UserImportDialog({
               </Table>
             </Box>
             {!canContinue && !busy && (
-              <Typography color="#d95b63" fontSize={12} fontWeight={500}>
+              <Typography color="#d95b63" fontSize="var(--fs-12)" fontWeight={500}>
                 Select a unique identifier column that is mapped to a field
                 before continuing.
               </Typography>
@@ -888,30 +888,30 @@ export default function UserImportDialog({
           <Stack gap={2.5}>
             <Box>
               <Typography variant="h3">Review import</Typography>
-              <Typography color="text.secondary" fontSize={13}>
+              <Typography color="text.secondary" fontSize="var(--fs-13)">
                 Check the import summary before adding these users to PixlPush.
               </Typography>
             </Box>
             <Box className="import-review-summary">
               <Box>
-                <Typography color="text.secondary" fontSize={12}>
+                <Typography color="text.secondary" fontSize="var(--fs-12)">
                   File
                 </Typography>
                 <Typography fontWeight={600}>{fileName}</Typography>
               </Box>
               <Box>
-                <Typography color="text.secondary" fontSize={12}>
+                <Typography color="text.secondary" fontSize="var(--fs-12)">
                   Users to import
                 </Typography>
-                <Typography fontSize={24} fontWeight={600}>
+                <Typography fontSize="var(--fs-24)" fontWeight={600}>
                   {summary?.total ?? totalRows}
                 </Typography>
               </Box>
               <Box>
-                <Typography color="text.secondary" fontSize={12}>
+                <Typography color="text.secondary" fontSize="var(--fs-12)">
                   Mapped fields
                 </Typography>
-                <Typography fontSize={24} fontWeight={600}>
+                <Typography fontSize="var(--fs-24)" fontWeight={600}>
                   {
                     Object.values(mapping).filter((value) => value !== "ignore")
                       .length
@@ -920,7 +920,7 @@ export default function UserImportDialog({
               </Box>
             </Box>
             {summary && (
-              <Typography color="text.secondary" fontSize={13}>
+              <Typography color="text.secondary" fontSize="var(--fs-13)">
                 {summary.newUsers} new · {summary.existingUsers} existing (
                 {summary.unchanged} unchanged) · {summary.conflicts} conflicts ·{" "}
                 {summary.invalid} invalid · {summary.skipped} skipped
@@ -941,7 +941,7 @@ export default function UserImportDialog({
                     <Typography fontWeight={600}>
                       Add all imported users to a new audience group
                     </Typography>
-                    <Typography color="text.secondary" fontSize={12}>
+                    <Typography color="text.secondary" fontSize="var(--fs-12)">
                       When selected, PixlPush will create a new audience group
                       and add all users from this import to it.
                     </Typography>
@@ -965,13 +965,13 @@ export default function UserImportDialog({
               />
             </Box>
             {addToAudienceGroup && !audienceGroupName.trim() && (
-              <Typography color="#d95b63" fontSize={12} fontWeight={500}>
+              <Typography color="#d95b63" fontSize="var(--fs-12)" fontWeight={500}>
                 Enter an audience group name to continue.
               </Typography>
             )}
             <Box className="import-review-card">
               <Typography fontWeight={600}>Mapped fields</Typography>
-              <Typography color="text.secondary" fontSize={12}>
+              <Typography color="text.secondary" fontSize="var(--fs-12)">
                 Column header language:{" "}
                 {headerLanguages.find(([, code]) => code === headerLanguage)?.[0] ?? headerLanguage}
               </Typography>
@@ -1040,7 +1040,7 @@ export default function UserImportDialog({
                   />
                   <Typography
                     color="text.secondary"
-                    fontSize={11}
+                    fontSize="var(--fs-11)"
                     sx={{ mt: 0.5 }}
                   >
                     {totalRows
@@ -1054,7 +1054,7 @@ export default function UserImportDialog({
           </Stack>
         )}
         {error && (
-          <Typography color="#d95b63" fontSize={12} fontWeight={500}>
+          <Typography color="#d95b63" fontSize="var(--fs-12)" fontWeight={500}>
             {error}
           </Typography>
         )}

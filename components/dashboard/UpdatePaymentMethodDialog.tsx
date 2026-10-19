@@ -67,7 +67,7 @@ function CardForm({ projectId, onClose, onSaved }: { projectId: string; onClose:
   return (
     <>
       <DialogContent>
-        <Typography color="text.secondary" fontSize={12} sx={{ mb: 2 }}>Renewals and any unpaid invoice are charged to this card. Card details go directly to Stripe.</Typography>
+        <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mb: 2 }}>Renewals and any unpaid invoice are charged to this card. Card details go directly to Stripe.</Typography>
         {!ready && <Skeleton variant="rounded" height={150} />}
         <PaymentElement options={{ layout: "tabs" }} onReady={() => setReady(true)} />
         {error && <Alert severity="error" sx={{ mt: 2, borderRadius: 1.5 }}>{error}</Alert>}

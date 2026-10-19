@@ -19,14 +19,14 @@ function CopyField({ label, value }: { label: string; value: string }) {
   };
   return (
     <Box sx={{ flex: 1, minWidth: 0 }}>
-      <Typography color="text.secondary" fontSize={11} fontWeight={500} sx={{ mb: 0.5 }}>{label}</Typography>
+      <Typography color="text.secondary" fontSize="var(--fs-11)" fontWeight={500} sx={{ mb: 0.5 }}>{label}</Typography>
       <Stack direction="row" alignItems="center" gap={1} sx={{ bgcolor: '#303033', color: '#fff', borderRadius: 0.5, minHeight: 44, px: 1.25 }}>
-        <Typography component="code" fontSize={13} sx={{ wordBreak: 'break-all', fontFamily: 'var(--pp-mono)', flex: 1 }}>{value}</Typography>
+        <Typography component="code" fontSize="var(--fs-13)" sx={{ wordBreak: 'break-all', fontFamily: 'var(--pp-mono)', flex: 1 }}>{value}</Typography>
         <Tooltip title={copied ? 'Copied' : `Copy ${label.toLowerCase()}`}>
           <IconButton size="small" sx={{ color: '#fff' }} aria-label={`Copy ${label.toLowerCase()}`} onClick={copy}><ContentCopyRounded fontSize="small" /></IconButton>
         </Tooltip>
       </Stack>
-      {copied && <Typography role="status" fontSize={11} color="success.main">Copied</Typography>}
+      {copied && <Typography role="status" fontSize="var(--fs-11)" color="success.main">Copied</Typography>}
     </Box>
   );
 }
@@ -47,7 +47,7 @@ export default function DnsRecordCard({ record }: { record: DnsRecord }) {
         <Stack direction="row" gap={1} alignItems="center">
           {!isVerified && <CancelRounded sx={{ color: 'error.main', fontSize: 20 }} aria-label="Record needs attention" />}
           <Typography fontWeight={600}>{record.type} DNS record</Typography>
-          {!record.required && <Typography color="text.secondary" fontSize={12}>Optional</Typography>}
+          {!record.required && <Typography color="text.secondary" fontSize="var(--fs-12)">Optional</Typography>}
         </Stack>
         <Chip size="small" label={isVerified ? 'Passed' : status.label} color={isVerified ? 'success' : status.tone} variant={isVerified || status.tone !== 'default' ? 'filled' : 'outlined'} />
       </Stack>
@@ -55,7 +55,7 @@ export default function DnsRecordCard({ record }: { record: DnsRecord }) {
         <Box sx={{ mb: 1.5, px: 1.25, py: 0.75, borderRadius: 0.5, bgcolor: '#fff1f1', border: '1px solid #ffd5d5', color: '#b42318' }}>
           <Stack direction="row" alignItems="center" gap={0.75}>
             <ErrorOutlineRounded sx={{ fontSize: 15 }} />
-            <Typography fontSize={12}>{record.status === 'propagating' ? 'DNS changes can take a little time to appear.' : problemMessage(record)}</Typography>
+            <Typography fontSize="var(--fs-12)">{record.status === 'propagating' ? 'DNS changes can take a little time to appear.' : problemMessage(record)}</Typography>
           </Stack>
         </Box>
       )}
@@ -64,7 +64,7 @@ export default function DnsRecordCard({ record }: { record: DnsRecord }) {
         <CopyField label="Value" value={record.value} />
       </Stack>
       {record.errorMessage && !isVerified && (
-        <Typography color={record.status === 'propagating' ? 'warning.main' : 'error.main'} fontSize={12} sx={{ mt: 1 }}>
+        <Typography color={record.status === 'propagating' ? 'warning.main' : 'error.main'} fontSize="var(--fs-12)" sx={{ mt: 1 }}>
           {record.errorMessage}
         </Typography>
       )}

@@ -25,7 +25,7 @@ export default function CustomDomainDialog({ open, domain, onClose, onAdd }: Pro
         <DialogTitle>Connect your custom sending domain</DialogTitle>
         <DialogContent>
           <Stack gap={2} sx={{ pt: 1 }}>
-            <Typography color="text.secondary" fontSize={13}>
+            <Typography color="text.secondary" fontSize="var(--fs-13)">
               Enter the subdomain you want to use for PixlPush email links and tracking.
             </Typography>
             <Alert severity="warning" icon={false} sx={{ bgcolor: '#fff8c5', color: '#8a5a00', '& .MuiAlert-message': { p: 0 } }}>

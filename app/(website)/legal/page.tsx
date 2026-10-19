@@ -29,12 +29,12 @@ export default function LegalHubPage() {
     <Box sx={{ bgcolor: '#211331', color: '#fff', py: { xs: 9, md: 13 } }}>
       <Container maxWidth="lg">
         <Typography variant="overline" sx={{ color: '#ffab8e', letterSpacing: '.14em' }}>LEGAL & TRUST</Typography>
-        <Typography variant="h1" sx={{ fontSize: { xs: 48, md: 72 }, lineHeight: 1, mt: 1 }}>PixlPush Legal Hub</Typography>
+        <Typography variant="h1" sx={{ fontSize: { xs: "var(--fs-48)", md: "var(--fs-80)" }, lineHeight: 1, mt: 1 }}>PixlPush Legal Hub</Typography>
         <Typography sx={{ color: 'rgba(255,255,255,.68)', mt: 2, maxWidth: 650, lineHeight: 1.7 }}>Legal, privacy, security and service documentation in one place.</Typography>
       </Container>
     </Box>
     <Container maxWidth="lg" sx={{ py: { xs: 7, md: 11 } }}>
-      <Grid container spacing={2.5}>{documents.map(([title, description, href]) => <Grid item key={href} xs={12} sm={6} md={4}><Card component={Link} href={href} sx={{ display: 'block', height: '100%', p: 3, textDecoration: 'none', border: '1px solid #ece8f2', borderRadius: 3, boxShadow: 'none', '&:hover': { borderColor: '#6a42e8', transform: 'translateY(-2px)' }, transition: 'all .2s' }}><Typography variant="h3" sx={{ color: '#211331', fontSize: 20, mb: 1 }}>{title}</Typography><Typography color="text.secondary" lineHeight={1.6}>{description}</Typography><Typography sx={{ color: '#6a42e8', mt: 2, fontSize: 13, fontWeight: 600 }}>Read document →</Typography></Card></Grid>)}</Grid>
+      <Grid container spacing={2.5}>{documents.map(([title, description, href]) => <Grid item key={href} xs={12} sm={6} md={4}><Card component={Link} href={href} sx={{ display: 'block', height: '100%', p: 3, textDecoration: 'none', border: '1px solid #ece8f2', borderRadius: 3, boxShadow: 'none', '&:hover': { borderColor: '#6a42e8', transform: 'translateY(-2px)' }, transition: 'all .2s' }}><Typography variant="h3" component="h2" sx={{ color: '#211331', fontSize: "var(--fs-20)", mb: 1 }}>{title}</Typography><Typography color="text.secondary" lineHeight={1.6}>{description}</Typography><Typography sx={{ color: '#6a42e8', mt: 2, fontSize: "var(--fs-13)", fontWeight: 600 }}>Read document →</Typography></Card></Grid>)}</Grid>
     </Container>
   </SiteShell>;
 }

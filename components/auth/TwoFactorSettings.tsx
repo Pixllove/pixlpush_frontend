@@ -142,7 +142,7 @@ export default function TwoFactorSettings() {
               variant="contained"
               onClick={() => { setError(undefined); setMode('disable'); }}
               disabled={pending}
-              sx={{ color: '#fff', fontWeight: 700, boxShadow: 'none', '&:hover': { color: '#fff', boxShadow: 'none' } }}
+              sx={{ color: '#fff', fontWeight: 600, boxShadow: 'none', '&:hover': { color: '#fff', boxShadow: 'none' } }}
             >
               Turn off 2FA
             </Button>

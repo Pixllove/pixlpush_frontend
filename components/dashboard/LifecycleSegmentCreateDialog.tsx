@@ -118,7 +118,7 @@ export default function LifecycleSegmentCreateDialog({
       <DialogTitle sx={{ px: { xs: 3, md: 5 }, pt: 3.5, pb: 2 }}>
         <Typography
           color="primary"
-          fontSize={12}
+          fontSize="var(--fs-12)"
           letterSpacing={1.5}
           fontWeight={500}
         >
@@ -127,7 +127,7 @@ export default function LifecycleSegmentCreateDialog({
         <Typography variant="h3" sx={{ mt: 0.5 }}>
           Create segment
         </Typography>
-        <Typography color="text.secondary" fontSize={13} sx={{ mt: 0.7 }}>
+        <Typography color="text.secondary" fontSize="var(--fs-13)" sx={{ mt: 0.7 }}>
           {step === 0
             ? "Choose the product events that define this lifecycle segment."
             : "Name your segment and review the events that will qualify users."}
@@ -161,7 +161,7 @@ export default function LifecycleSegmentCreateDialog({
               </Box>
               <Box>
                 <Typography fontWeight={600}>Select events</Typography>
-                <Typography color="text.secondary" fontSize={12}>
+                <Typography color="text.secondary" fontSize="var(--fs-12)">
                   Users who complete any selected event will enter this segment.
                 </Typography>
               </Box>
@@ -229,12 +229,12 @@ export default function LifecycleSegmentCreateDialog({
                           sx={{ mr: 1 }}
                         />
                         <Box sx={{ flex: 1, minWidth: 0 }}>
-                          <Typography fontSize={12} fontWeight={500} noWrap>
+                          <Typography fontSize="var(--fs-12)" fontWeight={500} noWrap>
                             {option.name}
                           </Typography>
                           <Typography
                             color="text.secondary"
-                            fontSize={11}
+                            fontSize="var(--fs-11)"
                             noWrap
                           >
                             {option.assigned
@@ -262,7 +262,7 @@ export default function LifecycleSegmentCreateDialog({
               alignItems={{ sm: "center" }}
               gap={1}
             >
-              <Typography color="text.secondary" fontSize={12}>
+              <Typography color="text.secondary" fontSize="var(--fs-12)">
                 {selectedEvents.length} event
                 {selectedEvents.length === 1 ? "" : "s"} selected · Showing{" "}
                 {pagedEvents.length} of {visibleEvents.length}
@@ -298,7 +298,7 @@ export default function LifecycleSegmentCreateDialog({
               </Box>
               <Box>
                 <Typography fontWeight={600}>Add segment details</Typography>
-                <Typography color="text.secondary" fontSize={12}>
+                <Typography color="text.secondary" fontSize="var(--fs-12)">
                   Give this lifecycle segment a clear name your team will
                   recognize.
                 </Typography>
@@ -330,7 +330,7 @@ export default function LifecycleSegmentCreateDialog({
                 bgcolor: "#faf8ff",
               }}
             >
-              <Typography fontWeight={600} fontSize={13}>
+              <Typography fontWeight={600} fontSize="var(--fs-13)">
                 Users enter when they complete any of these events
               </Typography>
               <Stack direction="row" gap={1} flexWrap="wrap" sx={{ mt: 1 }}>
@@ -343,7 +343,7 @@ export default function LifecycleSegmentCreateDialog({
                       borderRadius: 1.5,
                       bgcolor: "#eee5ff",
                       color: "#5f22be",
-                      fontSize: 12,
+                      fontSize: "var(--fs-12)",
                       fontWeight: 500,
                     }}
                   >
@@ -353,7 +353,7 @@ export default function LifecycleSegmentCreateDialog({
               </Stack>
             </Box>
             {error && (
-              <Typography color="error" fontSize={12}>
+              <Typography color="error" fontSize="var(--fs-12)">
                 {error}
               </Typography>
             )}

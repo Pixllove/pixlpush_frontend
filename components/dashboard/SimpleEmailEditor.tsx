@@ -857,7 +857,7 @@ export default function SimpleEmailEditor({
                 <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
                   <Box>
                     <Typography fontWeight={600}>Footer content</Typography>
-                    <Typography fontSize={12} color="rgba(255,255,255,.55)" sx={{ mt: 0.5 }}>
+                    <Typography fontSize="var(--fs-12)" color="rgba(255,255,255,.55)" sx={{ mt: 0.5 }}>
                       Edit footer details, app links, and social accounts.
                     </Typography>
                   </Box>
@@ -907,12 +907,12 @@ export default function SimpleEmailEditor({
                     <TextField label="Footer badge text" size="small" value={footerConfig.badgeText} onChange={(event) => setFooterConfig((current) => ({ ...current, badgeText: event.target.value }))} />
                     {(footerConfig.type === "social" || footerConfig.type === "social-app") && <Box className="footer-social-settings">
                       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-                        <Typography fontSize={12} fontWeight={500}>Social accounts</Typography>
+                        <Typography fontSize="var(--fs-12)" fontWeight={500}>Social accounts</Typography>
                         <Button size="small" variant="contained" startIcon={<AddRounded />} onClick={() => setFooterConfig((current) => ({ ...current, socials: [...current.socials, { platform: "Facebook", url: "https://" }] }))}>Add</Button>
                       </Stack>
                       {footerConfig.socials.map((social, index) => <Box key={`${social.platform}-${index}`} className="footer-social-item">
                         <Stack direction="row" justifyContent="space-between" alignItems="center">
-                          <Typography fontSize={11} fontWeight={500}>{social.platform}</Typography>
+                          <Typography fontSize="var(--fs-11)" fontWeight={500}>{social.platform}</Typography>
                           <IconButton size="small" color="error" onClick={() => setFooterConfig((current) => ({ ...current, socials: current.socials.filter((_, socialIndex) => socialIndex !== index) }))}><DeleteOutlineRounded fontSize="small" /></IconButton>
                         </Stack>
                         <TextField label="Platform" select size="small" value={SOCIAL_OPTIONS.includes(social.platform) ? social.platform : "Facebook"} onChange={(event) => setFooterConfig((current) => ({ ...current, socials: current.socials.map((entry, socialIndex) => socialIndex === index ? { ...entry, platform: event.target.value } : entry) }))}>
@@ -1194,18 +1194,18 @@ export default function SimpleEmailEditor({
         <DialogTitle>
           <Typography
             color="primary"
-            fontSize={12}
+            fontSize="var(--fs-12)"
             fontWeight={500}
             letterSpacing=".14em"
           >
             INSERT LINK
           </Typography>
-          <Typography variant="h2" fontSize={24} sx={{ mt: 1 }}>
+          <Typography variant="h2" fontSize="var(--fs-24)" sx={{ mt: 1 }}>
             Add link
           </Typography>
         </DialogTitle>
         <DialogContent>
-          <Typography fontSize={13} fontWeight={600} sx={{ mb: 0.75 }}>
+          <Typography fontSize="var(--fs-13)" fontWeight={600} sx={{ mb: 0.75 }}>
             Text
           </Typography>
           <TextField
@@ -1215,7 +1215,7 @@ export default function SimpleEmailEditor({
             onChange={(event) => setLinkText(event.target.value)}
             placeholder="Text to display"
           />
-          <Typography fontSize={13} fontWeight={600} sx={{ mt: 2, mb: 0.75 }}>
+          <Typography fontSize="var(--fs-13)" fontWeight={600} sx={{ mt: 2, mb: 0.75 }}>
             Link
           </Typography>
           <TextField
@@ -1253,7 +1253,7 @@ export default function SimpleEmailEditor({
           </Stack>
         </DialogTitle>
         <DialogContent>
-          <Typography variant="h2" fontSize={24}>
+          <Typography variant="h2" fontSize="var(--fs-24)">
             What should I write?
           </Typography>
           <Typography color="text.secondary" sx={{ mt: 0.5 }}>
@@ -1270,7 +1270,7 @@ export default function SimpleEmailEditor({
             placeholder="Example: Create a friendly weekend email inviting users to discover new matches."
             sx={{ mt: 2 }}
           />
-          <Typography color="text.secondary" fontSize={11} sx={{ mt: 1 }}>
+          <Typography color="text.secondary" fontSize="var(--fs-11)" sx={{ mt: 1 }}>
             Try: “correct my grammar”, “make this more engaging”, or “shorten
             the email”.
           </Typography>
@@ -1418,7 +1418,7 @@ export default function SimpleEmailEditor({
       >
         <DialogTitle>Email signature</DialogTitle>
         <DialogContent>
-          <Typography color="text.secondary" fontSize={13}>
+          <Typography color="text.secondary" fontSize="var(--fs-13)">
             Edit the local HTML signature and preview it before inserting it
             into the email.
           </Typography>
@@ -1460,11 +1460,11 @@ export default function SimpleEmailEditor({
         fullWidth
       >
         <DialogTitle>
-          <Typography color="primary" fontSize={12} fontWeight={500} letterSpacing=".14em">
+          <Typography color="primary" fontSize="var(--fs-12)" fontWeight={500} letterSpacing=".14em">
             EMAIL FOOTER
           </Typography>
           <Typography variant="h4" sx={{ mt: 0.5 }}>Choose a footer</Typography>
-          <Typography color="text.secondary" fontSize={14} sx={{ mt: 0.5 }}>
+          <Typography color="text.secondary" fontSize="var(--fs-14)" sx={{ mt: 0.5 }}>
             Preview each footer layout and choose the one you want to add to your email.
           </Typography>
         </DialogTitle>
@@ -1484,8 +1484,8 @@ export default function SimpleEmailEditor({
                   setFooterOpen(false);
                 }}
               >
-                <Typography fontWeight={600} fontSize={16}>{option.title}</Typography>
-                <Typography color="text.secondary" fontSize={12} sx={{ mt: 1 }}>
+                <Typography fontWeight={600} fontSize="var(--fs-16)">{option.title}</Typography>
+                <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: 1 }}>
                   {option.description}
                 </Typography>
                 <Divider sx={{ my: 2 }} />
@@ -1540,24 +1540,24 @@ function SimpleCampaignReview({
           <Button variant="outlined" onClick={onSave}>Save for later</Button>
         </Stack>
         <Stack className="campaign-review-heading" direction={{ xs: "column", md: "row" }} justifyContent="space-between" gap={2}>
-          <Box><Typography className="campaign-eyebrow">Campaign setup</Typography><Typography variant="h1">Review your campaign</Typography><Typography color="text.secondary">Check the details, preview your email, and send when you’re ready.</Typography></Box>
+          <Box><Typography className="campaign-eyebrow">Campaign setup</Typography><Typography variant="h1" component="h2">Review your campaign</Typography><Typography color="text.secondary">Check the details, preview your email, and send when you’re ready.</Typography></Box>
           <Chip className="campaign-ready" color="success" size="small" label="Draft ready for review" />
         </Stack>
         <Box className="campaign-review-grid">
           <Stack gap={2.5}>
-            <Paper className="campaign-review-card"><Stack direction="row" justifyContent="space-between" alignItems="flex-start"><Box><Typography variant="h3">Campaign details</Typography><Typography color="text.secondary" fontSize={12}>Give your campaign a clear identity.</Typography></Box><Chip label="Simple editor" size="small" /></Stack><TextField fullWidth label="Campaign name" value={name} onChange={(event) => onNameChange(event.target.value)} /><TextField fullWidth label="Subject line" value={subject} placeholder="Add a subject" onChange={(event) => onSubjectChange(event.target.value)} /><TextField fullWidth label="Preheader (optional)" value={preheader} placeholder="A short preview of your email content" onChange={(event) => setPreheader(event.target.value)} /></Paper>
+            <Paper className="campaign-review-card"><Stack direction="row" justifyContent="space-between" alignItems="flex-start"><Box><Typography variant="h3">Campaign details</Typography><Typography color="text.secondary" fontSize="var(--fs-12)">Give your campaign a clear identity.</Typography></Box><Chip label="Simple editor" size="small" /></Stack><TextField fullWidth label="Campaign name" value={name} onChange={(event) => onNameChange(event.target.value)} /><TextField fullWidth label="Subject line" value={subject} placeholder="Add a subject" onChange={(event) => onSubjectChange(event.target.value)} /><TextField fullWidth label="Preheader (optional)" value={preheader} placeholder="A short preview of your email content" onChange={(event) => setPreheader(event.target.value)} /></Paper>
             <ReviewPanel icon={<EmailRounded />} title="Sender details" copy="These details come from Email Marketing settings."><Box className="review-info-grid"><span><small>From name</small><b>PixlPush</b></span><span><small>From email</small><b>hello@pixlpush.com</b></span></Box></ReviewPanel>
-            <ReviewPanel icon={<InsertEmoticonRounded />} title="Recipients" copy="Who should receive this campaign?"><Select fullWidth size="small" value="All eligible users"><MenuItem value="All eligible users">All eligible users</MenuItem></Select><Typography color="text.secondary" fontSize={11} sx={{ mt: 1.5 }}>You can change your recipient selection before the campaign is sent.</Typography><Typography fontWeight={500} fontSize={12} sx={{ mt: 1 }}>87,493 eligible recipients</Typography></ReviewPanel>
-            <Paper className="campaign-review-card"><Stack direction="row" gap={1.5}><Box className="review-icon"><ScheduleRounded /></Box><Box><Typography variant="h3">Schedule delivery</Typography><Typography color="text.secondary" fontSize={12}>Leave it blank to start delivery now, or choose a future time.</Typography></Box></Stack><Tabs value={deliveryMode} onChange={(_, value) => setDeliveryMode(value)} aria-label="Delivery time"><Tab value="immediately" label="Immediately" /><Tab value="specific" label="Specific date" /></Tabs>{deliveryMode === "specific" ? <Box className="review-schedule-panel"><TextField fullWidth type="date" label="Date" InputLabelProps={{ shrink: true }} /><Stack direction="row" gap={1} sx={{ mt: 1.5 }}><TextField size="small" label="Hour" defaultValue="12" /><TextField size="small" label="Minute" defaultValue="00" /><Select size="small" defaultValue="AM"><MenuItem value="AM">AM</MenuItem><MenuItem value="PM">PM</MenuItem></Select></Stack><Typography className="review-timezone">Scheduled using your workspace timezone (UTC+1).</Typography></Box> : <Typography className="review-note">Immediate campaigns start through the background delivery pipeline.</Typography>}</Paper>
+            <ReviewPanel icon={<InsertEmoticonRounded />} title="Recipients" copy="Who should receive this campaign?"><Select fullWidth size="small" value="All eligible users"><MenuItem value="All eligible users">All eligible users</MenuItem></Select><Typography color="text.secondary" fontSize="var(--fs-11)" sx={{ mt: 1.5 }}>You can change your recipient selection before the campaign is sent.</Typography><Typography fontWeight={500} fontSize="var(--fs-12)" sx={{ mt: 1 }}>87,493 eligible recipients</Typography></ReviewPanel>
+            <Paper className="campaign-review-card"><Stack direction="row" gap={1.5}><Box className="review-icon"><ScheduleRounded /></Box><Box><Typography variant="h3">Schedule delivery</Typography><Typography color="text.secondary" fontSize="var(--fs-12)">Leave it blank to start delivery now, or choose a future time.</Typography></Box></Stack><Tabs value={deliveryMode} onChange={(_, value) => setDeliveryMode(value)} aria-label="Delivery time"><Tab value="immediately" label="Immediately" /><Tab value="specific" label="Specific date" /></Tabs>{deliveryMode === "specific" ? <Box className="review-schedule-panel"><TextField fullWidth type="date" label="Date" InputLabelProps={{ shrink: true }} /><Stack direction="row" gap={1} sx={{ mt: 1.5 }}><TextField size="small" label="Hour" defaultValue="12" /><TextField size="small" label="Minute" defaultValue="00" /><Select size="small" defaultValue="AM"><MenuItem value="AM">AM</MenuItem><MenuItem value="PM">PM</MenuItem></Select></Stack><Typography className="review-timezone">Scheduled using your workspace timezone (UTC+1).</Typography></Box> : <Typography className="review-note">Immediate campaigns start through the background delivery pipeline.</Typography>}</Paper>
           </Stack>
-          <Paper className="campaign-review-card campaign-review-preview"><Stack direction="row" justifyContent="space-between" alignItems="center"><Box><Typography variant="h3">Email preview</Typography><Typography color="text.secondary" fontSize={12}>This is how your campaign will look.</Typography></Box><Button variant="outlined" onClick={onBack}>Edit content</Button></Stack><Paper className="review-email-frame" dangerouslySetInnerHTML={{ __html: `<h3>${subject || "Add a subject"}</h3>${content || "<p>Your email content will appear here.</p>"}` }} /></Paper>
+          <Paper className="campaign-review-card campaign-review-preview"><Stack direction="row" justifyContent="space-between" alignItems="center"><Box><Typography variant="h3">Email preview</Typography><Typography color="text.secondary" fontSize="var(--fs-12)">This is how your campaign will look.</Typography></Box><Button variant="outlined" onClick={onBack}>Edit content</Button></Stack><Paper className="review-email-frame" dangerouslySetInnerHTML={{ __html: `<h3>${subject || "Add a subject"}</h3>${content || "<p>Your email content will appear here.</p>"}` }} /></Paper>
         </Box>
-        <Paper className="campaign-review-footer"><Box><Typography fontWeight={600}>Ready to send this campaign?</Typography><Typography color="text.secondary" fontSize={11}>The campaign is prepared locally and can be sent when you are ready.</Typography></Box><Button variant="contained" startIcon={<SendRounded />} onClick={() => onNotice("Campaign ready to send locally")}>Send campaign</Button></Paper>
+        <Paper className="campaign-review-footer"><Box><Typography fontWeight={600}>Ready to send this campaign?</Typography><Typography color="text.secondary" fontSize="var(--fs-11)">The campaign is prepared locally and can be sent when you are ready.</Typography></Box><Button variant="contained" startIcon={<SendRounded />} onClick={() => onNotice("Campaign ready to send locally")}>Send campaign</Button></Paper>
       </Box>
     </Box>
   );
 }
 
 function ReviewPanel({ icon, title, copy, children }: { icon: React.ReactNode; title: string; copy: string; children: React.ReactNode }) {
-  return <Paper className="campaign-review-card"><Stack direction="row" gap={1.5}><Box className="review-icon">{icon}</Box><Box><Typography variant="h3">{title}</Typography><Typography color="text.secondary" fontSize={12}>{copy}</Typography></Box></Stack><Box sx={{ mt: 2 }}>{children}</Box></Paper>;
+  return <Paper className="campaign-review-card"><Stack direction="row" gap={1.5}><Box className="review-icon">{icon}</Box><Box><Typography variant="h3">{title}</Typography><Typography color="text.secondary" fontSize="var(--fs-12)">{copy}</Typography></Box></Stack><Box sx={{ mt: 2 }}>{children}</Box></Paper>;
 }

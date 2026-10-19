@@ -66,7 +66,7 @@ export default function AddDomainDialog({ open, projectId, onClose, onCreated }:
         <DialogTitle>Add a sending domain</DialogTitle>
         <DialogContent>
           <Stack gap={2} sx={{ pt: 1 }}>
-            <Typography color="text.secondary" fontSize={13}>Enter the address you want to send from. We will set up its domain.</Typography>
+            <Typography color="text.secondary" fontSize="var(--fs-13)">Enter the address you want to send from. We will set up its domain.</Typography>
             {error && <Alert severity="error">{error}</Alert>}
             <TextField
               label="Sender email"

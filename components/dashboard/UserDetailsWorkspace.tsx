@@ -126,7 +126,7 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
         Back to Users
       </Button>
       <Box className="user-detail-breadcrumb">
-        <Typography color="text.secondary" fontSize={11}>
+        <Typography color="text.secondary" fontSize="var(--fs-11)">
           Users&nbsp; › &nbsp;{user?.email || user?.externalUserId || userId}
         </Typography>
         <Stack
@@ -134,7 +134,7 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
           alignItems={{ xs: "flex-start", sm: "center" }}
           gap={1}
         >
-          <Typography className="user-detail-email-title">
+          <Typography component="h1" className="user-detail-email-title">
             {user?.email || user?.externalUserId || userId}
           </Typography>
           <Chip
@@ -143,7 +143,7 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
             className={user?.deletedAt ? "paused-chip" : "active-chip"}
           />
         </Stack>
-        <Typography color="text.secondary" fontSize={11}>
+        <Typography color="text.secondary" fontSize="var(--fs-11)">
           {user?.name || "No name provided"}
         </Typography>
       </Box>
@@ -166,7 +166,7 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
             >
               <Box>
                 <Typography fontWeight={600}>User Details</Typography>
-                <Typography color="text.secondary" fontSize={11}>
+                <Typography color="text.secondary" fontSize="var(--fs-11)">
                   Account identity, subscription, permissions, device, and
                   profile information
                 </Typography>
@@ -274,7 +274,7 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
           </Card>
           <Card className="group-section-card user-engagement-card">
             <Typography variant="h3">Engagement</Typography>
-            <Typography color="text.secondary" fontSize={12}>
+            <Typography color="text.secondary" fontSize="var(--fs-12)">
               Email and push performance are calculated independently by channel
             </Typography>
             <Grid container spacing={1.2} sx={{ mt: 1 }}>
@@ -336,7 +336,7 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
                 value="No"
               />
             </Grid>
-            <Typography color="text.secondary" fontSize={11} sx={{ mt: 1 }}>
+            <Typography color="text.secondary" fontSize="var(--fs-11)" sx={{ mt: 1 }}>
               SDK events recorded:{" "}
               {count(user?.engagement?.sdkEvents ?? (eventsQuery.isLoading ? undefined : events.length))}
             </Typography>
@@ -406,7 +406,7 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
               overflow: "auto",
               color: "#f7f1ff",
               fontFamily: "var(--pp-mono)",
-              fontSize: 12,
+              fontSize: "var(--fs-12)",
               lineHeight: 1.65,
             }}
           >
@@ -415,7 +415,7 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
         </DialogContent>
         <DialogActions sx={{ justifyContent: "space-between" }}>
           {copied ? (
-            <Typography color="success.main" fontSize={12} fontWeight={500}>
+            <Typography color="success.main" fontSize="var(--fs-12)" fontWeight={500}>
               JSON copied
             </Typography>
           ) : (
@@ -497,7 +497,7 @@ function ActivityCard({
             value={category}
             displayEmpty
             onChange={(event) => onCategoryChange(String(event.target.value))}
-            sx={{ minWidth: 150, fontSize: 13 }}
+            sx={{ minWidth: 150, fontSize: "var(--fs-13)" }}
           >
             <MenuItem value="">All activity</MenuItem>
             {categories.map((name) => (
@@ -532,7 +532,7 @@ function ActivityCard({
                 </Box>
                 <Box>
                   <Stack direction="row" gap={1} alignItems="center">
-                    <Typography fontSize={11} fontWeight={500}>
+                    <Typography fontSize="var(--fs-11)" fontWeight={500}>
                       {activity.title || activity.type || "Activity"}
                     </Typography>
                     <Chip
@@ -540,12 +540,12 @@ function ActivityCard({
                       size="small"
                     />
                   </Stack>
-                  <Typography color="text.secondary" fontSize={11}>
+                  <Typography color="text.secondary" fontSize="var(--fs-11)">
                     {formatDate(activity.occurredAt || activity.createdAt)}
                   </Typography>
                   {activity.details?.length ? (
                     activity.details.map((item) => (
-                      <Typography key={item.label} fontSize={11}>
+                      <Typography key={item.label} fontSize="var(--fs-11)">
                         <Box component="span" sx={{ color: "text.secondary" }}>
                           {item.label}:
                         </Box>{" "}
@@ -553,7 +553,7 @@ function ActivityCard({
                       </Typography>
                     ))
                   ) : activity.description ? (
-                    <Typography color="text.secondary" fontSize={11}>
+                    <Typography color="text.secondary" fontSize="var(--fs-11)">
                       {activity.description}
                     </Typography>
                   ) : null}
@@ -570,13 +570,13 @@ function ActivityCard({
             </Box>
           ))
         ) : (
-          <Typography color="text.secondary" fontSize={12}>
+          <Typography color="text.secondary" fontSize="var(--fs-12)">
             No activity recorded for this user.
           </Typography>
         )}
       </Stack>
       <Stack direction="row" justifyContent="space-between" sx={{ mt: 2 }}>
-        <Typography color="text.secondary" fontSize={11}>
+        <Typography color="text.secondary" fontSize="var(--fs-11)">
           Page {page} of {totalPages} • {total.toLocaleString()}{" "}
           {total === 1 ? "activity" : "activities"}
         </Typography>
@@ -631,10 +631,10 @@ function DetailHeader({
         <Icon fontSize="small" />
       </Box>
       <Box>
-        <Typography fontWeight={600} fontSize={13}>
+        <Typography fontWeight={600} fontSize="var(--fs-13)">
           {title}
         </Typography>
-        <Typography color="text.secondary" fontSize={11}>
+        <Typography color="text.secondary" fontSize="var(--fs-11)">
           {subtitle}
         </Typography>
       </Box>
@@ -650,7 +650,7 @@ function UserDetailSection({
 }) {
   return (
     <Box className="user-detail-section">
-      <Typography fontWeight={500} fontSize={11} sx={{ mb: 1 }}>
+      <Typography fontWeight={500} fontSize="var(--fs-11)" sx={{ mb: 1 }}>
         {title}
       </Typography>
       <Grid container spacing={1.2}>
@@ -675,14 +675,14 @@ function DetailItem({
       <Box className="user-detail-item">
         <Stack direction="row" gap={0.7} alignItems="center">
           <Icon sx={{ fontSize: 13, color: "#6678ee" }} />
-          <Typography color="text.secondary" fontSize={11}>
+          <Typography color="text.secondary" fontSize="var(--fs-11)">
             {label}
           </Typography>
         </Stack>
         {badge ? (
           <Chip label={value} size="small" className="active-chip" />
         ) : (
-          <Typography fontSize={11} fontWeight={500}>
+          <Typography fontSize="var(--fs-11)" fontWeight={500}>
             {value}
           </Typography>
         )}
@@ -696,13 +696,13 @@ function MetricRows({ rows, empty = "—" }: { rows: string[]; empty?: string })
       {rows.length ? (
         rows.map((row) => (
           <Stack key={row} direction="row" justifyContent="space-between" alignItems="center" className="group-metric-row">
-            <Typography fontSize={11}>{row.split("|")[0]}</Typography>
-            <Typography fontSize={11} fontWeight={500}>{row.split("|")[1] ?? "—"}</Typography>
+            <Typography fontSize="var(--fs-11)">{row.split("|")[0]}</Typography>
+            <Typography fontSize="var(--fs-11)" fontWeight={500}>{row.split("|")[1] ?? "—"}</Typography>
           </Stack>
         ))
       ) : (
         <Stack direction="row" justifyContent="space-between" alignItems="center" className="group-metric-row">
-          <Typography fontSize={11}>{empty}</Typography>
+          <Typography fontSize="var(--fs-11)">{empty}</Typography>
         </Stack>
       )}
     </Stack>
@@ -714,10 +714,10 @@ function metric(Icon: ElementType, label: string, value: string) {
       <Box className="user-detail-icon">
         <Icon fontSize="small" />
       </Box>
-      <Typography color="text.secondary" fontSize={11}>
+      <Typography color="text.secondary" fontSize="var(--fs-11)">
         {label}
       </Typography>
-      <Typography fontSize={20} fontWeight={600}>
+      <Typography fontSize="var(--fs-20)" fontWeight={600}>
         {value}
       </Typography>
     </Card>

@@ -76,7 +76,7 @@ export default function FirebasePanel() {
     <Stack gap={2.5}>
       <Box>
         <Typography variant="h3">Firebase / FCM</Typography>
-        <Typography color="text.secondary" fontSize={12}>Connect the Firebase project used by {appName} for push delivery and device token management.</Typography>
+        <Typography color="text.secondary" fontSize="var(--fs-12)">Connect the Firebase project used by {appName} for push delivery and device token management.</Typography>
       </Box>
 
       {query.isError && <Alert severity="error">{query.error.message}</Alert>}
@@ -90,7 +90,7 @@ export default function FirebasePanel() {
               <Typography fontWeight={600}>Firebase service account</Typography>
               {config && <SettingsStatus tone={connected ? 'success' : config.status === 'error' ? 'warning' : 'neutral'}>{connected ? 'Connected' : config.status === 'error' ? 'Error' : 'Not connected'}</SettingsStatus>}
             </Stack>
-            <Typography color="text.secondary" fontSize={12} sx={{ mt: .6 }}>
+            <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: .6 }}>
               {query.isPending ? 'Loading…'
                 : config?.status === 'error' ? config.lastError
                 : configured ? `Firebase project ${config!.firebaseProjectId} · ${config!.clientEmail}${config!.validatedAt ? ` · Last checked ${new Date(config!.validatedAt).toLocaleString()}` : ''}`
@@ -113,8 +113,8 @@ export default function FirebasePanel() {
           {checklist.map(([label, value, done]) => (
             <Stack direction="row" alignItems="center" key={label}>
               {done ? <CheckCircleRounded sx={{ color: '#15965e', fontSize: 19, mr: 1 }} /> : config?.status === 'error' && label.startsWith('Firebase Cloud') ? <ErrorOutlineRounded sx={{ color: '#ad6415', fontSize: 19, mr: 1 }} /> : <RadioButtonUncheckedRounded sx={{ color: '#b6aabf', fontSize: 19, mr: 1 }} />}
-              <Typography fontSize={13} sx={{ flex: 1 }}>{label}</Typography>
-              <Typography fontSize={12} color="text.secondary">{value}</Typography>
+              <Typography fontSize="var(--fs-13)" sx={{ flex: 1 }}>{label}</Typography>
+              <Typography fontSize="var(--fs-12)" color="text.secondary">{value}</Typography>
             </Stack>
           ))}
         </Stack>
@@ -123,7 +123,7 @@ export default function FirebasePanel() {
       {configured && (
         <Card className="saas-card">
           <Typography variant="h3">Change Firebase project</Typography>
-          <Typography color="text.secondary" fontSize={12} sx={{ mt: .5 }}>Use this only when moving {appName} to a completely different Firebase project. Existing FCM tokens may no longer be valid.</Typography>
+          <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: .5 }}>Use this only when moving {appName} to a completely different Firebase project. Existing FCM tokens may no longer be valid.</Typography>
           <Stack direction="row" gap={1.5} sx={{ mt: 2 }}>
             <Button color="warning" variant="outlined" startIcon={<WarningAmberRounded />} disabled={!canEdit} onClick={() => setOpen(true)}>Start change flow</Button>
             <Button color="error" disabled={!canEdit || disconnect.isPending} onClick={() => { if (window.confirm('Disconnect Firebase? Push sending stops for this Project.')) run(disconnect); }}>Disconnect</Button>
@@ -142,7 +142,7 @@ export default function FirebasePanel() {
               {file ? file.name : 'Choose JSON file'}
               <input type="file" accept="application/json,.json" hidden onChange={(e) => pick(e.target.files?.[0])} />
             </Button>
-            {file?.projectId && <Typography fontSize={12} color="text.secondary">Firebase project in this file: <b>{file.projectId}</b></Typography>}
+            {file?.projectId && <Typography fontSize="var(--fs-12)" color="text.secondary">Firebase project in this file: <b>{file.projectId}</b></Typography>}
             {file?.adminKey && (
               <Alert severity="warning">This is Firebase’s default Admin key. It works, but it also gives access to your database, users and storage. A key that can only send push is safer.</Alert>
             )}

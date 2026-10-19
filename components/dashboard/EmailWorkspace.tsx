@@ -1150,7 +1150,7 @@ export default function EmailWorkspace() {
                   ? "Draft emails"
                   : "Sent campaigns"}
             </Typography>
-            <Typography color="text.secondary" fontSize={12}>
+            <Typography color="text.secondary" fontSize="var(--fs-12)">
               {tab === "templates"
                 ? "Reusable email content ready for your next campaign."
                 : tab === "drafts"
@@ -1241,14 +1241,14 @@ export default function EmailWorkspace() {
           alignItems="center"
           className="table-footer"
         >
-          <Typography color="text.secondary" fontSize={11}>
+          <Typography color="text.secondary" fontSize="var(--fs-11)">
             {isListLoading
               ? "Loading emails…"
               : `Showing ${visible.length} result${visible.length === 1 ? "" : "s"}`}
             {tab === "templates" ? " · templates" : ""}
           </Typography>
           <Stack direction="row" alignItems="center" gap={1}>
-            <Typography color="text.secondary" fontSize={11}>
+            <Typography color="text.secondary" fontSize="var(--fs-11)">
               Rows
             </Typography>
             <Select
@@ -1306,7 +1306,7 @@ function EmailTableRow({
         <Typography
           component="button"
           type="button"
-          fontSize={12}
+          fontSize="var(--fs-12)"
           fontWeight={500}
           onClick={onEdit}
           sx={{
@@ -1324,7 +1324,7 @@ function EmailTableRow({
         >
           {item.name}
         </Typography>
-        <Typography color="text.secondary" fontSize={11}>
+        <Typography color="text.secondary" fontSize="var(--fs-11)">
           {item.kind === "templates"
             ? "Email template"
             : item.kind === "drafts"
@@ -1333,22 +1333,22 @@ function EmailTableRow({
         </Typography>
       </TableCell>
       <TableCell>
-        <Typography fontSize={11} noWrap>
+        <Typography fontSize="var(--fs-11)" noWrap>
           {item.subject || "—"}
         </Typography>
       </TableCell>
       <TableCell sx={{ maxWidth: 260 }}>
-        <Typography fontSize={11} noWrap>
+        <Typography fontSize="var(--fs-11)" noWrap>
           {item.description}
         </Typography>
       </TableCell>
       <TableCell>
-        <Typography color="text.secondary" fontSize={11}>
+        <Typography color="text.secondary" fontSize="var(--fs-11)">
           {item.editor === "drag" ? "Drag & drop" : "Simple"}
         </Typography>
       </TableCell>
       <TableCell>
-        <Typography color="text.secondary" fontSize={11}>
+        <Typography color="text.secondary" fontSize="var(--fs-11)">
           {item.updated.replace("Edited ", "")}
         </Typography>
       </TableCell>
@@ -1372,12 +1372,12 @@ function EmailTableRow({
         />
       </TableCell>
       <TableCell align="right">
-        <Typography color="text.secondary" fontSize={11}>
+        <Typography color="text.secondary" fontSize="var(--fs-11)">
           {item.kind === "send" ? "125.4K" : "—"}
         </Typography>
       </TableCell>
       <TableCell align="right">
-        <Typography color="text.secondary" fontSize={11}>
+        <Typography color="text.secondary" fontSize="var(--fs-11)">
           {item.kind === "send" ? "42.8%" : "—"}
         </Typography>
       </TableCell>
@@ -1525,7 +1525,7 @@ function ChoiceScreen({
         >
           Back to email templates
         </Button>
-        <Typography color="text.secondary" fontSize={12}>
+        <Typography color="text.secondary" fontSize="var(--fs-12)">
           <b>Design email</b> &nbsp;/&nbsp; Details &nbsp;/&nbsp; Schedule
         </Typography>
       </Stack>
@@ -1572,7 +1572,7 @@ function ChoiceScreen({
                 </Box>
                 <Box sx={{ flex: 1, textAlign: "left" }}>
                   <Typography fontWeight={600}>{item.name}</Typography>
-                  <Typography color="text.secondary" fontSize={12}>
+                  <Typography color="text.secondary" fontSize="var(--fs-12)">
                     {item.description}
                   </Typography>
                 </Box>
@@ -1591,22 +1591,22 @@ function ChoiceScreen({
         <DialogTitle>
           <Typography
             color="primary"
-            fontSize={11}
+            fontSize="var(--fs-11)"
             fontWeight={500}
             letterSpacing=".16em"
           >
             EMAIL LANGUAGE
           </Typography>
-          <Typography variant="h2" fontSize={20} sx={{ mt: 1 }}>
+          <Typography variant="h2" fontSize="var(--fs-20)" sx={{ mt: 1 }}>
             Choose language to start
           </Typography>
         </DialogTitle>
         <DialogContent>
-          <Typography color="text.secondary" fontSize={12}>
+          <Typography color="text.secondary" fontSize="var(--fs-12)">
             The editor will open in this language first, and AI translation will
             use it as an available editor version.
           </Typography>
-          <Typography fontSize={12} fontWeight={500} sx={{ mt: 2, mb: 0.75 }}>
+          <Typography fontSize="var(--fs-12)" fontWeight={500} sx={{ mt: 2, mb: 0.75 }}>
             Create email in
           </Typography>
           <Select
@@ -1632,10 +1632,10 @@ function ChoiceScreen({
               onClick={(event) => event.stopPropagation()}
             />
             <Box>
-              <Typography fontSize={12} fontWeight={500}>
+              <Typography fontSize="var(--fs-12)" fontWeight={500}>
                 Set as default for next time
               </Typography>
-              <Typography color="text.secondary" fontSize={11}>
+              <Typography color="text.secondary" fontSize="var(--fs-11)">
                 Selected language: {languageName(language)}
               </Typography>
             </Box>
@@ -1686,7 +1686,7 @@ function EditorChoice({
         <Typography variant="h3" sx={{ mt: 1 }}>
           {drag ? "Drag & drop editor" : "Simple editor"}
         </Typography>
-        <Typography color="text.secondary" fontSize={12} sx={{ mt: 0.7 }}>
+        <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: 0.7 }}>
           {drag
             ? "Create polished, visual emails with images, sections, buttons, dividers, and branded layouts. Ideal for newsletters, promotions, product announcements, and high-impact campaigns."
             : "Create clear, personal emails in seconds. Ideal for welcome messages, reminders, follow-ups, re-engagement emails, and simple Journey Automation steps."}
@@ -1972,7 +1972,7 @@ function SimpleEditor({
           {panel === "ai" ? (
             <>
               <Typography variant="h3">AI translation</Typography>
-              <Typography color="text.secondary" fontSize={12} sx={{ mt: 0.5 }}>
+              <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: 0.5 }}>
                 Translate this simple email into selected languages, then switch
                 between each version and edit it in the editor.
               </Typography>
@@ -2010,7 +2010,7 @@ function SimpleEditor({
                   key={language}
                   className="language-row"
                 >
-                  <Typography fontSize={12}>{language}</Typography>
+                  <Typography fontSize="var(--fs-12)">{language}</Typography>
                   <input type="checkbox" aria-label={language} />
                 </Stack>
               ))}
@@ -2031,7 +2031,7 @@ function SimpleEditor({
           ) : (
             <>
               <Typography variant="h3">Settings</Typography>
-              <Typography color="text.secondary" fontSize={12} sx={{ mt: 0.5 }}>
+              <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: 0.5 }}>
                 Simple email settings and footer content.
               </Typography>
               <TextField
@@ -3173,7 +3173,7 @@ function DragEditor({
                     ? "SEARCH RESULTS"
                     : activeCategory.toUpperCase()}
                 </Typography>
-                <Typography color="text.secondary" fontSize={12} sx={{ mt: 1 }}>
+                <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: 1 }}>
                   Drag a design into the email or click Add.
                 </Typography>
                 <Stack gap={1.5} sx={{ mt: 2 }}>
@@ -3489,7 +3489,7 @@ function DragEditor({
                 <Typography variant="h3" sx={{ mt: 2 }}>
                   Brand system
                 </Typography>
-                <Typography color="text.secondary" fontSize={12} sx={{ mt: 1 }}>
+                <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: 1 }}>
                   Set default colors, typography, and layout for this whole
                   email.
                 </Typography>
@@ -3561,13 +3561,13 @@ function DragEditor({
               <Typography variant="h3" sx={{ mt: 1 }}>
                 {selectedBlock.variant || selectedBlock.type}
               </Typography>
-              <Typography color="text.secondary" fontSize={12} sx={{ mt: 1 }}>
+              <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: 1 }}>
                 Click any text in the email to edit it. Links, social icons and
                 style are set here.
               </Typography>
               {selectedLinks.length > 0 && (
                 <Paper className="inspector-upload-card" sx={{ mt: 2 }}>
-                  <Typography fontWeight={500} fontSize={12}>
+                  <Typography fontWeight={500} fontSize="var(--fs-12)">
                     Links and buttons
                   </Typography>
                   {selectedLinks.map((link, linkIndex) => (
@@ -3610,7 +3610,7 @@ function DragEditor({
               )}
               {selectedHasSocials && (
                 <Paper className="inspector-upload-card" sx={{ mt: 2 }}>
-                  <Typography fontWeight={500} fontSize={12}>
+                  <Typography fontWeight={500} fontSize="var(--fs-12)">
                     Social links
                   </Typography>
                   {selectedSocials.map((social, socialIndex) => (
@@ -3713,7 +3713,7 @@ function DragEditor({
               )}
               {selectedHasLogo && (
                 <Paper className="inspector-upload-card" sx={{ mt: 2 }}>
-                  <Typography fontWeight={500} fontSize={12}>
+                  <Typography fontWeight={500} fontSize="var(--fs-12)">
                     Logo
                   </Typography>
                   <Stack direction="row" gap={1} sx={{ mt: 1 }}>
@@ -3761,8 +3761,8 @@ function DragEditor({
                         justifyContent="space-between"
                         sx={{ mt: 2 }}
                       >
-                        <Typography fontSize={12}>Size</Typography>
-                        <Typography fontSize={12} fontWeight={500}>
+                        <Typography fontSize="var(--fs-12)">Size</Typography>
+                        <Typography fontSize="var(--fs-12)" fontWeight={500}>
                           {selectedBlock.logoWidth ?? logoSizes.md}px wide
                         </Typography>
                       </Stack>
@@ -3836,7 +3836,7 @@ function DragEditor({
               )}
               {selectedHasImage && (
                 <Paper className="inspector-upload-card" sx={{ mt: 2 }}>
-                  <Typography fontWeight={500} fontSize={12}>
+                  <Typography fontWeight={500} fontSize="var(--fs-12)">
                     Image
                   </Typography>
                   <Stack direction="row" gap={1} sx={{ mt: 1 }}>
@@ -3978,10 +3978,10 @@ function DragEditor({
                                 direction="row"
                                 justifyContent="space-between"
                               >
-                                <Typography fontSize={12}>
+                                <Typography fontSize="var(--fs-12)">
                                   {slider.label}
                                 </Typography>
-                                <Typography fontSize={12} fontWeight={500}>
+                                <Typography fontSize="var(--fs-12)" fontWeight={500}>
                                   {slider.value}
                                   {slider.unit}
                                 </Typography>
@@ -4071,8 +4071,8 @@ function DragEditor({
                 .map(([key, label, min, max, step]) => (
                   <Box className="inspector-slider-row" key={key}>
                     <Stack direction="row" justifyContent="space-between">
-                      <Typography fontSize={12}>{label}</Typography>
-                      <Typography fontSize={12} fontWeight={500}>
+                      <Typography fontSize="var(--fs-12)">{label}</Typography>
+                      <Typography fontSize="var(--fs-12)" fontWeight={500}>
                         {selectedBlock.sectionStyle?.[key] ??
                           styleDefaults(selectedBlock)[key]}
                         {key === "lineHeight" ? "" : "px"}
@@ -4234,7 +4234,7 @@ function CampaignReview({
         >
           <Box>
             <Typography className="campaign-eyebrow">Campaign setup</Typography>
-            <Typography variant="h1">Review your campaign</Typography>
+            <Typography variant="h1" component="h2">Review your campaign</Typography>
             <Typography color="text.secondary">
               Check the details, preview your email, and send when you’re ready.
             </Typography>
@@ -4257,7 +4257,7 @@ function CampaignReview({
               >
                 <Box>
                   <Typography variant="h3">Campaign details</Typography>
-                  <Typography color="text.secondary" fontSize={12}>
+                  <Typography color="text.secondary" fontSize="var(--fs-12)">
                     Give your campaign a clear identity.
                   </Typography>
                 </Box>
@@ -4310,11 +4310,11 @@ function CampaignReview({
                   All eligible users
                 </MenuItem>
               </Select>
-              <Typography color="text.secondary" fontSize={11} sx={{ mt: 1.5 }}>
+              <Typography color="text.secondary" fontSize="var(--fs-11)" sx={{ mt: 1.5 }}>
                 You can change your recipient selection before the campaign is
                 sent.
               </Typography>
-              <Typography fontWeight={500} fontSize={12} sx={{ mt: 1 }}>
+              <Typography fontWeight={500} fontSize="var(--fs-12)" sx={{ mt: 1 }}>
                 87,493 eligible recipients
               </Typography>
             </ReviewInfoCard>
@@ -4325,7 +4325,7 @@ function CampaignReview({
                 </Box>
                 <Box>
                   <Typography variant="h3">Schedule delivery</Typography>
-                  <Typography color="text.secondary" fontSize={12}>
+                  <Typography color="text.secondary" fontSize="var(--fs-12)">
                     Leave it blank to start delivery now, or choose a future
                     time.
                   </Typography>
@@ -4375,7 +4375,7 @@ function CampaignReview({
             >
               <Box>
                 <Typography variant="h3">Email preview</Typography>
-                <Typography color="text.secondary" fontSize={12}>
+                <Typography color="text.secondary" fontSize="var(--fs-12)">
                   This is how your campaign will look.
                 </Typography>
               </Box>
@@ -4399,7 +4399,7 @@ function CampaignReview({
             <Typography fontWeight={600}>
               Ready to send this campaign?
             </Typography>
-            <Typography color="text.secondary" fontSize={11}>
+            <Typography color="text.secondary" fontSize="var(--fs-11)">
               The campaign is prepared locally and can be sent when you are
               ready.
             </Typography>
@@ -4435,7 +4435,7 @@ function ReviewInfoCard({
         <Box className="review-icon">{icon}</Box>
         <Box>
           <Typography variant="h3">{title}</Typography>
-          <Typography color="text.secondary" fontSize={12}>
+          <Typography color="text.secondary" fontSize="var(--fs-12)">
             {copy}
           </Typography>
         </Box>

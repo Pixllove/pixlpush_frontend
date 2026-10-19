@@ -63,7 +63,7 @@ export default function LoginForm({ active = true, onSwitch }: { active?: boolea
   return (
     <Box className={`auth-block${active ? ' is-active' : ''}`}>
       <Box>
-        <Typography component="h1" variant="h1">Welcome back</Typography>
+        <Typography component={active ? "h1" : "h2"} variant="h1">Welcome back</Typography>
         <Typography color="text.secondary" sx={{ mt: 0.5 }}>Log in to your PixlPush workspace.</Typography>
       </Box>
 

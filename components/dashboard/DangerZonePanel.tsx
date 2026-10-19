@@ -40,7 +40,7 @@ export default function DangerZonePanel() {
     <Stack gap={2.5}>
       <Box>
         <Typography variant="h3">Danger zone</Typography>
-        <Typography color="text.secondary" fontSize={12}>Project deactivation is separate from subscription cancellation.</Typography>
+        <Typography color="text.secondary" fontSize="var(--fs-12)">Project deactivation is separate from subscription cancellation.</Typography>
       </Box>
 
       {error && !open && <Alert severity="error">{error}</Alert>}
@@ -50,7 +50,7 @@ export default function DangerZonePanel() {
           <WarningAmberRounded />
           <Box sx={{ flex: 1 }}>
             <Typography fontWeight={600}>{name} is deactivated</Typography>
-            <Typography color="text.secondary" fontSize={12} sx={{ mt: .5 }}>
+            <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: .5 }}>
               {recoveryOpen
                 ? `It can be restored until ${new Date(project!.recoveryUntil!).toLocaleString()}. Billing is unchanged.`
                 : 'The recovery window has expired. Contact PixlPush support.'}
@@ -65,10 +65,10 @@ export default function DangerZonePanel() {
           <WarningAmberRounded />
           <Box sx={{ flex: 1 }}>
             <Typography fontWeight={600}>Deactivate {name}</Typography>
-            <Typography color="text.secondary" fontSize={12} sx={{ mt: .5 }}>
+            <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: .5 }}>
               The Project enters a 14-day recovery window. After that, normal access cannot be restored. Deactivation does not cancel billing.
             </Typography>
-            {project && !isOwner && <Typography color="text.secondary" fontSize={12} sx={{ mt: .5 }}>Only the Project owner can deactivate it.</Typography>}
+            {project && !isOwner && <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: .5 }}>Only the Project owner can deactivate it.</Typography>}
           </Box>
           <Button color="error" variant="outlined" disabled={!isOwner} onClick={() => setOpen(true)}>Deactivate Project</Button>
         </Card>

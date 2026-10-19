@@ -21,14 +21,14 @@ export default function CaseStudiesPage() {
             </Box>
             <Box sx={{ p: 3 }}>
               <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap={1}>
-                <Box><Typography fontWeight={700}>{story.brand}</Typography><Box component="a" href={story.href} target="_blank" rel="noopener noreferrer" sx={{ display: 'inline-block', mt: .35, color: '#5b18bc', fontSize: 11, fontWeight: 700, textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}>Visit website ↗</Box></Box>
-                <Typography color="text.secondary" fontSize={12}>{story.type}</Typography>
+                <Box><Typography fontWeight={700}>{story.brand}</Typography><Box component="a" href={story.href} target="_blank" rel="noopener noreferrer" sx={{ display: 'inline-block', mt: .35, color: '#5b18bc', fontSize: "var(--fs-12)", fontWeight: 700, textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}>Visit website ↗</Box></Box>
+                <Typography color="text.secondary" fontSize="var(--fs-12)">{story.type}</Typography>
               </Stack>
-              <Box sx={{ mt: 2, display: 'inline-flex', px: 1.2, py: .4, borderRadius: 1, bgcolor: '#e6ffd8', color: '#263b25', fontSize: 10, fontWeight: 700, letterSpacing: '.04em' }}>CUSTOMER RESULT</Box>
-              <Typography sx={{ mt: 1.5, fontSize: { xs: 36, md: 42 }, color: '#5b18bc', fontWeight: 750, letterSpacing: '-.06em', lineHeight: 1 }}>{story.metric}</Typography>
-              <Typography fontSize={16} fontWeight={650} sx={{ mt: .5 }}>{story.result}</Typography>
+              <Box sx={{ mt: 2, display: 'inline-flex', px: 1.2, py: .4, borderRadius: 1, bgcolor: '#e6ffd8', color: '#263b25', fontSize: "var(--fs-12)", fontWeight: 700, letterSpacing: '.04em' }}>CUSTOMER RESULT</Box>
+              <Typography sx={{ mt: 1.5, fontSize: { xs: "var(--fs-40)", md: "var(--fs-40)" }, color: '#5b18bc', fontWeight: 700, letterSpacing: '-.06em', lineHeight: 1 }}>{story.metric}</Typography>
+              <Typography fontSize="var(--fs-16)" fontWeight={600} sx={{ mt: .5 }}>{story.result}</Typography>
               <Divider sx={{ my: 2 }} />
-              <Typography component="blockquote" sx={{ m: 0, color: 'text.secondary', fontSize: 13, lineHeight: 1.65 }}>&ldquo;{story.quote}&rdquo;</Typography>
+              <Typography component="blockquote" sx={{ m: 0, color: 'text.secondary', fontSize: "var(--fs-13)", lineHeight: 1.65 }}>&ldquo;{story.quote}&rdquo;</Typography>
             </Box>
           </Box>
         </Grid>)}

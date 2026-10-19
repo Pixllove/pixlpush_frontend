@@ -53,7 +53,7 @@ export default function SdkKeysPanel() {
     <Stack gap={2.5}>
       <Box>
         <Typography variant="h3">SDK / ingestion keys</Typography>
-        <Typography color="text.secondary" fontSize={12}>Public keys belong to this Project. Keep old keys active while rolling a new key into production.</Typography>
+        <Typography color="text.secondary" fontSize="var(--fs-12)">Public keys belong to this Project. Keep old keys active while rolling a new key into production.</Typography>
       </Box>
 
       {!canManage && active && <Alert severity="info">Only owners, admins and developers can view and manage SDK keys.</Alert>}
@@ -62,12 +62,12 @@ export default function SdkKeysPanel() {
 
       {fresh && (
         <Alert severity="warning" onClose={() => setFresh(undefined)}>
-          <Typography fontWeight={600} fontSize={13}>Copy &quot;{fresh.name}&quot; now. It is shown only once.</Typography>
+          <Typography fontWeight={600} fontSize="var(--fs-13)">Copy &quot;{fresh.name}&quot; now. It is shown only once.</Typography>
           <Box className="key-field" sx={{ mt: 1 }}>
             <KeyRounded /><Typography sx={{ wordBreak: 'break-all' }}>{fresh.key}</Typography>
             <Button size="small" startIcon={<ContentCopyRounded />} onClick={copy}>{copied ? 'Copied' : 'Copy'}</Button>
           </Box>
-          <Typography fontSize={12} sx={{ mt: 1 }}>Project ID for the SDK: <b>{active?.slug}</b></Typography>
+          <Typography fontSize="var(--fs-12)" sx={{ mt: 1 }}>Project ID for the SDK: <b>{active?.slug}</b></Typography>
         </Alert>
       )}
 
@@ -78,7 +78,7 @@ export default function SdkKeysPanel() {
           <Stack direction="row" justifyContent="space-between" alignItems="center">
             <Box>
               <Typography fontWeight={600}>{key.name}</Typography>
-              <Typography color="text.secondary" fontSize={12}>
+              <Typography color="text.secondary" fontSize="var(--fs-12)">
                 Created {date(key.createdAt)} · {key.status === 'revoked' ? `Revoked ${date(key.revokedAt!)}` : key.lastUsedAt ? `Last used ${date(key.lastUsedAt)}` : 'Never used'}
               </Typography>
             </Box>
@@ -94,7 +94,7 @@ export default function SdkKeysPanel() {
       {canManage && (
         <Card className="saas-card" component="form" onSubmit={submit}>
           <Typography variant="h3">Create a new key</Typography>
-          <Typography color="text.secondary" fontSize={12}>Use a separate key for staging or safe production rotation.</Typography>
+          <Typography color="text.secondary" fontSize="var(--fs-12)">Use a separate key for staging or safe production rotation.</Typography>
           <Stack direction={{ xs: 'column', sm: 'row' }} gap={1.5} sx={{ mt: 2 }}>
             <TextField label="Key name" placeholder="Production mobile" value={name} onChange={(e) => setName(e.target.value)} inputProps={{ maxLength: 80 }} fullWidth />
             <Button type="submit" variant="contained" startIcon={<KeyRounded />} disabled={!name.trim() || create.isPending} sx={{ minWidth: 150 }}>

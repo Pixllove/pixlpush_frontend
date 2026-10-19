@@ -101,7 +101,7 @@ export default function AccountProfile({ section = 'all', showCompanyHeading = t
           <Box sx={{ minWidth: 0, mt: 3 }}>
             <Typography variant="caption" className="pp-profile-label">Project role</Typography>
             <Typography noWrap>{roleLoading ? <Skeleton width="70%" /> : roleLabel(role)}</Typography>
-            <Typography color="text.secondary" fontSize={12} sx={{ mt: .5 }}>Managed in Team & Access.</Typography>
+            <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: .5 }}>Managed in Team & Access.</Typography>
           </Box>
         </Box>
       </section>}

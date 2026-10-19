@@ -115,7 +115,7 @@ export default function DashboardFrame({
                 "& .MuiAlert-message": { width: "100%" },
               }}
             >
-              <Typography component="span" fontWeight={700}>
+              <Typography component="span" fontWeight={600}>
                 {projectName} is deactivated.
               </Typography>{" "}
               This project is currently read-only. Restore it from Project Settings
