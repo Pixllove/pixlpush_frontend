@@ -1,15 +1,6 @@
-import DashboardFrame from "@/components/dashboard/DashboardFrame";
-import IntegrationDocumentation from "@/components/dashboard/IntegrationDocumentation";
+import { redirect } from "next/navigation";
 
+// The guide moved to platform-scoped routes; keep old links (sidebar, developer docs, bookmarks) working.
 export default function IntegrationsPage() {
-  return (
-    <DashboardFrame
-      requiresProject
-      active="SDK Integration Guide"
-      title="SDK Integration Guide"
-      description="Connect your product to PixlPush with the React SDK and start turning behavior into retention."
-    >
-      <IntegrationDocumentation />
-    </DashboardFrame>
-  );
+  redirect("/dashboard/integrations/react-native/quickstart");
 }

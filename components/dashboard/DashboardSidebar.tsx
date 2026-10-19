@@ -27,7 +27,7 @@ const groups = [
   {
     label: 'Project',
     items: [
-      { label: 'SDK Integration Guide', href: '/dashboard/integrations', icon: TuneOutlined },
+      { label: 'SDK Integration Guide', href: '/dashboard/integrations/react-native/quickstart', icon: TuneOutlined },
       { label: 'Developer documentation', href: '/dashboard/developer-docs', icon: DescriptionOutlined },
       { label: 'Audit Logs', href: '/dashboard/audit-logs', icon: HistoryOutlined },
       { label: 'Billing & Usage', href: '/dashboard/billing', icon: BarChartOutlined },

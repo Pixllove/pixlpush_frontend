@@ -714,7 +714,7 @@ function GuidedFlowCard({ flow, steps, step, answers, onSelect, onNext, onBack, 
     <Typography className="guided-flow-question">{current.question}</Typography>
     {step === 1 && purposeRecommendation && <Alert severity="info" sx={{ mb: 1.25, fontSize: "var(--fs-12)" }}>
       <strong>Recommended:</strong> {purposeRecommendation}{' '}
-      <a className="paywall-doc-link" href="/dashboard/developer-docs/engagement" target="_blank" rel="noreferrer">View developer documentation</a>
+      <a className="paywall-doc-link" href="/dashboard/integrations/react-native/engagement-segment" target="_blank" rel="noreferrer">View developer documentation</a>
     </Alert>}
     <Stack gap={1}>
       {current.choices.map((choice) => <Box key={choice.label}>
@@ -724,11 +724,11 @@ function GuidedFlowCard({ flow, steps, step, answers, onSelect, onNext, onBack, 
         </ButtonBase>
         {choice.label === "Lifecycle segment entry" && showLifecycleUnavailable && <Typography component="div" className="sdk-unavailable-message" fontSize="var(--fs-12)" sx={{ mt: .75, px: 1 }}>
           Lifecycle segment entry is unavailable until the SDK is integrated.{' '}
-          <a className="paywall-doc-link" href="/dashboard/developer-docs/engagement" target="_blank" rel="noreferrer">View developer documentation</a>
+          <a className="paywall-doc-link" href="/dashboard/integrations/react-native/engagement-segment" target="_blank" rel="noreferrer">View developer documentation</a>
         </Typography>}
         {choice.label === "An event or action" && showEventActionUnavailable && <Typography component="div" className="sdk-unavailable-message" fontSize="var(--fs-12)" sx={{ mt: .75, px: 1 }}>
           {!sdkIntegrated ? "Event or action is unavailable until the SDK is integrated." : "The SDK is integrated, but no relevant events have been received yet. Ask your developer to add and verify the required events."}{' '}
-          <a className="paywall-doc-link" href="/dashboard/developer-docs/engagement" target="_blank" rel="noreferrer">View developer documentation</a>
+          <a className="paywall-doc-link" href="/dashboard/integrations/react-native/engagement-segment" target="_blank" rel="noreferrer">View developer documentation</a>
         </Typography>}
         {(choice.label === "Push" || choice.label === "Multichannel") && showPushUnavailable && <Typography component="div" className="sdk-unavailable-message" fontSize="var(--fs-12)" sx={{ mt: .75, px: 1 }}>
           {pushUnavailableReason} <a className="paywall-doc-link" href="/dashboard/settings/firebase">Open Firebase / FCM settings</a>
@@ -739,7 +739,7 @@ function GuidedFlowCard({ flow, steps, step, answers, onSelect, onNext, onBack, 
       {!sdkIntegrated
         ? <>Your SDK isn’t integrated yet, so paywall drop-off events aren’t available. Ask your developer to integrate the SDK before using this trigger.</>
         : <>We haven’t received the events needed to detect paywall drop-off yet. Ask your developer to add them before using this trigger.</>}
-      <Box component="div" sx={{ mt: .5 }}><a className="paywall-doc-link" href="/dashboard/developer-docs/paywall-drop-off" target="_blank" rel="noreferrer">View developer documentation</a></Box>
+      <Box component="div" sx={{ mt: .5 }}><a className="paywall-doc-link" href="/dashboard/integrations/react-native/paywall-segment" target="_blank" rel="noreferrer">View developer documentation</a></Box>
       <Typography component="div" fontSize="var(--fs-12)" sx={{ mt: .9 }}>You can continue without an audience for now and add the lifecycle segment later.</Typography>
       <Button className="paywall-continue-button" size="small" variant="outlined" onClick={onContinueWithoutAudience}>Continue without an audience for now</Button>
     </Alert>}

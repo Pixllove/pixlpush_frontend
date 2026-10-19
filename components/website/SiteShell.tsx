@@ -362,6 +362,7 @@ export function SiteHeader() {
         </Stack>
         <IconButton
           onClick={() => setOpen(true)}
+          aria-label="Open menu"
           sx={{ display: { xs: "flex", lg: "none" }, color: "#fff" }}
         >
           <MenuRounded />
