@@ -17,6 +17,7 @@ import {
 import MenuRounded from "@mui/icons-material/MenuRounded";
 import KeyboardArrowDownRounded from "@mui/icons-material/KeyboardArrowDownRounded";
 import { SiteAccount, SiteAccountDrawer } from "./SiteAccount";
+import SupportChatWidget from "./SupportChatWidget";
 
 const links = [
   ["Product", "/product"],
@@ -591,6 +592,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
       <SiteHeader />
       {children}
       <SiteFooter />
+      <SupportChatWidget />
     </Box>
   );
 }

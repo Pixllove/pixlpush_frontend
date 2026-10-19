@@ -20,6 +20,7 @@ import CreateProjectDialog from "./CreateProjectDialog";
 import DashboardSidebar from "./DashboardSidebar";
 import AccountMenu from "@/components/auth/AccountMenu";
 import NotificationMenu from "@/components/dashboard/NotificationMenu";
+import SupportChatWidget from "@/components/website/SupportChatWidget";
 
 export default function DashboardFrame({
   active,
@@ -41,6 +42,7 @@ export default function DashboardFrame({
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
   const { active: activeProject, isEmpty, selectProject } = useActiveProject();
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -55,6 +57,7 @@ export default function DashboardFrame({
   // Nothing invented: the heading names the real Project, or says there is none.
   const projectName = activeProject?.name ?? (isEmpty ? "No project" : "");
   return (
+    <>
     <Box className={`dashboard-app${sidebarCollapsed ? " sidebar-is-collapsed" : ""}${mobileOpen ? " mobile-navigation-open" : ""}`}>
       <DashboardSidebar
         active={active}
@@ -63,6 +66,7 @@ export default function DashboardFrame({
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(value => !value)}
         onChangeProject={changeProject}
+        onOpenSupport={() => setSupportOpen(true)}
       />
       {mobileOpen && (
         <Box
@@ -181,5 +185,7 @@ export default function DashboardFrame({
         onClose={() => setCreateOpen(false)}
       />
     </Box>
+    <SupportChatWidget showLauncher={false} isOpen={supportOpen} onClose={() => setSupportOpen(false)} />
+    </>
   );
 }

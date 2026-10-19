@@ -2,7 +2,7 @@
 
 import {
   AddRounded, BarChartOutlined, BoltOutlined, ChevronLeftRounded, ChevronRightRounded, DescriptionOutlined, EmailOutlined, GroupsOutlined,
-  HistoryOutlined, HomeOutlined, InsightsOutlined, PeopleAltOutlined, PersonOutlineOutlined, SettingsOutlined, SpaceDashboardOutlined, TuneOutlined, UnfoldMoreRounded,
+  HistoryOutlined, HomeOutlined, InsightsOutlined, PeopleAltOutlined, PersonOutlineOutlined, SettingsOutlined, SpaceDashboardOutlined, SupportAgentOutlined, TuneOutlined, UnfoldMoreRounded,
 } from '@mui/icons-material';
 import {
   Avatar, ButtonBase, Divider, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Menu, MenuItem, Tooltip, Typography,
@@ -38,7 +38,7 @@ const groups = [
   },
 ];
 
-export default function DashboardSidebar({ active, setActive, mobileOpen, collapsed, onToggleCollapse, onChangeProject }: {
+export default function DashboardSidebar({ active, setActive, mobileOpen, collapsed, onToggleCollapse, onChangeProject, onOpenSupport }: {
   active: string;
   setActive: (value: string) => void;
   mobileOpen: boolean;
@@ -46,6 +46,7 @@ export default function DashboardSidebar({ active, setActive, mobileOpen, collap
   onToggleCollapse: () => void;
   /** A Project id, or `create` to start a new one. */
   onChangeProject: (value: string) => void;
+  onOpenSupport: () => void;
 }) {
   const { projects, active: activeProject, isPending } = useActiveProject();
   const [menu, setMenu] = useState<HTMLElement | null>(null);
@@ -140,6 +141,19 @@ export default function DashboardSidebar({ active, setActive, mobileOpen, collap
           </section>
         ))}
       </nav>
+
+      <div className="sidebar-support">
+        <Tooltip title={collapsed ? 'Contact support' : ''} placement="right">
+          <ListItemButton
+            className={`dashboard-nav sidebar-support-link${current === 'Contact support' ? ' active' : ''}`}
+            onClick={() => { setClicked('Contact support'); setActive('Contact support'); onOpenSupport(); }}
+            aria-label="Contact support"
+          >
+            <ListItemIcon className="dashboard-nav-icon"><SupportAgentOutlined /></ListItemIcon>
+            <ListItemText className="dashboard-nav-label" primary="Contact support" />
+          </ListItemButton>
+        </Tooltip>
+      </div>
 
     </aside>
   );

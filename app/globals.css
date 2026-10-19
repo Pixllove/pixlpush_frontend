@@ -3530,6 +3530,22 @@ a {
 .sidebar-navigation::-webkit-scrollbar {
   display: none;
 }
+.sidebar-support {
+  flex: 0 0 auto;
+  margin: 0 12px 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--sb-hairline);
+}
+.sidebar-support-link.MuiListItemButton-root {
+  min-height: 45px;
+}
+.sidebar-support-link .dashboard-nav-icon {
+  color: #cbb4e7;
+}
+.sidebar-is-collapsed .sidebar-support {
+  margin-right: 9px;
+  margin-left: 9px;
+}
 .sidebar-group + .sidebar-group {
   margin-top: 23px;
   padding-top: 17px;
