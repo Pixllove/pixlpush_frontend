@@ -74,7 +74,7 @@ export default function DocsLayout({ base, variant, children }: { base: string; 
   return <Box sx={{ ...topVar[variant], "--docs-offset": `calc(var(--docs-top) + ${BAR + 24}px)`, bgcolor: tokens.surface, color: tokens.text, ...(variant === "app" ? { border: `1px solid ${tokens.border}`, borderRadius: 2 } : {}) }}>
     {variant === "site" && <Box component="a" href="#docs-content" sx={{ position: "absolute", left: 16, top: -60, zIndex: 20, px: 2, py: 1, bgcolor: tokens.accent, color: "#fff", borderRadius: 1.5, "&:focus": { top: 96 } }}>Skip to content</Box>}
 
-    <Stack data-docs-bar direction="row" alignItems="center" gap={1.5} sx={{ position: "sticky", top: "var(--docs-top)", zIndex: 6, height: BAR, px: { xs: 1, sm: 2, lg: 3 }, bgcolor: "rgba(255,255,255,.96)", backdropFilter: "blur(10px)", borderBottom: `1px solid ${tokens.border}`, ...(variant === "app" ? { borderRadius: "8px 8px 0 0" } : {}) }}>
+    <Stack data-docs-bar direction="row" alignItems="center" gap={1.5} sx={{ position: "sticky", top: "var(--docs-top)", zIndex: 6, height: BAR, px: variant === "site" ? { xs: 2, md: "max(32px, calc((100% - 1360px) / 2 + 32px))" } : { xs: 1, sm: 2, lg: 3 }, bgcolor: "rgba(255,255,255,.96)", backdropFilter: "blur(10px)", borderBottom: `1px solid ${tokens.border}`, ...(variant === "app" ? { borderRadius: "8px 8px 0 0" } : {}) }}>
       <IconButton onClick={() => setDrawerOpen(true)} aria-label="Open documentation menu" sx={{ display: { lg: "none" }, width: 44, height: 44 }}><MenuRounded /></IconButton>
       <Typography component={NextLink} href={base === "/docs" ? "/docs" : guideHref(base, platformId)} sx={{ display: { xs: "none", sm: "block" }, color: tokens.text, fontWeight: 600, fontSize: "var(--fs-14)", textDecoration: "none", whiteSpace: "nowrap" }}>Developer docs</Typography>
       <Stack direction="row" alignItems="stretch" gap={1.5}>
@@ -91,7 +91,7 @@ export default function DocsLayout({ base, variant, children }: { base: string; 
       </Button>
     </Stack>
 
-    <Box sx={{ display: "grid", gridTemplateColumns: { xs: "minmax(0,1fr)", lg: "248px minmax(0,1fr)" }, maxWidth: variant === "site" ? 1440 : undefined, mx: "auto" }}>
+    <Box sx={{ display: "grid", gridTemplateColumns: { xs: "minmax(0,1fr)", lg: "248px minmax(0,1fr)" }, maxWidth: variant === "site" ? 1360 : undefined, mx: "auto" }}>
       <Box component="aside" sx={{ display: { xs: "none", lg: "block" }, position: "sticky", top: `calc(var(--docs-top) + ${BAR}px)`, alignSelf: "start", maxHeight: `calc(100vh - var(--docs-top) - ${BAR}px)`, overflowY: "auto", ...hiddenScrollbar, p: 2, pt: 3, borderRight: `1px solid ${tokens.border}` }}>
         <GuideNav base={base} platformId={platformId} pathname={pathname} />
       </Box>

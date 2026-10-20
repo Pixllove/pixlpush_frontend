@@ -158,7 +158,8 @@ function MegaMenu({ kind }: { kind: "product" | "resources" }) {
                     p: 1.2,
                     mx: -1.2,
                     borderRadius: 2,
-                    color: "rgba(255,255,255,.82)",
+                    color: "#fff",
+                    transition: "background-color .15s",
                     "&:hover": { bgcolor: "rgba(255,255,255,.08)" },
                   }}
                 >
@@ -166,8 +167,8 @@ function MegaMenu({ kind }: { kind: "product" | "resources" }) {
                     {title}
                   </Typography>
                   <Typography
-                    sx={{ color: "rgba(255,255,255,.58)" }}
-                    fontSize="var(--fs-12)"
+                    sx={{ color: "rgba(255,255,255,.72)" }}
+                    fontSize="var(--fs-13)"
                     component="div"
                     mt={0.35}
                   >
@@ -183,6 +184,7 @@ function MegaMenu({ kind }: { kind: "product" | "resources" }) {
             p: 2.3,
             borderRadius: 4,
             bgcolor: "rgba(255,255,255,.08)",
+            border: "1px solid rgba(255,255,255,.1)",
             alignSelf: "start",
           }}
         >
@@ -200,28 +202,24 @@ function MegaMenu({ kind }: { kind: "product" | "resources" }) {
           >
             <Box
               sx={{
-                bgcolor: "rgba(255,255,255,.9)",
+                bgcolor: "#fff",
+                color: "#211331",
                 borderRadius: 2,
                 height: "100%",
-                p: 1,
+                p: 1.25,
+                display: "flex",
+                flexDirection: "column",
               }}
             >
-              <Typography fontSize="var(--fs-12)" fontWeight={500}>
+              <Typography fontSize="var(--fs-11)" fontWeight={700} letterSpacing=".08em" color="#5b18bc">
                 PIXLPUSH /{" "}
                 {kind === "product" ? "JOURNEY BUILDER" : "ANALYTICS"}
               </Typography>
-              <Box
-                sx={{
-                  mt: 1.5,
-                  height: 8,
-                  width: "72%",
-                  bgcolor: "#e5d4f0",
-                  borderRadius: 3,
-                }}
-              />
-              <Box
-                sx={{ mt: 1, height: 28, bgcolor: "#ffeadf", borderRadius: 2 }}
-              />
+              <Stack direction="row" alignItems="flex-end" gap={0.75} sx={{ mt: "auto", height: 52 }}>
+                {[38, 55, 46, 70, 62, 88, 100].map((h, i) => (
+                  <Box key={i} sx={{ flex: 1, height: `${h}%`, borderRadius: "3px 3px 0 0", background: i === 6 ? "linear-gradient(180deg,#f26237,#8621c7)" : "#e5d4f0" }} />
+                ))}
+              </Stack>
             </Box>
           </Box>
           <Typography fontWeight={600}>
@@ -230,8 +228,8 @@ function MegaMenu({ kind }: { kind: "product" | "resources" }) {
               : "Explore the resource room"}
           </Typography>
           <Typography
-            sx={{ color: "rgba(255,255,255,.62)" }}
-            fontSize="var(--fs-12)"
+            sx={{ color: "rgba(255,255,255,.72)" }}
+            fontSize="var(--fs-13)"
             component="div"
             mt={0.5}
             lineHeight={1.5}
