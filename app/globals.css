@@ -3278,9 +3278,9 @@ a {
   box-shadow: 0 4px 15px rgba(31, 7, 64, 0.16);
 }
 .translation-ai-screenshot {
-  display: grid;
-  min-height: 360px;
-  place-items: center;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1.58;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.58);
   border-radius: 18px;
@@ -3290,12 +3290,21 @@ a {
     0 0 0 9px rgba(255, 255, 255, 0.08);
 }
 .translation-ai-screenshot img {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
-  height: auto;
-  max-height: 590px;
+  height: 100%;
   object-fit: contain;
-  animation: translation-ai-fade-in 0.28s ease both;
+  opacity: 0;
+  transform: scale(0.99);
+  transition: opacity 420ms ease, transform 520ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  pointer-events: none;
+}
+.translation-ai-screenshot img.is-active {
+  z-index: 1;
+  opacity: 1;
+  transform: scale(1);
 }
 .translation-ai-caption {
   margin: 18px 4px 0 !important;
@@ -3305,14 +3314,9 @@ a {
   text-align: right;
   text-transform: uppercase;
 }
-@keyframes translation-ai-fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(5px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+@media (prefers-reduced-motion: reduce) {
+  .translation-ai-screenshot img {
+    transition-duration: 120ms;
   }
 }
 @media (max-width: 900px) {
@@ -3324,10 +3328,7 @@ a {
     font-size: clamp(34px, 5vw, 48px) !important;
   }
   .translation-ai-screenshot {
-    min-height: 0;
-  }
-  .translation-ai-screenshot img {
-    max-height: calc(100vh - 230px);
+    aspect-ratio: 1.48;
   }
 }
 @media (max-width: 650px) {
@@ -3393,14 +3394,11 @@ a {
     font-size: 10px;
   }
   .translation-ai-screenshot {
-    min-height: 0;
+    aspect-ratio: 1.48;
     border-radius: 10px;
     box-shadow:
       0 12px 30px rgba(26, 4, 57, 0.26),
       0 0 0 4px rgba(255, 255, 255, 0.08);
-  }
-  .translation-ai-screenshot img {
-    max-height: 30svh;
   }
   .translation-ai-caption {
     margin-top: 8px !important;

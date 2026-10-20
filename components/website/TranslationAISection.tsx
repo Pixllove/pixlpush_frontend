@@ -31,45 +31,32 @@ const benefits = [
 export default function TranslationAISection() {
   const [activeView, setActiveView] = useState(0);
   const trackRef = useRef<HTMLDivElement>(null);
-  const lastScrollY = useRef(0);
-  const scrollRemainder = useRef(0);
   const selectedView = productViews[activeView];
 
   useEffect(() => {
-    lastScrollY.current = window.scrollY;
+    let animationFrame = 0;
     const updateActiveView = () => {
-      const track = trackRef.current;
-      const currentY = window.scrollY;
-      const delta = currentY - lastScrollY.current;
-      lastScrollY.current = currentY;
-      if (!track) return;
+      if (animationFrame) return;
+      animationFrame = window.requestAnimationFrame(() => {
+        animationFrame = 0;
+        const track = trackRef.current;
+        if (!track) return;
 
-      const trackTop = track.getBoundingClientRect().top + currentY;
-      const trackEnd = trackTop + track.offsetHeight - window.innerHeight;
-      const insideTrack = currentY >= trackTop && currentY < trackEnd;
-      if (!insideTrack) {
-        scrollRemainder.current = 0;
-        return;
-      }
-
-      scrollRemainder.current += delta;
-      const switchDistance = Math.max(window.innerHeight * 0.48, 1);
-      if (Math.abs(scrollRemainder.current) < switchDistance) return;
-
-      const direction = Math.sign(scrollRemainder.current);
-      scrollRemainder.current = 0;
-      setActiveView((current) => Math.max(0, Math.min(productViews.length - 1, current + direction)));
-    };
-    const resetScrollState = () => {
-      scrollRemainder.current = 0;
-      lastScrollY.current = window.scrollY;
+        const trackTop = track.getBoundingClientRect().top + window.scrollY;
+        const scrollableDistance = Math.max(1, track.offsetHeight - window.innerHeight);
+        const progress = Math.min(1, Math.max(0, (window.scrollY - trackTop) / scrollableDistance));
+        const nextView = Math.min(productViews.length - 1, Math.floor(progress * productViews.length));
+        setActiveView((current) => current === nextView ? current : nextView);
+      });
     };
 
     window.addEventListener('scroll', updateActiveView, { passive: true });
-    window.addEventListener('resize', resetScrollState);
+    window.addEventListener('resize', updateActiveView);
+    updateActiveView();
     return () => {
       window.removeEventListener('scroll', updateActiveView);
-      window.removeEventListener('resize', resetScrollState);
+      window.removeEventListener('resize', updateActiveView);
+      if (animationFrame) window.cancelAnimationFrame(animationFrame);
     };
   }, []);
 
@@ -115,7 +102,17 @@ export default function TranslationAISection() {
               ))}
             </Stack>
             <Box className="translation-ai-screenshot" role="tabpanel" aria-label={selectedView.label}>
-              <Box key={selectedView.image} component="img" src={selectedView.image} alt={selectedView.alt} />
+              {productViews.map((view, index) => (
+                <Box
+                  key={view.image}
+                  component="img"
+                  src={view.image}
+                  alt={index === activeView ? view.alt : ''}
+                  aria-hidden={index !== activeView}
+                  className={index === activeView ? 'is-active' : ''}
+                  draggable={false}
+                />
+              ))}
             </Box>
             <Typography className="translation-ai-caption">A look inside PixlPush</Typography>
           </Box>
