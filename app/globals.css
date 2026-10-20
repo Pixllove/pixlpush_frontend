@@ -2546,6 +2546,12 @@ a {
 .journey-window {
   width: min(100%, 500px);
 }
+.retention-journey-art {
+  position: relative;
+  width: min(100%, 760px);
+  height: 100%;
+  min-height: 440px;
+}
 .journey-window-body {
   padding: 22px 25px 25px;
 }
@@ -3115,6 +3121,9 @@ a {
     height: 100%;
     min-height: 230px;
     overflow: hidden;
+  }
+  .retention-story-mobile-visual .retention-journey-art {
+    min-height: 230px;
   }
   .retention-story-step {
     min-height: 0;
