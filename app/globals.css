@@ -16716,7 +16716,8 @@ body {
 .onboarding-workspace { max-width:1120px; margin:auto; display:grid; grid-template-columns:minmax(0,1fr) 250px; align-items:center; gap:36px; }
 .onboarding-chat.MuiPaper-root { border:1px solid #ebe2f0; border-radius:24px; overflow:hidden; background:rgba(255,255,255,.94); box-shadow:0 24px 80px #3c1c5512; }
 .onboarding-chat-head { min-height:74px; padding:16px 25px; display:flex; align-items:center; gap:12px; border-bottom:1px solid #f0eaf3; }
-.max-avatar { display:grid; place-items:center; width:39px; height:39px; border-radius:14px; color:white; background:linear-gradient(145deg,#9d45ed,#5b22bd); box-shadow:0 6px 16px #7b36c733; }
+.max-avatar { display:grid; place-items:center; width:52px; height:52px; flex:none; overflow:hidden; border:2px solid #fff; border-radius:50%; color:white; background:linear-gradient(145deg,#9d45ed,#5b22bd); box-shadow:0 6px 16px #7b36c733; }
+.max-avatar img { display:block; width:100%; height:100%; object-fit:cover; }
 .onboarding-chat-head strong,.onboarding-chat-head small { display:block; }
 .onboarding-chat-head small { margin-top:3px; color:#92879c; font-size:9px; letter-spacing:1px; }
 .max-online.MuiChip-root { margin-left:auto; color:#25845e; background:#ecf8f1; font-size:10px; }
