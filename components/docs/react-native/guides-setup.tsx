@@ -9,7 +9,7 @@ import CodeTabs from "../CodeTabs";
 import { Body, Callout, Checklist, DataTable, Expect, LinkCard, List, Section, Step, SubHeading } from "../DocsPrimitives";
 import { LinkBox } from "../links";
 import { guideHref } from "../registry";
-import { code, configOptions, installCommands, pushInstallCommands } from "./content";
+import { aiPrompt, code, configOptions, installCommands, pushInstallCommands } from "./content";
 
 export type GuideProps = { base: string };
 const A = ({ href, children }: { href: string; children: ReactNode }) => <LinkBox href={href} sx={{ color: "inherit" }}>{children}</LinkBox>;
@@ -103,6 +103,22 @@ export function Quickstart({ base }: GuideProps) {
     <Step id="checkpoint" number={9} title="Before production">
       <Checklist items={["Use a separate production SDK key.", "Test logout → login as a different user on one device.", "Test offline: track in airplane mode, reconnect, flush.", <>Work through <A href={rn(base, "production")}>Verify & ship</A>.</>]} />
     </Step>
+  </>;
+}
+
+export function AiSetup({ base }: GuideProps) {
+  return <>
+    <Section id="prompt" title="The prompt">
+      <Body>Copy this into Claude Code, Cursor, GitHub Copilot, Codex, Windsurf, Gemini CLI, Cline or any coding agent, from the root of your app. It uses the same code as the <A href={rn(base, "quickstart")}>Quickstart</A>.</Body>
+      <CodeBlock code={aiPrompt} language="Text" filename="pixlpush-setup-prompt.md" lineNumbers={false} maxHeight={520} />
+    </Section>
+    <Section id="how" title="How to use it">
+      <List ordered items={["Open your app’s repository in the agent (agent or edit mode, not plain chat).", "Paste the prompt and let it inspect the project first.", "Review the diff, paste your development SDK key, and run the verify script."]} />
+    </Section>
+    <Section id="manual" title="What you do by hand">
+      <Body>The agent writes the push code but can’t use the Firebase, Apple or PixlPush consoles. Follow <A href={rn(base, "firebase")}>Firebase & push setup</A> to create <code>google-services.json</code>, <code>GoogleService-Info.plist</code>, the APNs key and the service-account JSON.</Body>
+      <Callout tone="danger" title="Never give the agent your secrets">Upload the service-account JSON and the <code>.p8</code> key yourself. They never belong in the repo or the app.</Callout>
+    </Section>
   </>;
 }
 

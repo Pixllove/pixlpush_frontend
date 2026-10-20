@@ -16682,3 +16682,8 @@ body {
     overflow-x: auto;
   }
 }
+
+/* Docs: shimmering "AI setup prompt" button */
+.docs-ai-shine::after { content: ""; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,.45) 50%, transparent 70%); transform: translateX(-100%); animation: docsAiShine 2.8s ease-in-out infinite; pointer-events: none; }
+@keyframes docsAiShine { 60%, 100% { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) { .docs-ai-shine::after { animation: none; } }

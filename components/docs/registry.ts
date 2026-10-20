@@ -28,6 +28,11 @@ const reactNativeGuides: Guide[] = [
     sections: [s("prerequisites", "Prerequisites"), s("install", "Install the SDK", "npm yarn pnpm expo install"), s("key", "Create an SDK key", "pp_sk"), s("configure", "Configure once", "configure getStatus"), s("identify", "Identify after login", "identify reset"), s("track", "Track an event", "track"), s("verify", "Verify", "flush getStatus"), s("push", "Add push"), s("checkpoint", "Before production")],
   },
   {
+    slug: "ai-setup", group: "Get started", title: "AI agent setup",
+    description: "One copy-paste prompt that lets any AI coding agent install and configure the SDK, following these docs.",
+    sections: [s("prompt", "The prompt", "ai agent claude cursor copilot codex"), s("how", "How to use it"), s("manual", "What you do by hand", "firebase apns service account")],
+  },
+  {
     slug: "installation", group: "Set up", title: "Install & configure",
     description: "Packages, environment variables, a production-ready initialization module, and every configuration option.",
     sections: [s("packages", "Packages", "peer dependencies async-storage"), s("push-packages", "Push packages", "@react-native-firebase/messaging expo-notifications"), s("environment", "Environment variables", ".env EXPO_PUBLIC react-native-config"), s("initialize", "Initialization module", "configure once onError"), s("entry", "App entry point"), s("status", "Check getStatus()", "getStatus pixlpushId deviceId"), s("options", "Configuration options", "sdkKey projectId environment enableLogging autoPush trackLifecycleEvents maxQueueSize"), s("api-url", "Where data is sent", "apiBaseUrl base url server url hosted local tunnel")],

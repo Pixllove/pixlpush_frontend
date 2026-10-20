@@ -7,7 +7,7 @@ import { LinkBox } from "../links";
 import { code, errorCodes, methods, SDK_VERSION } from "./content";
 import { Events, Identity, Push } from "./guides-integrate";
 import { EngagementSegment, PaywallSegment } from "./guides-segments";
-import { Firebase, Installation, Overview, Quickstart, SdkKeys, rn, type GuideProps } from "./guides-setup";
+import { AiSetup, Firebase, Installation, Overview, Quickstart, SdkKeys, rn, type GuideProps } from "./guides-setup";
 
 export function Security({ base }: GuideProps) {
   return <>
@@ -167,7 +167,7 @@ export function Reference({ base }: GuideProps) {
 }
 
 export const reactNativeGuides: Record<string, ComponentType<GuideProps>> = {
-  "": Overview, quickstart: Quickstart, installation: Installation, "sdk-keys": SdkKeys, firebase: Firebase,
+  "": Overview, quickstart: Quickstart, "ai-setup": AiSetup, installation: Installation, "sdk-keys": SdkKeys, firebase: Firebase,
   identity: Identity, events: Events, push: Push, "engagement-segment": EngagementSegment, "paywall-segment": PaywallSegment, security: Security, production: Production,
   troubleshooting: Troubleshooting, reference: Reference,
 };

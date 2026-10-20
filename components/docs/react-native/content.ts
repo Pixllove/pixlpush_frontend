@@ -469,3 +469,86 @@ export const methods: Record<"setup" | "identity" | "events" | "push" | "listene
 
 /** The public method names above, used by tests to keep the docs aligned with the SDK. */
 export const documentedMethodNames = Object.values(methods).flat().flatMap((method) => method.name.split(" / "));
+
+// Agent-agnostic setup prompt (Claude Code, Cursor, Copilot, Codex, Windsurf, Gemini CLI, Cline…).
+// Built from the same snippets the Quickstart, Installation, Firebase and Push guides render, so it cannot drift from them.
+const fence = (lang: string, body: string) => "```" + lang + "\n" + body + "\n```";
+const list = (commands: Record<string, string>) => Object.entries(commands).map(([name, cmd]) => `- ${name}: \`${cmd}\``).join("\n");
+
+export const aiPrompt = `# Task
+Integrate the PixlPush React Native SDK (@pixlpush/react-native ${SDK_VERSION}) into this app: analytics, identity and push notifications.
+
+# Rules
+- Use ONLY the packages, options and methods shown below. Do not invent APIs, do not set apiBaseUrl or sdkVersion.
+- Match this codebase's language (TS/JS), folder layout and style. Adapt file paths, keep the code's behaviour.
+- Only public values in the app. Never add a dashboard token, Firebase service-account JSON or APNs .p8 key to the repo, bundle or env files.
+- Never send passwords, tokens, payment details or other sensitive data as event or user properties.
+- Do not do the manual console steps in "Hand-off"; list them for me instead.
+- If something here conflicts with the project, stop and ask instead of guessing.
+
+# 0. Inspect first
+Detect: Expo (app.json / app.config.*) or bare React Native; package manager (lockfile); entry point (App.tsx or expo-router root layout); where sign-in and sign-out happen; whether a privacy/consent prompt exists.
+
+# 1. Install
+${list(installCommands)}
+
+# 2. Public config
+Expo → \`.env\`:
+${fence("sh", code.envExpo)}
+Bare → \`src/config/pixlpush.ts\` (inject with the project's existing build-time config tool; the SDK reads no env vars itself):
+${fence("ts", code.envBare)}
+Leave the key as a placeholder. I will create it in PixlPush → Project settings → SDK keys.
+
+# 3. Configure once → src/lib/pixlpush.ts
+${fence("ts", code.initialize)}
+Call it from the entry point:
+${fence("tsx", code.entry)}
+
+# 4. Identity → hook into the existing auth flow
+${fence("ts", code.identify)}
+externalUserId = the stable internal user ID, never an email.
+
+# 5. Events
+${fence("ts", code.track)}
+Add events for this app's core actions (snake_case). If a consent prompt exists, forward its answers:
+${fence("ts", code.consent)}
+
+# 6. Push (code only)
+${list(pushInstallCommands)}
+React Native Firebase must be v22+ (modular API).
+
+Expo → merge into app.config.*, then rebuild (Expo Go cannot receive push):
+${fence("js", code.expoConfig)}
+${fence("sh", code.expoBuild)}
+
+Bare Android → android/build.gradle and android/app/build.gradle:
+${fence("gradle", code.androidRootGradle + "\n\n" + code.androidAppGradle)}
+
+Bare iOS → Podfile, AppDelegate (Swift for RN 0.77+, else Objective-C), firebase.json, then \`cd ios && pod install\`:
+${fence("ruby", code.podfile)}
+${fence("swift", code.appDelegateSwift)}
+${fence("objc", code.appDelegateObjc)}
+${fence("json", code.firebaseJson)}
+
+Listeners → a file imported before startPixlPush() runs:
+${fence("ts", code.listeners)}
+Permission → call from a button or onboarding step, never at launch:
+${fence("ts", code.permission)}
+Foreground messages:
+${fence("ts", code.foreground)}
+Never send an Expo push token (ExponentPushToken[…]) to PixlPush; autoPush sends the native FCM token.
+
+# 7. Verify → src/dev/verify-pixlpush.ts (dev only)
+${fence("ts", code.verify)}
+Success: \`failed: 0, remaining: 0\`, and qa-user-001 appears in PixlPush → Users with an integration_verified event.
+
+# Hand-off (manual, do not attempt)
+Tell me to follow the "Firebase & push setup" guide in the PixlPush docs for:
+1. Firebase project → add Android app (package name) → google-services.json into android/app/ (Expo: project root).
+2. Add iOS app (bundle ID) → GoogleService-Info.plist into the iOS target (Expo: project root).
+3. Apple Developer → APNs .p8 key → upload to Firebase.
+4. Service-account JSON (role: Firebase Cloud Messaging API Admin) → upload in PixlPush → Project settings → Firebase / FCM.
+5. SDK keys: paste the development key; create a separate production key before release.
+
+# Output
+Finish with: files changed (one line each), commands I still need to run, and the hand-off checklist.`;
