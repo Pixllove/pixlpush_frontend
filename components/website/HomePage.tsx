@@ -18,8 +18,8 @@ function BrandStrip() {
   const products = [
     { name: 'PIXLLOVE', color: '#7938c8', mark: '✳' },
     { name: 'PIXLTRACE', color: '#363047', mark: '◈' },
-    { name: 'All in 1 - Media', color: '#ef633f', mark: '●' },
-    { name: 'Auramagie', color: '#7d62a8', mark: '✦' },
+    { name: 'ALL IN 1 - MEDIA', color: '#ef633f', mark: '●' },
+    { name: 'AURAMAGIE', color: '#7d62a8', mark: '✦' },
     { name: 'AUGMENTPRO', color: '#2e7c76', mark: '⬡' },
     { name: 'GUAGEAI', color: '#5b18bc', mark: '◎' },
     { name: 'INVOICEQUE', color: '#3d526e', mark: '▤' },
@@ -34,8 +34,8 @@ function BrandStrip() {
       <Box sx={{ overflow: 'hidden', mt: 3, mx: { xs: -2, md: -6 } }}>
         <Box sx={{ display: 'flex', alignItems: 'center', width: 'max-content', animation: 'companyMarquee 34s linear infinite', '&:hover': { animationPlayState: 'paused' }, '@media (prefers-reduced-motion: reduce)': { animation: 'none' }, '@keyframes companyMarquee': { '0%': { transform: 'translateX(0)' }, '100%': { transform: 'translateX(-50%)' } } }}>
           {logos.map(({ name, color, mark }, i) => <Stack key={`${name}-${i}`} direction="row" alignItems="center" justifyContent="center" gap={1} sx={{ width: { xs: 190, sm: 225, md: 250 }, minHeight: 42, flexShrink: 0, borderRight: '1px solid #eee7f1', whiteSpace: 'nowrap' }}>
-            <Box aria-hidden="true" sx={{ display: 'grid', placeItems: 'center', width: 23, height: 23, borderRadius: name === 'All in 1 - Media' ? '50%' : '7px', color, bgcolor: `${color}12`, fontSize: name === 'CONNECTBRICKS' ? 17 : 15, fontWeight: 800, lineHeight: 1 }}>{mark}</Box>
-            <Typography aria-label={`${name} logo`} sx={{ color, fontSize: { xs: 'var(--fs-14)', md: 'var(--fs-16)' }, fontWeight: 700, letterSpacing: name === 'All in 1 - Media' || name === 'Auramagie' ? '-.045em' : '.015em', lineHeight: 1 }}>{name}</Typography>
+            <Box aria-hidden="true" sx={{ display: 'grid', placeItems: 'center', width: 23, height: 23, borderRadius: name === 'ALL IN 1 - MEDIA' ? '50%' : '7px', color, bgcolor: `${color}12`, fontSize: name === 'CONNECTBRICKS' ? 17 : 15, fontWeight: 800, lineHeight: 1 }}>{mark}</Box>
+            <Typography aria-label={`${name} logo`} sx={{ color, fontSize: { xs: 'var(--fs-14)', md: 'var(--fs-16)' }, fontWeight: 700, letterSpacing: name === 'ALL IN 1 - MEDIA' || name === 'AURAMAGIE' ? '-.045em' : '.015em', lineHeight: 1 }}>{name}</Typography>
           </Stack>)}
         </Box>
       </Box>
