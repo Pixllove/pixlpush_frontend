@@ -7,6 +7,8 @@ import type { ApiErrorBody } from '@/types/auth';
  * so the access token can live in an httpOnly cookie that JS cannot read.
  */
 const API_URL = process.env.BACKEND_API_URL ?? 'http://localhost:3000/api/v1';
+/** Runs the Supabase Edge Function next to the database (Tokyo); only sent when the backend is on Supabase. */
+const SUPABASE_REGION: Record<string, string> = API_URL.includes('.supabase.co') ? { 'x-region': 'ap-northeast-1' } : {};
 
 export const SESSION_COOKIE = 'pixlpush_session';
 export const REFRESH_COOKIE = 'pixlpush_refresh';
@@ -93,7 +95,10 @@ export async function callBackend<T>(
   init: { method?: string; body?: unknown; auth?: boolean; contentType?: string } = {},
 ): Promise<UpstreamResult<T>> {
   // A contentType means a raw text body (CSV user import), forwarded as-is.
-  const headers: Record<string, string> = { 'Content-Type': init.contentType ?? 'application/json' };
+  const headers: Record<string, string> = {
+    'Content-Type': init.contentType ?? 'application/json',
+    ...SUPABASE_REGION,
+  };
 
   // Every browser reaches the backend through this server, so without the
   // original address its per-IP auth limits would count all users as one.
