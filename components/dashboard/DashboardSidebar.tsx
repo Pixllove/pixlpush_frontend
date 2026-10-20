@@ -2,7 +2,7 @@
 
 import {
   AddRounded, BarChartOutlined, BoltOutlined, ChevronLeftRounded, ChevronRightRounded, DescriptionOutlined, EmailOutlined, GroupsOutlined,
-  HistoryOutlined, HomeOutlined, InsightsOutlined, PeopleAltOutlined, PersonOutlineOutlined, SettingsOutlined, SpaceDashboardOutlined, SupportAgentOutlined, TuneOutlined, UnfoldMoreRounded,
+  HistoryOutlined, HomeOutlined, InsightsOutlined, PeopleAltOutlined, PersonOutlineOutlined, SettingsOutlined, SpaceDashboardOutlined, SupportAgentOutlined, TuneOutlined, UnfoldMoreRounded, ChecklistRounded,
 } from '@mui/icons-material';
 import {
   Avatar, ButtonBase, Divider, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Menu, MenuItem, Tooltip, Typography,
@@ -27,6 +27,7 @@ const groups = [
   {
     label: 'Project',
     items: [
+      { label: 'Onboarding Guide', href: '/dashboard/onboarding', icon: ChecklistRounded },
       { label: 'SDK Integration Guide', href: '/dashboard/integrations/react-native/quickstart', icon: TuneOutlined },
       { label: 'Developer documentation', href: '/dashboard/developer-docs', icon: DescriptionOutlined },
       { label: 'Audit Logs', href: '/dashboard/audit-logs', icon: HistoryOutlined },
