@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Box, Button, Container, Stack, Typography } from '@mui/material';
 import ArrowForwardRounded from '@mui/icons-material/ArrowForwardRounded';
+import Image from 'next/image';
 
 const steps = [
   {
@@ -45,18 +46,9 @@ function AnalysisVisual() {
 function JourneyVisual() {
   return (
     <Box className="retention-scene retention-scene-journey" aria-hidden="true">
-      <Box className="retention-window journey-window">
-        <Box className="retention-window-bar"><i /><i /><i /><span>JOURNEY BUILDER</span></Box>
-        <Box className="journey-window-body">
-          <Box className="journey-start"><span>TRIGGER</span><b>User becomes inactive</b><small>Behavior signal</small></Box>
-          <Box className="journey-branches"><span /><span /></Box>
-          <Box className="journey-channel-row"><Box className="journey-channel email"><b>✉</b><span><small>EMAIL</small><strong>Helpful check-in</strong></span></Box><Box className="journey-channel push"><b>⌁</b><span><small>PUSH</small><strong>Come back offer</strong></span></Box></Box>
-          <Box className="journey-result"><span>✓</span><b>Personalized journey ready</b><small>Audience · Timing · Message</small></Box>
-        </Box>
+      <Box className="retention-journey-art">
+        <Image src="/assets/retention-journey-cartoon.png" alt="" fill sizes="(max-width: 650px) 100vw, (max-width: 1200px) 50vw, 600px" style={{ objectFit: 'contain' }} />
       </Box>
-      <Box className="retention-agent-stack"><Box component="img" src="/assets/agent-avatar-max-v2.png" alt="Max" /><Box component="img" src="/assets/agent-avatar-nova-v2.png" alt="Nova" /><Box component="img" src="/assets/agent-avatar-ben-v2.png" alt="Ben" /><Box component="img" src="/assets/agent-avatar-anna-v3.png" alt="Anna" /></Box>
-      <Box className="retention-float-card journey-float"><span className="journey-live-dot" /><Box><b>Email + Push</b><small>One coordinated journey</small></Box></Box>
-      <Box className="retention-orbit orbit-journey" />
     </Box>
   );
 }

@@ -16,6 +16,7 @@ import { useLogin } from '@/hooks/auth/use-login';
 import { useClearOnRestore } from '@/hooks/auth/use-clear-on-restore';
 import { applyApiError } from '@/lib/auth/form';
 import { postLoginPath } from '@/lib/auth/redirect';
+import { onboardingNeedsResume, readOnboardingState } from '@/lib/onboarding';
 import { FormError } from './AuthFeedback';
 import GoogleButton from './GoogleButton';
 import PasswordField from './PasswordField';
@@ -49,7 +50,8 @@ export default function LoginForm({ active = true, onSwitch }: { active?: boolea
         router.replace(`/login/mfa${redirect ? `?redirect=${encodeURIComponent(redirect)}` : ''}`);
         return;
       }
-      router.replace(postLoginPath(account, searchParams.get('redirect')));
+      const destination = postLoginPath(account, searchParams.get('redirect'));
+      router.replace(destination === '/dashboard/onboarding' && onboardingNeedsResume(readOnboardingState()) ? '/onboarding' : destination);
       router.refresh();
     } catch (error) {
       setFormError(applyApiError(error as never, setError));

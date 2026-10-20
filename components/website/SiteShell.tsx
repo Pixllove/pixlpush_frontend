@@ -335,6 +335,7 @@ export function SiteHeader() {
                 key={label}
                 href={value}
                 underline="none"
+                onMouseEnter={() => setMega(null)}
                 sx={{
                   fontSize: "var(--fs-16)",
                   fontWeight: 700,
