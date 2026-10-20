@@ -481,7 +481,7 @@ export default function UserImportDialog({
                     <Icon />
                   </Box>
                   <Typography fontWeight={600}>{label}</Typography>
-                  <Typography color="text.secondary" fontSize="var(--fs-11)">
+                  <Typography color="text.secondary" fontSize="var(--fs-12)">
                     {description}
                   </Typography>
                 </Box>
@@ -608,7 +608,7 @@ export default function UserImportDialog({
                       Review files imported into this project.
                     </Typography>
                   </Box>
-                  <Typography color="text.secondary" fontSize="var(--fs-11)">
+                  <Typography color="text.secondary" fontSize="var(--fs-12)">
                     {importHistory.length} import
                     {importHistory.length === 1 ? "" : "s"}
                   </Typography>
@@ -1040,7 +1040,7 @@ export default function UserImportDialog({
                   />
                   <Typography
                     color="text.secondary"
-                    fontSize="var(--fs-11)"
+                    fontSize="var(--fs-12)"
                     sx={{ mt: 0.5 }}
                   >
                     {totalRows

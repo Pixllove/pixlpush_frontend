@@ -475,45 +475,55 @@ export const documentedMethodNames = Object.values(methods).flat().flatMap((meth
 const fence = (lang: string, body: string) => "```" + lang + "\n" + body + "\n```";
 const list = (commands: Record<string, string>) => Object.entries(commands).map(([name, cmd]) => `- ${name}: \`${cmd}\``).join("\n");
 
-export const aiPrompt = `# Task
-Integrate the PixlPush React Native SDK (@pixlpush/react-native ${SDK_VERSION}) into this app: analytics, identity and push notifications.
+export const aiPrompt = `You are a senior React Native engineer. Integrate the PixlPush SDK (@pixlpush/react-native ${SDK_VERSION}) into this repository: analytics, user identity and push notifications. Work like a careful reviewer is watching: small, focused changes that match the existing code.
 
-# Rules
-- Use ONLY the packages, options and methods shown below. Do not invent APIs, do not set apiBaseUrl or sdkVersion.
-- Match this codebase's language (TS/JS), folder layout and style. Adapt file paths, keep the code's behaviour.
-- Only public values in the app. Never add a dashboard token, Firebase service-account JSON or APNs .p8 key to the repo, bundle or env files.
-- Never send passwords, tokens, payment details or other sensitive data as event or user properties.
-- Do not do the manual console steps in "Hand-off"; list them for me instead.
-- If something here conflicts with the project, stop and ask instead of guessing.
+<goal>
+When you are done, the app configures PixlPush once at startup, identifies users on sign-in, resets on sign-out, tracks its core product events, registers for push, and passes the verification step below.
+</goal>
 
-# 0. Inspect first
-Detect: Expo (app.json / app.config.*) or bare React Native; package manager (lockfile); entry point (App.tsx or expo-router root layout); where sign-in and sign-out happen; whether a privacy/consent prompt exists.
+<rules>
+1. Source of truth: use ONLY the packages, options and methods in this prompt. Do not invent APIs. Do not set apiBaseUrl or sdkVersion.
+2. Fit the codebase: follow its language (TS/JS), folder layout, naming, formatting and state/auth patterns. Adapt file paths; keep behaviour identical.
+3. Secrets: only the public SDK key and project ID go in the app. Never add a dashboard token, Firebase service-account JSON or APNs .p8 key to the repo, bundle or env files.
+4. Privacy: never send passwords, tokens, payment data or other sensitive values as event or user properties. externalUserId is the stable internal user ID, never an email.
+5. Scope: do not refactor unrelated code, upgrade unrelated dependencies, or touch Firebase/Apple/PixlPush consoles.
+6. Uncertainty: if the project conflicts with these steps (unknown auth flow, monorepo, unusual entry point), stop and ask one concise question instead of guessing.
+</rules>
 
-# 1. Install
+<workflow>
+Step 0 — Inspect, then plan. Before editing, report in a short list:
+- Expo (app.json / app.config.*) or bare React Native, and the RN version
+- package manager (from the lockfile)
+- app entry point (App.tsx or expo-router root layout)
+- where sign-in and sign-out happen
+- whether a privacy/consent prompt exists
+- the files you intend to create or change
+Then proceed.
+
+Step 1 — Install (pick the matching command):
 ${list(installCommands)}
 
-# 2. Public config
-Expo → \`.env\`:
+Step 2 — Public config.
+Expo → .env:
 ${fence("sh", code.envExpo)}
-Bare → \`src/config/pixlpush.ts\` (inject with the project's existing build-time config tool; the SDK reads no env vars itself):
+Bare → src/config/pixlpush.ts (inject values with the project's existing build-time config tool; the SDK reads no env vars itself):
 ${fence("ts", code.envBare)}
-Leave the key as a placeholder. I will create it in PixlPush → Project settings → SDK keys.
+Leave the key as a placeholder; I will paste it from PixlPush → Project settings → SDK keys.
 
-# 3. Configure once → src/lib/pixlpush.ts
+Step 3 — Configure once → src/lib/pixlpush.ts
 ${fence("ts", code.initialize)}
 Call it from the entry point:
 ${fence("tsx", code.entry)}
 
-# 4. Identity → hook into the existing auth flow
+Step 4 — Identity: hook into the existing auth flow.
 ${fence("ts", code.identify)}
-externalUserId = the stable internal user ID, never an email.
 
-# 5. Events
+Step 5 — Events: track this app's core actions (snake_case names, non-sensitive properties).
 ${fence("ts", code.track)}
-Add events for this app's core actions (snake_case). If a consent prompt exists, forward its answers:
+If a consent prompt exists, forward its answers:
 ${fence("ts", code.consent)}
 
-# 6. Push (code only)
+Step 6 — Push (code only).
 ${list(pushInstallCommands)}
 React Native Firebase must be v22+ (modular API).
 
@@ -524,31 +534,47 @@ ${fence("sh", code.expoBuild)}
 Bare Android → android/build.gradle and android/app/build.gradle:
 ${fence("gradle", code.androidRootGradle + "\n\n" + code.androidAppGradle)}
 
-Bare iOS → Podfile, AppDelegate (Swift for RN 0.77+, else Objective-C), firebase.json, then \`cd ios && pod install\`:
+Bare iOS → Podfile, AppDelegate (Swift for RN 0.77+, otherwise Objective-C), firebase.json, then run pod install:
 ${fence("ruby", code.podfile)}
 ${fence("swift", code.appDelegateSwift)}
 ${fence("objc", code.appDelegateObjc)}
 ${fence("json", code.firebaseJson)}
 
-Listeners → a file imported before startPixlPush() runs:
+Listeners → in a file imported before startPixlPush() runs:
 ${fence("ts", code.listeners)}
-Permission → call from a button or onboarding step, never at launch:
+Permission → call from a button or onboarding step, never automatically at launch:
 ${fence("ts", code.permission)}
 Foreground messages:
 ${fence("ts", code.foreground)}
 Never send an Expo push token (ExponentPushToken[…]) to PixlPush; autoPush sends the native FCM token.
 
-# 7. Verify → src/dev/verify-pixlpush.ts (dev only)
+Step 7 — Verify → src/dev/verify-pixlpush.ts (dev builds only)
 ${fence("ts", code.verify)}
-Success: \`failed: 0, remaining: 0\`, and qa-user-001 appears in PixlPush → Users with an integration_verified event.
+Run the type checker and linter the project already uses and fix anything you introduced.
+</workflow>
 
-# Hand-off (manual, do not attempt)
-Tell me to follow the "Firebase & push setup" guide in the PixlPush docs for:
-1. Firebase project → add Android app (package name) → google-services.json into android/app/ (Expo: project root).
-2. Add iOS app (bundle ID) → GoogleService-Info.plist into the iOS target (Expo: project root).
-3. Apple Developer → APNs .p8 key → upload to Firebase.
-4. Service-account JSON (role: Firebase Cloud Messaging API Admin) → upload in PixlPush → Project settings → Firebase / FCM.
-5. SDK keys: paste the development key; create a separate production key before release.
+<acceptance_criteria>
+- configure() runs exactly once per app launch; errors are logged in dev and never block the UI.
+- identify() runs after every sign-in; reset() is awaited on sign-out.
+- At least the app's main conversion events are tracked.
+- Verification prints failed: 0, remaining: 0, and qa-user-001 appears in PixlPush → Users with an integration_verified event.
+- No secrets, no sensitive properties, no unrelated changes.
+</acceptance_criteria>
 
-# Output
-Finish with: files changed (one line each), commands I still need to run, and the hand-off checklist.`;
+<manual_steps>
+Do not attempt these. List them for me at the end and point me to the "Firebase & push setup" guide in the PixlPush docs:
+1. Firebase project → add the Android app (package name) → place google-services.json in android/app/ (Expo: project root).
+2. Add the iOS app (bundle ID) → add GoogleService-Info.plist to the iOS target (Expo: project root).
+3. Apple Developer → create an APNs .p8 key → upload it to Firebase.
+4. Create a service-account JSON (role: Firebase Cloud Messaging API Admin) → upload it in PixlPush → Project settings → Firebase / FCM.
+5. Paste the development SDK key; create a separate production key before release.
+</manual_steps>
+
+<final_report>
+End with exactly these sections:
+1. Summary — two sentences.
+2. Files changed — one line per file with what changed.
+3. Commands to run — anything I still need to run (install, prebuild, pod install).
+4. Manual steps — the checklist above, in order.
+5. Open questions — assumptions you made, if any.
+</final_report>`;

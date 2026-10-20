@@ -79,11 +79,11 @@ export default function SavedCards({ projectId, adding, onAdd, onChanged }: {
                             <Box sx={{ position: "absolute", left: 1, width: 14, height: 14, borderRadius: "50%", backgroundColor: "#ef3e44" }} />
                             <Box sx={{ position: "absolute", right: 1, width: 14, height: 14, borderRadius: "50%", backgroundColor: "#ffbf2f", opacity: 0.95 }} />
                           </Box>
-                        ) : <Typography fontSize={card.brand === "visa" ? "var(--fs-13)" : "var(--fs-11)"} fontWeight={600} sx={{ fontStyle: card.brand === "visa" ? "italic" : "normal", letterSpacing: card.brand === "visa" ? 0.5 : 0.2 }}>{brandLabel(card.brand)}</Typography>}
+                        ) : <Typography fontSize={card.brand === "visa" ? "var(--fs-13)" : "var(--fs-12)"} fontWeight={600} sx={{ fontStyle: card.brand === "visa" ? "italic" : "normal", letterSpacing: card.brand === "visa" ? 0.5 : 0.2 }}>{brandLabel(card.brand)}</Typography>}
                       </Box>
                       <Typography fontWeight={600} fontSize={card.brand === "visa" ? "var(--fs-18)" : "var(--fs-14)"} sx={{ fontStyle: card.brand === "visa" ? "italic" : "normal", letterSpacing: card.brand === "visa" ? 1 : 0.3 }}>{brandLabel(card.brand)}</Typography>
                     </Stack>
-                    {card.isDefault && <Chip icon={<CheckCircleRounded />} label="Default" size="small" sx={{ height: 23, color: "#f6fff9", backgroundColor: "rgba(71,217,137,.16)", border: "1px solid rgba(129,255,179,.35)", fontSize: "var(--fs-11)", fontWeight: 600, "& .MuiChip-icon": { color: "#7df2ad", fontSize: 15 } }} />}
+                    {card.isDefault && <Chip icon={<CheckCircleRounded />} label="Default" size="small" sx={{ height: 23, color: "#f6fff9", backgroundColor: "rgba(71,217,137,.16)", border: "1px solid rgba(129,255,179,.35)", fontSize: "var(--fs-12)", fontWeight: 600, "& .MuiChip-icon": { color: "#7df2ad", fontSize: 15 } }} />}
                   </Stack>
                   <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mt: "auto" }}>
                     <Box aria-label="EMV chip" sx={{ width: 48, height: 32, borderRadius: 1.15, background: "linear-gradient(135deg,#fff2b2 0%,#dfbd61 52%,#b99035 100%)", boxShadow: "inset 0 0 0 1px rgba(104,68,20,.24), inset 2px 2px 4px rgba(255,255,255,.45)", overflow: "hidden", position: "relative", backgroundImage: "linear-gradient(90deg, transparent 44%, rgba(104,68,20,.25) 45% 55%, transparent 56%), linear-gradient(0deg, transparent 42%, rgba(104,68,20,.25) 43% 57%, transparent 58%), linear-gradient(135deg,#fff2b2 0%,#dfbd61 52%,#b99035 100%)" }} />
@@ -92,7 +92,7 @@ export default function SavedCards({ projectId, adding, onAdd, onChanged }: {
                   <Typography sx={{ mt: 1.3, fontSize: { xs: "var(--fs-16)", sm: "var(--fs-18)" }, fontWeight: 600, letterSpacing: 2.7, fontFamily: "var(--pp-mono)", whiteSpace: "nowrap" }}>**** **** **** {card.last4 ?? "****"}</Typography>
                   <Stack direction="row" justifyContent="flex-end" sx={{ mt: 1.1 }}>
                     <Box sx={{ textAlign: "right" }}>
-                      <Typography fontSize="var(--fs-11)" sx={{ opacity: 0.62, letterSpacing: 1.2 }}>EXPIRES</Typography>
+                      <Typography fontSize="var(--fs-12)" sx={{ opacity: 0.62, letterSpacing: 1.2 }}>EXPIRES</Typography>
                       <Typography fontSize="var(--fs-12)" fontWeight={600}>{expiry(card)}</Typography>
                     </Box>
                   </Stack>

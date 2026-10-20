@@ -133,7 +133,7 @@ export function StatCard({
           {value}
         </Typography>
         {trend && (
-          <Typography color="#129661" fontSize="var(--fs-11)" fontWeight={500}>
+          <Typography color="#129661" fontSize="var(--fs-12)" fontWeight={500}>
             {trend}
           </Typography>
         )}
@@ -217,7 +217,7 @@ export function LegacyOverviewSection() {
             <Stack direction="row" alignItems="center" gap={1}>
               <Box className="live-dot" />
               <Typography
-                fontSize="var(--fs-11)"
+                fontSize="var(--fs-12)"
                 fontWeight={500}
                 color="#168c5b"
                 letterSpacing=".08em"
@@ -443,7 +443,7 @@ export function LegacyOverviewSection() {
                 <strong>
                   {selectedProject === "PixlLove" ? "94,218" : "32,108"}
                 </strong>
-                <Typography color="#15965e" fontSize="var(--fs-11)">
+                <Typography color="#15965e" fontSize="var(--fs-12)">
                   {selectedProject === "PixlLove" ? "73.1%" : "75.9%"}
                 </Typography>
               </Stack>
@@ -455,7 +455,7 @@ export function LegacyOverviewSection() {
                 <strong>
                   {selectedProject === "PixlLove" ? "76,402" : "24,740"}
                 </strong>
-                <Typography color="#15965e" fontSize="var(--fs-11)">
+                <Typography color="#15965e" fontSize="var(--fs-12)">
                   {selectedProject === "PixlLove" ? "59.3%" : "58.5%"}
                 </Typography>
               </Stack>
@@ -467,7 +467,7 @@ export function LegacyOverviewSection() {
                 <strong>
                   {selectedProject === "PixlLove" ? "41,716" : "14,528"}
                 </strong>
-                <Typography color="#15965e" fontSize="var(--fs-11)">
+                <Typography color="#15965e" fontSize="var(--fs-12)">
                   {selectedProject === "PixlLove" ? "32.4%" : "34.3%"}
                 </Typography>
               </Stack>
@@ -627,7 +627,7 @@ export function LegacyOverviewSection() {
           </Box>
           <Stack direction="row" alignItems="center" gap={0.7}>
             <Box className="live-dot" />
-            <Typography fontSize="var(--fs-11)" fontWeight={500} color="#168c5b">
+            <Typography fontSize="var(--fs-12)" fontWeight={500} color="#168c5b">
               Receiving events
             </Typography>
             <Button href="/dashboard/users" size="small" sx={{ ml: 1 }}>
@@ -662,11 +662,11 @@ export function LegacyOverviewSection() {
                 <Typography fontSize="var(--fs-12)" fontWeight={500}>
                   {type}
                 </Typography>
-                <Typography color="text.secondary" fontSize="var(--fs-11)">
+                <Typography color="text.secondary" fontSize="var(--fs-12)">
                   {user} <span className="activity-separator">·</span> {object}
                 </Typography>
               </Box>
-              <Typography color="text.secondary" fontSize="var(--fs-11)">
+              <Typography color="text.secondary" fontSize="var(--fs-12)">
                 {time}
               </Typography>
             </Stack>
@@ -900,7 +900,7 @@ export function UsersSection() {
           <Typography fontSize="var(--fs-12)" fontWeight={500}>
             {row.externalUserId || row.email || row.id}
           </Typography>
-          <Typography color="text.secondary" fontSize="var(--fs-11)">
+          <Typography color="text.secondary" fontSize="var(--fs-12)">
             {row.name || "Identified user"}
           </Typography>
         </Box>
@@ -972,7 +972,7 @@ export function UsersSection() {
                 </Typography>
                 <Chip label="AUTO LIFECYCLE" size="small" />
               </Stack>
-              <Typography color="text.secondary" fontSize="var(--fs-11)">
+              <Typography color="text.secondary" fontSize="var(--fs-12)">
                 {row.description ||
                   "Automatically updated based on user activity."}
               </Typography>
@@ -985,7 +985,7 @@ export function UsersSection() {
       key: "updatedAt",
       label: "Status",
       render: (row) => (
-        <Typography color="#168c5b" fontSize="var(--fs-11)" fontWeight={500}>
+        <Typography color="#168c5b" fontSize="var(--fs-12)" fontWeight={500}>
           {row.updatedAt
             ? `Updated ${new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(row.updatedAt))}`
             : "Updated automatically"}
@@ -1010,7 +1010,7 @@ export function UsersSection() {
       align: "right",
       render: (row) => (
         <Box className="segment-count">
-          <Typography color="text.secondary" fontSize="var(--fs-11)">
+          <Typography color="text.secondary" fontSize="var(--fs-12)">
             <GroupsRounded fontSize="inherit" /> Users
           </Typography>
           <strong>
@@ -1078,7 +1078,7 @@ export function UsersSection() {
               </Typography>
               <Chip label="DYNAMIC" size="small" />
             </Stack>
-            <Typography color="text.secondary" fontSize="var(--fs-11)">
+            <Typography color="text.secondary" fontSize="var(--fs-12)">
               {row.description || "Dynamic audience group"}
             </Typography>
           </Box>
@@ -1089,7 +1089,7 @@ export function UsersSection() {
       key: "updatedAt",
       label: "Updated",
       render: (row) => (
-        <Typography color="text.secondary" fontSize="var(--fs-11)">
+        <Typography color="text.secondary" fontSize="var(--fs-12)">
           {row.updatedAt
             ? new Intl.DateTimeFormat(undefined, {
                 dateStyle: "medium",
@@ -1104,7 +1104,7 @@ export function UsersSection() {
       align: "right",
       render: (row) => (
         <Box className="segment-count">
-          <Typography color="text.secondary" fontSize="var(--fs-11)">
+          <Typography color="text.secondary" fontSize="var(--fs-12)">
             <GroupsRounded fontSize="inherit" /> Users
           </Typography>
           <strong>{(row.memberCount ?? 0).toLocaleString()}</strong>
@@ -1333,7 +1333,7 @@ export function UsersSection() {
                 <Box>
                   <Stack direction="row" alignItems="center" gap={0.7}>
                     <span>1</span>
-                    <Typography fontSize="var(--fs-11)" fontWeight={500}>
+                    <Typography fontSize="var(--fs-12)" fontWeight={500}>
                       Integrate SDK
                     </Typography>
                   </Stack>
@@ -1350,7 +1350,7 @@ export function UsersSection() {
                 <Box>
                   <Stack direction="row" alignItems="center" gap={0.7}>
                     <span>2</span>
-                    <Typography fontSize="var(--fs-11)" fontWeight={500}>
+                    <Typography fontSize="var(--fs-12)" fontWeight={500}>
                       Choose events
                     </Typography>
                   </Stack>
@@ -1367,7 +1367,7 @@ export function UsersSection() {
                 <Box>
                   <Stack direction="row" alignItems="center" gap={0.7}>
                     <span>3</span>
-                    <Typography fontSize="var(--fs-11)" fontWeight={500}>
+                    <Typography fontSize="var(--fs-12)" fontWeight={500}>
                       Add conditions
                     </Typography>
                   </Stack>
@@ -1384,7 +1384,7 @@ export function UsersSection() {
                 <Box>
                   <Stack direction="row" alignItems="center" gap={0.7}>
                     <span>4</span>
-                    <Typography fontSize="var(--fs-11)" fontWeight={500}>
+                    <Typography fontSize="var(--fs-12)" fontWeight={500}>
                       Segment updates
                     </Typography>
                   </Stack>
@@ -1738,10 +1738,10 @@ function EmailDataSection() {
                 }
               />
             </Stack>
-            <Typography color="text.secondary" fontSize="var(--fs-11)">
+            <Typography color="text.secondary" fontSize="var(--fs-12)">
               {row.detail}
             </Typography>
-            <Typography color="text.secondary" fontSize="var(--fs-11)" sx={{ mt: 0.5 }}>
+            <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: 0.5 }}>
               {row.meta}
             </Typography>
           </Box>
@@ -1752,7 +1752,7 @@ function EmailDataSection() {
       key: "status",
       label: "Type",
       render: (row) => (
-        <Typography color="text.secondary" fontSize="var(--fs-11)">
+        <Typography color="text.secondary" fontSize="var(--fs-12)">
           {row.status}
         </Typography>
       ),
@@ -1761,7 +1761,7 @@ function EmailDataSection() {
       key: "meta",
       label: "Updated",
       render: (row) => (
-        <Typography color="text.secondary" fontSize="var(--fs-11)">
+        <Typography color="text.secondary" fontSize="var(--fs-12)">
           {row.meta.split(" · ")[1] ?? row.meta}
         </Typography>
       ),
@@ -2014,10 +2014,10 @@ function EmailSection() {
                 }
               />
             </Stack>
-            <Typography color="text.secondary" fontSize="var(--fs-11)">
+            <Typography color="text.secondary" fontSize="var(--fs-12)">
               {row.detail}
             </Typography>
-            <Typography color="text.secondary" fontSize="var(--fs-11)" sx={{ mt: 0.5 }}>
+            <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: 0.5 }}>
               {row.meta}
             </Typography>
           </Box>
@@ -2028,7 +2028,7 @@ function EmailSection() {
       key: "status",
       label: "Type",
       render: (row) => (
-        <Typography color="text.secondary" fontSize="var(--fs-11)">
+        <Typography color="text.secondary" fontSize="var(--fs-12)">
           {row.status}
         </Typography>
       ),
@@ -2037,7 +2037,7 @@ function EmailSection() {
       key: "meta",
       label: "Updated",
       render: (row) => (
-        <Typography color="text.secondary" fontSize="var(--fs-11)">
+        <Typography color="text.secondary" fontSize="var(--fs-12)">
           {row.meta.split(" · ")[1] ?? row.meta}
         </Typography>
       ),
@@ -2365,7 +2365,7 @@ function PushSection() {
           >
             {row.name}
           </Typography>
-          <Typography color="text.secondary" fontSize="var(--fs-11)">
+          <Typography color="text.secondary" fontSize="var(--fs-12)">
             {row.category}
           </Typography>
         </Box>
@@ -2374,12 +2374,12 @@ function PushSection() {
     {
       key: "title",
       label: "Title",
-      render: (row) => <Typography fontSize="var(--fs-11)">{row.title}</Typography>,
+      render: (row) => <Typography fontSize="var(--fs-12)">{row.title}</Typography>,
     },
     {
       key: "message",
       label: "Message",
-      render: (row) => <Typography fontSize="var(--fs-11)">{row.message}</Typography>,
+      render: (row) => <Typography fontSize="var(--fs-12)">{row.message}</Typography>,
     },
     {
       key: "category",
@@ -2392,7 +2392,7 @@ function PushSection() {
       key: "created",
       label: "Created / updated",
       render: (row) => (
-        <Typography color="text.secondary" fontSize="var(--fs-11)">
+        <Typography color="text.secondary" fontSize="var(--fs-12)">
           {row.created}
         </Typography>
       ),
@@ -2418,7 +2418,7 @@ function PushSection() {
       key: "target",
       label: "Target",
       render: (row) => (
-        <Typography color="text.secondary" fontSize="var(--fs-11)">
+        <Typography color="text.secondary" fontSize="var(--fs-12)">
           {row.target}
         </Typography>
       ),
@@ -2430,7 +2430,7 @@ function PushSection() {
       render: (row) => (
         <Typography
           color={row.sends === "—" ? "text.secondary" : "#168c5b"}
-          fontSize="var(--fs-11)"
+          fontSize="var(--fs-12)"
           fontWeight={500}
         >
           {row.sends}
@@ -2442,7 +2442,7 @@ function PushSection() {
       label: "Opens",
       align: "right",
       render: (row) => (
-        <Typography color="text.secondary" fontSize="var(--fs-11)">
+        <Typography color="text.secondary" fontSize="var(--fs-12)">
           {row.clicks}
         </Typography>
       ),
@@ -2599,7 +2599,7 @@ function PushSection() {
           </Stack>
         </Stack>
         {activeQuery.isError && (
-          <Typography color="warning.main" fontSize="var(--fs-11)">
+          <Typography color="warning.main" fontSize="var(--fs-12)">
             The push API is unavailable. Refresh after the backend is reachable.
           </Typography>
         )}
@@ -2734,7 +2734,7 @@ export function IntegrationsSection() {
                   {status}
                 </Typography>
               </Stack>
-              <Typography color="text.secondary" fontSize="var(--fs-11)" sx={{ mt: 0.7 }}>
+              <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: 0.7 }}>
                 {detail}
               </Typography>
               <Button variant="outlined" fullWidth sx={{ mt: 2 }}>

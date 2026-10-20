@@ -19,14 +19,14 @@ function CopyField({ label, value }: { label: string; value: string }) {
   };
   return (
     <Box sx={{ flex: 1, minWidth: 0 }}>
-      <Typography color="text.secondary" fontSize="var(--fs-11)" fontWeight={500} sx={{ mb: 0.5 }}>{label}</Typography>
+      <Typography color="text.secondary" fontSize="var(--fs-12)" fontWeight={500} sx={{ mb: 0.5 }}>{label}</Typography>
       <Stack direction="row" alignItems="center" gap={1} sx={{ bgcolor: '#303033', color: '#fff', borderRadius: 0.5, minHeight: 44, px: 1.25 }}>
         <Typography component="code" fontSize="var(--fs-13)" sx={{ wordBreak: 'break-all', fontFamily: 'var(--pp-mono)', flex: 1 }}>{value}</Typography>
         <Tooltip title={copied ? 'Copied' : `Copy ${label.toLowerCase()}`}>
           <IconButton size="small" sx={{ color: '#fff' }} aria-label={`Copy ${label.toLowerCase()}`} onClick={copy}><ContentCopyRounded fontSize="small" /></IconButton>
         </Tooltip>
       </Stack>
-      {copied && <Typography role="status" fontSize="var(--fs-11)" color="success.main">Copied</Typography>}
+      {copied && <Typography role="status" fontSize="var(--fs-12)" color="success.main">Copied</Typography>}
     </Box>
   );
 }

@@ -821,7 +821,7 @@ function JourneyBlock({
           <Typography fontWeight={600}>{block.title}</Typography>
           <Typography
             color="text.secondary"
-            fontSize="var(--fs-11)"
+            fontSize="var(--fs-12)"
             sx={{ whiteSpace: "pre-line" }}
           >
             {block.description}
@@ -976,7 +976,7 @@ function MetricUsersPanel({ blockId, blockTitle, type, label, onClose }: OpenMet
       <Box className="journey-settings-title">
         <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
           <Box>
-            <Typography fontSize="var(--fs-11)" color="#4775de" fontWeight={500} letterSpacing=".08em">
+            <Typography fontSize="var(--fs-12)" color="#4775de" fontWeight={500} letterSpacing=".08em">
               {blockTitle.toUpperCase()}
             </Typography>
             <Typography variant="h3">{label}</Typography>
@@ -1056,7 +1056,7 @@ function MetricUsersPanel({ blockId, blockTitle, type, label, onClose }: OpenMet
                       {statusText && (
                         <Box
                           component="span"
-                          sx={{ ...CHIP[tone ?? "grey"], fontSize: "var(--fs-11)", fontWeight: 600, px: 1, py: 0.25, borderRadius: 10, whiteSpace: "nowrap" }}
+                          sx={{ ...CHIP[tone ?? "grey"], fontSize: "var(--fs-12)", fontWeight: 600, px: 1, py: 0.25, borderRadius: 10, whiteSpace: "nowrap" }}
                         >
                           {statusText}
                         </Box>
@@ -1279,7 +1279,7 @@ function AddStepPopover({
                 </Box>
                 <Box sx={{ textAlign: "left" }}>
                   <Typography fontWeight={600}>{title}</Typography>
-                  <Typography color="text.secondary" fontSize="var(--fs-11)">
+                  <Typography color="text.secondary" fontSize="var(--fs-12)">
                     {description}
                   </Typography>
                 </Box>
@@ -1322,7 +1322,7 @@ function SettingsPanel({
       >
         <Box>
           <Typography
-            fontSize="var(--fs-11)"
+            fontSize="var(--fs-12)"
             color="#4775de"
             fontWeight={500}
             letterSpacing=".08em"
@@ -1673,7 +1673,7 @@ function ConditionSettings({
             <Typography fontWeight={600} fontSize="var(--fs-13)">
               {title}
             </Typography>
-            <Typography fontSize="var(--fs-11)" color="text.secondary">
+            <Typography fontSize="var(--fs-12)" color="text.secondary">
               {description}
             </Typography>
           </Box>

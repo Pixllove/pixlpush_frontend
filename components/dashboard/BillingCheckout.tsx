@@ -176,7 +176,7 @@ function CheckoutForm({ projectId, plan, interval, onInterval, unitAmount, curre
       </Stack>
 
       <Card sx={{ ...sectionSx, position: { lg: "sticky" }, top: { lg: 96 } }}>
-        <Typography fontSize="var(--fs-11)" fontWeight={500} sx={{ letterSpacing: 1.3, color: "#8e8798" }}>ORDER SUMMARY</Typography>
+        <Typography fontSize="var(--fs-12)" fontWeight={500} sx={{ letterSpacing: 1.3, color: "#8e8798" }}>ORDER SUMMARY</Typography>
         <Stack direction="row" justifyContent="space-between" alignItems="baseline" sx={{ mt: 1 }}>
           <Typography fontSize="var(--fs-24)" fontWeight={600}>PixlPush {info.label}</Typography>
           <Typography fontWeight={600} fontSize="var(--fs-16)">{formatMoney(unitAmount, currency)}<Typography component="span" fontSize="var(--fs-12)" color="text.secondary"> / {interval}</Typography></Typography>
@@ -199,7 +199,7 @@ function CheckoutForm({ projectId, plan, interval, onInterval, unitAmount, curre
           <Row label="Tax" value={previewing ? "Calculating…" : totals ? formatMoney(totals.tax ?? 0, currency) : "Added after you enter your address"} muted={!totals} />
           <Divider />
           <Row label="Total due today" value={totals ? formatMoney(totals.total, currency) : "—"} strong />
-          <Typography color="text.secondary" fontSize="var(--fs-11)">Then {totals ? formatMoney(totals.total, currency) : formatMoney(unitAmount, currency) + " plus tax"} every {interval} until you cancel. Cancel any time; access runs to the end of the paid period.</Typography>
+          <Typography color="text.secondary" fontSize="var(--fs-12)">Then {totals ? formatMoney(totals.total, currency) : formatMoney(unitAmount, currency) + " plus tax"} every {interval} until you cancel. Cancel any time; access runs to the end of the paid period.</Typography>
         </Stack>
         {(taxError || error) && <Alert severity="error" sx={{ mt: 2, borderRadius: 1.5 }}>{taxError ?? error}</Alert>}
         <Button variant="contained" fullWidth size="large" startIcon={<LockRounded />} disabled={!canPay} onClick={pay} sx={{ mt: 2, textTransform: "none", borderRadius: 1.5 }}>
@@ -207,7 +207,7 @@ function CheckoutForm({ projectId, plan, interval, onInterval, unitAmount, curre
         </Button>
         <Stack direction="row" gap={1} alignItems="center" justifyContent="center" sx={{ mt: 1.5 }}>
           <ShieldRounded sx={{ fontSize: 16, color: "#8e8798" }} />
-          <Typography color="text.secondary" fontSize="var(--fs-11)">Secured by Stripe. Prices in AED, tax calculated by Stripe Tax.</Typography>
+          <Typography color="text.secondary" fontSize="var(--fs-12)">Secured by Stripe. Prices in AED, tax calculated by Stripe Tax.</Typography>
         </Stack>
       </Card>
     </Box>

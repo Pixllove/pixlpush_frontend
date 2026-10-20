@@ -110,7 +110,7 @@ export function AiSetup({ base }: GuideProps) {
   return <>
     <Section id="prompt" title="The prompt">
       <Body>Copy this into Claude Code, Cursor, GitHub Copilot, Codex, Windsurf, Gemini CLI, Cline or any coding agent, from the root of your app. It uses the same code as the <A href={rn(base, "quickstart")}>Quickstart</A>.</Body>
-      <CodeBlock code={aiPrompt} language="Text" filename="pixlpush-setup-prompt.md" lineNumbers={false} maxHeight={520} />
+      <CodeBlock code={aiPrompt} language="Markdown" download="pixlpush-setup-prompt.md" filename="pixlpush-setup-prompt.md" lineNumbers={false} maxHeight={520} wrap />
     </Section>
     <Section id="how" title="How to use it">
       <DataTable code={false} headers={["Agent", "Where to paste it"]} rows={[

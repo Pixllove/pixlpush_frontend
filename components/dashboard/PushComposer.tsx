@@ -570,7 +570,7 @@ export default function PushComposer({
                 </Button>
               )}
               {country !== "All Countries" && (
-                <Typography color="text.secondary" fontSize="var(--fs-11)" sx={{ mt: 1 }}>
+                <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: 1 }}>
                   Country targeting is managed through an audience group. Select
                   a group that contains this country before sending.
                 </Typography>
@@ -1206,7 +1206,7 @@ function PushHeading({
         {title}
       </Typography>
       {disabled && (
-        <Typography fontSize="var(--fs-11)" color="text.secondary">
+        <Typography fontSize="var(--fs-12)" color="text.secondary">
           (disabled for templates)
         </Typography>
       )}
@@ -1236,7 +1236,7 @@ function PlatformCard({
           <Typography fontWeight={600} fontSize="var(--fs-13)">
             {title}
           </Typography>
-          <Typography color="text.secondary" fontSize="var(--fs-11)">
+          <Typography color="text.secondary" fontSize="var(--fs-12)">
             {subtitle}
           </Typography>
         </Box>
@@ -1247,7 +1247,7 @@ function PlatformCard({
         />
       </Stack>
       {checked && (
-        <Typography color="#477fe4" fontSize="var(--fs-11)" sx={{ mt: 1 }}>
+        <Typography color="#477fe4" fontSize="var(--fs-12)" sx={{ mt: 1 }}>
           ✓ Enabled for this platform
         </Typography>
       )}

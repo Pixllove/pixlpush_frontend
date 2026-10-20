@@ -88,7 +88,7 @@ export default function EmailLanguageSettings({
         <Typography fontSize="var(--fs-12)" color={secondaryColor}>Saved language</Typography>
         {languagesQuery.isLoading ? <Skeleton width={70} /> : <Typography fontWeight={600} color={textColor}>{languageName(settings?.defaultLanguage)}</Typography>}
       </Stack>
-      <Typography fontSize="var(--fs-11)" color={secondaryColor}>
+      <Typography fontSize="var(--fs-12)" color={secondaryColor}>
         {settings?.defaultLanguageEnabled
           ? `New editors will open in ${languageName(settings.defaultLanguage)}.`
           : "The language chooser will appear for each new email."}

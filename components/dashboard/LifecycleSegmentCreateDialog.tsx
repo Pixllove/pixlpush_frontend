@@ -234,7 +234,7 @@ export default function LifecycleSegmentCreateDialog({
                           </Typography>
                           <Typography
                             color="text.secondary"
-                            fontSize="var(--fs-11)"
+                            fontSize="var(--fs-12)"
                             noWrap
                           >
                             {option.assigned

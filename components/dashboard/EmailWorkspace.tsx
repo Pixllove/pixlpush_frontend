@@ -1241,14 +1241,14 @@ export default function EmailWorkspace() {
           alignItems="center"
           className="table-footer"
         >
-          <Typography color="text.secondary" fontSize="var(--fs-11)">
+          <Typography color="text.secondary" fontSize="var(--fs-12)">
             {isListLoading
               ? "Loading emails…"
               : `Showing ${visible.length} result${visible.length === 1 ? "" : "s"}`}
             {tab === "templates" ? " · templates" : ""}
           </Typography>
           <Stack direction="row" alignItems="center" gap={1}>
-            <Typography color="text.secondary" fontSize="var(--fs-11)">
+            <Typography color="text.secondary" fontSize="var(--fs-12)">
               Rows
             </Typography>
             <Select
@@ -1324,7 +1324,7 @@ function EmailTableRow({
         >
           {item.name}
         </Typography>
-        <Typography color="text.secondary" fontSize="var(--fs-11)">
+        <Typography color="text.secondary" fontSize="var(--fs-12)">
           {item.kind === "templates"
             ? "Email template"
             : item.kind === "drafts"
@@ -1333,22 +1333,22 @@ function EmailTableRow({
         </Typography>
       </TableCell>
       <TableCell>
-        <Typography fontSize="var(--fs-11)" noWrap>
+        <Typography fontSize="var(--fs-12)" noWrap>
           {item.subject || "—"}
         </Typography>
       </TableCell>
       <TableCell sx={{ maxWidth: 260 }}>
-        <Typography fontSize="var(--fs-11)" noWrap>
+        <Typography fontSize="var(--fs-12)" noWrap>
           {item.description}
         </Typography>
       </TableCell>
       <TableCell>
-        <Typography color="text.secondary" fontSize="var(--fs-11)">
+        <Typography color="text.secondary" fontSize="var(--fs-12)">
           {item.editor === "drag" ? "Drag & drop" : "Simple"}
         </Typography>
       </TableCell>
       <TableCell>
-        <Typography color="text.secondary" fontSize="var(--fs-11)">
+        <Typography color="text.secondary" fontSize="var(--fs-12)">
           {item.updated.replace("Edited ", "")}
         </Typography>
       </TableCell>
@@ -1372,12 +1372,12 @@ function EmailTableRow({
         />
       </TableCell>
       <TableCell align="right">
-        <Typography color="text.secondary" fontSize="var(--fs-11)">
+        <Typography color="text.secondary" fontSize="var(--fs-12)">
           {item.kind === "send" ? "125.4K" : "—"}
         </Typography>
       </TableCell>
       <TableCell align="right">
-        <Typography color="text.secondary" fontSize="var(--fs-11)">
+        <Typography color="text.secondary" fontSize="var(--fs-12)">
           {item.kind === "send" ? "42.8%" : "—"}
         </Typography>
       </TableCell>
@@ -1591,7 +1591,7 @@ function ChoiceScreen({
         <DialogTitle>
           <Typography
             color="primary"
-            fontSize="var(--fs-11)"
+            fontSize="var(--fs-12)"
             fontWeight={500}
             letterSpacing=".16em"
           >
@@ -1635,7 +1635,7 @@ function ChoiceScreen({
               <Typography fontSize="var(--fs-12)" fontWeight={500}>
                 Set as default for next time
               </Typography>
-              <Typography color="text.secondary" fontSize="var(--fs-11)">
+              <Typography color="text.secondary" fontSize="var(--fs-12)">
                 Selected language: {languageName(language)}
               </Typography>
             </Box>
@@ -4310,7 +4310,7 @@ function CampaignReview({
                   All eligible users
                 </MenuItem>
               </Select>
-              <Typography color="text.secondary" fontSize="var(--fs-11)" sx={{ mt: 1.5 }}>
+              <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: 1.5 }}>
                 You can change your recipient selection before the campaign is
                 sent.
               </Typography>
@@ -4399,7 +4399,7 @@ function CampaignReview({
             <Typography fontWeight={600}>
               Ready to send this campaign?
             </Typography>
-            <Typography color="text.secondary" fontSize="var(--fs-11)">
+            <Typography color="text.secondary" fontSize="var(--fs-12)">
               The campaign is prepared locally and can be sent when you are
               ready.
             </Typography>

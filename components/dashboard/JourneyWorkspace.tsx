@@ -265,7 +265,7 @@ export default function JourneyWorkspace() {
           >
             {row.name}
           </Typography>
-          <Typography color="text.secondary" fontSize="var(--fs-11)">
+          <Typography color="text.secondary" fontSize="var(--fs-12)">
             Automated journey
           </Typography>
         </Box>
@@ -291,7 +291,7 @@ export default function JourneyWorkspace() {
           alignItems="center"
           gap={0.7}
           color="text.secondary"
-          fontSize="var(--fs-11)"
+          fontSize="var(--fs-12)"
         >
           {row.type === "Email" ? (
             <EmailRounded fontSize="small" />
@@ -329,7 +329,7 @@ export default function JourneyWorkspace() {
             }
           />
           <Typography
-            fontSize="var(--fs-11)"
+            fontSize="var(--fs-12)"
             color={canToggle(row) ? "#4775de" : "#a59bb2"}
             fontWeight={500}
           >
@@ -344,7 +344,7 @@ export default function JourneyWorkspace() {
       key: "created",
       label: "Created at",
       render: (row) => (
-        <Typography color="text.secondary" fontSize="var(--fs-11)">
+        <Typography color="text.secondary" fontSize="var(--fs-12)">
           {row.created}
         </Typography>
       ),
@@ -353,7 +353,7 @@ export default function JourneyWorkspace() {
       key: "live",
       label: "Went live",
       render: (row) => (
-        <Typography color="text.secondary" fontSize="var(--fs-11)">
+        <Typography color="text.secondary" fontSize="var(--fs-12)">
           {row.live}
         </Typography>
       ),
@@ -455,7 +455,7 @@ export default function JourneyWorkspace() {
                 </Typography>
                 <Typography
                   color="text.secondary"
-                  fontSize="var(--fs-11)"
+                  fontSize="var(--fs-12)"
                   lineHeight={1.45}
                   sx={{ mt: 0.6 }}
                 >

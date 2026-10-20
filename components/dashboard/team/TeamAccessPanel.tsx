@@ -159,9 +159,9 @@ export default function TeamAccessPanel() {
                         <Box sx={{ minWidth: 0 }}>
                           <Typography fontWeight={500} fontSize="var(--fs-12)">
                             {m.account.name ?? m.account.email}
-                            {m.account.id === me && <Chip size="small" label="You" sx={{ ml: 1, height: 18, fontSize: "var(--fs-11)" }} />}
+                            {m.account.id === me && <Chip size="small" label="You" sx={{ ml: 1, height: 18, fontSize: "var(--fs-12)" }} />}
                           </Typography>
-                          <Typography color="text.secondary" fontSize="var(--fs-11)">{m.account.email}</Typography>
+                          <Typography color="text.secondary" fontSize="var(--fs-12)">{m.account.email}</Typography>
                         </Box>
                       </Stack>
                     </TableCell>

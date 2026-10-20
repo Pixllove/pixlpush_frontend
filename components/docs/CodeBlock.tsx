@@ -1,5 +1,6 @@
 "use client";
 
+import FileDownloadOutlined from "@mui/icons-material/FileDownloadOutlined";
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import CheckRounded from "@mui/icons-material/CheckRounded";
 import ContentCopyRounded from "@mui/icons-material/ContentCopyRounded";
@@ -88,9 +89,9 @@ function HeaderTabs({ tabs, label }: { tabs: CodeTab[]; label: string }) {
   </Stack>;
 }
 
-export default function CodeBlock({ code, language = "TypeScript", filename, highlight = [], lineNumbers, tabs, tabsLabel = "Variants", maxHeight }: {
+export default function CodeBlock({ code, language = "TypeScript", filename, highlight = [], lineNumbers, tabs, tabsLabel = "Variants", maxHeight, wrap = false, download }: {
   code: string; language?: string; filename?: string; highlight?: number[]; lineNumbers?: boolean;
-  tabs?: CodeTab[]; tabsLabel?: string; maxHeight?: number;
+  tabs?: CodeTab[]; tabsLabel?: string; maxHeight?: number; wrap?: boolean; /** File name; shows a Download button that saves the code as this file. */ download?: string;
 }) {
   const { projectId } = useDocsProject();
   const text = personalize(code, projectId);
@@ -105,6 +106,13 @@ export default function CodeBlock({ code, language = "TypeScript", filename, hig
     catch { setState("error"); }
     window.clearTimeout(timer.current);
     timer.current = window.setTimeout(() => setState("idle"), 2000);
+  };
+
+  const save = () => {
+    const url = URL.createObjectURL(new Blob([text], { type: "text/markdown;charset=utf-8" }));
+    const link = Object.assign(document.createElement("a"), { href: url, download });
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   const label = filename ?? language;
@@ -122,6 +130,11 @@ export default function CodeBlock({ code, language = "TypeScript", filename, hig
     <Stack component="figcaption" direction="row" alignItems="center" gap={1.25} sx={{ minHeight: 44, pl: tabs ? .5 : 2, pr: .75, bgcolor: syntax.header, borderBottom: `1px solid ${syntax.line}` }}>
       <Box sx={{ minWidth: 0, flex: 1, display: "flex", alignItems: "center", alignSelf: "stretch" }}>{title}</Box>
       <Typography component="span" sx={{ flexShrink: 0, display: { xs: tabs ? "none" : "inline", sm: "inline" }, px: .75, borderRadius: 1, border: `1px solid ${syntax.line}`, color: syntax.muted, fontFamily: "var(--pp-mono)", fontSize: "var(--fs-11)", lineHeight: 1.7 }}>{language}</Typography>
+      {download && <ButtonBase onClick={save} aria-label={`Download ${download}`}
+        sx={{ flexShrink: 0, gap: .75, minWidth: { xs: 44, sm: 104 }, height: { xs: 44, sm: 32 }, px: 1.25, borderRadius: 1.5, color: syntax.muted, fontFamily: "inherit", fontSize: "var(--fs-12)", fontWeight: 500, transition: "background-color var(--pp-ease), color var(--pp-ease)", "&:hover": { bgcolor: "rgba(255,255,255,.06)", color: syntax.text }, "&:focus-visible": { outline: `2px solid ${syntax.accent}`, outlineOffset: -2 } }}>
+        <FileDownloadOutlined sx={{ fontSize: 16 }} />
+        <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>Download</Box>
+      </ButtonBase>}
       <ButtonBase onClick={copy} aria-label={`Copy ${selectedTab ? `${selectedTab.label} ` : ""}${label}`}
         sx={{ flexShrink: 0, gap: .75, minWidth: { xs: 44, sm: 84 }, height: { xs: 44, sm: 32 }, px: 1.25, borderRadius: 1.5, color: state === "copied" ? syntax.string : state === "error" ? "#FFB4AB" : syntax.muted, fontFamily: "inherit", fontSize: "var(--fs-12)", fontWeight: 500, transition: "background-color var(--pp-ease), color var(--pp-ease)", "&:hover": { bgcolor: "rgba(255,255,255,.06)", color: state === "idle" ? syntax.text : undefined }, "&:focus-visible": { outline: `2px solid ${syntax.accent}`, outlineOffset: -2 } }}>
         {state === "copied" ? <CheckRounded sx={{ fontSize: 16 }} /> : state === "error" ? <ErrorOutlineRounded sx={{ fontSize: 16 }} /> : <ContentCopyRounded sx={{ fontSize: 15 }} />}
@@ -130,8 +143,8 @@ export default function CodeBlock({ code, language = "TypeScript", filename, hig
       <Box component="span" role="status" aria-live="polite" sx={srOnly}>{state === "copied" ? "Copied to clipboard" : state === "error" ? "Copy failed. Select the code and copy it manually." : ""}</Box>
     </Stack>
     <Box component="pre" tabIndex={0} role={tabs ? "tabpanel" : undefined} id={selectedTab?.panelId} aria-labelledby={selectedTab?.id} aria-label={tabs ? undefined : `${label} code`}
-      sx={{ m: 0, py: 2, overflow: "auto", maxHeight, color: syntax.text, fontFamily: "var(--pp-mono)", fontSize: { xs: "var(--fs-12)", md: "var(--fs-13)" }, lineHeight: 1.75, whiteSpace: "pre", tabSize: 2, fontVariantLigatures: "none", ...codeScrollbar, "&:focus-visible": { outline: `2px solid ${syntax.accent}`, outlineOffset: -2 } }}>
-      <Box component="code" sx={{ display: "block", minWidth: "max-content", fontFamily: "inherit" }}>
+      sx={{ m: 0, py: 2, overflow: "auto", maxHeight, color: syntax.text, fontFamily: "var(--pp-mono)", fontSize: { xs: "var(--fs-12)", md: "var(--fs-13)" }, lineHeight: 1.75, whiteSpace: wrap ? "pre-wrap" : "pre", overflowWrap: wrap ? "anywhere" : undefined, tabSize: 2, fontVariantLigatures: "none", ...codeScrollbar, "&:focus-visible": { outline: `2px solid ${syntax.accent}`, outlineOffset: -2 } }}>
+      <Box component="code" sx={{ display: "block", minWidth: wrap ? 0 : "max-content", fontFamily: "inherit" }}>
         {lines.map((line, index) => {
           const marked = highlight.includes(index + 1);
           return <Box component="span" key={index} sx={{ display: "block", pl: numbered ? 0 : 2.25, pr: 3, bgcolor: marked ? syntax.highlight : "transparent", boxShadow: marked ? `inset 2px 0 ${syntax.accent}` : "none" }}>

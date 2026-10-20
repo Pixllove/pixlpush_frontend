@@ -72,7 +72,7 @@ const actorName = (e: AuditLogEntry) => (e.actor ? e.actor.name ?? e.actor.email
 
 function CategoryChip({ category }: { category: AuditCategory }) {
   const c = CATEGORY_COLOR[category] ?? CATEGORY_COLOR.auth;
-  return <Chip size="small" label={CATEGORY_LABEL[category] ?? category} sx={{ color: c.color, bgcolor: c.bg, fontWeight: 500, fontSize: "var(--fs-11)", height: 22 }} />;
+  return <Chip size="small" label={CATEGORY_LABEL[category] ?? category} sx={{ color: c.color, bgcolor: c.bg, fontWeight: 500, fontSize: "var(--fs-12)", height: 22 }} />;
 }
 
 /** Event code as a small badge, e.g. "resource_deleted". */
@@ -81,7 +81,7 @@ export function EventBadge({ action }: { action: string }) {
     <Chip
       size="small"
       label={action.toLowerCase()}
-      sx={{ height: 20, fontSize: "var(--fs-11)", fontFamily: 'var(--pp-mono)', color: '#4a4556', bgcolor: '#f0eef3', borderRadius: 1 }}
+      sx={{ height: 20, fontSize: "var(--fs-12)", fontFamily: 'var(--pp-mono)', color: '#4a4556', bgcolor: '#f0eef3', borderRadius: 1 }}
     />
   );
 }
@@ -199,7 +199,7 @@ export default function AuditLogsPanel() {
                 </TableCell>
                 <TableCell>
                   <Typography fontSize="var(--fs-13)" fontWeight={600}>{actorName(entry)}</Typography>
-                  {entry.actor?.name && <Typography fontSize="var(--fs-11)" color="text.secondary">{entry.actor.email}</Typography>}
+                  {entry.actor?.name && <Typography fontSize="var(--fs-12)" color="text.secondary">{entry.actor.email}</Typography>}
                 </TableCell>
                 <TableCell sx={{ maxWidth: 420 }}>{entry.description}</TableCell>
                 <TableCell><CategoryChip category={entry.category} /></TableCell>
@@ -256,7 +256,7 @@ function DetailsDrawer({ entry, onClose }: { entry: AuditLogEntry | null; onClos
         <Stack sx={{ p: 3 }} gap={2} role="dialog" aria-label="Activity details">
           <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap={1}>
             <Box>
-              <Typography fontSize="var(--fs-11)" fontWeight={500} letterSpacing={1} color="text.secondary">ACTIVITY DETAILS</Typography>
+              <Typography fontSize="var(--fs-12)" fontWeight={500} letterSpacing={1} color="text.secondary">ACTIVITY DETAILS</Typography>
               <Typography fontSize="var(--fs-16)" fontWeight={600} sx={{ mt: 0.5 }}>{entry.description}</Typography>
             </Box>
             <IconButton aria-label="Close details" onClick={onClose}><CloseRounded /></IconButton>
@@ -302,7 +302,7 @@ function DetailsDrawer({ entry, onClose }: { entry: AuditLogEntry | null; onClos
               <Stack direction="row" gap={0.8} flexWrap="wrap">
                 {changedFields.map((f) => <Chip key={f} size="small" variant="outlined" label={label(f)} />)}
               </Stack>
-              <Typography fontSize="var(--fs-11)" color="text.secondary" sx={{ mt: 1 }}>Values are not stored for these changes, so secrets never reach the log.</Typography>
+              <Typography fontSize="var(--fs-12)" color="text.secondary" sx={{ mt: 1 }}>Values are not stored for these changes, so secrets never reach the log.</Typography>
             </Box>
           )}
 
