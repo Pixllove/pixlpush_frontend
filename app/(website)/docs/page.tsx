@@ -60,8 +60,7 @@ export default function DocsHome() {
         <Typography component="h1" sx={{ mt: 1.5, color: tokens.text, fontSize: { xs: "var(--fs-32)", md: "var(--fs-48)" }, fontWeight: 600, lineHeight: 1.08, letterSpacing: "-0.035em" }}>Integrate PixlPush in your app.</Typography>
         <Typography sx={{ mt: 2, maxWidth: 480, color: tokens.textSecondary, fontSize: { xs: "var(--fs-16)", md: "var(--fs-18)" }, lineHeight: 1.65 }}>Identify users, track product events, keep data flowing offline, and attribute every push notification — with the React Native & Expo SDK.</Typography>
         <Stack direction={{ xs: "column", sm: "row" }} gap={1.5} sx={{ mt: 4, "& .MuiButton-root": { whiteSpace: "nowrap" } }}>
-          <LinkButton href={rn("quickstart")} variant="contained" size="large" endIcon={<ArrowForwardRounded />}>Start the quickstart</LinkButton>
-          <LinkButton href={rn("ai-setup")} variant="contained" size="large" startIcon={<AutoAwesomeRounded />} className="docs-ai-shine" sx={{ position: "relative", overflow: "hidden", background: "linear-gradient(135deg,#6d28d9,#9333ea 55%,#db2777)" }}>Set up with AI</LinkButton>
+          <LinkButton href={rn("quickstart")} variant="contained" size="large">Start the quickstart</LinkButton>
         </Stack>
       </Box>
       <Box sx={{ minWidth: 0 }}><CodeBlock code={hero} filename="App.tsx" /></Box>
