@@ -8,43 +8,10 @@ import {
   TerminalRounded,
 } from "@mui/icons-material";
 import { Box, Button, Container, Stack, Typography } from "@mui/material";
+import { aiPrompt, code, installCommands } from "@/components/docs/react-native/content";
 
-const integrationPrompt = `Integrate PixlPush into this React app using the @pixlpush/react SDK.
-
-First inspect the existing app structure, authentication flow, and environment configuration. Then:
-1. Install the SDK and initialize it once at the app entry point with the Project ID, public SDK key, and environment.
-2. Read configuration from environment variables. Never expose private credentials in client code.
-3. Identify signed-in users with a stable userId after signup or login, and reset the identity on logout.
-4. Track meaningful product events with consistent names and useful, non-sensitive properties. Start with onboarding_started and onboarding_completed, then add events that match this product's core actions.
-5. Respect email consent and push permission. Do not send passwords, access tokens, payment details, or sensitive personal data.
-6. Add appropriate TypeScript types, error handling, and a short README note showing how to configure and verify the integration.
-
-Use the existing patterns in this codebase, show me the files you changed, and call out anything that needs server-side work.`;
-
-const codeExample = `npm install @pixlpush/react
-
-import { PixlPush } from "@pixlpush/react";
-
-PixlPush.initialize({
-  projectId: process.env.NEXT_PUBLIC_PIXLPUSH_PROJECT_ID,
-  publicKey: process.env.NEXT_PUBLIC_PIXLPUSH_PUBLIC_KEY,
-  environment: "production",
-});
-
-// After signup or login
-PixlPush.identify({
-  userId: user.id,
-  email: user.email,
-  plan: user.plan,
-  locale: user.locale,
-});
-
-PixlPush.track("onboarding_completed", {
-  source: "product_signup",
-});
-
-// On logout
-PixlPush.reset();`;
+const integrationPrompt = aiPrompt;
+const codeExample = `${installCommands.npm}\n\n${code.initialize}\n\n${code.identify}\n\n${code.track}`;
 
 type View = "prompt" | "code";
 
@@ -72,11 +39,11 @@ export default function IntegrationPromptSection() {
               Connect PixlPush with one prompt.
             </Typography>
             <Typography sx={{ mt: 2.2, maxWidth: 500, color: "#62576d", fontSize: "var(--fs-16)", lineHeight: 1.7 }}>
-              Give your AI coding assistant the PixlPush context. It can wire up the React SDK, user identification, and the events your marketing team needs for better journeys.
+              Give your AI coding assistant the PixlPush context. It can wire up the React Native SDK, user identification, push, and the events your marketing team needs for better journeys.
             </Typography>
             <Stack direction={{ xs: "column", sm: "row" }} gap={1.5} alignItems={{ xs: "stretch", sm: "center" }} sx={{ mt: 3 }}>
-              <Button href="/docs#quickstart" variant="contained" endIcon={<ArrowOutwardRounded />} sx={{ alignSelf: "flex-start", px: 2.2, py: 1.1, borderRadius: 2, bgcolor: "#5b18bc", fontWeight: 700, textTransform: "none", "&:hover": { bgcolor: "#481194" } }}>
-                View integration guide
+              <Button href="/docs/react-native/ai-setup" variant="contained" endIcon={<ArrowOutwardRounded />} sx={{ alignSelf: "flex-start", px: 2.2, py: 1.1, borderRadius: 2, bgcolor: "#5b18bc", fontWeight: 700, textTransform: "none", "&:hover": { bgcolor: "#481194" } }}>
+                View AI setup guide
               </Button>
             </Stack>
           </Box>
@@ -85,7 +52,7 @@ export default function IntegrationPromptSection() {
             <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "stretch", sm: "center" }} gap={1.5} sx={{ px: { xs: 2, md: 2.5 }, py: 1.7, borderBottom: "1px solid rgba(255,255,255,.1)", bgcolor: "#1d1930" }}>
               <Stack direction="row" gap={1} alignItems="center">
                 <Box sx={{ display: "grid", width: 32, height: 32, placeItems: "center", borderRadius: 1.5, bgcolor: "rgba(139,92,246,.18)", color: "#c4a5ff" }}><TerminalRounded fontSize="small" /></Box>
-                <Box><Typography sx={{ fontSize: "var(--fs-12)", fontWeight: 700 }}>PIXLPUSH REACT SDK</Typography><Typography sx={{ mt: .2, color: "rgba(255,255,255,.52)", fontSize: "var(--fs-12)" }}>AI-ready setup</Typography></Box>
+                <Box><Typography sx={{ fontSize: "var(--fs-12)", fontWeight: 700 }}>PIXLPUSH REACT NATIVE SDK</Typography><Typography sx={{ mt: .2, color: "rgba(255,255,255,.52)", fontSize: "var(--fs-12)" }}>AI-ready setup</Typography></Box>
               </Stack>
               <Stack direction="row" gap={0.5} alignItems="center">
                 <Stack direction="row" gap={0.5} role="tablist" aria-label="Integration example">

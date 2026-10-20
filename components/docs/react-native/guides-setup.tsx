@@ -113,6 +113,13 @@ export function AiSetup({ base }: GuideProps) {
       <CodeBlock code={aiPrompt} language="Text" filename="pixlpush-setup-prompt.md" lineNumbers={false} maxHeight={520} />
     </Section>
     <Section id="how" title="How to use it">
+      <DataTable code={false} headers={["Agent", "Where to paste it"]} rows={[
+        ["Claude Code", "Run claude in the project root and paste it, or save it as CLAUDE.md."],
+        ["Cursor", "Agent mode in chat, or save it under .cursor/rules/."],
+        ["GitHub Copilot", "Copilot Chat in agent mode, or .github/copilot-instructions.md."],
+        ["Codex / Gemini CLI", "Paste it into the CLI session, or save it as AGENTS.md / GEMINI.md."],
+        ["Windsurf / Cline / others", "Paste it into the agent chat with file editing enabled."],
+      ]} />
       <List ordered items={["Open your app’s repository in the agent (agent or edit mode, not plain chat).", "Paste the prompt and let it inspect the project first.", "Review the diff, paste your development SDK key, and run the verify script."]} />
     </Section>
     <Section id="manual" title="What you do by hand">
@@ -159,13 +166,7 @@ export function Installation({ base }: GuideProps) {
     </Section>
     <Section id="api-url" title="Where data is sent">
       <Body>There is no server URL to configure, in development or production. <b>The SDK key decides where data goes</b>, the way a Sentry DSN carries its host. To switch servers, switch keys.</Body>
-      <DataTable code={false} headers={["Key created on", "The app sends to", "Use for"]} minWidth={620} rows={[
-        ["The PixlPush dashboard (hosted)", "PixlPush cloud — the SDK’s built-in default", "Development, staging and production apps"],
-        ["A local PixlPush backend, reached through an HTTPS tunnel", "That tunnel’s URL, stored in the key", "Real phones against a local backend"],
-        ["A local PixlPush backend, reached on localhost", "Your computer’s Wi-Fi IP over http, stored in the key", "Simulators and emulators on the same network"],
-      ]} />
-      <Body>So for your own app: create a development key and a production key in the dashboard, put each in the matching environment file, and you’re done. Details on local keys are in <A href={rn(base, "sdk-keys", "local")}>SDK keys → Local backends</A>.</Body>
-      <Callout tone="warning" title="Local keys need React Native 0.74+ (Hermes)">The SDK reads a key’s address with <code>atob</code>, which Hermes provides from React Native 0.74. On older engines the address is ignored and data goes to PixlPush cloud, where a local key is rejected with <code>SDK_KEY_INVALID</code>.</Callout>
+      <Body>Create a development key and a production key in the dashboard, put each in the matching environment file, and you’re done.</Body>
       <Body>The SDK also accepts <code>apiBaseUrl</code> and <code>sdkVersion</code>. Leave both unset: the key and the package already provide them.</Body>
     </Section>
   </>;
@@ -193,19 +194,6 @@ export function SdkKeys({ base }: GuideProps) {
     <Section id="environments" title="One key per environment">
       <CodeBlock language="Environment" filename=".env.development / .env.staging / .env.production" code={`EXPO_PUBLIC_PIXLPUSH_KEY=YOUR_DEVELOPMENT_SDK_KEY\nEXPO_PUBLIC_PIXLPUSH_KEY=YOUR_STAGING_SDK_KEY\nEXPO_PUBLIC_PIXLPUSH_KEY=YOUR_PRODUCTION_SDK_KEY`} />
       <Body>Separate keys let you revoke a leaked development key without touching production, and tell traffic apart by last-used date. Pair them with the matching <code>environment</code> option.</Body>
-    </Section>
-    <Section id="local" title="Local backends">
-      <Body>Only needed if you run the PixlPush backend yourself. A key created on a non-production backend stores the address the dashboard used to reach it, so the app follows automatically:</Body>
-      <DataTable code={false} headers={["Dashboard BACKEND_API_URL", "Key sends the app to", "Works on"]} minWidth={620} rows={[
-        [<code key="t">https://xxxx.trycloudflare.com/api/v1</code>, "The tunnel (HTTPS)", "Real iOS and Android devices (recommended)"],
-        [<code key="l">http://localhost:3000/api/v1</code>, "Your computer’s Wi-Fi IP, e.g. http://192.168.1.20:3000", "Simulator / emulator on the same Wi-Fi; dev builds only (plain http)"],
-      ]} />
-      <List ordered items={[
-        "Start the backend (and the worker, for real pushes) and, for phones, a tunnel such as npx cloudflared tunnel --url http://localhost:3000.",
-        "Point the dashboard’s BACKEND_API_URL at the tunnel, then create the key in Project settings → SDK keys.",
-        <>Run the app with <code>enableLogging: true</code>: requests must go to the tunnel or LAN IP, not to PixlPush cloud.</>,
-      ]} />
-      <Callout tone="tip" title="Tunnel URL or Wi-Fi IP changed?">The address is fixed when the key is created. Quick tunnels change on every restart, so create a new key (a named tunnel keeps its URL).</Callout>
     </Section>
     <Section id="rotate" title="Rotate without downtime">
       <Body>Several keys can be active at once on purpose.</Body>

@@ -100,7 +100,6 @@ const troubleshooting: Record<string, [string, string, string][]> = {
     ["SDK_KEY_MISSING", "The env variable wasn’t inlined.", "Restart Metro with --clear; check the EXPO_PUBLIC_ prefix."],
     ["SDK_KEY_INVALID", "Key revoked, deleted, mistyped, or from another backend.", "Create a new key in Project settings → SDK keys."],
     ["SDK_KEY_PROJECT_MISMATCH", "projectId isn’t the key’s project ID or slug.", "Fix projectId or remove it."],
-    ["Data reaches PixlPush cloud while testing a local backend", "The key was created on the hosted dashboard, or the app’s JS engine has no atob (React Native below 0.74).", "Create the key on the local backend (SDK keys → Local backends) and use Hermes on RN 0.74+. Don’t set apiBaseUrl."],
     ["NETWORK_ERROR or timeouts on a real phone", "The key points at a Wi-Fi IP over http, or at a tunnel that has stopped.", "Create the key while the dashboard reaches the backend through a running HTTPS tunnel."],
     ["App still runs old SDK code", "A cached copy of the same SDK version.", "Delete node_modules/@pixlpush, reinstall, and restart Metro with --clear."],
   ],

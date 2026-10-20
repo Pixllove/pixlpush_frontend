@@ -5,8 +5,11 @@ const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
 export const stripePromise = publishableKey ? loadStripe(publishableKey) : null;
 
 /** Stripe Elements styled like the dashboard's own inputs. */
+// Elements render in Stripe's iframe, so they load the app font themselves (pass as `fonts` to <Elements options>).
+export const stripeFonts = [{ cssSrc: "https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" }];
+
 export const stripeAppearance = {
   theme: "stripe" as const,
-  variables: { colorPrimary: "#5517B8", colorText: "#1E1429", colorDanger: "#C0352B", fontFamily: "Inter, system-ui, sans-serif", borderRadius: "6px", spacingUnit: "4px" },
+  variables: { colorPrimary: "#5517B8", colorText: "#1E1429", colorDanger: "#C0352B", fontFamily: "Manrope, system-ui, sans-serif", borderRadius: "6px", spacingUnit: "4px" },
   rules: { ".Input": { padding: "10px 12px", fontSize: "14px", lineHeight: "20px", borderColor: "#D9D3E1", boxShadow: "none" }, ".Input:focus": { borderColor: "#5517B8", boxShadow: "0 0 0 1px #5517B8" }, ".Label": { fontWeight: "500", fontSize: "13px", color: "#625A6E" } },
 };

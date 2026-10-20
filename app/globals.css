@@ -79,6 +79,7 @@ html {
 }
 body {
   margin: 0;
+  font-family: var(--font-manrope), Manrope, system-ui, sans-serif;
   background: #fffaf8;
   color: #241536;
 }
@@ -1865,14 +1866,6 @@ a {
       rgba(205, 15, 109, 0.42),
       transparent 38%
     );
-}
-.website-shell {
-  font-family: var(--font-manrope), Manrope, sans-serif;
-}
-.website-shell .MuiTypography-root,
-.website-shell .MuiButton-root,
-.website-shell .MuiChip-root {
-  font-family: var(--font-manrope), Manrope, sans-serif !important;
 }
 
 /* Animated AI team constellation in the marketing hero. */
@@ -9716,9 +9709,7 @@ a {
 
 /* iOS device simulator (push preview) */
 .ios-device {
-  --ios-font:
-    -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
-    "Helvetica Neue", sans-serif;
+  --ios-font: var(--pp-font);
   position: relative;
   width: min(100%, 300px);
   aspect-ratio: 393/852;
@@ -9916,7 +9907,7 @@ a {
   z-index: 2;
   margin-top: -2px;
   text-align: center;
-  font-family: "SF Pro Rounded", ui-rounded, var(--ios-font);
+  font-family: var(--ios-font);
   font-size: 84px;
   font-weight: 700;
   line-height: 1;
@@ -11576,7 +11567,7 @@ html[data-email-editor] body::before {
   --pp-r-overlay: 10px;
   --pp-ease: 150ms cubic-bezier(0.2, 0.6, 0.2, 1);
   --pp-font:
-    var(--font-inter), Inter, system-ui, -apple-system, "Segoe UI", Roboto,
+    var(--font-manrope), Manrope, system-ui, -apple-system, "Segoe UI", Roboto,
     sans-serif;
   --pp-mono: SFMono-Regular, Menlo, Consolas, monospace;
 }
@@ -14929,7 +14920,7 @@ html:has(.home-experience)::-webkit-scrollbar {
   border-color: var(--pp-accent) !important;
 }
 
-/* ---- Fonts: the app is Inter; the email being written keeps an email-safe face, as it did before ---- */
+/* ---- Fonts: the app is Manrope; the email being written keeps an email-safe face, as it did before ---- */
 .admin-simple-content,
 .recipient-preview {
   font-family: Arial, Helvetica, sans-serif;

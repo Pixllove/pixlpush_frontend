@@ -40,7 +40,7 @@ const reactNativeGuides: Guide[] = [
   {
     slug: "sdk-keys", group: "Set up", title: "SDK keys",
     description: "Create, store, rotate, revoke and delete the public key that authenticates your app.",
-    sections: [s("what", "What an SDK key is", "pp_sk public key JWT"), s("create", "Create a key"), s("listing", "What the list shows", "prefix last used"), s("roles", "Who can manage keys", "owner admin developer"), s("environments", "One key per environment", "YOUR_DEVELOPMENT_SDK_KEY staging production"), s("local", "Local backends", "LAN tunnel cloudflared BACKEND_API_URL localhost"), s("rotate", "Rotate without downtime"), s("revoke-delete", "Revoke vs. delete", "SDK_KEY_INVALID SDK_KEY_PROJECT_MISMATCH PROJECT_INACTIVE")],
+    sections: [s("what", "What an SDK key is", "pp_sk public key JWT"), s("create", "Create a key"), s("listing", "What the list shows", "prefix last used"), s("roles", "Who can manage keys", "owner admin developer"), s("environments", "One key per environment", "YOUR_DEVELOPMENT_SDK_KEY staging production"), s("rotate", "Rotate without downtime"), s("revoke-delete", "Revoke vs. delete", "SDK_KEY_INVALID SDK_KEY_PROJECT_MISMATCH PROJECT_INACTIVE")],
   },
   {
     slug: "firebase", group: "Set up", title: "Firebase & push setup",
@@ -111,7 +111,6 @@ export const platforms: Platform[] = [
   { id: "flutter", label: "Flutter", description: "Flutter SDK.", status: "coming-soon" },
   { id: "ios", label: "iOS (Swift)", description: "Native iOS SDK.", status: "coming-soon" },
   { id: "android", label: "Android (Kotlin)", description: "Native Android SDK.", status: "coming-soon" },
-  { id: "node", label: "Node.js", description: "Server-side SDK.", status: "coming-soon" },
 ];
 
 export const availablePlatforms = platforms.filter((platform) => platform.status === "available" && platform.guides?.length);

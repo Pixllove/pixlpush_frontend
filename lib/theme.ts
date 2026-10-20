@@ -46,7 +46,7 @@ export const tokens = {
     { fill: '#F8E6F9', text: '#86238F' },
   ],
   radius: { dense: 4, control: 6, card: 8, overlay: 10, pill: 9999 },
-  font: 'var(--font-inter), Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+  font: 'var(--font-manrope), Manrope, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
   mono: 'SFMono-Regular, Menlo, Consolas, monospace',
 } as const;
 

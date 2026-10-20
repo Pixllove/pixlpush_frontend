@@ -271,9 +271,6 @@ export function SiteHeader() {
         color: "#fff",
         borderBottom: "1px solid rgba(255,255,255,.12)",
         zIndex: 10,
-        "& .MuiLink-root": {
-          fontFamily: "var(--font-manrope), Manrope, sans-serif",
-        },
         "& .MuiButton-root": {
           minHeight: 48,
           px: 2.8,
@@ -427,6 +424,7 @@ export function SiteFooter() {
     {
       title: "Resources",
       links: [
+        ["Developer docs", "/docs"],
         ["Blog", "/blog"],
         ["Customer case studies", "/customer-case-studies"],
         ["Glossary", "/glossary"],

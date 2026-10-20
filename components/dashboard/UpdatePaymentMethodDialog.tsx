@@ -6,7 +6,7 @@ import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Skele
 import { LockRounded } from "@mui/icons-material";
 import { billingApi } from "@/lib/projects/api";
 import { billingErrorMessage } from "@/lib/billing";
-import { stripeAppearance, stripePromise } from "@/lib/stripe";
+import { stripeAppearance, stripeFonts, stripePromise } from "@/lib/stripe";
 
 /**
  * Saves a new card in the app: Stripe's Payment Element collects it (it never reaches PixlPush), a SetupIntent
@@ -23,7 +23,7 @@ export default function UpdatePaymentMethodDialog({ projectId, clientSecret, onC
     <Dialog open={Boolean(clientSecret)} onClose={onClose} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 2.5 } }}>
       <DialogTitle>Add a card</DialogTitle>
       {clientSecret && stripePromise ? (
-        <Elements stripe={stripePromise} options={{ clientSecret, appearance: stripeAppearance }}>
+        <Elements stripe={stripePromise} options={{ clientSecret, appearance: stripeAppearance, fonts: stripeFonts }}>
           <CardForm projectId={projectId} onClose={onClose} onSaved={onSaved} />
         </Elements>
       ) : (
