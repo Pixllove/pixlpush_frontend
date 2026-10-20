@@ -62,12 +62,12 @@ export default function TranslationAISection() {
 
   return (
     <Box ref={trackRef} className="translation-ai-scroll-track">
-      <Box component="section" className="translation-ai-section" aria-labelledby="translation-ai-title">
+      <Box component="section" className="translation-ai-section site-page-seam" aria-labelledby="translation-ai-title">
         <Container maxWidth="lg" className="translation-ai-container">
           <Box className="translation-ai-copy">
             <Typography className="translation-ai-eyebrow">AI-POWERED CAMPAIGN TRANSLATION</Typography>
             <Typography component="h2" id="translation-ai-title" className="translation-ai-title">
-              One campaign. Every user’s language.
+              One campaign. <span className="translation-ai-accent">Every</span> user’s language.
             </Typography>
             <Stack className="translation-ai-benefits" gap={2.1}>
               {benefits.map(([title, description]) => (

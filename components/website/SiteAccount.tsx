@@ -56,7 +56,7 @@ export function SiteAccount() {
     return (
       <>
         <Link href="/login" underline="none" sx={{ px: 1.5, fontSize: "var(--fs-16)", fontWeight: 700, color: 'rgba(255,255,255,.92)', '&:hover': { color: '#ffab8e' } }}>Log in</Link>
-        <Button variant="contained" href="/get-started" endIcon={<ArrowOutwardRounded />}>Start for free</Button>
+        <Button className="hero-gradient-button" variant="contained" href="/get-started" endIcon={<ArrowOutwardRounded />} sx={{ color: '#000' }}>Start for free</Button>
       </>
     );
   }

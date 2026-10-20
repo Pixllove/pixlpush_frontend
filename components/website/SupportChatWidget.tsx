@@ -99,7 +99,7 @@ export default function SupportChatWidget({
           sx={{
             position: "absolute", right: 0, bottom: showLauncher ? 74 : 0, display: "flex", width: { xs: "min( calc(100vw - 32px), 390px)", sm: 380 },
             height: { xs: "min(590px, calc(100dvh - 110px))", sm: 570 }, flexDirection: "column", overflow: "hidden",
-            border: "1px solid #e9e1ee", borderRadius: "22px", bgcolor: "#fff",
+            border: "1px solid rgba(226,207,247,.18)", borderRadius: "22px", bgcolor: "#21152d", color: "#f8f3fc",
             boxShadow: "0 24px 80px rgba(35,20,48,.22)", animation: "supportChatEnter .24s cubic-bezier(.2,.8,.2,1) both",
             "@keyframes supportChatEnter": { from: { opacity: 0, transform: "translateY(12px) scale(.97)" }, to: { opacity: 1, transform: "translateY(0) scale(1)" } },
           }}
@@ -119,20 +119,20 @@ export default function SupportChatWidget({
           </Stack>
 
           {!hasStarted ? (
-            <Box sx={{ display: "flex", flex: 1, flexDirection: "column", overflow: "auto", p: 2.4, bgcolor: "#fcfafd" }}>
+            <Box sx={{ display: "flex", flex: 1, flexDirection: "column", overflow: "auto", p: 2.4, bgcolor: "#1b1126" }}>
               <Stack direction="row" alignItems="center" gap={1.3} sx={{ mb: 2.2 }}>
-                <Avatar sx={{ width: 35, height: 35, color: "#5b18bc", bgcolor: "#f1eafa" }}><SupportAgentRounded fontSize="small" /></Avatar>
+                <Avatar sx={{ width: 35, height: 35, color: "#5b18bc", bgcolor: "#3a2850" }}><SupportAgentRounded fontSize="small" /></Avatar>
                 <Box>
                   <Typography sx={{ color: "#392b45", fontSize: 12, fontWeight: 750 }}>PixlPush Support</Typography>
-                  <Typography sx={{ color: "#998da1", fontSize: 10 }}>A quick note before we start</Typography>
+                  <Typography sx={{ color: "#ad9dbb", fontSize: 10 }}>A quick note before we start</Typography>
                 </Box>
               </Stack>
-              <Box sx={{ maxWidth: "92%", p: 1.7, border: "1px solid #eee8f2", borderRadius: "4px 16px 16px 16px", bgcolor: "#fff", boxShadow: "0 4px 14px rgba(46,30,59,.04)" }}>
-                <Typography sx={{ color: "#4d4158", fontSize: 13, lineHeight: 1.65 }}>Hi there 👋 Need a hand with PixlPush? Share your email and we’ll open a conversation.</Typography>
+              <Box sx={{ maxWidth: "92%", p: 1.7, border: "1px solid rgba(226,207,247,.16)", borderRadius: "4px 16px 16px 16px", bgcolor: "#2a1c38", boxShadow: "none" }}>
+                <Typography sx={{ color: "#d4c9df", fontSize: 13, lineHeight: 1.65 }}>Hi there 👋 Need a hand with PixlPush? Share your email and we’ll open a conversation.</Typography>
               </Box>
               <Box sx={{ flex: 1, minHeight: 25 }} />
-              <Box component="form" onSubmit={startChat} sx={{ p: 1.8, border: "1px solid #eee8f2", borderRadius: 3, bgcolor: "#fff" }}>
-                <Typography sx={{ mb: 1.1, color: "#30223c", fontSize: 13, fontWeight: 750 }}>Where can we reach you?</Typography>
+              <Box component="form" onSubmit={startChat} sx={{ p: 1.8, border: "1px solid rgba(226,207,247,.16)", borderRadius: 3, bgcolor: "#2a1c38" }}>
+                <Typography sx={{ mb: 1.1, color: "#f8f3fc", fontSize: 13, fontWeight: 750 }}>Where can we reach you?</Typography>
                 <TextField
                   inputRef={inputRef}
                   fullWidth
@@ -150,33 +150,33 @@ export default function SupportChatWidget({
                   Start a conversation <SendRounded sx={{ fontSize: 15 }} />
                 </Box>
               </Box>
-              <Typography sx={{ mt: 1.4, color: "#a196aa", fontSize: 10, textAlign: "center" }}>Demo preview · No message is sent or stored</Typography>
+              <Typography sx={{ mt: 1.4, color: "#a997b7", fontSize: 10, textAlign: "center" }}>Demo preview · No message is sent or stored</Typography>
             </Box>
           ) : (
             <>
               <Stack direction="row" justifyContent="center" sx={{ py: 1.2 }}>
-                <Typography sx={{ px: 1.2, py: .45, borderRadius: 99, color: "#8b7d94", bgcolor: "#f7f4f8", fontSize: 10 }}>Today · {email}</Typography>
+                <Typography sx={{ px: 1.2, py: .45, borderRadius: 99, color: "#ad9dbb", bgcolor: "#2a1c38", fontSize: 10 }}>Today · {email}</Typography>
               </Stack>
-              <Box sx={{ display: "flex", flex: 1, flexDirection: "column", gap: 1.7, overflowY: "auto", px: 2, pb: 2, bgcolor: "#fcfafd" }}>
+              <Box sx={{ display: "flex", flex: 1, flexDirection: "column", gap: 1.7, overflowY: "auto", px: 2, pb: 2, bgcolor: "#1b1126" }}>
                 {messages.map((message, index) => (
                   <Stack key={`${message.time}-${index}`} direction="row" justifyContent={message.from === "visitor" ? "flex-end" : "flex-start"} alignItems="flex-end" gap={.8}>
-                    {message.from === "support" && <Avatar sx={{ width: 27, height: 27, color: "#5b18bc", bgcolor: "#eee5f8" }}><SupportAgentRounded sx={{ fontSize: 16 }} /></Avatar>}
+                    {message.from === "support" && <Avatar sx={{ width: 27, height: 27, color: "#5b18bc", bgcolor: "#3a2850" }}><SupportAgentRounded sx={{ fontSize: 16 }} /></Avatar>}
                     <Box sx={{ maxWidth: "82%" }}>
-                      {message.from === "support" && <Typography sx={{ mb: .45, color: "#8b7d94", fontSize: 10 }}>PixlPush Support · demo</Typography>}
-                      <Box sx={{ p: 1.4, borderRadius: message.from === "visitor" ? "15px 5px 15px 15px" : "5px 15px 15px 15px", color: message.from === "visitor" ? "#fff" : "#44384f", bgcolor: message.from === "visitor" ? "#5b18bc" : "#fff", border: message.from === "visitor" ? "none" : "1px solid #eee8f2", boxShadow: "0 3px 12px rgba(46,30,59,.04)" }}>
+                      {message.from === "support" && <Typography sx={{ mb: .45, color: "#ad9dbb", fontSize: 10 }}>PixlPush Support · demo</Typography>}
+                      <Box sx={{ p: 1.4, borderRadius: message.from === "visitor" ? "15px 5px 15px 15px" : "5px 15px 15px 15px", color: "#f8f3fc", bgcolor: message.from === "visitor" ? "#7444df" : "#2a1c38", border: message.from === "visitor" ? "none" : "1px solid rgba(226,207,247,.16)", boxShadow: "none" }}>
                         <Typography sx={{ fontSize: 12.5, lineHeight: 1.6 }}>{message.text}</Typography>
                       </Box>
-                      <Typography sx={{ mt: .45, color: "#a196aa", fontSize: 9, textAlign: message.from === "visitor" ? "right" : "left" }}>{message.time}</Typography>
+                      <Typography sx={{ mt: .45, color: "#a997b7", fontSize: 9, textAlign: message.from === "visitor" ? "right" : "left" }}>{message.time}</Typography>
                     </Box>
                   </Stack>
                 ))}
               </Box>
-              <Box component="form" onSubmit={sendMessage} sx={{ p: 1.5, borderTop: "1px solid #f0ebf2", bgcolor: "#fff" }}>
-                <Stack direction="row" alignItems="center" gap={.8} sx={{ p: .55, pl: 1.4, border: "1px solid #e8e0ed", borderRadius: 3, transition: "border-color .2s, box-shadow .2s", "&:focus-within": { borderColor: "#9a6bd1", boxShadow: "0 0 0 3px rgba(91,24,188,.08)" } }}>
+              <Box component="form" onSubmit={sendMessage} sx={{ p: 1.5, borderTop: "1px solid rgba(226,207,247,.16)", bgcolor: "#21152d" }}>
+                <Stack direction="row" alignItems="center" gap={.8} sx={{ p: .55, pl: 1.4, border: "1px solid rgba(226,207,247,.2)", borderRadius: 3, transition: "border-color .2s, box-shadow .2s", "&:focus-within": { borderColor: "#9a6bd1", boxShadow: "0 0 0 3px rgba(91,24,188,.08)" } }}>
                   <TextField inputRef={inputRef} fullWidth size="small" value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={handleComposerKeyDown} placeholder="Type your message…" inputProps={{ "aria-label": "Type your message" }} sx={{ "& .MuiInputBase-root": { p: 0, fontSize: 13 }, "& fieldset": { border: "none" } }} />
-                  <IconButton type="submit" aria-label="Send message" disabled={!draft.trim()} sx={{ width: 36, height: 36, color: "#fff", bgcolor: "#5b18bc", "&:hover": { bgcolor: "#491292" }, "&.Mui-disabled": { color: "#a99db3", bgcolor: "#f1edf3" } }}><SendRounded sx={{ fontSize: 17 }} /></IconButton>
+                  <IconButton type="submit" aria-label="Send message" disabled={!draft.trim()} sx={{ width: 36, height: 36, color: "#fff", bgcolor: "#5b18bc", "&:hover": { bgcolor: "#491292" }, "&.Mui-disabled": { color: "#a99db3", bgcolor: "#3a2850" } }}><SendRounded sx={{ fontSize: 17 }} /></IconButton>
                 </Stack>
-                <Typography sx={{ mt: .8, color: "#a196aa", fontSize: 9, textAlign: "center" }}>Demo only · Replies are simulated, not sent to live support</Typography>
+                <Typography sx={{ mt: .8, color: "#a997b7", fontSize: 9, textAlign: "center" }}>Demo only · Replies are simulated, not sent to live support</Typography>
               </Box>
             </>
           )}

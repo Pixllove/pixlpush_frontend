@@ -7,9 +7,9 @@ import Image from 'next/image';
 
 const steps = [
   {
-    eyebrow: 'UNDERSTAND YOUR USERS',
-    title: 'Know what makes your users stay.',
-    body: 'Max brings your product, audience and business context together to uncover the moments that shape activation, engagement and churn.',
+    eyebrow: 'UNDERSTAND YOUR CUSTOMERS',
+    title: 'Know what moves your users.',
+    body: 'Max analyzes your website and, where available, your app links to understand your product, ideal customer profile, user pain points and buying motivations. He turns these insights into a business analysis that guides relevant email and push content.',
     action: 'Explore business analysis',
   },
   {
@@ -100,7 +100,6 @@ export default function RetentionScrollStory() {
       <Container maxWidth="lg" className="retention-story-container">
         <Box className="retention-story-visual">
           <Box className="retention-story-sticky">
-            <Typography className="retention-story-kicker">THE PIXLPUSH RETENTION LOOP</Typography>
             <Box className="retention-scenes">
               {visuals.map((Visual, index) => <Box key={index} className={`retention-scene-layer${active === index ? ' is-active' : ''}`}><Visual /></Box>)}
             </Box>
