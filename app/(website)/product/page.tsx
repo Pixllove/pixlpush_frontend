@@ -6,7 +6,6 @@ import AutoAwesomeRounded from '@mui/icons-material/AutoAwesomeRounded';
 import CampaignRounded from '@mui/icons-material/CampaignRounded';
 import GroupsRounded from '@mui/icons-material/GroupsRounded';
 import InsightsRounded from '@mui/icons-material/InsightsRounded';
-import LanguageRounded from '@mui/icons-material/LanguageRounded';
 import RouteRounded from '@mui/icons-material/RouteRounded';
 import { SiteShell } from '@/components/website/SiteShell';
 
@@ -39,16 +38,7 @@ const workflow = [
 function ProductWorkspacePreview() {
   return (
     <Box component="figure" className="prd-window" aria-label="PixlPush Analytics dashboard preview with illustrative sample values">
-      <Image src="/assets/product-analytics-dashboard.png" alt="PixlPush Analytics dashboard with navigation, campaign metrics and engagement chart" width={2872} height={1392} priority />
-      <Box className="prd-demo-header-copy">6 of your 6 key metrics are trending up in this demo.</Box>
-      <Box className="prd-demo-values" aria-label="Illustrative sample metrics">
-        <span className="prd-value-1">128,450</span><span className="prd-value-2">82,640</span><span className="prd-value-3">45,810</span>
-        <span className="prd-value-4">48.6%</span><span className="prd-value-5">19.4%</span><span className="prd-value-6">2.8M</span>
-        <small className="prd-change-1">↑ 12.4% vs previous 30 days</small><small className="prd-change-2">↑ 18.7% vs previous 30 days</small><small className="prd-change-3">↑ 9.2% vs previous 30 days</small>
-        <small className="prd-change-4">↑ 6.8 pts vs previous 30 days</small><small className="prd-change-5">↑ 3.4 pts vs previous 30 days</small><small className="prd-change-6">↑ 21.6% vs previous 30 days</small>
-      </Box>
-      <Box className="prd-demo-chart" aria-hidden="true"><svg viewBox="0 0 900 150" preserveAspectRatio="none"><path d="M0 127 C44 121 61 91 105 101 S161 125 205 89 S266 71 310 84 S376 45 420 62 S477 27 522 46 S588 78 633 49 S691 63 735 35 S795 44 839 17 S875 20 900 9" fill="none" stroke="#7138be" strokeWidth="4" /><path d="M0 139 C48 132 69 115 107 119 S165 100 207 110 S270 91 310 99 S376 72 419 84 S478 58 522 74 S584 94 632 68 S691 81 735 55 S795 64 839 42 S875 45 900 33" fill="none" stroke="#ef9b79" strokeWidth="3" /></svg></Box>
-      <Box className="prd-demo-tag">SAMPLE DASHBOARD DATA</Box>
+      <Image src="/assets/product-analytics-dashboard.png?capture=sample-analytics" alt="PixlPush Analytics dashboard with illustrative sample metrics, campaign performance, and engagement charts" width={1785} height={868} priority />
     </Box>
   );
 }
