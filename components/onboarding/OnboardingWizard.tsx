@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  ArrowBackRounded, ArrowForwardRounded, AutoAwesomeRounded, CheckRounded, ContentCopyRounded,
-  LanguageRounded, MailOutlineRounded, NotificationsActiveRounded, PhoneIphoneRounded, RocketLaunchRounded,
+  ArrowBackRounded, ArrowForwardRounded, AutoAwesomeRounded, CheckCircleRounded, CheckRounded, ContentCopyRounded,
+  LanguageRounded, MailOutlineRounded, NotificationsActiveRounded, PhoneIphoneRounded, SearchRounded, WarningAmberRounded,
 } from '@mui/icons-material';
 import {
   Alert, Box, Button, Checkbox, Chip, Container, Dialog, DialogActions, DialogContent, DialogTitle,
@@ -31,12 +31,18 @@ export default function OnboardingWizard() {
   const [state, setState] = useState<OnboardingState>(initialOnboardingState);
   const [copied, setCopied] = useState(false);
   const [firebaseDialogOpen, setFirebaseDialogOpen] = useState(false);
+  const [stepDirection, setStepDirection] = useState<'forward' | 'backward'>('forward');
+  const [appLinkScanState, setAppLinkScanState] = useState<'idle' | 'checking' | 'found' | 'not-found'>('idle');
   useEffect(() => setState(readOnboardingState()), []);
   useEffect(() => saveOnboardingState(state), [state]);
 
   const currentStep = Math.min(6, Math.max(1, state.currentStep));
   const pushEnabled = state.channels.includes('push');
-  const completedCount = state.completed.filter((step) => step !== 5 || pushEnabled).length + (pushEnabled ? 0 : 1);
+  const completedCount = Math.max(0, currentStep - 1);
+  const goToStep = (step: number) => {
+    setStepDirection(step >= currentStep ? 'forward' : 'backward');
+    setState({ ...state, currentStep: step });
+  };
 
   const patch = (value: Partial<OnboardingState>) => setState((previous) => ({ ...previous, ...value, skipped: false }));
   const openFirebaseWithMax = () => {
@@ -55,6 +61,7 @@ export default function OnboardingWizard() {
   const next = () => {
     const completed = new Set(state.completed);
     completed.add(currentStep);
+    setStepDirection('forward');
     if (currentStep === 6) {
       const finished = { ...state, completed: [...completed], currentStep: 6, skipped: false };
       saveOnboardingState(finished);
@@ -63,6 +70,23 @@ export default function OnboardingWizard() {
       return;
     }
     setState({ ...state, completed: [...completed], currentStep: currentStep + 1, skipped: false });
+  };
+  const previous = () => {
+    if (currentStep === 1) return;
+    setStepDirection('backward');
+    setState({ ...state, currentStep: currentStep - 1, skipped: false });
+  };
+  const checkForAppLinks = () => {
+    if (!state.websiteUrl.trim()) return;
+    setAppLinkScanState('checking');
+    window.setTimeout(() => {
+      const hasAppLinks = Boolean(state.androidAppUrl.trim() || state.iosAppUrl.trim());
+      setAppLinkScanState(hasAppLinks ? 'found' : 'not-found');
+    }, 650);
+  };
+  const updateWebsiteUrl = (value: string) => {
+    setAppLinkScanState('idle');
+    patch({ websiteUrl: value });
   };
   const skip = () => {
     const paused = { ...state, skipped: true };
@@ -107,9 +131,9 @@ export default function OnboardingWizard() {
             {steps.map(([title], index) => {
               const number = index + 1;
               const notNeeded = number === 5 && !pushEnabled;
-              const done = state.completed.includes(number) && !notNeeded;
-              const locked = number > currentStep && !state.completed.includes(number);
-              return <button key={title} className={`onboarding-step${done ? ' is-done' : ''}${notNeeded ? ' is-not-needed' : ''}${currentStep === number ? ' is-current' : ''}`} onClick={() => !locked && setState({ ...state, currentStep: number })} disabled={locked}>
+              const done = number < currentStep && state.completed.includes(number) && !notNeeded;
+              const locked = number > currentStep;
+              return <button key={title} className={`onboarding-step${done ? ' is-done' : ''}${notNeeded ? ' is-not-needed' : ''}${currentStep === number ? ' is-current' : ''}`} onClick={() => !locked && goToStep(number)} disabled={locked}>
                 <span className="onboarding-step-number">{done ? <CheckRounded fontSize="small" /> : notNeeded ? '–' : number}</span><span>{title}{notNeeded ? ' · Not needed' : ''}</span>
               </button>;
             })}
@@ -119,20 +143,33 @@ export default function OnboardingWizard() {
         <div className="onboarding-workspace">
           <Paper elevation={0} className="onboarding-chat">
             <div className="onboarding-chat-head"><span className="max-avatar"><img src="/assets/agent-avatar-max-v4.png" alt="Max" /></span><span><strong>Max</strong><small>PIXLPUSH ONBOARDING GUIDE · PREVIEW</small></span><Chip size="small" label="Ready to help" className="max-online" /></div>
-            <div className="onboarding-chat-body">
+            <div key={currentStep} className={`onboarding-chat-body onboarding-step-panel ${stepDirection}`}>
               <div className="max-message"><AutoAwesomeRounded fontSize="small" /><p>{prompt}</p></div>
               <div className="onboarding-question"><Typography className="onboarding-eyebrow">STEP {String(currentStep).padStart(2, '0')} · {steps[currentStep - 1][0].toUpperCase()}</Typography><Typography variant="h4" className="onboarding-question-title">{heading}</Typography>
                 {currentStep === 1 && <TextField autoFocus fullWidth label="Project name" placeholder="e.g. Northstar Mobile" value={state.projectName} onChange={(e) => patch({ projectName: e.target.value })} helperText="You can change this any time." />}
-                {currentStep === 2 && <Stack gap={1.5}><TextField fullWidth label="Website URL" placeholder="https://yourproduct.com" value={state.websiteUrl} onChange={(e) => patch({ websiteUrl: e.target.value })}/><TextField fullWidth label="Android app link" placeholder="Google Play Store URL" value={state.androidAppUrl} onChange={(e) => patch({ androidAppUrl: e.target.value })}/><TextField fullWidth label="iOS app link" placeholder="Apple App Store URL" value={state.iosAppUrl} onChange={(e) => patch({ iosAppUrl: e.target.value })}/><Alert severity="info" icon={<LanguageRounded />}>Add the links you have. We’ll use them only as setup context—no business analysis.</Alert></Stack>}
+                {currentStep === 2 && <div className="onboarding-product-links">
+                  <div className="onboarding-product-section-heading"><span className="onboarding-product-section-icon"><LanguageRounded /></span><span><strong>Website</strong><small>Start with your public product website</small></span></div>
+                  <TextField fullWidth label="Website link" placeholder="https://yourproduct.com" value={state.websiteUrl} onChange={(e) => updateWebsiteUrl(e.target.value)} />
+                  <Button className="onboarding-scan-button" variant="outlined" disabled={!state.websiteUrl.trim() || appLinkScanState === 'checking'} onClick={checkForAppLinks} startIcon={appLinkScanState === 'checking' ? <AutoAwesomeRounded className="onboarding-scan-icon" /> : <SearchRounded />}>
+                    {appLinkScanState === 'checking' ? 'Checking for app links…' : 'Check for app links'}
+                  </Button>
+                  {appLinkScanState !== 'idle' && <div className={`onboarding-link-scan ${appLinkScanState}`} role="status">
+                    {appLinkScanState === 'found' ? <CheckCircleRounded /> : <WarningAmberRounded />}
+                    <span><strong>{appLinkScanState === 'checking' ? 'Looking for app-store links' : appLinkScanState === 'found' ? 'App link found' : 'No app links found'}</strong><small>{appLinkScanState === 'checking' ? 'Reviewing the website details in this preview.' : appLinkScanState === 'found' ? 'We found an app link in the details below.' : 'No app-store links were found yet. You can add them manually below.'}</small></span>
+                  </div>}
+                  <div className="onboarding-product-section-heading app-links-heading"><span className="onboarding-product-section-icon"><AutoAwesomeRounded /></span><span><strong>App links</strong><small>Add or confirm your mobile app store links</small></span></div>
+                  <div className="onboarding-app-link-grid"><TextField fullWidth label="Android app link" placeholder="Google Play Store URL" value={state.androidAppUrl} onChange={(e) => patch({ androidAppUrl: e.target.value })}/><TextField fullWidth label="iOS app link" placeholder="Apple App Store URL" value={state.iosAppUrl} onChange={(e) => patch({ iosAppUrl: e.target.value })}/></div>
+                  <Alert severity="info" icon={<LanguageRounded />}>We’ll use these links only as setup context—no business analysis.</Alert>
+                </div>}
                 {currentStep === 3 && <div className="onboarding-channel-grid">{channelOptions.map(({ id, title, detail, icon: Icon }) => <button key={id} className={`onboarding-channel${state.channels.includes(id) ? ' selected' : ''}`} onClick={() => toggleChannel(id)}><span className="onboarding-channel-icon"><Icon /></span><span><strong>{title}</strong><small>{detail}</small></span>{state.channels.includes(id) && <CheckRounded className="onboarding-channel-check"/>}</button>)}</div>}
                 {currentStep === 4 && <Stack gap={2}><TextField fullWidth label="Sending domain" placeholder="mail.yourproduct.com" value={state.domain} onChange={(e) => patch({ domain: e.target.value })}/><Paper elevation={0} className="onboarding-guidance"><strong>What you’ll do later</strong><span>Verify ownership · Add DNS records · Confirm authentication</span><small>This is a guided preview only. No DNS records are created or verified here.</small></Paper></Stack>}
                 {currentStep === 5 && (pushEnabled ? <Stack gap={2}><Paper elevation={0} className="onboarding-guidance"><strong>Firebase Cloud Messaging</strong><span>Max can guide you through choosing your Firebase project, enabling Cloud Messaging, and preparing the PixlPush configuration.</span><small>For safety, never paste service-account private keys into this preview. No credentials are collected or transmitted.</small></Paper><Button variant="contained" onClick={openFirebaseWithMax} startIcon={<AutoAwesomeRounded />}>{state.completed.includes(5) ? 'Review Firebase with Max' : 'Connect Firebase with Max'}</Button>{state.completed.includes(5) && <Alert severity="success">Firebase setup checklist reviewed. Your actual Firebase project has not been connected in this preview.</Alert>}</Stack> : <Stack gap={2}><Alert severity="info" icon={<NotificationsActiveRounded />}>Push notifications weren’t selected. You can still add push now and have Max guide you through Firebase.</Alert><Button variant="contained" onClick={openFirebaseWithMax} startIcon={<AutoAwesomeRounded />}>Enable push &amp; set up Firebase with Max</Button></Stack>)}
                 {currentStep === 6 && <Stack gap={2}><Paper elevation={0} className="onboarding-code"><code>Set up the PixlPush SDK in my {state.projectName || 'app'}. Guide me through installation, initialize it safely, register push permissions if enabled, and track a first test event. Do not expose secrets.</code><IconButton aria-label="Copy setup prompt" onClick={() => { navigator.clipboard?.writeText(`Set up the PixlPush SDK in my ${state.projectName || 'app'}. Guide me through installation, initialize it safely, register push permissions if enabled, and track a first test event. Do not expose secrets.`); setCopied(true); }}><ContentCopyRounded/></IconButton></Paper><Button href="/dashboard/integrations/react-native/quickstart" variant="outlined">View SDK integration guide</Button></Stack>}
               </div>
             </div>
-            <div className="onboarding-chat-footer"><Typography variant="caption">Your progress is saved in this browser. You can return from the Onboarding Guide.</Typography><Button variant="contained" disabled={!canContinue} onClick={next} endIcon={<ArrowForwardRounded />}>{currentStep === 6 ? 'Finish setup' : currentStep === 5 && !pushEnabled ? 'Continue without push' : 'Continue'}{copied && currentStep === 6 ? ' · Prompt copied' : ''}</Button></div>
+            <div className="onboarding-chat-footer"><Typography variant="caption">Your progress is saved in this browser. You can return from the Onboarding Guide.</Typography><div className="onboarding-footer-actions">{currentStep > 1 && <Button variant="contained" className="onboarding-back-button" onClick={previous} startIcon={<ArrowBackRounded />}>Back</Button>}<Button variant="contained" disabled={!canContinue} onClick={next} endIcon={<ArrowForwardRounded />}>{currentStep === 6 ? 'Finish setup' : currentStep === 5 && !pushEnabled ? 'Continue without push' : 'Continue'}{copied && currentStep === 6 ? ' · Prompt copied' : ''}</Button></div></div>
           </Paper>
-          <aside className="onboarding-side-note"><div className="onboarding-orbit"><span><RocketLaunchRounded /></span><i/><b/></div><Typography variant="h6">A little setup now.<br/>A clearer picture later.</Typography><Typography color="text.secondary">Max will keep your place so you can pause and pick up whenever you’re ready.</Typography><div className="onboarding-side-foot"><ArrowBackRounded fontSize="small"/> No APIs connected in this onboarding preview</div></aside>
+          <aside className="onboarding-side-note"><div className="onboarding-orbit"><span><img className="onboarding-orbit-logo" src="/assets/favicon.png" alt="PixlPush" /></span><i/><b/></div><Typography variant="h6">A little setup now.<br/>A clearer picture later.</Typography><Typography color="text.secondary">Max will keep your place so you can pause and pick up whenever you’re ready.</Typography></aside>
         </div>
         <Dialog open={firebaseDialogOpen} onClose={() => setFirebaseDialogOpen(false)} fullWidth maxWidth="sm" aria-labelledby="firebase-max-title">
           <DialogTitle id="firebase-max-title" sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}><span className="max-avatar"><img src="/assets/agent-avatar-max-v4.png" alt="Max" /></span><span>Set up Firebase with Max<Typography component="small" display="block" color="text.secondary" fontSize={11} fontWeight={400}>PUSH NOTIFICATIONS · GUIDED PREVIEW</Typography></span></DialogTitle>
