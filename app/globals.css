@@ -3718,29 +3718,36 @@ a {
   padding: 11px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.62);
-  border-radius: 22px;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.07));
+  border-radius: 36px;
+  background: #241631;
   box-shadow:
     0 28px 70px rgba(26, 4, 57, 0.3),
     0 0 0 9px rgba(255, 255, 255, 0.08);
 }
-.translation-ai-screenshot img {
+.translation-ai-image-frame {
   position: absolute;
   inset: 11px;
+  overflow: hidden;
+  border-radius: 32px;
+}
+.translation-ai-image-frame img {
+  position: absolute;
+  inset: 0;
   display: block;
-  width: calc(100% - 22px);
-  height: calc(100% - 22px);
+  width: 100%;
+  height: 100%;
   box-sizing: border-box;
   border: 1px solid rgba(35, 20, 53, 0.12);
-  border-radius: 12px;
-  background: #f7f6fa;
+  border-radius: 0;
+  clip-path: none;
+  background: transparent;
   object-fit: contain;
   opacity: 0;
   transform: scale(0.99);
   transition: opacity 420ms ease, transform 520ms cubic-bezier(0.2, 0.7, 0.2, 1);
   pointer-events: none;
 }
-.translation-ai-screenshot img.is-active {
+.translation-ai-image-frame img.is-active {
   z-index: 1;
   opacity: 1;
   transform: scale(1);
@@ -3754,7 +3761,7 @@ a {
   text-transform: uppercase;
 }
 @media (prefers-reduced-motion: reduce) {
-  .translation-ai-screenshot img {
+  .translation-ai-image-frame img {
     transition-duration: 120ms;
   }
 }
@@ -3833,17 +3840,20 @@ a {
     font-size: 10px;
   }
   .translation-ai-screenshot {
-    border-radius: 10px;
+    border-radius: 18px;
     padding: 6px;
     box-shadow:
       0 12px 30px rgba(26, 4, 57, 0.26),
       0 0 0 4px rgba(255, 255, 255, 0.08);
   }
-  .translation-ai-screenshot img {
+  .translation-ai-image-frame {
     inset: 6px;
-    width: calc(100% - 12px);
-    height: calc(100% - 12px);
-    border-radius: 7px;
+    border-radius: 16px;
+  }
+  .translation-ai-image-frame img {
+    inset: 0;
+    width: 100%;
+    height: 100%;
   }
   .translation-ai-caption {
     margin-top: 8px !important;

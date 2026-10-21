@@ -7,21 +7,21 @@ import ArrowOutwardRounded from '@mui/icons-material/ArrowOutwardRounded';
 const productViews = [
   {
     label: 'Push notifications',
-    image: '/assets/translation-push.webp',
-    alt: 'PixlPush push notification editor with language tabs, automatic translation, and live preview',
+    image: '/assets/translation-push-v2.webp',
+    alt: 'PixlPush multilingual push campaign composer with a live mobile preview',
     ratio: '3 / 2',
   },
   {
     label: 'Choose languages',
-    image: '/assets/translation-languages.webp',
-    alt: 'PixlPush dialog for selecting the languages to translate a campaign into',
-    ratio: '1650 / 1010',
+    image: '/assets/translation-languages-v2.webp',
+    alt: 'PixlPush campaign language coverage workspace with connected locale cards',
+    ratio: '3 / 2',
   },
   {
     label: 'Email campaigns',
-    image: '/assets/translation-email.webp',
-    alt: 'PixlPush email editor with AI translation controls, language selection, and live email preview',
-    ratio: '2540 / 1526',
+    image: '/assets/translation-email-v2.webp',
+    alt: 'PixlPush email campaign workspace with AI translation readiness states',
+    ratio: '3 / 2',
   },
 ];
 
@@ -105,17 +105,19 @@ export default function TranslationAISection() {
               ))}
             </Stack>
             <Box className="translation-ai-screenshot" style={{ aspectRatio: selectedView.ratio }} role="tabpanel" aria-label={selectedView.label}>
-              {productViews.map((view, index) => (
-                <Box
-                  key={view.image}
-                  component="img"
-                  src={view.image}
-                  alt={index === activeView ? view.alt : ''}
-                  aria-hidden={index !== activeView}
-                  className={index === activeView ? 'is-active' : ''}
-                  draggable={false}
-                />
-              ))}
+              <Box className="translation-ai-image-frame">
+                {productViews.map((view, index) => (
+                  <Box
+                    key={view.image}
+                    component="img"
+                    src={view.image}
+                    alt={index === activeView ? view.alt : ''}
+                    aria-hidden={index !== activeView}
+                    className={index === activeView ? 'is-active' : ''}
+                    draggable={false}
+                  />
+                ))}
+              </Box>
             </Box>
             <Typography className="translation-ai-caption">A look inside PixlPush</Typography>
           </Box>
