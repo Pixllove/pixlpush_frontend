@@ -140,6 +140,8 @@
 .website-shell:not(.pricing-experience) .MuiPaper-root { color: var(--site-text); }
 .website-shell:not(.pricing-experience) .MuiButton-outlined { border-color: rgba(226,207,247,.32); color: var(--site-text); }
 .website-shell:not(.pricing-experience) .MuiButton-outlined:hover { border-color: #c4a7ff; background: rgba(196,167,255,.08); }
+.website-shell:not(.pricing-experience) .docs-shell .docs-search-button { color: #625a6e; border-color: #eae6ef; background: #fff; }
+.website-shell:not(.pricing-experience) .docs-shell .docs-search-button:hover { color: #1e1429; border-color: #d9d3e1; background: #f5f3f7; }
 .website-shell .retention-story { color: var(--site-text); background: radial-gradient(ellipse at 18% 38%,rgba(139,92,246,.14),transparent 38%),radial-gradient(ellipse at 86% 12%,rgba(255,107,94,.08),transparent 34%),#1b1126; }
 .website-shell .retention-step-title { color: var(--site-text); }
 .website-shell .retention-step-body { color: var(--site-muted); }
@@ -147,6 +149,13 @@
 .website-shell .translation-ai-section { background: radial-gradient(ellipse at 75% 50%,rgba(139,92,246,.18),transparent 45%),#21152d; }
 .website-shell:not(.pricing-experience) .MuiTableContainer-root { background: #21152d; color: var(--site-text); }
 .website-shell:not(.pricing-experience) .MuiTableCell-root { color: var(--site-text); border-color: var(--site-border); }
+/* Documentation tables stay readable on the light docs canvas, even though the marketing shell's
+   default tables use the dark site surface. Keep this scoped so other website tables retain their theme. */
+.website-shell:not(.pricing-experience) .docs-shell .MuiTableContainer-root { background: #fff; color: #1e1429; border-color: #eae6ef; }
+.website-shell:not(.pricing-experience) .docs-shell .MuiTable-root { background: #fff; }
+.website-shell:not(.pricing-experience) .docs-shell .MuiTableCell-root { color: #625a6e; border-color: #eae6ef; }
+.website-shell:not(.pricing-experience) .docs-shell .MuiTableHead-root .MuiTableCell-root { color: #1e1429; background: #faf9fb; font-weight: 600; }
+.website-shell:not(.pricing-experience) .docs-shell .MuiTableBody-root .MuiTableRow-root:hover { background: #f5f3f7; }
 .website-shell.pricing-experience { --site-bg: #fffaf8; --site-surface: #ffffff; --site-surface-raised: #f7f1fa; --site-text: #241536; --site-muted: #71677b; --site-border: #eae6ef; color: #241536; background: #fffaf8; }
 .website-shell.pricing-experience main, .website-shell.pricing-experience > .MuiBox-root:not(header):not(footer) { color: #241536; }
 html {
@@ -3949,7 +3958,8 @@ a {
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 20px 12px 16px;
+  padding: 20px 12px 28px;
+  scroll-padding-bottom: 28px;
   scrollbar-width: none;
 }
 .sidebar-navigation::-webkit-scrollbar {
@@ -3957,8 +3967,11 @@ a {
 }
 .sidebar-support {
   flex: 0 0 auto;
+  position: relative;
+  z-index: 2;
   margin: 0 12px 14px;
-  padding-top: 12px;
+  padding-top: 14px;
+  background: var(--sb-canvas);
   border-top: 1px solid var(--sb-hairline);
 }
 .sidebar-support-link.MuiListItemButton-root {
@@ -6214,6 +6227,22 @@ a {
     grid-column: auto;
   }
 }
+
+/* Keep the full navigation rhythm visible on shorter desktop viewports. The support action has its
+   own footer row, so the last project links (including Profile) never sit underneath it. */
+@media (min-width: 761px) and (max-height: 920px) {
+  .sidebar-brand { flex-basis: 56px; }
+  .sidebar-switch { padding-top: 8px; }
+  .sidebar-project.MuiButtonBase-root { min-height: 46px; padding-top: 5px; padding-bottom: 5px; }
+  .sidebar-navigation { padding-top: 12px; padding-bottom: 16px; scroll-padding-bottom: 16px; }
+  .sidebar-group + .sidebar-group { margin-top: 14px; padding-top: 10px; }
+  .sidebar-kicker { margin-bottom: 4px; }
+  .sidebar-list { gap: 1px; }
+  .dashboard-nav.MuiListItemButton-root { min-height: 36px; }
+  .sidebar-support { margin-bottom: 8px; padding-top: 8px; }
+  .sidebar-support-link.MuiListItemButton-root { min-height: 40px; }
+}
+
 @media (max-width: 460px) {
   .campaign-grid {
     grid-template-columns: 1fr;
