@@ -442,6 +442,19 @@ export default function JourneyBuilder() {
       .trim();
   /** A message card says what will be sent: the push title/body or the complete email template. */
   const describe = (block: Block): Block => {
+    if (block.type === "wait") {
+      const rawAmount = settings[block.id]?.amount ?? "3";
+      const amount = Math.floor(Number(rawAmount));
+      const unit = settings[block.id]?.unit || "days";
+      if (!Number.isFinite(amount) || amount < 1) {
+        return { ...block, description: "Set how long users should wait before the next step." };
+      }
+      const durationUnit = amount === 1 ? unit.slice(0, -1) : unit;
+      return {
+        ...block,
+        description: `Pause for ${amount} ${durationUnit} before the next step.`,
+      };
+    }
     const template = (
       block.type === "notification"
         ? choices.pushTemplates
@@ -1586,14 +1599,16 @@ function WaitSettings({ values, set }: SettingProps) {
           value={values.amount ?? "3"}
           onChange={pick(set, "amount")}
         />
-        <PanelSelect
+        <TextField
+          select
           label="Unit"
-          placeholder="day(s)"
-          value={values.unit || ""}
+          fullWidth
+          size="small"
+          value={values.unit || "days"}
           onChange={pick(set, "unit")}
         >
           {unitItems}
-        </PanelSelect>
+        </TextField>
       </Stack>
     </Stack>
   );
