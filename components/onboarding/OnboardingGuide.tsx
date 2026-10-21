@@ -34,12 +34,20 @@ export default function OnboardingGuide() {
     staleTime: 30_000,
   });
   useEffect(() => {
-    if (progress.data) setState((previous) => ({ ...previous, ...progress.data }));
-  }, [progress.data]);
-  const usePush = state.channels.includes('push');
+    if (!projectId) {
+      setState(initialOnboardingState);
+      return;
+    }
+    if (progress.data) {
+      setState({ ...initialOnboardingState, ...progress.data, projectName: progress.data.projectName || active?.name || '' });
+    }
+  }, [active?.name, projectId, progress.data]);
+  const hasProject = Boolean(projectId);
+  const usePush = hasProject && state.channels.includes('push');
   const activeSteps = items.map((step, index) => ({ step, number: index + 1 }));
   const firebaseConnected = firebase.data?.status === 'connected';
-  const complete = onboardingCompletedCount(state, firebaseConnected);
+  const complete = hasProject ? onboardingCompletedCount(state, firebaseConnected) : 0;
+  const percentage = hasProject ? onboardingPercentage(state, firebaseConnected) : 0;
 
   return <div className="dashboard-onboarding">
     <Paper className="guide-welcome" elevation={0}>
@@ -49,17 +57,17 @@ export default function OnboardingGuide() {
     </Paper>
     <Paper className="guide-progress-card" elevation={0}>
       <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" gap={1} alignItems={{ sm: 'center' }}>
-      <div><Typography variant="h6" fontWeight={700}>Setup progress</Typography><Typography color="text.secondary" variant="body2">{complete} of 6 steps complete{!usePush && ' · Firebase is marked not needed because push isn’t selected'}</Typography></div>
-        <strong className="guide-percent">{onboardingPercentage(state, firebaseConnected)}%</strong>
+      <div><Typography variant="h6" fontWeight={700}>Setup progress</Typography><Typography color="text.secondary" variant="body2">{complete} of 6 steps complete{hasProject && !usePush && ' · Firebase is marked not needed because push isn’t selected'}</Typography></div>
+        <strong className="guide-percent">{percentage}%</strong>
       </Stack>
-      <LinearProgress variant="determinate" value={onboardingPercentage(state, firebaseConnected)} className="onboarding-progress" />
+      <LinearProgress variant="determinate" value={percentage} className="onboarding-progress" />
       <div className="guide-timeline">{activeSteps.map(({ step: [title, detail, tag], number }) => {
-        const notNeeded = number === 5 && !usePush;
+        const notNeeded = hasProject && number === 5 && !usePush;
         const done = state.completed.includes(number) || (number === 5 && firebaseConnected);
         return <article className={`guide-step${done ? ' completed' : ''}${notNeeded ? ' not-needed' : ''}`} key={title}>
           <div className="guide-step-icon">{done ? <CheckCircleRounded/> : notNeeded ? <span aria-label="Not needed">–</span> : <span>{number}</span>}</div>
           <div className="guide-step-copy"><div><Typography fontWeight={700}>{title}</Typography><Chip size="small" label={tag}/></div><Typography color="text.secondary" variant="body2">{detail}</Typography>{number === 1 && state.projectName && <small>Current value: {state.projectName}</small>}{number === 2 && <small>{[state.websiteUrl, state.androidAppUrl, state.iosAppUrl].filter(Boolean).join(' · ') || 'No links added yet'}</small>}{number === 4 && state.domain && <small>Domain: {state.domain}</small>}</div>
-          <div className="guide-step-status">{number === 5 && !usePush ? <Chip size="small" variant="outlined" label="Not needed"/> : number === 5 && firebaseConnected ? <Chip size="small" color="success" label="Connected"/> : number === 5 && done ? <Chip size="small" color="success" label="Guide reviewed"/> : done ? <Chip size="small" color="success" label="Complete"/> : <Chip size="small" variant="outlined" label="To do"/>}</div>
+          <div className="guide-step-status">{notNeeded ? <Chip size="small" variant="outlined" label="Not needed"/> : number === 5 && firebaseConnected ? <Chip size="small" color="success" label="Connected"/> : number === 5 && done ? <Chip size="small" color="success" label="Guide reviewed"/> : done ? <Chip size="small" color="success" label="Complete"/> : <Chip size="small" variant="outlined" label="To do"/>}</div>
         </article>;
       })}</div>
       <div className="guide-note"><ReplayRounded fontSize="small"/><span>Domain and SDK steps are guidance. Firebase credentials are validated securely when you connect them from the onboarding flow.</span><Button size="small" href="/dashboard/integrations/react-native/quickstart" endIcon={<OpenInNewRounded/>}>SDK guide</Button></div>

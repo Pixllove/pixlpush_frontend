@@ -13,7 +13,7 @@ import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useActiveProject, planLabel } from '@/hooks/projects/use-active-project';
 import { onboardingApi } from '@/lib/projects/api';
-import { initialOnboardingState, onboardingPercentage } from '@/lib/onboarding';
+import { onboardingPercentage } from '@/lib/onboarding';
 
 const groups = [
   {
@@ -143,7 +143,7 @@ export default function DashboardSidebar({ active, setActive, mobileOpen, collap
                     >
                       <ListItemIcon className="dashboard-nav-icon"><Icon /></ListItemIcon>
                       <ListItemText className="dashboard-nav-label" primary={label} />
-                      {label === 'Onboarding Guide' && <span className="onboarding-nav-percent">{onboardingPercentage(onboarding.data ?? initialOnboardingState)}%</span>}
+                      {label === 'Onboarding Guide' && <span className="onboarding-nav-percent">{activeProject && onboarding.data ? `${onboardingPercentage(onboarding.data)}%` : '0%'}</span>}
                     </ListItemButton>
                   </Tooltip>
                 );

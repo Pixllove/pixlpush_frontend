@@ -29,7 +29,7 @@ export function onboardingCompletedCount(
 }
 
 export function onboardingPercentage(
-  state: Pick<OnboardingState, 'channels' | 'completed'> = initialOnboardingState,
+  state: Pick<OnboardingState, 'channels' | 'completed'>,
   firebaseConnected = false,
 ): number {
   return Math.round((onboardingCompletedCount(state, firebaseConnected) / ONBOARDING_STEP_COUNT) * 100);
