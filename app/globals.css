@@ -4102,7 +4102,8 @@ a {
   color: #fff;
 }
 .dashboard-nav.onboarding-nav.Mui-selected:hover {
-  color: #6427bd;
+  color: #fff;
+  background: #a84d20;
 }
 .dashboard-nav.onboarding-nav.Mui-selected {
   color: #6427bd;
@@ -4141,7 +4142,7 @@ a {
   color: #fff;
 }
 .dashboard-nav.onboarding-nav.Mui-selected:hover .onboarding-nav-percent {
-  color: #542096;
+  color: #fff;
 }
 .sidebar-is-collapsed .onboarding-nav-percent {
   display: none;
