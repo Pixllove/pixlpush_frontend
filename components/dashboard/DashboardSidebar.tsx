@@ -13,6 +13,7 @@ import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useActiveProject, planLabel } from '@/hooks/projects/use-active-project';
 import { onboardingApi } from '@/lib/projects/api';
+import { initialOnboardingState, onboardingPercentage } from '@/lib/onboarding';
 
 const groups = [
   {
@@ -142,7 +143,7 @@ export default function DashboardSidebar({ active, setActive, mobileOpen, collap
                     >
                       <ListItemIcon className="dashboard-nav-icon"><Icon /></ListItemIcon>
                       <ListItemText className="dashboard-nav-label" primary={label} />
-                      {label === 'Onboarding Guide' && <span className="onboarding-nav-percent">{onboardingPercent(onboarding.data)}</span>}
+                      {label === 'Onboarding Guide' && <span className="onboarding-nav-percent">{onboardingPercentage(onboarding.data ?? initialOnboardingState)}%</span>}
                     </ListItemButton>
                   </Tooltip>
                 );
@@ -174,10 +175,3 @@ function formatShortDate(value: string): string {
   return Number.isNaN(date.getTime()) ? 'later' : new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(date);
 }
 
-function onboardingPercent(state?: { channels?: string[]; completed?: number[] }): string {
-  if (!state) return '0%';
-  const pushEnabled = state.channels?.includes('push') ?? false;
-  const complete = Array.from({ length: 6 }, (_, index) => index + 1)
-    .filter((step) => state.completed?.includes(step) || (step === 5 && !pushEnabled)).length;
-  return `${Math.round((complete / 6) * 100)}%`;
-}

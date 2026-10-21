@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowForwardRounded, CheckCircleRounded, OpenInNewRounded, ReplayRounded } from '@mui/icons-material';
 import { Button, Chip, LinearProgress, Paper, Stack, Typography } from '@mui/material';
-import { initialOnboardingState, type OnboardingState } from '@/lib/onboarding';
+import { initialOnboardingState, onboardingCompletedCount, onboardingPercentage, type OnboardingState } from '@/lib/onboarding';
 import { firebaseApi, onboardingApi } from '@/lib/projects/api';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
 
@@ -39,7 +39,7 @@ export default function OnboardingGuide() {
   const usePush = state.channels.includes('push');
   const activeSteps = items.map((step, index) => ({ step, number: index + 1 }));
   const firebaseConnected = firebase.data?.status === 'connected';
-  const complete = activeSteps.filter(({ number }) => state.completed.includes(number) || (number === 5 && (!usePush || firebaseConnected))).length;
+  const complete = onboardingCompletedCount(state, firebaseConnected);
 
   return <div className="dashboard-onboarding">
     <Paper className="guide-welcome" elevation={0}>
@@ -50,9 +50,9 @@ export default function OnboardingGuide() {
     <Paper className="guide-progress-card" elevation={0}>
       <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" gap={1} alignItems={{ sm: 'center' }}>
       <div><Typography variant="h6" fontWeight={700}>Setup progress</Typography><Typography color="text.secondary" variant="body2">{complete} of 6 steps complete{!usePush && ' · Firebase is marked not needed because push isn’t selected'}</Typography></div>
-        <strong className="guide-percent">{activeSteps.length ? Math.round((complete / activeSteps.length) * 100) : 0}%</strong>
+        <strong className="guide-percent">{onboardingPercentage(state, firebaseConnected)}%</strong>
       </Stack>
-      <LinearProgress variant="determinate" value={activeSteps.length ? (complete / activeSteps.length) * 100 : 0} className="onboarding-progress" />
+      <LinearProgress variant="determinate" value={onboardingPercentage(state, firebaseConnected)} className="onboarding-progress" />
       <div className="guide-timeline">{activeSteps.map(({ step: [title, detail, tag], number }) => {
         // A step explicitly marked not-needed is resolved, so it should receive
         // the same green completion treatment as a completed step.
