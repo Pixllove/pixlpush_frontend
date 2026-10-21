@@ -737,7 +737,7 @@ function ConditionBranches({
               {branch === "yes" ? "Yes" : "No"}
             </Box>
             {branches[branch].map((block, index) => (
-              <Box key={block.id}>
+              <Box key={block.id} className="journey-branch-step">
                 <JourneyBlock
                   block={describe(block)}
                   sourceType={branches[branch][index - 1]?.type}
