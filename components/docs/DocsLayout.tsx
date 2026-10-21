@@ -71,7 +71,7 @@ export default function DocsLayout({ base, variant, children }: { base: string; 
 
   const openSearch = () => { setDrawerOpen(false); setSearchOpen(true); };
 
-  return <Box sx={{ ...topVar[variant], "--docs-offset": `calc(var(--docs-top) + ${BAR + 24}px)`, bgcolor: tokens.surface, color: tokens.text, ...(variant === "app" ? { border: `1px solid ${tokens.border}`, borderRadius: 2 } : {}) }}>
+  return <Box className={`docs-shell docs-${variant}`} sx={{ ...topVar[variant], "--docs-offset": `calc(var(--docs-top) + ${BAR + 24}px)`, bgcolor: tokens.surface, color: tokens.text, ...(variant === "app" ? { border: `1px solid ${tokens.border}`, borderRadius: 2 } : {}) }}>
     {variant === "site" && <Box component="a" href="#docs-content" sx={{ position: "absolute", left: 16, top: -60, zIndex: 20, px: 2, py: 1, bgcolor: tokens.accent, color: "#fff", borderRadius: 1.5, "&:focus": { top: 96 } }}>Skip to content</Box>}
 
     <Stack data-docs-bar direction="row" alignItems="center" gap={1.5} sx={{ position: "sticky", top: "var(--docs-top)", zIndex: 6, height: BAR, px: variant === "site" ? { xs: 2, md: "max(32px, calc((100% - 1360px) / 2 + 32px))" } : { xs: 1, sm: 2, lg: 3 }, bgcolor: "rgba(255,255,255,.96)", backdropFilter: "blur(10px)", borderBottom: `1px solid ${tokens.border}`, ...(variant === "app" ? { borderRadius: "8px 8px 0 0" } : {}) }}>
@@ -84,7 +84,7 @@ export default function DocsLayout({ base, variant, children }: { base: string; 
         <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>AI setup prompt</Box><Box component="span" sx={{ display: { sm: "none" } }}>AI</Box>
       </Button>}
       </Stack>
-      <Button onClick={openSearch} aria-label="Search documentation" aria-keyshortcuts="Meta+K Control+K /" variant="outlined" startIcon={<SearchRounded />}
+      <Button className="docs-search-button" onClick={openSearch} aria-label="Search documentation" aria-keyshortcuts="Meta+K Control+K /" variant="outlined" startIcon={<SearchRounded />}
         endIcon={<Box component="kbd" sx={{ display: { xs: "none", sm: "inline" }, fontFamily: "var(--pp-mono)", fontSize: "var(--fs-11)", color: tokens.textMuted }}>{shortcut}</Box>}
         sx={{ ml: "auto", width: { xs: 44, sm: 280 }, minWidth: 44, minHeight: { xs: 44, md: 36 }, px: { xs: 0, sm: 1.5 }, "& .MuiButton-startIcon": { mx: { xs: 0, sm: undefined } }, justifyContent: "flex-start", color: tokens.textMuted, fontWeight: 400, "& .MuiButton-endIcon": { ml: "auto" } }}>
         <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>Search docs</Box>
