@@ -118,7 +118,7 @@ export default function OnboardingWizard() {
 
         <div className="onboarding-workspace">
           <Paper elevation={0} className="onboarding-chat">
-            <div className="onboarding-chat-head"><span className="max-avatar"><img src="/assets/agent-avatar-max-v2.png" alt="Max" /></span><span><strong>Max</strong><small>PIXLPUSH ONBOARDING GUIDE · PREVIEW</small></span><Chip size="small" label="Ready to help" className="max-online" /></div>
+            <div className="onboarding-chat-head"><span className="max-avatar"><img src="/assets/agent-avatar-max-v4.png" alt="Max" /></span><span><strong>Max</strong><small>PIXLPUSH ONBOARDING GUIDE · PREVIEW</small></span><Chip size="small" label="Ready to help" className="max-online" /></div>
             <div className="onboarding-chat-body">
               <div className="max-message"><AutoAwesomeRounded fontSize="small" /><p>{prompt}</p></div>
               <div className="onboarding-question"><Typography className="onboarding-eyebrow">STEP {String(currentStep).padStart(2, '0')} · {steps[currentStep - 1][0].toUpperCase()}</Typography><Typography variant="h4" className="onboarding-question-title">{heading}</Typography>
@@ -135,7 +135,7 @@ export default function OnboardingWizard() {
           <aside className="onboarding-side-note"><div className="onboarding-orbit"><span><RocketLaunchRounded /></span><i/><b/></div><Typography variant="h6">A little setup now.<br/>A clearer picture later.</Typography><Typography color="text.secondary">Max will keep your place so you can pause and pick up whenever you’re ready.</Typography><div className="onboarding-side-foot"><ArrowBackRounded fontSize="small"/> No APIs connected in this onboarding preview</div></aside>
         </div>
         <Dialog open={firebaseDialogOpen} onClose={() => setFirebaseDialogOpen(false)} fullWidth maxWidth="sm" aria-labelledby="firebase-max-title">
-          <DialogTitle id="firebase-max-title" sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}><span className="max-avatar"><img src="/assets/agent-avatar-max-v2.png" alt="Max" /></span><span>Set up Firebase with Max<Typography component="small" display="block" color="text.secondary" fontSize={11} fontWeight={400}>PUSH NOTIFICATIONS · GUIDED PREVIEW</Typography></span></DialogTitle>
+          <DialogTitle id="firebase-max-title" sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}><span className="max-avatar"><img src="/assets/agent-avatar-max-v4.png" alt="Max" /></span><span>Set up Firebase with Max<Typography component="small" display="block" color="text.secondary" fontSize={11} fontWeight={400}>PUSH NOTIFICATIONS · GUIDED PREVIEW</Typography></span></DialogTitle>
           <DialogContent dividers>
             <Stack gap={1.5}>
               <div className="max-message"><AutoAwesomeRounded fontSize="small"/><p>Let’s get Firebase Cloud Messaging ready together. Check each item as you complete it in your Firebase account. I won’t ask you to share private keys here.</p></div>

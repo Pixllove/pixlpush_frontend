@@ -47,9 +47,9 @@ const prompts = [
 ] as const;
 
 const agents = [
-  ["Max", "Growth Concierge", "Coordinates the team and turns your goal into a clear next step.", "/assets/agent-avatar-max-v2.png"],
-  ["Ben", "Lifecycle & Campaign Data Analyst", "Analyzes retention, churn, campaigns and audience behavior.", "/assets/agent-avatar-ben-v2.png"],
-  ["Nova", "Campaign & Journey Creator", "Creates new journeys and improves existing campaigns and journeys.", "/assets/agent-avatar-nova-v2.png"],
+  ["Max", "Growth Concierge", "Coordinates the team and turns your goal into a clear next step.", "/assets/agent-avatar-max-v4.png"],
+  ["Ben", "Lifecycle & Campaign Data Analyst", "Analyzes retention, churn, campaigns and audience behavior.", "/assets/agent-avatar-ben-v4.png"],
+  ["Nova", "Campaign & Journey Creator", "Creates new journeys and improves existing campaigns and journeys.", "/assets/agent-avatar-nova-v4.png"],
   ["Anna", "Cross-Sell & Marketing Expert", "Creates and improves email campaigns and content.", "/assets/agent-avatar-anna-v3.png"],
 ] as const;
 
@@ -811,7 +811,7 @@ function JourneySummaryCard({ steps, answers, onApprove, onBack, onCancel, gener
     <Typography component="h2" className="guided-flow-title">Generating your journey</Typography>
     <Typography className="guided-flow-subtitle">Nova is creating the journey structure, timing, messages and templates using your business context.</Typography>
     <Stack alignItems="center" gap={1.25} sx={{ py: 4 }}>
-      <Box className="chat-agent-mark is-thinking"><Image src="/assets/agent-avatar-nova-v2.png" alt="Nova avatar" width={42} height={42} /></Box>
+      <Box className="chat-agent-mark is-thinking"><Image src="/assets/agent-avatar-nova-v4.png" alt="Nova avatar" width={42} height={42} /></Box>
       <Typography color="text.secondary" fontSize="var(--fs-13)">Preparing your editable journey draft<span className="thinking-dots">…</span></Typography>
       <Box className="thinking-bars" aria-hidden><span /><span /><span /></Box>
     </Stack>
@@ -837,7 +837,7 @@ function JourneyRecommendationCard({ draft, onCreate, onEdit, onRegenerate, crea
   if (creating) return <Box className="guided-flow-card" role="status" aria-live="polite">
     <Typography component="h2" className="guided-flow-title">Creating your journey draft</Typography>
     <Typography className="guided-flow-subtitle">Nova is creating the journey steps and saving the email and push templates.</Typography>
-    <Stack alignItems="center" gap={1.25} sx={{ py: 4 }}><Box className="chat-agent-mark is-thinking"><Image src="/assets/agent-avatar-nova-v2.png" alt="Nova avatar" width={42} height={42} /></Box><Typography color="text.secondary" fontSize="var(--fs-13)">Saving your editable draft<span className="thinking-dots">…</span></Typography><Box className="thinking-bars" aria-hidden><span /><span /><span /></Box></Stack>
+    <Stack alignItems="center" gap={1.25} sx={{ py: 4 }}><Box className="chat-agent-mark is-thinking"><Image src="/assets/agent-avatar-nova-v4.png" alt="Nova avatar" width={42} height={42} /></Box><Typography color="text.secondary" fontSize="var(--fs-13)">Saving your editable draft<span className="thinking-dots">…</span></Typography><Box className="thinking-bars" aria-hidden><span /><span /><span /></Box></Stack>
   </Box>;
   return <Box className="guided-flow-card">
     <Typography component="h2" className="guided-flow-title">Nova’s recommended journey</Typography>
@@ -855,7 +855,7 @@ function JourneyGenerationOverlay({ phase }: { phase: "recommendation" | "creati
     <Typography component="h2" className="guided-flow-title">{creation ? "Creating your journey draft" : "Preparing Nova’s recommendation"}</Typography>
     <Typography className="guided-flow-subtitle">{creation ? "Nova is creating the journey, writing the message templates and saving everything as an editable draft." : "Nova is turning your answers and saved business context into a best-practice journey recommendation."}</Typography>
     <Stack alignItems="center" gap={1.25} sx={{ py: 4 }}>
-      <Box className="chat-agent-mark is-thinking"><Image src="/assets/agent-avatar-nova-v2.png" alt="Nova avatar" width={52} height={52} /></Box>
+      <Box className="chat-agent-mark is-thinking"><Image src="/assets/agent-avatar-nova-v4.png" alt="Nova avatar" width={52} height={52} /></Box>
       <Typography color="text.secondary" fontSize="var(--fs-13)">{creation ? "Saving your journey and templates" : "Building your recommendation"}<span className="thinking-dots">…</span></Typography>
       <Box className="thinking-bars" aria-hidden><span /><span /><span /></Box>
       {creation && <Stack gap={.5} sx={{ mt: 1, width: "min(100%, 360px)" }}>

@@ -145,9 +145,9 @@ function MegaMenu({ kind }: { kind: "product" | "resources" | "usecases" }) {
   const groups = kind === "product" ? productGroups : resourceGroups;
   if (kind === "product") {
     const capabilities = [
-      { title: "Max · Growth Concierge", description: "Coordinates your AI team and growth strategy.", image: "/assets/agent-avatar-max-v2.png", icon: AutoAwesomeRounded },
-      { title: "Ben · Lifecycle Analyst", description: "Finds retention trends, churn signals and audience insights.", image: "/assets/agent-avatar-ben-v2.png", icon: InsightsRounded },
-      { title: "Nova · Journey Creator", description: "Builds personalized email and push journeys.", image: "/assets/agent-avatar-nova-v2.png", icon: AccountTreeRounded },
+      { title: "Max · Growth Concierge", description: "Coordinates your AI team and growth strategy.", image: "/assets/agent-avatar-max-v4.png", icon: AutoAwesomeRounded },
+      { title: "Ben · Lifecycle Analyst", description: "Finds retention trends, churn signals and audience insights.", image: "/assets/agent-avatar-ben-v4.png", icon: InsightsRounded },
+      { title: "Nova · Journey Creator", description: "Builds personalized email and push journeys.", image: "/assets/agent-avatar-nova-v4.png", icon: AccountTreeRounded },
       { title: "Anna · Campaign Expert", description: "Creates campaign concepts, copy and cross-sell ideas.", image: "/assets/agent-avatar-anna-v3.png", icon: CampaignRounded },
       { title: "AI Campaign Translator", description: "Adapt campaigns for every user’s language.", icon: TranslateRounded },
       { title: "AI Email Generator", description: "Create polished email copy for your campaigns.", icon: EditNoteRounded },

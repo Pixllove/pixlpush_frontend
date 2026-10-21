@@ -32,7 +32,7 @@ function AnalysisVisual() {
       <Box className="retention-window analysis-window">
         <Box className="retention-window-bar"><i /><i /><i /><span>BUSINESS SNAPSHOT</span></Box>
         <Box className="analysis-window-body">
-          <Box className="analysis-profile"><Box component="img" src="/assets/agent-avatar-max-v2.png" alt="" /><Box><b>Business context</b><small>Product &amp; audience understood</small></Box><strong>READY</strong></Box>
+          <Box className="analysis-profile"><Box component="img" src="/assets/agent-avatar-max-v4.png" alt="" /><Box><b>Business context</b><small>Product &amp; audience understood</small></Box><strong>READY</strong></Box>
           <Box className="analysis-metrics"><Box><small>ACTIVE USERS</small><b>18.4k</b><em>↑ 12.8%</em></Box><Box><small>AT-RISK USERS</small><b>2.3k</b><em className="metric-warn">Need a nudge</em></Box><Box><small>TOP SIGNAL</small><b>Trial started</b><em>High intent</em></Box></Box>
           <Box className="analysis-insight"><span>✦</span><Box><b>Growth opportunity found</b><small>Users who finish setup are more likely to return in week one.</small></Box></Box>
         </Box>
