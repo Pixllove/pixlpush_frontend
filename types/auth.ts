@@ -32,6 +32,8 @@ export interface CurrentUser {
   account: Account;
   projects: AccountProject[];
   activeProjectId: string | null;
+  /** True when the account postponed setup before creating its first Project. */
+  onboardingSkipped?: boolean;
 }
 
 export interface LoginResult {

@@ -31,6 +31,8 @@ export const authApi = {
 
   me: () => authRequest<CurrentUser>('/me'),
 
+  skipOnboarding: () => authRequest<{ skipped: boolean }>('/onboarding/skip', {}),
+
   setActiveProject: (projectId: string) =>
     authRequest<{ activeProjectId: string; project: AccountProject }>(
       '/me/active-project',

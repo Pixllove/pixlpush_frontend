@@ -12,6 +12,7 @@ import {
   FormControlLabel, IconButton, LinearProgress, Paper, Stack, TextField, Typography,
 } from '@mui/material';
 import { initialOnboardingState, type OnboardingState } from '@/lib/onboarding';
+import { authApi, authKeys } from '@/lib/auth/api';
 import { firebaseApi, onboardingApi, projectApi, projectKeys } from '@/lib/projects/api';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
 import type { ApiError } from '@/types/auth';
@@ -182,13 +183,20 @@ export default function OnboardingWizard() {
     setAppLinkScanState('idle');
     patch({ websiteUrl: value });
   };
-  const skip = () => {
+  const skip = async () => {
     const paused = { ...state, skipped: true };
     setState(paused);
     if (projectId) {
       onboardingApi.update(projectId, progressPayload(paused))
         .then((saved) => queryClient.setQueryData(['projects', projectId, 'onboarding'], saved))
         .catch(() => undefined);
+    }
+    try {
+      await authApi.skipOnboarding();
+      await queryClient.invalidateQueries({ queryKey: authKeys.currentUser() });
+    } catch (cause) {
+      setSaveError((cause as ApiError).message || 'Could not save your onboarding preference.');
+      return;
     }
     router.push('/dashboard/onboarding');
   };

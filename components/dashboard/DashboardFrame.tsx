@@ -22,6 +22,7 @@ import AccountMenu from "@/components/auth/AccountMenu";
 import NotificationMenu from "@/components/dashboard/NotificationMenu";
 import SupportChatWidget from "@/components/website/SupportChatWidget";
 import CreateProjectDialog from './CreateProjectDialog';
+import { useCurrentUser } from '@/hooks/auth/use-current-user';
 
 export default function DashboardFrame({
   active,
@@ -46,12 +47,13 @@ export default function DashboardFrame({
   const [supportOpen, setSupportOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const { active: activeProject, isEmpty, selectProject } = useActiveProject();
+  const { data: currentUser, isPending: userPending } = useCurrentUser();
 
   const router = useRouter();
   useEffect(() => {
-    if (active !== 'Home' || !isEmpty) return;
+    if (active !== 'Home' || !isEmpty || userPending || currentUser?.onboardingSkipped) return;
     router.replace('/onboarding');
-  }, [active, isEmpty, router]);
+  }, [active, currentUser?.onboardingSkipped, isEmpty, router, userPending]);
   const changeProject = (value: string) => {
     value === "create"
       ? setCreateOpen(true)
