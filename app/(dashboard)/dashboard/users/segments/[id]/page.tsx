@@ -3,5 +3,5 @@ import LifecycleSegmentWorkspace from '@/components/dashboard/LifecycleSegmentWo
 
 export default async function LifecycleSegmentPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return <DashboardFrame active="Users" title="" description="" hideHeader><LifecycleSegmentWorkspace segmentId={id} /></DashboardFrame>;
+  return <DashboardFrame requiresProject active="Users" title="" description="" hideHeader><LifecycleSegmentWorkspace segmentId={id} /></DashboardFrame>;
 }
