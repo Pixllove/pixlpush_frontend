@@ -1,0 +1,40 @@
+<svg width="760" height="280" viewBox="0 0 760 280" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>BirthBash logo</title>
+  <rect width="760" height="280" rx="34" fill="white"/>
+  <circle cx="176" cy="46" r="9" fill="#12BCE3"/>
+  <circle cx="316" cy="31" r="8" fill="#F72575"/>
+  <circle cx="406" cy="32" r="8" fill="#12BCE3"/>
+  <circle cx="534" cy="120" r="7" fill="#2F5DF7"/>
+  <circle cx="456" cy="122" r="7" fill="#F72575"/>
+  <circle cx="88" cy="114" r="7" fill="#2F5DF7"/>
+  <path d="M123 83C100 70 86 67 70 68" stroke="#F72575" stroke-width="14" stroke-linecap="round"/>
+  <path d="M150 74C166 80 177 90 184 105" stroke="#2F5DF7" stroke-width="12" stroke-linecap="round"/>
+  <path d="M515 91C530 79 547 74 566 73" stroke="#FF9F1C" stroke-width="12" stroke-linecap="round"/>
+  <path d="M498 137C511 126 525 123 538 125" stroke="#12BCE3" stroke-width="10" stroke-linecap="round"/>
+  <path d="M242 33L251 51L271 54L256 68L260 88L242 78L224 88L228 68L213 54L233 51L242 33Z" fill="#FF9F1C"/>
+  <path d="M471 39L480 58L501 61L486 75L490 96L471 86L452 96L456 75L441 61L462 58L471 39Z" fill="#7C3AED"/>
+  <path d="M675 94L684 112L704 115L690 129L693 149L675 140L657 149L660 129L646 115L666 112L675 94Z" fill="#FFB703"/>
+  <path d="M190 118L198 134L216 137L203 150L206 168L190 160L174 168L177 150L164 137L182 134L190 118Z" fill="#FFB703"/>
+  <path d="M242 212C314 239 427 238 510 212" stroke="#F72575" stroke-width="10" stroke-linecap="round"/>
+  <path d="M178 170C188 151 209 151 218 168C227 151 249 152 256 171C266 198 231 212 218 230C202 209 166 197 178 170Z" fill="#F72575"/>
+  <path d="M506 213C512 201 526 201 532 211C538 201 552 202 557 214C563 232 541 241 532 253C522 240 499 232 506 213Z" fill="#F72575"/>
+  <g transform="translate(278 48)">
+    <path d="M18 74C54 34 80 78 84 101C47 98 20 91 18 74Z" stroke="#F72575" stroke-width="16" stroke-linecap="round"/>
+    <path d="M110 99C110 60 156 22 164 62C171 99 136 107 110 99Z" stroke="#F72575" stroke-width="16" stroke-linecap="round"/>
+    <path d="M87 98C77 67 76 41 89 31C109 16 118 69 110 99" stroke="#F72575" stroke-width="14" stroke-linecap="round"/>
+    <path d="M84 102L18 115L31 175L101 160L84 102Z" fill="#7C3AED"/>
+    <path d="M112 99L186 113L174 177L104 161L112 99Z" fill="#FF9F1C"/>
+    <path d="M82 105L102 102L104 160L92 162L82 105Z" fill="#A855F7"/>
+    <path d="M112 100L102 102L104 160L116 163L112 100Z" fill="#FFB703"/>
+  </g>
+  <g transform="translate(626 116)">
+    <path d="M17 73L93 91L54 5L17 73Z" fill="#7C3AED"/>
+    <path d="M33 38L73 48" stroke="#F72575" stroke-width="12" stroke-linecap="round"/>
+    <path d="M25 56L84 70" stroke="#F72575" stroke-width="12" stroke-linecap="round"/>
+    <path d="M16 74C36 94 67 101 94 91" stroke="#F8FDFF" stroke-width="8" stroke-linecap="round"/>
+    <path d="M88 2L94 15L108 17L98 27L100 41L88 34L75 41L78 27L68 17L82 15L88 2Z" fill="#FFB703"/>
+  </g>
+  <text x="40" y="198" font-family="Arial Rounded MT Bold, Poppins, Arial, sans-serif" font-size="112" font-weight="900" letter-spacing="-5">
+    <tspan fill="#08276B">Birth</tspan><tspan fill="#F72575">Bash</tspan>
+  </text>
+</svg>

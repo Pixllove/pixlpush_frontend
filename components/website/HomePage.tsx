@@ -12,15 +12,15 @@ const accentGradient = 'linear-gradient(100deg, #ffe27a 0%, #ffb347 52%, #ff8148
 function JourneyPreview({ dark = false }: { dark?: boolean }) { const text = dark ? '#fff' : '#241536'; return <Box sx={{ borderRadius: 5, p: { xs: 2, md: 2.7 }, bgcolor: dark ? 'rgba(255,255,255,.12)' : '#fff', border: dark ? '1px solid rgba(255,255,255,.2)' : '1px solid #eee6f2', boxShadow: dark ? '0 25px 70px rgba(12,0,32,.3)' : '0 25px 70px rgba(65,23,75,.12)' }}><Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ pb: 2, borderBottom: 1, borderColor: dark ? 'rgba(255,255,255,.15)' : '#eee7f1' }}><Stack direction="row" gap={1} alignItems="center"><Box sx={{ width: 9, height: 9, borderRadius: '50%', bgcolor: '#ff6c43' }} /><Typography fontSize="var(--fs-12)" fontWeight={500} color={text}>PixlPush / Journey Builder</Typography></Stack><Chip label="LIVE" size="small" sx={{ bgcolor: '#e3f8e9', color: '#188047', fontWeight: 500, fontSize: "var(--fs-12)" }} /></Stack><Typography fontSize="var(--fs-12)" color={dark ? 'rgba(255,255,255,.6)' : 'text.secondary'} fontWeight={500} sx={{ mt: 2 }}>ONBOARDING ACTIVATION</Typography><Typography fontWeight={600} fontSize="var(--fs-16)" color={text} sx={{ mt: .5 }}>Help new users reach value faster</Typography><Stack direction={{ xs: 'column', sm: 'row' }} gap={1} sx={{ mt: 2 }}>{[['TRIGGER', 'User signs up', '#fff0e8', '#f15d2e'], ['WAIT', '2 days', '#fff1cf', '#995718'], ['MESSAGE', 'Send a helpful nudge', '#fff0e8', '#f15d2e']].map(([label, value, bg, color], i) => <Stack direction="row" gap={1} alignItems="center" key={label} sx={{ flex: 1 }}><Box sx={{ flex: 1, p: 1.5, borderRadius: 2.5, bgcolor: bg, minHeight: 65 }}><Typography fontSize="var(--fs-12)" color={color} fontWeight={500}>{label}</Typography><Typography fontSize="var(--fs-12)" color="#241536" fontWeight={500} sx={{ mt: 1 }}>{value}</Typography></Box>{i < 2 && <Typography sx={{ display: { xs: 'none', sm: 'block' }, color: dark ? 'rgba(255,255,255,.55)' : '#b8a6c0' }}>→</Typography>}</Stack>)}</Stack><Box sx={{ mt: 2, p: 1.5, borderRadius: 2.5, bgcolor: dark ? 'rgba(226,248,233,.14)' : '#f2faf4', display: 'flex', justifyContent: 'space-between' }}><Typography fontSize="var(--fs-12)" color={dark ? '#b9efc8' : '#3d7c54'} fontWeight={500}>Journey performance</Typography><Typography fontSize="var(--fs-12)" color={dark ? '#c8ffd4' : '#21814a'} fontWeight={500}>+27% D7 retention</Typography></Box></Box>; }
 function BrandStrip() {
   const products = [
-    { name: 'PIXLLOVE', color: '#7938c8', mark: '✳' },
-    { name: 'PIXLTRACE', color: '#363047', mark: '◈' },
-    { name: 'ALL IN 1 - MEDIA', color: '#ef633f', mark: '●' },
-    { name: 'AURAMAGIE', color: '#7d62a8', mark: '✦' },
-    { name: 'AUGMENTPRO', color: '#2e7c76', mark: '⬡' },
-    { name: 'GUAGEAI', color: '#5b18bc', mark: '◎' },
-    { name: 'INVOICEQUE', color: '#3d526e', mark: '▤' },
-    { name: 'BIRTHBASH', color: '#e65e78', mark: '✿' },
-    { name: 'CONNECTBRICKS', color: '#d16b37', mark: '▦' },
+    { name: 'Pixllove', src: '/assets/brand-logos/pixllove.png', href: 'https://pixllove.com/', kind: 'wordmark' },
+    { name: 'All In 1 Media', src: '/assets/brand-logos/allin1-transparent.png', href: 'https://ai1-media.de/', kind: 'wordmark' },
+    { name: 'WEMAKEARTISTS', src: '/assets/brand-logos/wemakeartists.png', href: 'https://www.wemakeartists.de/', kind: 'wordmark' },
+    { name: 'BirthBash', src: '/assets/brand-logos/birthdaybash-logo.svg', href: 'https://birthdaybash-weld.vercel.app/', kind: 'wordmark' },
+    { name: 'GaugeAI', src: '/assets/brand-logos/gaugeai.png', href: 'https://gaugeai.io/', kind: 'labelled', labelAccent: true },
+    { name: 'PixlTrace', src: '/assets/brand-logos/pixltrace.png', href: 'https://play.google.com/store/apps/details?id=com.pixltrace.app&hl=en', kind: 'labelled' },
+    { name: 'Auramagie', src: '/assets/brand-logos/auramagie-wordmark.svg', href: 'https://auramagie.de/', kind: 'wordmark' },
+    { name: 'AugmentPro', src: '/assets/brand-logos/augmentpro.png', href: 'https://augmentpro.co/', kind: 'wordmark' },
+    { name: 'Connect Bricks', src: '/assets/brand-logos/connectbricks.webp', href: 'https://connectbricks.com/', kind: 'wordmark' },
   ];
   const logos = [...products, ...products];
 
@@ -29,9 +29,13 @@ function BrandStrip() {
       <Typography textAlign="center" color="#a997b7" fontSize="var(--fs-12)" fontWeight={500} letterSpacing=".17em">BUILT FOR EVERY STAGE OF GROWTH</Typography>
       <Box sx={{ overflow: 'hidden', mt: 3, mx: { xs: -2, md: -6 } }}>
         <Box sx={{ display: 'flex', alignItems: 'center', width: 'max-content', animation: 'companyMarquee 34s linear infinite', '&:hover': { animationPlayState: 'paused' }, '@media (prefers-reduced-motion: reduce)': { animation: 'none' }, '@keyframes companyMarquee': { '0%': { transform: 'translateX(0)' }, '100%': { transform: 'translateX(-50%)' } } }}>
-          {logos.map(({ name, color, mark }, i) => <Stack key={`${name}-${i}`} direction="row" alignItems="center" justifyContent="center" gap={1} sx={{ width: { xs: 190, sm: 225, md: 250 }, minHeight: 42, flexShrink: 0, borderRight: '1px solid #eee7f1', whiteSpace: 'nowrap' }}>
-            <Box aria-hidden="true" sx={{ display: 'grid', placeItems: 'center', width: 23, height: 23, borderRadius: name === 'ALL IN 1 - MEDIA' ? '50%' : '7px', color, bgcolor: `${color}12`, fontSize: name === 'CONNECTBRICKS' ? 17 : 15, fontWeight: 800, lineHeight: 1 }}>{mark}</Box>
-            <Typography aria-label={`${name} logo`} sx={{ color, fontSize: { xs: 'var(--fs-14)', md: 'var(--fs-16)' }, fontWeight: 700, letterSpacing: name === 'ALL IN 1 - MEDIA' || name === 'AURAMAGIE' ? '-.045em' : '.015em', lineHeight: 1 }}>{name}</Typography>
+          {logos.map(({ name, src, href, kind, labelAccent }, i) => <Stack key={`${name}-${i}`} direction="row" alignItems="center" justifyContent="center" sx={{ width: { xs: 220, sm: 270, md: 300 }, minHeight: 58, flexShrink: 0, borderRight: '1px solid rgba(238,231,241,.26)', whiteSpace: 'nowrap' }}>
+            <Box component="a" href={href} target="_blank" rel="noopener noreferrer" aria-label={`${name} website`} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: 58, px: 2, borderRadius: 2, transition: 'transform .2s ease, opacity .2s ease', '&:hover': { transform: 'translateY(-2px)', opacity: .86 } }}>
+              {kind === 'labelled' ? <Stack direction="row" alignItems="center" gap={1.15}>
+                <Box component="img" src={src} alt={`${name} icon`} sx={{ display: 'block', width: 50, height: 50, objectFit: 'contain', borderRadius: 1.5 }} />
+                <Typography aria-label={`${name} logo`} sx={{ color: '#fff', fontSize: { xs: 'var(--fs-16)', md: 'var(--fs-20)' }, fontWeight: 700, letterSpacing: '.01em', lineHeight: 1 }}>{labelAccent ? <>Gauge<span style={{ color: '#d89068' }}>AI</span></> : 'PIXLTRACE'}</Typography>
+              </Stack> : <Box component="img" src={src} alt={`${name} logo`} sx={{ display: 'block', width: name === 'AugmentPro' ? 180 : name === 'BirthBash' ? 190 : 'auto', height: name === 'AugmentPro' ? 48 : name === 'BirthBash' ? 52 : 42, maxWidth: name === 'AugmentPro' ? 180 : 215, objectFit: name === 'AugmentPro' ? 'cover' : 'contain', objectPosition: name === 'AugmentPro' ? 'center 54%' : 'center', bgcolor: 'transparent', borderRadius: 0 }} />}
+            </Box>
           </Stack>)}
         </Box>
       </Box>
