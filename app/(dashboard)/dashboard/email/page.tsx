@@ -1,6 +1,8 @@
 import DashboardFrame from '@/components/dashboard/DashboardFrame';
 import EmailWorkspace from '@/components/dashboard/EmailWorkspace';
 
+export const metadata = { title: 'Email — PixlPush' };
+
 export default function EmailPage() {
   return <>
     {/* Runs before the page paints: if an editor was open when the page was reloaded, a plain editor-coloured

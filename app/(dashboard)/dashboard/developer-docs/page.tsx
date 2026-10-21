@@ -3,6 +3,8 @@ import { Box, Card, CardContent, Chip, Stack, Typography } from "@mui/material";
 import DashboardFrame from "@/components/dashboard/DashboardFrame";
 import { LinkButton } from "@/components/docs/links";
 
+export const metadata = { title: 'Developer Documentation — PixlPush' };
+
 // The entry point for developers: do the SDK integration first, then the segment guides that use its events.
 const steps = [
   {

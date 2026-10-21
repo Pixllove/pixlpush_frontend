@@ -1,5 +1,7 @@
 import DashboardFrame from "@/components/dashboard/DashboardFrame";
 import { ChannelSection } from "@/components/dashboard/DashboardSections";
+
+export const metadata = { title: 'Push Notifications — PixlPush' };
 export default function PushPage() {
   return (
     <DashboardFrame
