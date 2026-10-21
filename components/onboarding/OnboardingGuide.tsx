@@ -54,12 +54,10 @@ export default function OnboardingGuide() {
       </Stack>
       <LinearProgress variant="determinate" value={onboardingPercentage(state, firebaseConnected)} className="onboarding-progress" />
       <div className="guide-timeline">{activeSteps.map(({ step: [title, detail, tag], number }) => {
-        // A step explicitly marked not-needed is resolved, so it should receive
-        // the same green completion treatment as a completed step.
         const notNeeded = number === 5 && !usePush;
-        const done = state.completed.includes(number) || notNeeded || (number === 5 && firebaseConnected);
-        return <article className={`guide-step${done ? ' completed' : ''}`} key={title}>
-          <div className="guide-step-icon">{done ? <CheckCircleRounded/> : <span>{number}</span>}</div>
+        const done = state.completed.includes(number) || (number === 5 && firebaseConnected);
+        return <article className={`guide-step${done ? ' completed' : ''}${notNeeded ? ' not-needed' : ''}`} key={title}>
+          <div className="guide-step-icon">{done ? <CheckCircleRounded/> : notNeeded ? <span aria-label="Not needed">–</span> : <span>{number}</span>}</div>
           <div className="guide-step-copy"><div><Typography fontWeight={700}>{title}</Typography><Chip size="small" label={tag}/></div><Typography color="text.secondary" variant="body2">{detail}</Typography>{number === 1 && state.projectName && <small>Current value: {state.projectName}</small>}{number === 2 && <small>{[state.websiteUrl, state.androidAppUrl, state.iosAppUrl].filter(Boolean).join(' · ') || 'No links added yet'}</small>}{number === 4 && state.domain && <small>Domain: {state.domain}</small>}</div>
           <div className="guide-step-status">{number === 5 && !usePush ? <Chip size="small" variant="outlined" label="Not needed"/> : number === 5 && firebaseConnected ? <Chip size="small" color="success" label="Connected"/> : number === 5 && done ? <Chip size="small" color="success" label="Guide reviewed"/> : done ? <Chip size="small" color="success" label="Complete"/> : <Chip size="small" variant="outlined" label="To do"/>}</div>
         </article>;

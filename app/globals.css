@@ -17318,6 +17318,7 @@ body {
 .guide-step { display:grid; grid-template-columns:40px minmax(0,1fr) auto; gap:14px; align-items:center; padding:17px 2px; border-top:1px solid #f0edf2; }
 .guide-step-icon { width:32px; height:32px; display:grid; place-items:center; border:1px solid #e5ddeb; border-radius:50%; color:#83758f; font-size:12px; font-weight:700; background:#faf8fc; }
 .guide-step.completed .guide-step-icon { border:0; color:#2d9c70; background:#e8f6ef; }
+.guide-step.not-needed .guide-step-icon { color:#83758f; background:#f4f1f6; border-color:#e5ddeb; }
 .guide-step-copy > div { display:flex; align-items:center; gap:9px; }
 .guide-step-copy .MuiChip-root { height:20px; font-size:9px; color:#766b80; background:#f4f1f6; }
 .guide-step-copy > p { margin-top:4px; }
