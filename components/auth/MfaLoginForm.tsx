@@ -7,7 +7,6 @@ import { authApi, authKeys } from '@/lib/auth/api';
 import { projectKeys } from '@/lib/projects/api';
 import type { ApiError } from '@/types/auth';
 import { postLoginPath } from '@/lib/auth/redirect';
-import { onboardingNeedsResume, readOnboardingState } from '@/lib/onboarding';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FormError } from './AuthFeedback';
 import SubmitButton from './SubmitButton';
@@ -33,7 +32,7 @@ export default function MfaLoginForm() {
         setFormError('A recovery code was used. After signing in, generate a new set if you have fewer codes than expected.');
       }
       const destination = postLoginPath(result.account, searchParams.get('redirect'));
-      router.replace(destination === '/dashboard/onboarding' && onboardingNeedsResume(readOnboardingState()) ? '/onboarding' : destination);
+      router.replace(destination);
       router.refresh();
     } catch (error) {
       setFormError((error as ApiError)?.message ?? 'The verification code could not be accepted.');

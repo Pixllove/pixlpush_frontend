@@ -21,7 +21,7 @@ import DashboardSidebar from "./DashboardSidebar";
 import AccountMenu from "@/components/auth/AccountMenu";
 import NotificationMenu from "@/components/dashboard/NotificationMenu";
 import SupportChatWidget from "@/components/website/SupportChatWidget";
-import { onboardingNeedsResume, readOnboardingState } from '@/lib/onboarding';
+import CreateProjectDialog from './CreateProjectDialog';
 
 export default function DashboardFrame({
   active,
@@ -44,17 +44,17 @@ export default function DashboardFrame({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const { active: activeProject, isEmpty, selectProject } = useActiveProject();
 
   const router = useRouter();
   useEffect(() => {
     if (active !== 'Home' || !isEmpty) return;
-    const onboarding = readOnboardingState();
-    if (onboardingNeedsResume(onboarding)) router.replace('/onboarding');
+    router.replace('/onboarding');
   }, [active, isEmpty, router]);
   const changeProject = (value: string) => {
     value === "create"
-      ? router.push('/onboarding')
+      ? setCreateOpen(true)
       : selectProject(value);
   };
 
@@ -163,7 +163,7 @@ export default function DashboardFrame({
                 Users, emails, push notifications and journeys all live inside a project. Create your first one
                 and this page is ready to use.
               </p>
-              <Button className="project-empty-cta" startIcon={<AddRounded />} onClick={() => router.push('/onboarding')}>
+              <Button className="project-empty-cta" startIcon={<AddRounded />} onClick={() => setCreateOpen(true)}>
                 Create project
               </Button>
               <div className="project-empty-note">Takes less than a minute</div>
@@ -187,6 +187,7 @@ export default function DashboardFrame({
         </Box>
       </Box>
     </Box>
+    <CreateProjectDialog open={createOpen} onClose={() => setCreateOpen(false)} />
     <SupportChatWidget showLauncher={false} isOpen={supportOpen} onClose={() => setSupportOpen(false)} />
     </>
   );

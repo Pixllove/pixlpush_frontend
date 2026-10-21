@@ -4105,10 +4105,11 @@ a {
 }
 .dashboard-nav.onboarding-nav.Mui-selected:hover {
   color: #fff;
+  color: #fff;
   background: #a84d20;
 }
 .dashboard-nav.onboarding-nav.Mui-selected {
-  color: #6427bd;
+  color: #fff;
   background: #f1813f;
 }
 .dashboard-nav.onboarding-nav .dashboard-nav-icon,
@@ -4137,7 +4138,7 @@ a {
   font-weight: 700;
 }
 .dashboard-nav.onboarding-nav:hover .onboarding-nav-percent {
-  color: #542096;
+  color: #fff;
   background: transparent;
 }
 .dashboard-nav.onboarding-nav:not(.Mui-selected):hover .onboarding-nav-percent {

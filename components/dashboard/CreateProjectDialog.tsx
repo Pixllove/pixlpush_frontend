@@ -5,6 +5,7 @@ import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack
 import { useDispatch } from 'react-redux';
 import { setSelectedProject } from '@/lib/uiSlice';
 import { useCreateProject } from '@/hooks/projects/use-projects';
+import { authApi } from '@/lib/auth/api';
 import SubmitButton from '@/components/auth/SubmitButton';
 import type { ApiError } from '@/types/auth';
 
@@ -32,6 +33,7 @@ export default function CreateProjectDialog({ open, onClose }: { open: boolean; 
       const project = await createProject.mutateAsync({ name: name.trim() });
       // Switch to it straight away: creating a Project is how someone with none
       // gets started, so leaving the old selection would strand them.
+      await authApi.setActiveProject(project.id);
       dispatch(setSelectedProject(project.id));
       close();
     } catch (cause) {

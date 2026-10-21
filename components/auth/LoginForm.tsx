@@ -16,7 +16,6 @@ import { useLogin } from '@/hooks/auth/use-login';
 import { useClearOnRestore } from '@/hooks/auth/use-clear-on-restore';
 import { applyApiError } from '@/lib/auth/form';
 import { postLoginPath } from '@/lib/auth/redirect';
-import { onboardingNeedsResume, readOnboardingState } from '@/lib/onboarding';
 import { FormError } from './AuthFeedback';
 import GoogleButton from './GoogleButton';
 import PasswordField from './PasswordField';
@@ -51,7 +50,7 @@ export default function LoginForm({ active = true, onSwitch }: { active?: boolea
         return;
       }
       const destination = postLoginPath(account, searchParams.get('redirect'));
-      router.replace(destination === '/dashboard/onboarding' && onboardingNeedsResume(readOnboardingState()) ? '/onboarding' : destination);
+      router.replace(destination);
       router.refresh();
     } catch (error) {
       setFormError(applyApiError(error as never, setError));

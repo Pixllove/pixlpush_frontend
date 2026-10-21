@@ -50,6 +50,7 @@ import type {
   UserStats,
   UsersPage,
 } from "@/types/project";
+import type { OnboardingState } from "@/lib/onboarding";
 
 /** Route handlers under app/api/projects, which forward to Fastify. */
 const BASE = "/api/projects";
@@ -119,6 +120,14 @@ export const firebaseApi = {
       BASE,
       "DELETE",
     ),
+};
+
+/** Durable setup progress for the active Project's onboarding guide. */
+export const onboardingApi = {
+  get: (projectId: string) =>
+    authRequest<OnboardingState>(at(projectId, "/onboarding"), undefined, BASE),
+  update: (projectId: string, input: Partial<Omit<OnboardingState, "projectName">>) =>
+    authRequest<OnboardingState>(at(projectId, "/onboarding"), input, BASE, "PATCH"),
 };
 
 export const sdkKeyApi = {

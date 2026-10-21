@@ -13,7 +13,7 @@ const REFRESH_COOKIE = 'pixlpush_refresh';
  * the real JWT. This exists to avoid rendering a signed-in shell to a signed-out
  * visitor (and the resulting auth flash).
  */
-const PROTECTED = ['/dashboard'];
+const PROTECTED = ['/dashboard', '/onboarding'];
 
 /** Signed-in users have no reason to see these. */
 const AUTH_ONLY = ['/login', '/get-started'];
@@ -136,5 +136,5 @@ export const config = {
    * /reset-password and /verify-email are deliberately absent from AUTH_ONLY:
    * a signed-in user following a reset link must still reach the form.
    */
-  matcher: ['/dashboard/:path*', '/login', '/get-started', '/api/:path*'],
+  matcher: ['/dashboard/:path*', '/onboarding', '/login', '/get-started', '/api/:path*'],
 };

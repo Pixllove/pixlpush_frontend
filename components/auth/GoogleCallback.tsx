@@ -7,7 +7,6 @@ import LockRounded from '@mui/icons-material/LockRounded';
 import AuthShell from '@/components/website/AuthShell';
 import { useGoogleLogin } from '@/hooks/auth/use-login';
 import { postLoginPath, safeRedirect } from '@/lib/auth/redirect';
-import { onboardingNeedsResume, readOnboardingState } from '@/lib/onboarding';
 import { googleErrorMessage } from './GoogleButton';
 
 /**
@@ -53,7 +52,7 @@ export default function GoogleCallback() {
         }
         // Verified addresses go to the app, unverified ones to the verify screen.
         const destination = postLoginPath(account, searchParams.get('redirect'));
-        router.replace(destination === '/dashboard/onboarding' && onboardingNeedsResume(readOnboardingState()) ? '/onboarding' : destination);
+        router.replace(destination);
         router.refresh();
       } catch (error) {
         backWith(googleErrorMessage(error));
