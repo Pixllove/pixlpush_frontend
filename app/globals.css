@@ -82,7 +82,7 @@
   --type-h2-lh: var(--lh-heading);
   --type-body1-lh: var(--lh-body);
 }
-.website-shell main, .website-shell > .MuiBox-root:not(header):not(footer) { color: var(--site-text); }
+.website-shell:not(.pricing-experience) main, .website-shell:not(.pricing-experience) > .MuiBox-root:not(header):not(footer) { color: var(--site-text); }
 
 /* Soft animated light seams blend the site chrome into the page without hard rules. */
 .site-header-seam::after,
@@ -132,21 +132,23 @@
   .site-page-seam::before,
   .site-page-seam::after { animation: none; }
 }
-.website-shell .MuiTypography-colorTextSecondary { color: var(--site-muted); }
-.website-shell .MuiCard-root { color: var(--site-text); background: #21152d; border: 1px solid var(--site-border); box-shadow: none; }
-.website-shell .MuiCard-root .MuiTypography-colorTextSecondary { color: var(--site-muted); }
-.website-shell .MuiAccordion-root { color: var(--site-text); background: #21152d; border-color: var(--site-border); }
-.website-shell .MuiAccordionSummary-root { color: var(--site-text); }
-.website-shell .MuiPaper-root { color: var(--site-text); }
-.website-shell .MuiButton-outlined { border-color: rgba(226,207,247,.32); color: var(--site-text); }
-.website-shell .MuiButton-outlined:hover { border-color: #c4a7ff; background: rgba(196,167,255,.08); }
+.website-shell:not(.pricing-experience) .MuiTypography-colorTextSecondary { color: var(--site-muted); }
+.website-shell:not(.pricing-experience) .MuiCard-root { color: var(--site-text); background: #21152d; border: 1px solid var(--site-border); box-shadow: none; }
+.website-shell:not(.pricing-experience) .MuiCard-root .MuiTypography-colorTextSecondary { color: var(--site-muted); }
+.website-shell:not(.pricing-experience) .MuiAccordion-root { color: var(--site-text); background: #21152d; border-color: var(--site-border); }
+.website-shell:not(.pricing-experience) .MuiAccordionSummary-root { color: var(--site-text); }
+.website-shell:not(.pricing-experience) .MuiPaper-root { color: var(--site-text); }
+.website-shell:not(.pricing-experience) .MuiButton-outlined { border-color: rgba(226,207,247,.32); color: var(--site-text); }
+.website-shell:not(.pricing-experience) .MuiButton-outlined:hover { border-color: #c4a7ff; background: rgba(196,167,255,.08); }
 .website-shell .retention-story { color: var(--site-text); background: radial-gradient(ellipse at 18% 38%,rgba(139,92,246,.14),transparent 38%),radial-gradient(ellipse at 86% 12%,rgba(255,107,94,.08),transparent 34%),#1b1126; }
 .website-shell .retention-step-title { color: var(--site-text); }
 .website-shell .retention-step-body { color: var(--site-muted); }
 .website-shell .retention-step-eyebrow { color: #ffbd62; }
 .website-shell .translation-ai-section { background: radial-gradient(ellipse at 75% 50%,rgba(139,92,246,.18),transparent 45%),#21152d; }
-.website-shell .MuiTableContainer-root { background: #21152d; color: var(--site-text); }
-.website-shell .MuiTableCell-root { color: var(--site-text); border-color: var(--site-border); }
+.website-shell:not(.pricing-experience) .MuiTableContainer-root { background: #21152d; color: var(--site-text); }
+.website-shell:not(.pricing-experience) .MuiTableCell-root { color: var(--site-text); border-color: var(--site-border); }
+.website-shell.pricing-experience { --site-bg: #fffaf8; --site-surface: #ffffff; --site-surface-raised: #f7f1fa; --site-text: #241536; --site-muted: #71677b; --site-border: #eae6ef; color: #241536; background: #fffaf8; }
+.website-shell.pricing-experience main, .website-shell.pricing-experience > .MuiBox-root:not(header):not(footer) { color: #241536; }
 html {
   scroll-behavior: smooth;
 }

@@ -676,9 +676,9 @@ export function SiteFooter() {
     </Box>
   );
 }
-export function SiteShell({ children }: { children: React.ReactNode }) {
+export function SiteShell({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <Box className="website-shell" sx={{ bgcolor: '#160d20', color: '#f8f3fc' }}>
+    <Box className={`website-shell ${className}`.trim()} sx={{ bgcolor: className.includes("pricing-experience") ? '#fffaf8' : '#160d20', color: className.includes("pricing-experience") ? '#241536' : '#f8f3fc' }}>
       <SiteHeader />
       {children}
       <SiteFooter />

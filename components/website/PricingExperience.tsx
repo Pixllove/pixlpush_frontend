@@ -335,7 +335,7 @@ export default function PricingExperience() {
     : 'Estimated monthly total: platform cost plus any additional reachable-user and email-send charges.';
 
   return (
-    <SiteShell>
+    <SiteShell className="pricing-experience">
       <Box sx={{ position: 'relative', overflow: 'hidden', color: '#2f1d3d', background: 'linear-gradient(116deg,#f3ecf8 0%,#f8eee9 100%)', borderBottom: '1px solid rgba(85,23,184,.1)', '&:after': { content: '""', position: 'absolute', width: 420, height: 420, right: '-8%', top: '-58%', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,.3)', border: '1px solid rgba(85,23,184,.1)' } }}>
         <Container maxWidth="lg" sx={{ py: { xs: 4, md: 5.5 } }}>
           <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ md: 'center' }} gap={{ xs: 3, md: 6 }}>
