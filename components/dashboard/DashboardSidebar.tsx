@@ -12,7 +12,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useActiveProject, planLabel } from '@/hooks/projects/use-active-project';
-import { onboardingApi } from '@/lib/projects/api';
+import { firebaseApi, onboardingApi } from '@/lib/projects/api';
 import { onboardingPercentage } from '@/lib/onboarding';
 
 const groups = [
@@ -62,6 +62,12 @@ export default function DashboardSidebar({ active, setActive, mobileOpen, collap
     enabled: Boolean(activeProject?.id),
     staleTime: 30_000,
   });
+  const firebase = useQuery({
+    queryKey: ['projects', activeProject?.id, 'firebase'],
+    queryFn: () => firebaseApi.get(activeProject!.id),
+    enabled: Boolean(activeProject?.id),
+    staleTime: 30_000,
+  });
   const current = clicked ?? active;
   const projectName = activeProject?.name ?? (isPending ? 'Loading…' : 'No project');
   const projectPlan = activeProject
@@ -69,6 +75,11 @@ export default function DashboardSidebar({ active, setActive, mobileOpen, collap
       ? `Deactivated${activeProject.recoveryUntil ? ` · restores ${formatShortDate(activeProject.recoveryUntil)}` : ''}`
       : planLabel(activeProject)
     : 'Not set up yet';
+  const onboardingPercent = !activeProject
+    ? '0%'
+    : onboarding.data && !onboarding.isPending && !firebase.isPending
+      ? `${onboardingPercentage({ ...onboarding.data, completed: Array.from(new Set([1, ...onboarding.data.completed])) }, firebase.data?.status === 'connected')}%`
+      : '…';
   const switchProject = (value: string) => { setMenu(null); onChangeProject(value); };
 
   return (
@@ -143,7 +154,7 @@ export default function DashboardSidebar({ active, setActive, mobileOpen, collap
                     >
                       <ListItemIcon className="dashboard-nav-icon"><Icon /></ListItemIcon>
                       <ListItemText className="dashboard-nav-label" primary={label} />
-                      {label === 'Onboarding Guide' && <span className="onboarding-nav-percent">{activeProject && onboarding.data ? `${onboardingPercentage({ ...onboarding.data, completed: Array.from(new Set([1, ...onboarding.data.completed])) })}%` : '0%'}</span>}
+                      {label === 'Onboarding Guide' && <span className="onboarding-nav-percent">{onboardingPercent}</span>}
                     </ListItemButton>
                   </Tooltip>
                 );
