@@ -7,18 +7,21 @@ import ArrowOutwardRounded from '@mui/icons-material/ArrowOutwardRounded';
 const productViews = [
   {
     label: 'Push notifications',
-    image: '/assets/translation-push.png',
-    alt: 'PixlPush push notification editor with language tabs, automatic translation, and live preview',
+    image: '/assets/translation-push-v2.png',
+    alt: 'PixlPush multilingual push campaign composer with a live mobile preview',
+    ratio: '3 / 2',
   },
   {
     label: 'Choose languages',
-    image: '/assets/translation-languages.png',
-    alt: 'PixlPush dialog for selecting the languages to translate a campaign into',
+    image: '/assets/translation-languages-v2.png',
+    alt: 'PixlPush campaign language coverage workspace with connected locale cards',
+    ratio: '3 / 2',
   },
   {
     label: 'Email campaigns',
-    image: '/assets/translation-email.png',
-    alt: 'PixlPush email editor with AI translation controls, language selection, and live email preview',
+    image: '/assets/translation-email-v2.png',
+    alt: 'PixlPush email campaign workspace with AI translation readiness states',
+    ratio: '3 / 2',
   },
 ];
 
@@ -101,7 +104,7 @@ export default function TranslationAISection() {
                 </Box>
               ))}
             </Stack>
-            <Box className="translation-ai-screenshot" role="tabpanel" aria-label={selectedView.label}>
+            <Box className="translation-ai-screenshot" style={{ aspectRatio: selectedView.ratio }} role="tabpanel" aria-label={selectedView.label}>
               {productViews.map((view, index) => (
                 <Box
                   key={view.image}
