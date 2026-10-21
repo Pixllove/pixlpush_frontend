@@ -3958,7 +3958,8 @@ a {
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 20px 12px 16px;
+  padding: 20px 12px 28px;
+  scroll-padding-bottom: 28px;
   scrollbar-width: none;
 }
 .sidebar-navigation::-webkit-scrollbar {
@@ -3966,8 +3967,11 @@ a {
 }
 .sidebar-support {
   flex: 0 0 auto;
+  position: relative;
+  z-index: 2;
   margin: 0 12px 14px;
-  padding-top: 12px;
+  padding-top: 14px;
+  background: var(--sb-canvas);
   border-top: 1px solid var(--sb-hairline);
 }
 .sidebar-support-link.MuiListItemButton-root {
@@ -6223,6 +6227,22 @@ a {
     grid-column: auto;
   }
 }
+
+/* Keep the full navigation rhythm visible on shorter desktop viewports. The support action has its
+   own footer row, so the last project links (including Profile) never sit underneath it. */
+@media (min-width: 761px) and (max-height: 920px) {
+  .sidebar-brand { flex-basis: 56px; }
+  .sidebar-switch { padding-top: 8px; }
+  .sidebar-project.MuiButtonBase-root { min-height: 46px; padding-top: 5px; padding-bottom: 5px; }
+  .sidebar-navigation { padding-top: 12px; padding-bottom: 16px; scroll-padding-bottom: 16px; }
+  .sidebar-group + .sidebar-group { margin-top: 14px; padding-top: 10px; }
+  .sidebar-kicker { margin-bottom: 4px; }
+  .sidebar-list { gap: 1px; }
+  .dashboard-nav.MuiListItemButton-root { min-height: 36px; }
+  .sidebar-support { margin-bottom: 8px; padding-top: 8px; }
+  .sidebar-support-link.MuiListItemButton-root { min-height: 40px; }
+}
+
 @media (max-width: 460px) {
   .campaign-grid {
     grid-template-columns: 1fr;
