@@ -339,7 +339,7 @@ export function SiteHeader() {
     <>
     <AppBar
       position="sticky"
-      className="site-header-seam site-header-premium"
+      className="site-header-seam"
       elevation={0}
       onMouseLeave={() => setMega(null)}
       sx={{
@@ -360,7 +360,6 @@ export function SiteHeader() {
       }}
     >
       <Toolbar
-        className="site-header-toolbar"
         sx={{
           maxWidth: 1360,
           width: "100%",
@@ -533,7 +532,7 @@ export function SiteFooter() {
   return (
     <Box
       component="footer"
-      className="site-footer-seam site-footer-premium"
+      className="site-footer-seam"
       sx={{
         bgcolor: "#211331",
         color: "#fff",
