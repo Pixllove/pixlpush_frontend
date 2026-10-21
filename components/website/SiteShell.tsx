@@ -44,7 +44,7 @@ import SupportChatWidget from "./SupportChatWidget";
 
 const links = [
   ["Product", "/product"],
-  ["How It Works", "/how-it-works"],
+  ["How It Works", "/#how-it-works"],
   ["Use Cases", "/use-cases"],
   ["Pricing", "/pricing"],
 ];
@@ -88,7 +88,7 @@ const resourceGroups: MenuGroup[] = [
       [
         "Customer case studies",
         "See how digital products grow with PixlPush.",
-        "/customer-case-studies",
+        "/#customer-stories",
         AutoStoriesRounded,
       ],
       [
@@ -109,15 +109,9 @@ const resourceGroups: MenuGroup[] = [
     title: "Explore",
     items: [
       [
-        "Why PixlPush",
-        "The thinking behind a better retention loop.",
-        "/why-pixlpush",
-        AutoAwesomeRounded,
-      ],
-      [
-        "ROI if switching",
-        "Build the business case for making a change.",
-        "/roi-if-switching",
+        "Compare costs in seconds",
+        "See how much you could save with PixlPush against leading platforms.",
+        "/pricing#provider-comparison",
         CompareArrowsRounded,
       ],
       ["Glossary", "Clear definitions for lifecycle marketing.", "/glossary", MenuBookRounded],
@@ -141,7 +135,7 @@ export function Logo() {
     </NextLink>
   );
 }
-function MegaMenu({ kind }: { kind: "product" | "resources" | "usecases" }) {
+function MegaMenu({ kind, onNavigate }: { kind: "product" | "resources" | "usecases"; onNavigate: () => void }) {
   const groups = kind === "product" ? productGroups : resourceGroups;
   if (kind === "product") {
     const capabilities = [
@@ -159,9 +153,8 @@ function MegaMenu({ kind }: { kind: "product" | "resources" | "usecases" }) {
       { title: "In-app messaging", icon: MarkChatUnreadRounded },
     ];
     const platformFeatures = [
-      { title: "Email campaigns", icon: EmailRounded },
-      { title: "Push notification campaigns", icon: NotificationsActiveRounded },
-      { title: "Journey automation", icon: AccountTreeRounded },
+      { title: "AI agents", icon: AutoAwesomeRounded },
+      { title: "Multi-channel journey automation", icon: AccountTreeRounded },
       { title: "User segmentation & audiences", icon: GroupsRounded },
       { title: "Analytics & reporting", icon: InsightsRounded },
     ];
@@ -170,12 +163,12 @@ function MegaMenu({ kind }: { kind: "product" | "resources" | "usecases" }) {
         <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "minmax(0, 1.4fr) minmax(0, 1fr) minmax(185px, .75fr)" }, gap: { xs: 3, md: 3.5 }, maxWidth: 1320, mx: "auto" }}>
           <Box>
             <Typography sx={{ color: "#c4b6d0", fontWeight: 700, fontSize: "var(--fs-12)", letterSpacing: ".12em", textTransform: "uppercase", mb: 1.5 }}>AI marketing capabilities</Typography>
-            <Link href="/product" underline="none" sx={{ display: "flex", gap: 2, alignItems: "center", p: 1.5, mb: 1.3, borderRadius: 3, color: "#f8f3fc", background: "linear-gradient(100deg,rgba(255,198,109,.13),rgba(255,145,79,.06))", border: "1px solid rgba(255,190,94,.2)", transition: "background .18s,border-color .18s", "&:hover": { background: "linear-gradient(100deg,rgba(255,198,109,.2),rgba(255,145,79,.1))", borderColor: "rgba(255,190,94,.42)" } }}>
+            <Link component={NextLink} prefetch href="/product#platform-capabilities" onClick={onNavigate} underline="none" sx={{ display: "flex", gap: 2, alignItems: "center", p: 1.5, mb: 1.3, borderRadius: 3, color: "#f8f3fc", background: "linear-gradient(100deg,rgba(255,198,109,.13),rgba(255,145,79,.06))", border: "1px solid rgba(255,190,94,.2)", transition: "background .18s,border-color .18s", "&:hover": { background: "linear-gradient(100deg,rgba(255,198,109,.2),rgba(255,145,79,.1))", borderColor: "rgba(255,190,94,.42)" } }}>
               <Box><Typography fontWeight={750} fontSize="var(--fs-16)">Your AI marketing team</Typography><Typography sx={{ color: "#c4b6d0", mt: .35 }} fontSize="var(--fs-13)">Meet Max, Ben, Nova and Anna — AI marketers for smarter campaigns, journeys and growth.</Typography></Box>
             </Link>
             <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: .7 }}>
               {capabilities.map(({ title, description, image, icon: Icon }) => (
-                <Link key={title} href="/product" underline="none" sx={{ display: "flex", alignItems: "flex-start", gap: 1.3, p: 1.15, borderRadius: 2, color: "#f8f3fc", transition: "background .15s", "&:hover": { bgcolor: "rgba(255,255,255,.07)" } }}>
+                <Link component={NextLink} prefetch key={title} href="/product#platform-capabilities" onClick={onNavigate} underline="none" sx={{ display: "flex", alignItems: "flex-start", gap: 1.3, p: 1.15, borderRadius: 2, color: "#f8f3fc", transition: "background .15s", "&:hover": { bgcolor: "rgba(255,255,255,.07)" } }}>
                   <Box sx={{ display: "grid", placeItems: "center", flex: "0 0 38px", width: 38, height: 38, borderRadius: "50%", overflow: "hidden", color: "#21152d", background: image ? "#38264b" : "linear-gradient(145deg,#ffd36e,#ff914f)", border: image ? "2px solid rgba(255,198,109,.72)" : "none", "& svg": { fontSize: 19 } }}>{image ? <Box component="img" src={image} alt="" sx={{ display: "block", width: "100%", height: "100%", objectFit: "cover" }} /> : <Icon />}</Box>
                   <Box><Typography fontWeight={700} fontSize="var(--fs-13)">{title}</Typography><Typography sx={{ mt: .25, color: "#b9abc5", lineHeight: 1.4 }} fontSize="var(--fs-12)">{description}</Typography></Box>
                 </Link>
@@ -186,7 +179,7 @@ function MegaMenu({ kind }: { kind: "product" | "resources" | "usecases" }) {
             <Typography sx={{ color: "#c4b6d0", fontWeight: 700, fontSize: "var(--fs-12)", letterSpacing: ".12em", textTransform: "uppercase", mb: 1.5 }}>Platform capabilities</Typography>
             <Stack gap={.45}>
               {platformFeatures.map(({ title, icon: Icon }) => (
-                <Link key={title} href="/product" underline="none" sx={{ display: "flex", alignItems: "center", gap: 1.2, p: 1, borderRadius: 2, color: "#f8f3fc", transition: "background .15s", "&:hover": { bgcolor: "rgba(255,255,255,.07)" } }}>
+                <Link component={NextLink} prefetch key={title} href={title === "Multi-channel journey automation" ? "/product#journeys" : title === "User segmentation & audiences" ? "/product#audiences" : title === "Analytics & reporting" ? "/product#insights" : "/product#platform-capabilities"} onClick={onNavigate} underline="none" sx={{ display: "flex", alignItems: "center", gap: 1.2, p: 1, borderRadius: 2, color: "#f8f3fc", transition: "background .15s", "&:hover": { bgcolor: "rgba(255,255,255,.07)" } }}>
                   <Box sx={{ display: "grid", placeItems: "center", flex: "0 0 32px", width: 32, height: 32, borderRadius: 1.7, color: "#21152d", background: "linear-gradient(145deg,#ffd36e,#ff914f)", "& svg": { fontSize: 18 } }}><Icon /></Box>
                   <Typography fontWeight={700} fontSize="var(--fs-13)">{title}</Typography>
                 </Link>
@@ -197,13 +190,13 @@ function MegaMenu({ kind }: { kind: "product" | "resources" | "usecases" }) {
             <Typography sx={{ color: "#c4b6d0", fontWeight: 700, fontSize: "var(--fs-12)", letterSpacing: ".12em", textTransform: "uppercase", mb: 1.5 }}>Channels</Typography>
             <Stack gap={.7}>
               {channels.map(({ title, icon: Icon }) => (
-                <Link key={title} href="/product" underline="none" sx={{ display: "flex", alignItems: "center", gap: 1.5, p: 1.25, borderRadius: 2.2, color: "#f8f3fc", transition: "background .15s,transform .15s", "&:hover": { bgcolor: "rgba(255,255,255,.07)", transform: "translateX(3px)" } }}>
+                <Link component={NextLink} prefetch key={title} href={"/product#campaigns"} onClick={onNavigate} underline="none" sx={{ display: "flex", alignItems: "center", gap: 1.5, p: 1.25, borderRadius: 2.2, color: "#f8f3fc", transition: "background .15s,transform .15s", "&:hover": { bgcolor: "rgba(255,255,255,.07)", transform: "translateX(3px)" } }}>
                   <Box sx={{ display: "grid", placeItems: "center", width: 38, height: 38, borderRadius: 2, color: "#21152d", background: "linear-gradient(145deg,#ffd36e,#ff914f)", "& svg": { fontSize: 20 } }}><Icon /></Box>
                   <Typography fontWeight={700} fontSize="var(--fs-14)">{title}</Typography>
                 </Link>
               ))}
             </Stack>
-            <Link href="/product" underline="none" sx={{ display: "inline-flex", alignItems: "center", mt: 1.8, px: 1.25, py: .8, borderRadius: 2, color: "#ffc66d", fontWeight: 700, fontSize: "var(--fs-13)", "&:hover": { bgcolor: "rgba(255,198,109,.09)" } }}>Explore the platform →</Link>
+            <Link component={NextLink} prefetch href="/product#platform-capabilities" onClick={onNavigate} underline="none" sx={{ display: "inline-flex", alignItems: "center", mt: 1.8, px: 1.25, py: .8, borderRadius: 2, color: "#ffc66d", fontWeight: 700, fontSize: "var(--fs-13)", "&:hover": { bgcolor: "rgba(255,198,109,.09)" } }}>Explore the platform →</Link>
           </Box>
         </Box>
       </Paper>
@@ -224,7 +217,7 @@ function MegaMenu({ kind }: { kind: "product" | "resources" | "usecases" }) {
             <Typography sx={{ color: "#c4b6d0", fontWeight: 700, fontSize: "var(--fs-12)", letterSpacing: ".12em", textTransform: "uppercase", mb: 1.2 }}>What you can achieve with journey automations</Typography>
             <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: .6 }}>
               {useCases.map(({ title, description, icon: Icon }) => (
-                <Link key={title} href="/use-cases" underline="none" sx={{ display: "flex", alignItems: "flex-start", gap: 1.3, p: 1.2, borderRadius: 2.2, color: "#f8f3fc", transition: "background .15s", "&:hover": { bgcolor: "rgba(255,255,255,.07)" } }}>
+                <Link component={NextLink} prefetch key={title} href="/use-cases" onClick={onNavigate} underline="none" sx={{ display: "flex", alignItems: "flex-start", gap: 1.3, p: 1.2, borderRadius: 2.2, color: "#f8f3fc", transition: "background .15s", "&:hover": { bgcolor: "rgba(255,255,255,.07)" } }}>
                   <Box sx={{ display: "grid", placeItems: "center", flex: "0 0 36px", width: 36, height: 36, borderRadius: 1.8, color: "#21152d", background: "linear-gradient(145deg,#ffd36e,#ff914f)", "& svg": { fontSize: 19 } }}><Icon /></Box>
                   <Box><Typography fontWeight={700} fontSize="var(--fs-14)">{title}</Typography><Typography sx={{ mt: .2, color: "#b9abc5", fontSize: "var(--fs-12)", lineHeight: 1.4 }}>{description}</Typography></Box>
                 </Link>
@@ -242,15 +235,15 @@ function MegaMenu({ kind }: { kind: "product" | "resources" | "usecases" }) {
                 ["Fintech / Financial", AccountBalanceRounded, "/industries/financial"],
               ].map(([industry, IndustryIcon, href]) => {
                 const Icon = IndustryIcon as typeof SportsEsportsRounded;
-                return <Link key={industry as string} href={href as string} underline="none" sx={{ display: "flex", alignItems: "center", gap: 1.1, px: .8, py: .55, mx: -.8, borderRadius: 1.5, color: "#f8f3fc", fontSize: "var(--fs-13)", fontWeight: 600, transition: "color .15s, background .15s", "&:hover": { color: "#ffc66d", bgcolor: "rgba(255,255,255,.06)" } }}>
+                return <Link component={NextLink} prefetch key={industry as string} href={href as string} onClick={onNavigate} underline="none" sx={{ display: "flex", alignItems: "center", gap: 1.1, px: .8, py: .55, mx: -.8, borderRadius: 1.5, color: "#f8f3fc", fontSize: "var(--fs-13)", fontWeight: 600, transition: "color .15s, background .15s", "&:hover": { color: "#ffc66d", bgcolor: "rgba(255,255,255,.06)" } }}>
                   <Box sx={{ display: "grid", placeItems: "center", flex: "0 0 30px", width: 30, height: 30, borderRadius: 1.6, color: "#21152d", background: "linear-gradient(145deg,#ffd36e,#ff914f)", "& svg": { fontSize: 17 } }}><Icon /></Box>
                   {industry as string}
                 </Link>;
               })}
             </Stack>
-            <Link href="/for-digital-products" underline="none" sx={{ display: "inline-flex", alignItems: "center", mt: 1.5, color: "#ffc66d", fontWeight: 700, fontSize: "var(--fs-13)", "&:hover": { color: "#ffe27a" } }}>Explore digital products →</Link>
+            <Link component={NextLink} prefetch href="/for-digital-products" onClick={onNavigate} underline="none" sx={{ display: "inline-flex", alignItems: "center", mt: 1.5, color: "#ffc66d", fontWeight: 700, fontSize: "var(--fs-13)", "&:hover": { color: "#ffe27a" } }}>Explore digital products →</Link>
           </Box>
-          <Link href="/for-digital-products" underline="none" sx={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "flex-start", p: 2.6, borderRadius: 3, color: "#f8f3fc", border: "1px solid rgba(255,190,94,.22)", background: "linear-gradient(120deg,rgba(255,198,109,.12),rgba(255,145,79,.045))", transition: "background .18s,border-color .18s", "&:hover": { background: "linear-gradient(120deg,rgba(255,198,109,.2),rgba(255,145,79,.08))", borderColor: "rgba(255,190,94,.42)" } }}>
+          <Link component={NextLink} prefetch href="/for-digital-products" onClick={onNavigate} underline="none" sx={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "flex-start", p: 2.6, borderRadius: 3, color: "#f8f3fc", border: "1px solid rgba(255,190,94,.22)", background: "linear-gradient(120deg,rgba(255,198,109,.12),rgba(255,145,79,.045))", transition: "background .18s,border-color .18s", "&:hover": { background: "linear-gradient(120deg,rgba(255,198,109,.2),rgba(255,145,79,.08))", borderColor: "rgba(255,190,94,.42)" } }}>
             <Typography sx={{ color: "#ffc66d", fontWeight: 700, fontSize: "var(--fs-12)", letterSpacing: ".12em", textTransform: "uppercase" }}>For digital products</Typography>
             <Typography sx={{ mt: 1, color: "#f8f3fc", fontWeight: 750, fontSize: "var(--fs-20)" }}>Built for products with an active user base.</Typography>
             <Typography sx={{ mt: .7, color: "#c4b6d0", fontSize: "var(--fs-13)", lineHeight: 1.55 }}>Explore how PixlPush supports apps, SaaS and other user-based digital businesses.</Typography>
@@ -306,8 +299,11 @@ function MegaMenu({ kind }: { kind: "product" | "resources" | "usecases" }) {
                 const Icon = ItemIcon ?? AutoAwesomeRounded;
                 return (
                 <Link
+                  component={NextLink}
+                  prefetch
                   key={title}
                   href={href.replace("​​", "")}
+                  onClick={onNavigate}
                   underline="none"
                   sx={{
                     display: "flex",
@@ -382,8 +378,8 @@ export function SiteHeader() {
         >
           {[
             ["Product", "product"],
-            ["How It Works", "/how-it-works"],
-            ["Use Cases", "usecases"],
+            ["How It Works", "/#how-it-works"],
+            ["Solutions", "usecases"],
             ["Pricing", "/pricing"],
             ["Resources", "resources"],
           ].map(([label, value]) =>
@@ -456,7 +452,7 @@ export function SiteHeader() {
           sx={{ display: { xs: "none", lg: "block" } }}
           onMouseEnter={() => setMega(mega)}
         >
-          <MegaMenu kind={mega} />
+          <MegaMenu kind={mega} onNavigate={() => setMega(null)} />
         </Box>
       )}
       <Drawer
@@ -516,9 +512,9 @@ export function SiteFooter() {
       links: [
         ["Developer docs", "/docs"],
         ["Blog", "/blog"],
-        ["Customer case studies", "/customer-case-studies"],
+        ["Customer case studies", "/#customer-stories"],
         ["Glossary", "/glossary"],
-        ["ROI if switching", "/roi-if-switching"],
+        ["ROI if switching", "/pricing#provider-comparison"],
         ["Resources hub", "/resources"],
       ],
     },

@@ -193,8 +193,8 @@ export function ProviderComparison({ onScenarioChange }: { onScenarioChange?: (u
     : competitorEmailIsCapped ? competitor.detail : '';
 
   return (
-    <Box component="section" className="pp-compare" aria-labelledby="provider-comparison-title" sx={{ mt: 5 }}>
-      <Stack gap={{ xs: 3, md: 5 }}>
+    <Box id="provider-comparison" component="section" className="pp-compare" aria-labelledby="provider-comparison-title" sx={{ mt: 5, scrollMarginTop: 100 }}>
+      <Stack gap={{ xs: 2.5, md: 3.5 }}>
         <Box sx={{ maxWidth: 850, mx: 'auto', textAlign: 'center' }}>
           <Typography id="provider-comparison-title" variant="h1" component="h2" className="pp-compare-title" sx={{ mt: 1 }}>
             Compare PixlPush<br /><span>with leading competitors.</span>
@@ -204,12 +204,12 @@ export function ProviderComparison({ onScenarioChange }: { onScenarioChange?: (u
           </Typography>
         </Box>
 
-        <Card sx={{ p: { xs: 2, md: 5 }, boxShadow: '0 18px 40px rgba(69,30,91,.13)' }}>
-          <Stack gap={{ xs: 3, md: 4 }}>
+        <Card sx={{ p: { xs: 2, md: 3 }, boxShadow: '0 18px 40px rgba(69,30,91,.13)' }}>
+          <Stack gap={{ xs: 2, md: 2.5 }}>
             <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'flex-start' }} gap={2}>
               <Box>
                 <Typography variant="overline" color="primary">Your scenario</Typography>
-                <Typography variant="h1" component="h3" sx={{ mt: .5 }}>How many users do you want to reach each month?</Typography>
+                <Typography variant="h1" component="h3" sx={{ mt: .5, fontSize: { xs: 'var(--fs-24)', md: 'var(--fs-32)' }, lineHeight: 1.15 }}>How many users do you want to reach each month?</Typography>
                 <Typography color="text.secondary" sx={{ mt: .5 }}>We compare the same reach and send volume for every provider.</Typography>
               </Box>
               <TextField label="Users / subscribers" type="number" error={audienceIsCapped} helperText={audienceIsCapped ? capMessage : undefined} inputProps={{ min: 1000, max: maxUsers, step: 1000 }} InputProps={{ readOnly: true }} value={users} sx={{ width: { xs: '100%', sm: 205 }, flexShrink: 0 }} />
@@ -219,7 +219,7 @@ export function ProviderComparison({ onScenarioChange }: { onScenarioChange?: (u
               <Slider aria-label="Reachable users per month" min={1000} max={maxUsers} step={250} marks={ticks.map((value, index) => ({ value, label: `${quantity(value)}${index === ticks.length - 1 ? '+' : ''}` }))} value={users} onChange={(_, value) => syncAudienceValue(value as number)} />
             </Box>
 
-            <Box className="pp-compare-rules" sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3, py: { xs: 3, md: 4 } }}>
+            <Box className="pp-compare-rules" sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2.5, py: { xs: 2, md: 2.5 } }}>
               <Box>
                 <Typography variant="subtitle2" color="text.secondary">Which channels do you use?</Typography>
                 <Stack direction="row" gap={1.5} flexWrap="wrap" sx={{ mt: 1.5 }}>
@@ -229,7 +229,7 @@ export function ProviderComparison({ onScenarioChange }: { onScenarioChange?: (u
               </Box>
               <Box>
                 <Typography variant="subtitle2" color="text.secondary">Your usage</Typography>
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2.5, mt: 2 }}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5, mt: 1.5 }}>
                   <TextField label="Email sends / month" type="number" inputProps={{ 'aria-label': 'Email sends per month', min: 0, max: 3000000, step: 1000 }} value={emailSends || ''} onChange={(event) => updateEmailSends(event.target.value)} />
                   <TextField label="Push subscribers" type="number" error={pushOn && audienceIsCapped} helperText={pushOn && audienceIsCapped ? capMessage : undefined} inputProps={{ min: 0, max: maxUsers, step: 250 }} InputProps={{ readOnly: true }} disabled={!pushOn} value={pushUsers} />
                 </Box>
