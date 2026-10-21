@@ -38,9 +38,9 @@ export default function OnboardingGuide() {
       setState(initialOnboardingState);
       return;
     }
-    if (progress.data) {
-      setState({ ...initialOnboardingState, ...progress.data, projectName: progress.data.projectName || active?.name || '' });
-    }
+    setState(progress.data
+      ? { ...initialOnboardingState, ...progress.data, projectName: progress.data.projectName || active?.name || '' }
+      : { ...initialOnboardingState, projectName: active?.name || '' });
   }, [active?.name, projectId, progress.data]);
   const hasProject = Boolean(projectId);
   const usePush = hasProject && state.channels.includes('push');
