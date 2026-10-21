@@ -4127,6 +4127,53 @@ a {
 .dashboard-nav.Mui-selected .dashboard-nav-label .MuiListItemText-primary {
   font-weight: 600;
 }
+.dashboard-nav.onboarding-nav {
+  color: #f1813f;
+}
+.dashboard-nav.onboarding-nav:hover,
+.dashboard-nav.onboarding-nav.Mui-selected:hover {
+  color: #6427bd;
+  background: #a84d20;
+}
+.dashboard-nav.onboarding-nav.Mui-selected {
+  color: #6427bd;
+  background: #f1813f;
+}
+.dashboard-nav.onboarding-nav .dashboard-nav-icon,
+.dashboard-nav.onboarding-nav:hover .dashboard-nav-icon,
+.dashboard-nav.onboarding-nav.Mui-selected .dashboard-nav-icon {
+  color: inherit;
+}
+.dashboard-nav.onboarding-nav::before,
+.dashboard-nav.onboarding-nav.Mui-selected::before {
+  background: #ffd0b4;
+}
+.onboarding-nav-percent {
+  flex: none;
+  margin-left: auto;
+  padding: 2px 0;
+  color: inherit;
+  background: transparent;
+  border-radius: 0;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 16px;
+  transition: background-color var(--sidebar-motion), color var(--sidebar-motion);
+}
+.dashboard-nav.onboarding-nav.Mui-selected .dashboard-nav-label .MuiListItemText-primary,
+.dashboard-nav.onboarding-nav.Mui-selected .onboarding-nav-percent {
+  font-weight: 700;
+}
+.dashboard-nav.onboarding-nav:hover .onboarding-nav-percent {
+  color: #542096;
+  background: transparent;
+}
+.dashboard-nav.onboarding-nav.Mui-selected:hover .onboarding-nav-percent {
+  color: #542096;
+}
+.sidebar-is-collapsed .onboarding-nav-percent {
+  display: none;
+}
 .sidebar-project.MuiButtonBase-root {
   box-sizing: border-box;
   min-width: 0;
