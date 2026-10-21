@@ -4,19 +4,19 @@ const team = [
   {
     name: 'Ben',
     role: 'Lifecycle & Campaign Data Analyst',
-    image: '/assets/agent-avatar-ben-v4.png',
+    image: '/assets/agent-avatar-ben-v4.webp',
     className: 'ben',
   },
   {
     name: 'Nova',
     role: 'Campaign & Journey Creator',
-    image: '/assets/agent-avatar-nova-v4.png',
+    image: '/assets/agent-avatar-nova-v4.webp',
     className: 'nova',
   },
   {
     name: 'Anna',
     role: 'Cross-Sell & Marketing Expert',
-    image: '/assets/agent-avatar-anna-v3.png',
+    image: '/assets/agent-avatar-anna-v3.webp',
     className: 'anna',
   },
 ];
@@ -41,7 +41,7 @@ export default function HeroTeamNetwork() {
         <Typography component="p" className="hero-team-name">Max</Typography>
         <Typography component="p" className="hero-team-role">Growth Concierge</Typography>
         <Box className="hero-team-avatar hero-team-avatar-max">
-          <Box component="img" src="/assets/agent-avatar-max-v4.png" alt="Max" />
+          <Box component="img" src="/assets/agent-avatar-max-v4.webp" alt="Max" />
         </Box>
       </Box>
 

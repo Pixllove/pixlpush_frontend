@@ -33,7 +33,7 @@ function BusinessContextPanel({ projectId }: { projectId?: string }) {
     let y = 46;
     const date = new Date();
     const dateLabel = `${date.toLocaleDateString('en-GB')}, ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-    const logoData = await fetch('/assets/logo.png').then((response) => response.blob()).then((blob) => new Promise<string>((resolve, reject) => {
+    const logoData = await fetch('/assets/logo.webp').then((response) => response.blob()).then((blob) => new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(String(reader.result));
       reader.onerror = reject;

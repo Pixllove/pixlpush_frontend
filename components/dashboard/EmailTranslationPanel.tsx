@@ -12,7 +12,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import aiIcon from "../../assets/ai.png";
+import aiIcon from "../../assets/ai.webp";
 import { emailApi } from "@/lib/projects/api";
 
 export const EMAIL_TRANSLATION_LANGUAGES = [

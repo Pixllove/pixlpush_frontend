@@ -12,14 +12,14 @@ const accentGradient = 'linear-gradient(100deg, #ffe27a 0%, #ffb347 52%, #ff8148
 function JourneyPreview({ dark = false }: { dark?: boolean }) { const text = dark ? '#fff' : '#241536'; return <Box sx={{ borderRadius: 5, p: { xs: 2, md: 2.7 }, bgcolor: dark ? 'rgba(255,255,255,.12)' : '#fff', border: dark ? '1px solid rgba(255,255,255,.2)' : '1px solid #eee6f2', boxShadow: dark ? '0 25px 70px rgba(12,0,32,.3)' : '0 25px 70px rgba(65,23,75,.12)' }}><Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ pb: 2, borderBottom: 1, borderColor: dark ? 'rgba(255,255,255,.15)' : '#eee7f1' }}><Stack direction="row" gap={1} alignItems="center"><Box sx={{ width: 9, height: 9, borderRadius: '50%', bgcolor: '#ff6c43' }} /><Typography fontSize="var(--fs-12)" fontWeight={500} color={text}>PixlPush / Journey Builder</Typography></Stack><Chip label="LIVE" size="small" sx={{ bgcolor: '#e3f8e9', color: '#188047', fontWeight: 500, fontSize: "var(--fs-12)" }} /></Stack><Typography fontSize="var(--fs-12)" color={dark ? 'rgba(255,255,255,.6)' : 'text.secondary'} fontWeight={500} sx={{ mt: 2 }}>ONBOARDING ACTIVATION</Typography><Typography fontWeight={600} fontSize="var(--fs-16)" color={text} sx={{ mt: .5 }}>Help new users reach value faster</Typography><Stack direction={{ xs: 'column', sm: 'row' }} gap={1} sx={{ mt: 2 }}>{[['TRIGGER', 'User signs up', '#fff0e8', '#f15d2e'], ['WAIT', '2 days', '#fff1cf', '#995718'], ['MESSAGE', 'Send a helpful nudge', '#fff0e8', '#f15d2e']].map(([label, value, bg, color], i) => <Stack direction="row" gap={1} alignItems="center" key={label} sx={{ flex: 1 }}><Box sx={{ flex: 1, p: 1.5, borderRadius: 2.5, bgcolor: bg, minHeight: 65 }}><Typography fontSize="var(--fs-12)" color={color} fontWeight={500}>{label}</Typography><Typography fontSize="var(--fs-12)" color="#241536" fontWeight={500} sx={{ mt: 1 }}>{value}</Typography></Box>{i < 2 && <Typography sx={{ display: { xs: 'none', sm: 'block' }, color: dark ? 'rgba(255,255,255,.55)' : '#b8a6c0' }}>→</Typography>}</Stack>)}</Stack><Box sx={{ mt: 2, p: 1.5, borderRadius: 2.5, bgcolor: dark ? 'rgba(226,248,233,.14)' : '#f2faf4', display: 'flex', justifyContent: 'space-between' }}><Typography fontSize="var(--fs-12)" color={dark ? '#b9efc8' : '#3d7c54'} fontWeight={500}>Journey performance</Typography><Typography fontSize="var(--fs-12)" color={dark ? '#c8ffd4' : '#21814a'} fontWeight={500}>+27% D7 retention</Typography></Box></Box>; }
 function BrandStrip() {
   const products = [
-    { name: 'Pixllove', src: '/assets/brand-logos/pixllove.png', href: 'https://pixllove.com/', kind: 'wordmark' },
-    { name: 'All In 1 Media', src: '/assets/brand-logos/allin1-transparent.png', href: 'https://ai1-media.de/', kind: 'wordmark' },
-    { name: 'WEMAKEARTISTS', src: '/assets/brand-logos/wemakeartists.png', href: 'https://www.wemakeartists.de/', kind: 'wordmark' },
+    { name: 'Pixllove', src: '/assets/brand-logos/pixllove.webp', href: 'https://pixllove.com/', kind: 'wordmark' },
+    { name: 'All In 1 Media', src: '/assets/brand-logos/allin1-transparent.webp', href: 'https://ai1-media.de/', kind: 'wordmark' },
+    { name: 'WEMAKEARTISTS', src: '/assets/brand-logos/wemakeartists.webp', href: 'https://www.wemakeartists.de/', kind: 'wordmark' },
     { name: 'BirthBash', src: '/assets/brand-logos/birthdaybash-logo.svg', href: 'https://birthdaybash-weld.vercel.app/', kind: 'wordmark' },
-    { name: 'GaugeAI', src: '/assets/brand-logos/gaugeai.png', href: 'https://gaugeai.io/', kind: 'labelled', labelAccent: true },
-    { name: 'PixlTrace', src: '/assets/brand-logos/pixltrace.png', href: 'https://play.google.com/store/apps/details?id=com.pixltrace.app&hl=en', kind: 'labelled' },
+    { name: 'GaugeAI', src: '/assets/brand-logos/gaugeai.webp', href: 'https://gaugeai.io/', kind: 'labelled', labelAccent: true },
+    { name: 'PixlTrace', src: '/assets/brand-logos/pixltrace.webp', href: 'https://play.google.com/store/apps/details?id=com.pixltrace.app&hl=en', kind: 'labelled' },
     { name: 'Auramagie', src: '/assets/brand-logos/auramagie-wordmark.svg', href: 'https://auramagie.de/', kind: 'wordmark' },
-    { name: 'AugmentPro', src: '/assets/brand-logos/augmentpro.png', href: 'https://augmentpro.co/', kind: 'wordmark' },
+    { name: 'AugmentPro', src: '/assets/brand-logos/augmentpro.webp', href: 'https://augmentpro.co/', kind: 'wordmark' },
     { name: 'Connect Bricks', src: '/assets/brand-logos/connectbricks.webp', href: 'https://connectbricks.com/', kind: 'wordmark' },
   ];
   const logos = [...products, ...products];
@@ -69,7 +69,7 @@ function HowItWorks() {
 
 function ProofSection() {
   const stories = [
-    { brand: 'Pixllove', href: 'https://pixllove.com/', type: 'Dating app', metric: '24%', result: 'less paywall drop-off', quote: 'Nova and Ben helped our dating app reduce paywall drop-off by 24% through journey analysis and optimization.', image: '/assets/case-pixllove.png', fit: 'contain', bg: '#000000' },
+    { brand: 'Pixllove', href: 'https://pixllove.com/', type: 'Dating app', metric: '24%', result: 'less paywall drop-off', quote: 'Nova and Ben helped our dating app reduce paywall drop-off by 24% through journey analysis and optimization.', image: '/assets/case-pixllove.webp', fit: 'contain', bg: '#000000' },
     { brand: 'All in 1 - Media', href: 'https://ai1-media.de/en', type: 'Creative studio', metric: '+32%', result: 'revenue over six months', quote: 'We use PixlPush to manage our email campaigns. Over the past six months, we increased revenue by 32% while tracking and optimizing campaign performance.', image: '/assets/case-auramagi.avif', fit: 'cover' },
     { brand: 'Auramagie', href: 'https://auramagie.de/', type: 'Manifestation app', metric: '3% → 27%', result: 'D7 retention', quote: 'We struggled with D7 retention, which was just 3%. With targeted content and behavior-based campaigns, we increased it to 27%.', image: '/assets/case-ai1-media.webp', fit: 'cover' },
   ];

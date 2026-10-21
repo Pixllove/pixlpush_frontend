@@ -17,14 +17,16 @@ export const initialOnboardingState: OnboardingState = {
 
 const ONBOARDING_STEP_COUNT = 6;
 
-/** Counts resolved setup steps. Firebase is resolved when push is not selected. */
+/** Counts resolved setup steps. Firebase is required for every Project. */
 export function onboardingCompletedCount(
   state: Pick<OnboardingState, 'channels' | 'completed'>,
   firebaseConnected = false,
 ): number {
-  const pushEnabled = state.channels.includes('push');
+  // A progress record belongs to an existing Project, so Project basics is
+  // complete even for legacy records that predate this invariant.
+  const completed = new Set([1, ...state.completed]);
   return Array.from({ length: ONBOARDING_STEP_COUNT }, (_, index) => index + 1)
-    .filter((step) => state.completed.includes(step) || (step === 5 && (!pushEnabled || firebaseConnected)))
+    .filter((step) => step === 5 ? firebaseConnected : completed.has(step))
     .length;
 }
 

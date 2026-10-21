@@ -1145,7 +1145,7 @@ a {
 .dp-push-notification { position: absolute; z-index: 4; top: 46px; left: 10px; right: 10px; display: flex; align-items: flex-start; gap: 8px; padding: 11px 9px; border: 1px solid rgba(255,255,255,.72); border-radius: 13px; background: rgba(255,255,255,.9); box-shadow: 0 8px 20px rgba(38,27,49,.15); backdrop-filter: blur(16px); transition: transform .25s ease,box-shadow .25s ease; }
 .dp-push-notification.is-simulated,.dp-web-push.is-simulated { box-shadow: 0 0 0 2px #7d4bc6,0 12px 28px rgba(38,27,49,.2); transform: translateY(-3px); }
 .dp-app-icon { display: grid; width: 27px; height: 27px; flex: 0 0 27px; place-items: center; overflow: hidden; border-radius: 8px; background: #fff; }
-.dp-app-icon { background-image: url('/assets/favicon.png'); background-repeat: no-repeat; background-position: center; background-size: contain; }
+.dp-app-icon { background-image: url('/assets/favicon.webp'); background-repeat: no-repeat; background-position: center; background-size: contain; }
 .dp-app-icon img { width: 100%; height: 100%; object-fit: contain; }
 .dp-push-content { flex: 1; }
 .dp-push-content b { color: #71697b; font-size: 6px; letter-spacing: .04em; }
@@ -1447,7 +1447,7 @@ a {
 .dp-edit-fields .Mui-focused .MuiOutlinedInput-notchedOutline { border-color: #7a43b8; }
 .dp-sender-row { display: flex; align-items: center; gap: 9px; }
 .dp-sender-row > .MuiSvgIcon-root { margin-left: auto; color: #45a773; font-size: 16px; }
-.dp-sender-logo { width: 27px; height: 27px; flex: 0 0 27px; border-radius: 8px; background: #fff url('/assets/favicon.png') center / contain no-repeat; }
+.dp-sender-logo { width: 27px; height: 27px; flex: 0 0 27px; border-radius: 8px; background: #fff url('/assets/favicon.webp') center / contain no-repeat; }
 .dp-sender-overline { color: #8b7d96; font-size: 6px !important; font-weight: 850 !important; letter-spacing: .13em; }
 .dp-sender-name { color: #3f304c; font-size: 10px !important; font-weight: 750 !important; }
 .dp-token-hint { margin-top: 8px !important; color: #786e81; font-size: 8px !important; }
@@ -6241,6 +6241,14 @@ a {
 
 /* Keep the full navigation rhythm visible on shorter desktop viewports. The support action has its
    own footer row, so the last project links (including Profile) never sit underneath it. */
+@media (min-width: 761px) and (max-height: 1100px) {
+  .sidebar-navigation { padding-top: 16px; padding-bottom: 20px; scroll-padding-bottom: 20px; }
+  .sidebar-group + .sidebar-group { margin-top: 18px; padding-top: 14px; }
+  .dashboard-nav.MuiListItemButton-root { min-height: 40px; }
+  .sidebar-support { margin-bottom: 10px; padding-top: 12px; }
+  .sidebar-support-link.MuiListItemButton-root { min-height: 42px; }
+}
+
 @media (min-width: 761px) and (max-height: 920px) {
   .sidebar-brand { flex-basis: 56px; }
   .sidebar-switch { padding-top: 8px; }

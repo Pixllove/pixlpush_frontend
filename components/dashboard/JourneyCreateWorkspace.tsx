@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { ArrowBackRounded, ArrowForwardRounded, AutoAwesomeRounded, AutoGraphRounded, CardGiftcardRounded, EmailRounded, FavoriteRounded, GroupsRounded, MailRounded, ShoppingBagRounded } from '@mui/icons-material';
 import { Box, Button, Card, Grid, Stack, Typography } from '@mui/material';
-import journeyTemplateHero from '../../assets/email-journey-template-hero.png';
+import journeyTemplateHero from '../../assets/email-journey-template-hero.webp';
 
 const templates = [
   ['Welcome new subscribers', 'Greet people when they join and guide them to their first action.', 'Welcome', GroupsRounded, '#1eac5f'],

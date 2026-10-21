@@ -7,21 +7,21 @@ import ArrowOutwardRounded from '@mui/icons-material/ArrowOutwardRounded';
 const productViews = [
   {
     label: 'Push notifications',
-    image: '/assets/translation-push-v2.png',
-    alt: 'PixlPush multilingual push campaign composer with a live mobile preview',
+    image: '/assets/translation-push.webp',
+    alt: 'PixlPush push notification editor with language tabs, automatic translation, and live preview',
     ratio: '3 / 2',
   },
   {
     label: 'Choose languages',
-    image: '/assets/translation-languages-v2.png',
-    alt: 'PixlPush campaign language coverage workspace with connected locale cards',
-    ratio: '3 / 2',
+    image: '/assets/translation-languages.webp',
+    alt: 'PixlPush dialog for selecting the languages to translate a campaign into',
+    ratio: '1650 / 1010',
   },
   {
     label: 'Email campaigns',
-    image: '/assets/translation-email-v2.png',
-    alt: 'PixlPush email campaign workspace with AI translation readiness states',
-    ratio: '3 / 2',
+    image: '/assets/translation-email.webp',
+    alt: 'PixlPush email editor with AI translation controls, language selection, and live email preview',
+    ratio: '2540 / 1526',
   },
 ];
 

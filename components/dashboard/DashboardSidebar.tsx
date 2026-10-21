@@ -75,8 +75,8 @@ export default function DashboardSidebar({ active, setActive, mobileOpen, collap
     <aside className={`dashboard-sidebar${mobileOpen ? ' is-open' : ''}`} aria-label="PixlPush navigation">
       <header className="sidebar-brand">
         <Link className="sidebar-brand-lockup" href="/dashboard" aria-label="PixlPush home">
-          <Image className="sidebar-brand-mark" src="/assets/site-icon.png" alt="" aria-hidden="true" width={21} height={31} priority />
-          <Image className="sidebar-brand-wordmark" src="/assets/logo-header.png" alt="PixlPush" width={104} height={37} priority />
+          <Image className="sidebar-brand-mark" src="/assets/site-icon.webp" alt="" aria-hidden="true" width={21} height={31} priority />
+          <Image className="sidebar-brand-wordmark" src="/assets/logo-header.webp" alt="PixlPush" width={104} height={37} priority />
         </Link>
         <IconButton
           className="sidebar-collapse-toggle"
@@ -143,7 +143,7 @@ export default function DashboardSidebar({ active, setActive, mobileOpen, collap
                     >
                       <ListItemIcon className="dashboard-nav-icon"><Icon /></ListItemIcon>
                       <ListItemText className="dashboard-nav-label" primary={label} />
-                      {label === 'Onboarding Guide' && <span className="onboarding-nav-percent">{activeProject && onboarding.data ? `${onboardingPercentage(onboarding.data)}%` : '0%'}</span>}
+                      {label === 'Onboarding Guide' && <span className="onboarding-nav-percent">{activeProject && onboarding.data ? `${onboardingPercentage({ ...onboarding.data, completed: Array.from(new Set([1, ...onboarding.data.completed])) })}%` : '0%'}</span>}
                     </ListItemButton>
                   </Tooltip>
                 );

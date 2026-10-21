@@ -121,7 +121,7 @@ function Brand({ name, logo, subtitle }: { name: string; logo?: string; subtitle
   if (name === 'PixlPush') {
     return (
       <Stack direction="row" alignItems="center" gap={1.2} sx={{ minHeight: 48 }}>
-        <Box component="img" src="/assets/site-icon.png" alt="" sx={{ display: 'block', width: 38, height: 38, flex: '0 0 38px', borderRadius: '8px', objectFit: 'contain' }} />
+        <Box component="img" src="/assets/site-icon.webp" alt="" sx={{ display: 'block', width: 38, height: 38, flex: '0 0 38px', borderRadius: '8px', objectFit: 'contain' }} />
         <Box>
           <Typography fontSize="var(--fs-14)" fontWeight={600}>PixlPush</Typography>
           {subtitle && <Typography color="text.secondary" fontSize="var(--fs-12)">{subtitle}</Typography>}

@@ -57,7 +57,7 @@ export default function DigitalProductsPage() {
 
           <Box className="dpx-orbit" aria-label="Product signals connect to PixlPush email and push journeys">
             <Box className="dpx-orbit-ring dpx-ring-a" /><Box className="dpx-orbit-ring dpx-ring-b" />
-            <Box className="dpx-orbit-core"><Box component="img" src="/assets/favicon.png" alt="" className="dpx-core-mark" /><b>PixlPush</b><small>customer journeys</small></Box>
+            <Box className="dpx-orbit-core"><Box component="img" src="/assets/favicon.webp" alt="" className="dpx-core-mark" /><b>PixlPush</b><small>customer journeys</small></Box>
             <Box className="dpx-orbit-node dpx-node-app"><AppsRounded /><span>APP</span><b>Product activity</b></Box>
             <Box className="dpx-orbit-node dpx-node-web"><LanguageRounded /><span>WEB</span><b>Site behavior</b></Box>
             <Box className="dpx-orbit-node dpx-node-saas"><DevicesRounded /><span>SAAS</span><b>Lifecycle signals</b></Box>

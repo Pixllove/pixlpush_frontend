@@ -106,7 +106,7 @@ export default function AuthShell({ children, mode, back = true }: { children: R
         <Box className="auth-head">
           <Link href="/" className="auth-brand" underline="none" aria-label="PixlPush home">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/assets/site-icon.png" alt="" />
+            <img src="/assets/site-icon.webp" alt="" />
             PixlPush
           </Link>
           {/* The way out: quiet, opposite the brand, where people look for it. */}

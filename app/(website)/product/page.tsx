@@ -38,7 +38,7 @@ const workflow = [
 function ProductWorkspacePreview() {
   return (
     <Box component="figure" className="prd-window" aria-label="PixlPush Analytics dashboard preview with illustrative sample values">
-      <Image src="/assets/product-analytics-dashboard.png?capture=sample-analytics" alt="PixlPush Analytics dashboard with illustrative sample metrics, campaign performance, and engagement charts" width={1785} height={868} priority />
+      <Image src="/assets/product-analytics-dashboard.webp?capture=sample-analytics" alt="PixlPush Analytics dashboard with illustrative sample metrics, campaign performance, and engagement charts" width={1785} height={868} priority />
     </Box>
   );
 }

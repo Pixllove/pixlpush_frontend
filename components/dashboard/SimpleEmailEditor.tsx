@@ -7,7 +7,7 @@ import EmailLanguageSettings from "./EmailLanguageSettings";
 import { languageName } from "./EmailLanguageSettings";
 import { emailApi } from "@/lib/projects/api";
 import Image from "next/image";
-import aiIcon from "../../assets/ai-translation-rail.png";
+import aiIcon from "../../assets/ai-translation-rail.webp";
 
 import {
   ChangeEvent,

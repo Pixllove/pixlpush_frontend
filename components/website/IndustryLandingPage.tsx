@@ -16,7 +16,7 @@ const industryContent = {
     name: 'Gaming', tag: 'FOR GAME DEVELOPERS & PUBLISHERS',
     title: <>Turn player signals into <em>the next great session.</em></>,
     intro: 'Welcome new players, build habits around the moments they enjoy and bring lapsed players back with timely, behavior-based messaging.',
-    image: '/assets/retention-journey-cartoon.png', imageAlt: 'A connected player journey with lifecycle touchpoints',
+    image: '/assets/retention-journey-cartoon.webp', imageAlt: 'A connected player journey with lifecycle touchpoints',
     imageLabel: 'PLAYER JOURNEY', imageTitle: 'From first launch to next session', metric: '01', metricLabel: 'PLAYER ONBOARDING',
     proof: ['Player lifecycle journeys', 'Event-based audience groups', 'Push and email in one flow'],
     sections: [
@@ -55,7 +55,7 @@ const industryContent = {
     name: 'Mobile Apps', tag: 'FOR MOBILE APP TEAMS',
     title: <>Make every app session <em>lead somewhere.</em></>,
     intro: 'Turn app activity into connected mobile push and email journeys that help people get started, discover more and keep using your product.',
-    image: '/assets/case-pixllove.png', imageAlt: 'A mobile-first digital product experience',
+    image: '/assets/case-pixllove.webp', imageAlt: 'A mobile-first digital product experience',
     imageLabel: 'APP LIFECYCLE', imageTitle: 'A connected path through your product', metric: 'APP', metricLabel: 'BEHAVIOR-BASED',
     proof: ['Mobile push notifications', 'In-app behavior signals', 'Cross-channel journeys'],
     sections: [
@@ -68,7 +68,7 @@ const industryContent = {
     name: 'Financial Services', tag: 'FOR FINTECH & FINANCIAL PRODUCTS',
     title: <>Make every <em>financial interaction</em> feel effortless.</>,
     intro: 'Support the customer lifecycle with clear onboarding, relevant product education and timely service messages across push and email.',
-    image: '/assets/product-analytics-dashboard.png', imageAlt: 'A financial product analytics dashboard',
+    image: '/assets/product-analytics-dashboard.webp', imageAlt: 'A financial product analytics dashboard',
     imageLabel: 'CUSTOMER LIFECYCLE', imageTitle: 'Clear communication at every stage', metric: '360°', metricLabel: 'CUSTOMER CONTEXT',
     proof: ['Onboarding and verification journeys', 'Behavior-based audiences', 'Timely service communication'],
     sections: [

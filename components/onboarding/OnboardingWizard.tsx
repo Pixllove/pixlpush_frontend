@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import Image from 'next/image';
 import {
   ArrowBackRounded, ArrowForwardRounded, AutoAwesomeRounded, CheckCircleRounded, CheckRounded, CloudUploadRounded, ContentCopyRounded,
   LanguageRounded, LockRounded, MailOutlineRounded, NotificationsActiveRounded, PhoneIphoneRounded, SearchRounded, WarningAmberRounded,
@@ -93,7 +94,9 @@ export default function OnboardingWizard() {
     domain: value.domain,
     firebaseChecklist: value.firebaseChecklist,
     currentStep: value.currentStep,
-    completed: value.completed,
+    // A Project exists before this wizard can persist anything, so the
+    // project-basics step is complete even for legacy progress rows.
+    completed: Array.from(new Set([1, ...value.completed])),
     skipped: value.skipped,
   });
 
@@ -115,8 +118,8 @@ export default function OnboardingWizard() {
   }, [projectId, progressQuery.isFetching, progressQuery.isSuccess, queryClient, state]);
 
   const currentStep = Math.min(6, Math.max(1, state.currentStep));
-  const pushEnabled = state.channels.includes('push');
-  const completedCount = [...new Set(state.completed)].filter((step) => step !== 5 || pushEnabled).length + (pushEnabled ? 0 : 1);
+  const firebaseConnected = firebaseQuery.data?.status === 'connected';
+  const completedCount = [...new Set([1, ...state.completed])].filter((step) => step !== 5 || firebaseConnected).length;
   const goToStep = (step: number) => {
     localUserChange.current = true;
     setStepDirection(step >= currentStep ? 'forward' : 'backward');
@@ -128,15 +131,8 @@ export default function OnboardingWizard() {
     setState((previous) => ({ ...previous, ...value, skipped: false }));
   };
   const openFirebaseWithMax = () => {
-    if (!pushEnabled) {
-      localUserChange.current = true;
-      setState((previous) => ({
-        ...previous,
-        channels: previous.channels.includes('push') ? previous.channels : [...previous.channels, 'push'],
-        completed: previous.completed.filter((step) => step !== 5),
-        skipped: false,
-      }));
-    }
+    localUserChange.current = true;
+    setState((previous) => ({ ...previous, completed: previous.completed.filter((step) => step !== 5), skipped: false }));
     setFirebaseDialogOpen(true);
   };
   const toggleFirebaseCheck = (step: number) => {
@@ -277,7 +273,7 @@ export default function OnboardingWizard() {
         ...(isSwitch ? { confirmFirebaseProjectId: firebaseConfirm.trim() } : {}),
       });
       await queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'firebase'] });
-      const nextState = { ...state, channels: state.channels.includes('push') ? state.channels : [...state.channels, 'push'], completed: [...new Set([...state.completed, 5])], firebaseChecklist: [1, 2, 3], skipped: false };
+      const nextState = { ...state, completed: [...new Set([...state.completed, 5])], firebaseChecklist: [1, 2, 3], skipped: false };
       setState(nextState);
       setFirebaseFile(undefined);
       setFirebaseConfirm('');
@@ -289,10 +285,10 @@ export default function OnboardingWizard() {
     }
   };
 
-  const canContinue = currentStep === 1 ? Boolean(state.projectName.trim()) && !projectsPending && !projectsQuery.isPending : currentStep === 3 ? state.channels.length > 0 : currentStep === 5 && pushEnabled ? state.completed.includes(5) : true;
+  const canContinue = currentStep === 1 ? Boolean(state.projectName.trim()) && !projectsPending && !projectsQuery.isPending : currentStep === 3 ? state.channels.length > 0 : currentStep === 5 ? firebaseConnected : true;
   const firebaseProjectChange = Boolean(firebaseQuery.data?.firebaseProjectId && firebaseFile?.projectId && firebaseQuery.data.firebaseProjectId !== firebaseFile.projectId);
-  const heading = currentStep === 5 && !pushEnabled ? 'No push setup needed right now.' : ['What should we call your project?', 'Where can customers find your product?', 'Which channels do you want to use?', 'Let’s get your domain ready.', 'Set up push with Firebase.', 'Add the PixlPush SDK to your app.'][currentStep - 1];
-  const prompt = currentStep === 5 && !pushEnabled ? 'You haven’t selected push notifications, so we can leave Firebase for later. Let’s move on to SDK setup.' : [
+  const heading = ['What should we call your project?', 'Where can customers find your product?', 'Which channels do you want to use?', 'Let’s get your domain ready.', 'Set up push with Firebase.', 'Add the PixlPush SDK to your app.'][currentStep - 1];
+  const prompt = [
     'I’m Max, your onboarding guide. Let’s start with a name for the product or workspace you’re setting up.',
     'Great start. Share a public website or app-store link so we can keep this setup focused on your product. No business analysis is needed.',
     'Choose every channel you plan to use. We’ll tailor the remaining setup to your selections.',
@@ -318,11 +314,10 @@ export default function OnboardingWizard() {
           <div className="onboarding-stepper">
             {steps.map(([title], index) => {
               const number = index + 1;
-              const notNeeded = number === 5 && !pushEnabled;
-              const done = number < currentStep && state.completed.includes(number) && !notNeeded;
+              const done = number < currentStep && (number === 5 ? firebaseConnected : state.completed.includes(number));
               const locked = number > currentStep;
-              return <button key={title} className={`onboarding-step${done ? ' is-done' : ''}${notNeeded ? ' is-not-needed' : ''}${currentStep === number ? ' is-current' : ''}`} onClick={() => !locked && goToStep(number)} disabled={locked}>
-                <span className="onboarding-step-number">{done ? <CheckRounded fontSize="small" /> : notNeeded ? '–' : number}</span><span>{title}{notNeeded ? ' · Not needed' : ''}</span>
+              return <button key={title} className={`onboarding-step${done ? ' is-done' : ''}${currentStep === number ? ' is-current' : ''}`} onClick={() => !locked && goToStep(number)} disabled={locked}>
+                <span className="onboarding-step-number">{done ? <CheckRounded fontSize="small" /> : number}</span><span>{title}</span>
               </button>;
             })}
           </div>
@@ -330,7 +325,7 @@ export default function OnboardingWizard() {
 
         <div className="onboarding-workspace">
           <Paper elevation={0} className="onboarding-chat">
-            <div className="onboarding-chat-head"><span className="max-avatar"><img src="/assets/agent-avatar-max-v4.png" alt="Max" /></span><span><strong>Max</strong><small>PIXLPUSH ONBOARDING GUIDE</small></span><Chip size="small" label="Ready to help" className="max-online" /></div>
+            <div className="onboarding-chat-head"><span className="max-avatar"><Image src="/assets/agent-avatar-max-v4.webp" alt="Max" width={52} height={52} /></span><span><strong>Max</strong><small>PIXLPUSH ONBOARDING GUIDE</small></span><Chip size="small" label="Ready to help" className="max-online" /></div>
             <div key={currentStep} className={`onboarding-chat-body onboarding-step-panel ${stepDirection}`}>
               <div className="max-message"><AutoAwesomeRounded fontSize="small" /><p>{prompt}</p></div>
               <div className="onboarding-question"><Typography className="onboarding-eyebrow">STEP {String(currentStep).padStart(2, '0')} · {steps[currentStep - 1][0].toUpperCase()}</Typography><Typography variant="h4" className="onboarding-question-title">{heading}</Typography>
@@ -351,16 +346,16 @@ export default function OnboardingWizard() {
                 </div>}
                 {currentStep === 3 && <div className="onboarding-channel-grid">{channelOptions.map(({ id, title, detail, icon: Icon }) => <button key={id} className={`onboarding-channel${state.channels.includes(id) ? ' selected' : ''}`} onClick={() => toggleChannel(id)}><span className="onboarding-channel-icon"><Icon /></span><span><strong>{title}</strong><small>{detail}</small></span>{state.channels.includes(id) && <CheckRounded className="onboarding-channel-check"/>}</button>)}</div>}
                 {currentStep === 4 && <Stack gap={2}><TextField fullWidth label="Sending domain" placeholder="mail.yourproduct.com" value={state.domain} onChange={(e) => patch({ domain: e.target.value })}/><Paper elevation={0} className="onboarding-guidance"><strong>What you’ll do later</strong><span>Verify ownership · Add DNS records · Confirm authentication</span><small>This is a guided preview only. No DNS records are created or verified here.</small></Paper></Stack>}
-                {currentStep === 5 && (pushEnabled ? <Stack gap={2}><Paper elevation={0} className="onboarding-guidance"><strong>Firebase Cloud Messaging</strong><span>Upload the Firebase service-account JSON used by this Project. PixlPush validates it with Google before encrypting and storing it.</span><small>Never paste credentials into chat or your app. The file is sent only to the authenticated backend.</small></Paper><Button variant="contained" onClick={openFirebaseWithMax} startIcon={<AutoAwesomeRounded />}>{state.completed.includes(5) ? 'Review Firebase with Max' : 'Connect Firebase with Max'}</Button>{state.completed.includes(5) && <Alert severity="success">Firebase is connected for this Project.</Alert>}</Stack> : <Stack gap={2}><Alert severity="info" icon={<NotificationsActiveRounded />}>Push notifications weren’t selected. You can still add push now and set up Firebase.</Alert><Button variant="contained" onClick={openFirebaseWithMax} startIcon={<AutoAwesomeRounded />}>Enable push &amp; set up Firebase</Button></Stack>)}
+                {currentStep === 5 && <Stack gap={2}><Paper elevation={0} className="onboarding-guidance"><strong>Firebase Cloud Messaging</strong><span>Upload the Firebase service-account JSON used by this Project. PixlPush validates it with Google before encrypting and storing it.</span><small>Never paste credentials into chat or your app. The file is sent only to the authenticated backend.</small></Paper><Button variant="contained" onClick={openFirebaseWithMax} startIcon={<AutoAwesomeRounded />}>{firebaseConnected ? 'Review Firebase with Max' : 'Connect Firebase with Max'}</Button>{firebaseConnected && <Alert severity="success">Firebase is connected for this Project.</Alert>}</Stack>}
                 {currentStep === 6 && <Stack gap={2}><Paper elevation={0} className="onboarding-code"><code>Set up the PixlPush SDK in my {state.projectName || 'app'}. Guide me through installation, initialize it safely, register push permissions if enabled, and track a first test event. Do not expose secrets.</code><IconButton aria-label="Copy setup prompt" onClick={() => { navigator.clipboard?.writeText(`Set up the PixlPush SDK in my ${state.projectName || 'app'}. Guide me through installation, initialize it safely, register push permissions if enabled, and track a first test event. Do not expose secrets.`); setCopied(true); }}><ContentCopyRounded/></IconButton></Paper><Button href="/dashboard/integrations/react-native/quickstart" variant="outlined">View SDK integration guide</Button></Stack>}
               </div>
             </div>
-            <div className="onboarding-chat-footer">{saveError && <Alert severity="error" sx={{ mb: 1.5 }}>{saveError}</Alert>}<Typography variant="caption">Your progress is saved to this project. You can return from the Onboarding Guide on any device.</Typography><div className="onboarding-footer-actions">{currentStep > 1 && <Button variant="contained" className="onboarding-back-button" onClick={previous} startIcon={<ArrowBackRounded />}>Back</Button>}<Button variant="contained" disabled={!canContinue} onClick={next} endIcon={<ArrowForwardRounded />}>{currentStep === 6 ? 'Finish setup' : currentStep === 5 && !pushEnabled ? 'Continue without push' : 'Continue'}{copied && currentStep === 6 ? ' · Prompt copied' : ''}</Button></div></div>
+            <div className="onboarding-chat-footer">{saveError && <Alert severity="error" sx={{ mb: 1.5 }}>{saveError}</Alert>}<Typography variant="caption">Your progress is saved to this project. You can return from the Onboarding Guide on any device.</Typography><div className="onboarding-footer-actions">{currentStep > 1 && <Button variant="contained" className="onboarding-back-button" onClick={previous} startIcon={<ArrowBackRounded />}>Back</Button>}<Button variant="contained" disabled={!canContinue} onClick={next} endIcon={<ArrowForwardRounded />}>{currentStep === 6 ? 'Finish setup' : 'Continue'}{copied && currentStep === 6 ? ' · Prompt copied' : ''}</Button></div></div>
           </Paper>
-          <aside className="onboarding-side-note"><div className="onboarding-orbit"><span><img className="onboarding-orbit-logo" src="/assets/favicon.png" alt="PixlPush" /></span><i/><b/></div><Typography variant="h6">A little setup now.<br/>A clearer picture later.</Typography><Typography color="text.secondary">Max will keep your place so you can pause and pick up whenever you’re ready.</Typography></aside>
+          <aside className="onboarding-side-note"><div className="onboarding-orbit"><span><Image className="onboarding-orbit-logo" src="/assets/favicon.webp" alt="PixlPush" width={52} height={52} /></span><i/><b/></div><Typography variant="h6">A little setup now.<br/>A clearer picture later.</Typography><Typography color="text.secondary">Max will keep your place so you can pause and pick up whenever you’re ready.</Typography></aside>
         </div>
         <Dialog open={firebaseDialogOpen} onClose={() => setFirebaseDialogOpen(false)} fullWidth maxWidth="sm" aria-labelledby="firebase-max-title">
-          <DialogTitle id="firebase-max-title" sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}><span className="max-avatar"><img src="/assets/agent-avatar-max-v4.png" alt="Max" /></span><span>Set up Firebase with Max<Typography component="small" display="block" color="text.secondary" fontSize={11} fontWeight={400}>PUSH NOTIFICATIONS · SECURE CONNECTION</Typography></span></DialogTitle>
+          <DialogTitle id="firebase-max-title" sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}><span className="max-avatar"><Image src="/assets/agent-avatar-max-v4.webp" alt="Max" width={52} height={52} /></span><span>Set up Firebase with Max<Typography component="small" display="block" color="text.secondary" fontSize={11} fontWeight={400}>PUSH NOTIFICATIONS · SECURE CONNECTION</Typography></span></DialogTitle>
           <DialogContent dividers>
             <Stack gap={1.5}>
               <div className="max-message"><AutoAwesomeRounded fontSize="small"/><p>Upload the Firebase service-account JSON. PixlPush validates it with Google before encrypting and saving it to this Project.</p></div>

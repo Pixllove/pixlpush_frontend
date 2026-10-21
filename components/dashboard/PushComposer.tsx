@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowBackRounded,
@@ -907,7 +908,7 @@ export default function PushComposer({
                 <Box className="ios-stack">
                   <Box className="ios-notif">
                     <Box className="ios-app-icon">
-                      <img src="/assets/site-icon.png" alt="PixlPush" />
+                      <Image src="/assets/site-icon.webp" alt="PixlPush" width={24} height={36} />
                     </Box>
                     <Box className="ios-notif-body">
                       <Box className="ios-notif-head">

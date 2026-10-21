@@ -72,7 +72,7 @@ export default function GoogleCallback() {
           </svg>
           <span className="auth-signin-mark">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/assets/site-icon.png" alt="" />
+            <img src="/assets/site-icon.webp" alt="" />
           </span>
         </div>
 
