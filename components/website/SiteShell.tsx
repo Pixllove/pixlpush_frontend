@@ -48,7 +48,12 @@ const links = [
   ["Use Cases", "/use-cases"],
   ["Pricing", "/pricing"],
 ];
-const productGroups = [
+type MenuGroup = {
+  title: string;
+  items: [string, string, string, (typeof AutoAwesomeRounded)?][];
+};
+
+const productGroups: MenuGroup[] = [
   {
     title: "Platform",
     items: [
@@ -75,7 +80,7 @@ const productGroups = [
     ],
   },
 ];
-const resourceGroups = [
+const resourceGroups: MenuGroup[] = [
   {
     title: "Learn",
     items: [
@@ -298,7 +303,7 @@ function MegaMenu({ kind }: { kind: "product" | "resources" | "usecases" }) {
             </Typography>
             <Stack gap={0.7}>
               {group.items.map(([title, description, href, ItemIcon]) => {
-                const Icon = ItemIcon as typeof AutoAwesomeRounded;
+                const Icon = ItemIcon ?? AutoAwesomeRounded;
                 return (
                 <Link
                   key={title}
@@ -744,7 +749,7 @@ export function SectionIntro({
   description,
 }: {
   eyebrow: string;
-  title: string;
+  title: React.ReactNode;
   description?: string;
 }) {
   return (
