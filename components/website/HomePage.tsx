@@ -34,7 +34,7 @@ function BrandStrip() {
               {kind === 'labelled' ? <Stack direction="row" alignItems="center" gap={1.15}>
                 <Box component="img" src={src} alt={`${name} icon`} sx={{ display: 'block', width: 50, height: 50, objectFit: 'contain', borderRadius: 1.5 }} />
                 <Typography aria-label={`${name} logo`} sx={{ color: '#fff', fontSize: { xs: 'var(--fs-16)', md: 'var(--fs-20)' }, fontWeight: 700, letterSpacing: '.01em', lineHeight: 1 }}>{labelAccent ? <>Gauge<span style={{ color: '#d89068' }}>AI</span></> : 'PIXLTRACE'}</Typography>
-              </Stack> : <Box component="img" src={src} alt={`${name} logo`} sx={{ display: 'block', width: name === 'AugmentPro' ? 180 : name === 'BirthBash' ? 190 : 'auto', height: name === 'AugmentPro' ? 48 : name === 'BirthBash' ? 52 : 42, maxWidth: name === 'AugmentPro' ? 180 : 215, objectFit: name === 'AugmentPro' ? 'cover' : 'contain', objectPosition: name === 'AugmentPro' ? 'center 54%' : 'center', bgcolor: 'transparent', borderRadius: 0 }} />}
+              </Stack> : <Box component="img" src={src} alt={`${name} logo`} sx={{ display: 'block', width: name === 'AugmentPro' ? 180 : name === 'BirthBash' ? 190 : 'auto', height: name === 'AugmentPro' ? 48 : name === 'BirthBash' ? 52 : 42, maxWidth: name === 'AugmentPro' ? 180 : 215, objectFit: name === 'AugmentPro' ? 'cover' : 'contain', objectPosition: name === 'AugmentPro' ? 'center 54%' : 'center', transform: name === 'BirthBash' ? 'translateX(24px)' : 'none', bgcolor: 'transparent', borderRadius: 0 }} />}
             </Box>
           </Stack>)}
         </Box>
