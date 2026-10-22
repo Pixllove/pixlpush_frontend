@@ -5,8 +5,7 @@ import { Alert, Box, Button, Card, Chip, Skeleton, Stack, TextField, Typography 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCurrentUser } from '@/hooks/auth/use-current-user';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
-import { billingApi, teamApi } from '@/lib/projects/api';
-import type { ProjectRole } from '@/types/project';
+import { billingApi } from '@/lib/projects/api';
 import ChangePasswordForm from './ChangePasswordForm';
 import TwoFactorSettings from './TwoFactorSettings';
 import NotificationPreferences from './NotificationPreferences';
@@ -18,18 +17,15 @@ const memberSince = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', time
 // While a value loads, the real field is drawn with a shimmer line where the value will appear, so the
 // section looks the same before and after and nothing moves. It is read-only, not disabled, for that moment.
 const loadingField = { InputLabelProps: { shrink: true }, InputProps: { readOnly: true, startAdornment: <Skeleton width={96} /> } };
-const roleLabel = (role: string) => role.charAt(0).toUpperCase() + role.slice(1).replace('_', ' ');
+const roleLabel = (role: string) => role === '-' ? role : role.charAt(0).toUpperCase() + role.slice(1).replace('_', ' ');
 
 export default function AccountProfile({ section = 'all', showCompanyHeading = true, embedded = false }: { section?: 'all' | 'profile' | 'company'; showCompanyHeading?: boolean; embedded?: boolean } = {}) {
   const { account, isLoading, isError } = useCurrentUser();
   const { active, isEmpty, isPending: projectsPending } = useActiveProject();
   const queryClient = useQueryClient();
   const billingQuery = useQuery({ queryKey: ['projects', 'billing', active?.id, 'subscription'], queryFn: () => billingApi.subscription(active!.id), enabled: Boolean(active?.id) });
-  const membersQuery = useQuery({ queryKey: ['projects', 'members', active?.id], queryFn: () => teamApi.members(active!.id), enabled: Boolean(active?.id) });
   const [company, setCompany] = useState('');
-  const [role, setRole] = useState(active?.role ?? '');
   useEffect(() => setCompany(billingQuery.data?.billingContact?.company ?? ''), [billingQuery.data?.billingContact?.company]);
-  useEffect(() => setRole(active?.role ?? ''), [active?.role]);
   const saveCompany = useMutation({
     mutationFn: () => billingApi.updateContact(active!.id, {
       email: billingQuery.data?.billingContact?.email ?? account?.email ?? '',
@@ -48,7 +44,7 @@ export default function AccountProfile({ section = 'all', showCompanyHeading = t
   // them empty and locked would tell an owner they lack permission.
   const projectPending = projectsPending || (!active && !isEmpty);
   const companyLoading = projectPending || billingQuery.isLoading;
-  const roleLoading = projectPending || membersQuery.isLoading;
+  const roleLoading = projectPending;
   const canEditCompany = ['owner', 'admin', 'billing'].includes(active?.role ?? '');
   if (isError) return <Alert severity="error">Could not load your profile. Please refresh and try again.</Alert>;
   const companyContent = (section === 'all' || section === 'company') && <section className={`pp-profile-section${embedded ? ' is-embedded' : ''}`}>
@@ -87,23 +83,13 @@ export default function AccountProfile({ section = 'all', showCompanyHeading = t
     <Card>
       {(section === 'all' || section === 'profile') && <section className="pp-profile-section">
         <div>
-          <Typography variant="h3">Profile</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: .5 }}>Your PixlPush account information.</Typography>
+          <Typography variant="h3">Project role</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: .5 }}>Your access level for this PixlPush project.</Typography>
         </div>
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 3 }}>
-          <Box sx={{ minWidth: 0 }}>
-            <Typography variant="caption" className="pp-profile-label">Full name</Typography>
-            <Typography noWrap>{isLoading ? <Skeleton width="70%" /> : display(account?.name)}</Typography>
-          </Box>
-          <Box sx={{ minWidth: 0 }}>
-            <Typography variant="caption" className="pp-profile-label">Email address</Typography>
-            <Typography noWrap>{isLoading ? <Skeleton width="70%" /> : display(account?.email)}</Typography>
-          </Box>
-          <Box sx={{ minWidth: 0, mt: 3 }}>
-            <Typography variant="caption" className="pp-profile-label">Project role</Typography>
-            <Typography noWrap>{roleLoading ? <Skeleton width="70%" /> : roleLabel(role)}</Typography>
-            <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: .5 }}>Managed in Team & Access.</Typography>
-          </Box>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="caption" className="pp-profile-label">Current role</Typography>
+          <Typography noWrap>{roleLoading ? <Skeleton width="70%" /> : roleLabel(active?.role ?? '-')}</Typography>
+          <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: .5 }}>Managed in Team & Access.</Typography>
         </Box>
       </section>}
 
