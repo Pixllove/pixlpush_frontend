@@ -14,6 +14,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useActiveProject, planLabel } from '@/hooks/projects/use-active-project';
 import { firebaseApi, onboardingApi } from '@/lib/projects/api';
 import { onboardingPercentage } from '@/lib/onboarding';
+import { useNotificationUnreadCount } from '@/hooks/notifications/use-notifications';
 
 const groups = [
   {
@@ -54,6 +55,7 @@ export default function DashboardSidebar({ active, setActive, mobileOpen, collap
   onOpenSupport: () => void;
 }) {
   const { projects, active: activeProject, isPending } = useActiveProject();
+  const unreadNotifications = useNotificationUnreadCount();
   const [menu, setMenu] = useState<HTMLElement | null>(null);
   const [clicked, setClicked] = useState<string | null>(null);
   useEffect(() => setClicked(null), [active]);
@@ -70,6 +72,7 @@ export default function DashboardSidebar({ active, setActive, mobileOpen, collap
     staleTime: 30_000,
   });
   const current = clicked ?? active;
+  const unreadNotificationCount = unreadNotifications.data?.count ?? 0;
   const projectName = activeProject?.name ?? (isPending ? 'Loading…' : 'No project');
   const projectPlan = activeProject
     ? activeProject.status === 'deactivated'
@@ -156,6 +159,11 @@ export default function DashboardSidebar({ active, setActive, mobileOpen, collap
                       <ListItemIcon className="dashboard-nav-icon"><Icon /></ListItemIcon>
                       <ListItemText className="dashboard-nav-label" primary={label} />
                       {label === 'Onboarding Guide' && <span className="onboarding-nav-percent">{onboardingPercent}</span>}
+                      {label === 'Notifications' && unreadNotificationCount > 0 && (
+                        <span className="notifications-nav-count" aria-label={`${unreadNotificationCount} unread notifications`}>
+                          {formatNotificationCount(unreadNotificationCount)}
+                        </span>
+                      )}
                     </ListItemButton>
                   </Tooltip>
                 );
@@ -180,6 +188,12 @@ export default function DashboardSidebar({ active, setActive, mobileOpen, collap
 
     </aside>
   );
+}
+
+function formatNotificationCount(count: number): string {
+  if (count > 999) return '999+';
+  if (count > 99) return '99+';
+  return String(count);
 }
 
 function formatShortDate(value: string): string {

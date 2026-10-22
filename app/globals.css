@@ -4167,6 +4167,28 @@ a {
   line-height: 16px;
   transition: background-color var(--sidebar-motion), color var(--sidebar-motion);
 }
+.notifications-nav-count {
+  flex: none;
+  min-width: 20px;
+  height: 20px;
+  margin-left: auto;
+  padding: 0 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: #ef5b55;
+  border: 2px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: 0 3px 9px rgba(239, 91, 85, 0.28);
+}
+.dashboard-nav.Mui-selected .notifications-nav-count {
+  background: #ff7168;
+}
 .dashboard-nav.onboarding-nav.Mui-selected .dashboard-nav-label .MuiListItemText-primary,
 .dashboard-nav.onboarding-nav.Mui-selected .onboarding-nav-percent {
   font-weight: 700;
@@ -4183,6 +4205,18 @@ a {
 }
 .sidebar-is-collapsed .onboarding-nav-percent {
   display: none;
+}
+.sidebar-is-collapsed .notifications-nav-count {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  min-width: 8px;
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 2px solid var(--sb-canvas);
+  font-size: 0;
+  box-shadow: none;
 }
 .sidebar-project.MuiButtonBase-root {
   box-sizing: border-box;
