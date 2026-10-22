@@ -1,8 +1,11 @@
 'use client';
 
-import { Alert, Box, Divider, Skeleton, Stack, Switch, Typography } from '@mui/material';
-import { useNotificationPreferences, useUpdateNotificationPreference } from '@/hooks/notifications/use-notifications';
-import type { NotificationCategory } from '@/types/notifications';
+import { useState } from 'react';
+import { Alert, Box, Skeleton, Snackbar, Switch, Typography } from '@mui/material';
+import { EmailOutlined, NotificationsNoneOutlined } from '@mui/icons-material';
+import { useQueryClient } from '@tanstack/react-query';
+import { notificationKeys, useNotificationPreferences, useUpdateNotificationPreference } from '@/hooks/notifications/use-notifications';
+import type { NotificationCategory, NotificationPreference } from '@/types/notifications';
 
 const rows: Array<{ category: NotificationCategory; title: string; description: string }> = [
   { category: 'account', title: 'Account activity', description: 'Welcome messages, profile changes and account lifecycle updates.' },
@@ -16,59 +19,160 @@ const rows: Array<{ category: NotificationCategory; title: string; description: 
   { category: 'announcement', title: 'PixlPush announcements', description: 'Product updates and important notices from the PixlPush team.' },
 ];
 
+type NotificationChannel = 'inAppEnabled' | 'emailEnabled';
+type PreferenceToast = { severity: 'success' | 'error'; message: string };
+
 export default function NotificationPreferences() {
   const preferences = useNotificationPreferences();
   const update = useUpdateNotificationPreference();
+  const queryClient = useQueryClient();
   const stored = new Map(preferences.data?.map((preference) => [preference.category, preference]));
+  const [optimisticValues, setOptimisticValues] = useState<Record<string, boolean>>({});
+  const [pendingKeys, setPendingKeys] = useState<Record<string, boolean>>({});
+  const [toast, setToast] = useState<PreferenceToast | null>(null);
+
+  const togglePreference = (category: NotificationCategory, channel: NotificationChannel, checked: boolean) => {
+    const key = `${category}:${channel}`;
+    setOptimisticValues((current) => ({ ...current, [key]: checked }));
+    setPendingKeys((current) => ({ ...current, [key]: true }));
+    void update.mutateAsync({ category, [channel]: checked })
+      .then((saved) => {
+        queryClient.setQueryData<NotificationPreference[]>(notificationKeys.preferences(), (current) => {
+          if (!current) return [saved];
+          const existing = current.findIndex((preference) => preference.category === saved.category);
+          return existing === -1
+            ? [...current, saved]
+            : current.map((preference, index) => index === existing ? saved : preference);
+        });
+        setOptimisticValues((current) => removeOptimisticValue(current, key));
+        setToast({
+          severity: 'success',
+          message: checked
+            ? `You’ll now receive these updates in ${channel === 'inAppEnabled' ? 'PixlPush' : 'your email'}.`
+            : `You won’t receive these updates in ${channel === 'inAppEnabled' ? 'PixlPush' : 'your email'}.`,
+        });
+      })
+      .catch(() => {
+        setOptimisticValues((current) => removeOptimisticValue(current, key));
+        setToast({ severity: 'error', message: 'We couldn’t save that setting. Please try again.' });
+      })
+      .finally(() => {
+        setPendingKeys((current) => removeOptimisticValue(current, key));
+      });
+  };
+
+  const valueFor = (category: NotificationCategory, channel: NotificationChannel) => {
+    const key = `${category}:${channel}`;
+    return optimisticValues[key] ?? stored.get(category)?.[channel] ?? true;
+  };
 
   return (
-    <Box sx={{ mt: 3, pt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
-      <Box>
-        <Typography variant="h3">Notification preferences</Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: .5 }}>
-          Choose how PixlPush keeps you informed. In-app updates always appear in your notification inbox unless dismissed.
-        </Typography>
+    <Box className="notification-preferences">
+      <Box className="notification-preferences-header">
+        <Box>
+          <Typography variant="h3">Where should we send your updates?</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: .5 }}>
+            Choose where you want to receive updates from PixlPush. You can change this at any time.
+          </Typography>
+        </Box>
+        <Box className="notification-preferences-status" role="status">
+          <span className="notification-preferences-status-dot" aria-hidden="true" />
+          Saved automatically
+        </Box>
       </Box>
-      {preferences.isError && <Alert severity="error" sx={{ mt: 2 }}>Could not load notification preferences.</Alert>}
-      <Stack divider={<Divider flexItem />} sx={{ mt: 2 }}>
-        {preferences.isPending ? [1, 2, 3].map((item) => <Stack key={item} direction="row" justifyContent="space-between" sx={{ py: 2 }}><Box sx={{ flex: 1 }}><Skeleton width="34%" /><Skeleton width="70%" /></Box><Skeleton width={130} /></Stack>) : rows.map((row) => {
+      <Box className="notification-preferences-explainer">
+        <Box className="notification-preferences-explainer-item">
+          <span className="notification-preferences-explainer-icon"><NotificationsNoneOutlined fontSize="small" /></span>
+          <span><strong>In PixlPush</strong><small>See updates in the notification bell.</small></span>
+        </Box>
+        <Box className="notification-preferences-explainer-item">
+          <span className="notification-preferences-explainer-icon"><EmailOutlined fontSize="small" /></span>
+          <span><strong>By email</strong><small>Send updates to your account email.</small></span>
+        </Box>
+      </Box>
+      <Box className="notification-preferences-instruction">
+        <strong>How it works</strong>
+        <span>Turn on a choice in a row to receive that type of update there. Turn it off to stop it. Security alerts stay on for your protection.</span>
+      </Box>
+      {preferences.isError && <Alert severity="error" className="notification-preferences-error">Could not load notification preferences.</Alert>}
+      <Box className="notification-preferences-table" role="table" aria-label="Notification preferences">
+        <Box className="notification-preferences-columns" role="row">
+          <Typography component="span" role="columnheader">Update type</Typography>
+          <Box component="span" role="columnheader"><strong>In PixlPush</strong><small>Notification bell</small></Box>
+          <Box component="span" role="columnheader"><strong>By email</strong><small>Your account email</small></Box>
+        </Box>
+        {preferences.isPending ? [1, 2, 3].map((item) => (
+          <Box className="notification-preference-row notification-preference-row-skeleton" key={item} role="row" aria-hidden="true">
+            <Box className="notification-preference-copy">
+              <Skeleton width="34%" />
+              <Skeleton width="78%" />
+            </Box>
+            <Box className="notification-preference-control"><Skeleton variant="rounded" width={42} height={22} /></Box>
+            <Box className="notification-preference-control"><Skeleton variant="rounded" width={42} height={22} /></Box>
+          </Box>
+        )) : rows.map((row) => {
           const preference = stored.get(row.category);
-          const protectedCategory = row.category === 'security';
+          const protectedCategory = preference?.locked ?? row.category === 'security';
           return (
-            <Stack key={row.category} direction={{ xs: 'column', sm: 'row' }} alignItems={{ sm: 'center' }} justifyContent="space-between" gap={1.5} sx={{ py: 2 }}>
-              <Box sx={{ minWidth: 0, flex: 1 }}>
-                <Typography fontWeight={600} fontSize="var(--fs-13)">{row.title}</Typography>
-                <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: .35 }}>{row.description}</Typography>
-                {protectedCategory && <Typography color="text.secondary" fontSize="var(--fs-11)" sx={{ mt: .45 }}>Security alerts are always delivered for your protection.</Typography>}
+            <Box className={`notification-preference-row${protectedCategory ? ' is-protected' : ''}`} key={row.category} role="row">
+              <Box className="notification-preference-copy" role="cell">
+                <Box className="notification-preference-title">
+                  <Typography component="h4" fontWeight={650} fontSize="var(--fs-14)">{row.title}</Typography>
+                  {protectedCategory && <span className="notification-preference-badge">Always on</span>}
+                </Box>
+                <Typography color="text.secondary" fontSize="var(--fs-13)" sx={{ mt: .35 }}>{row.description}</Typography>
+                {protectedCategory && <Typography className="notification-preference-note" color="text.secondary" fontSize="var(--fs-12)">Security alerts are always delivered for your protection.</Typography>}
               </Box>
-              <Stack direction="row" gap={{ xs: 2, sm: 1.5 }} sx={{ flexShrink: 0 }}>
-                <Stack direction="row" alignItems="center" gap={.4}>
-                  <Switch
-                    size="small"
-                    checked={preference?.inAppEnabled ?? true}
-                    disabled={protectedCategory || update.isPending}
-                    onChange={(event) => update.mutate({ category: row.category, inAppEnabled: event.target.checked })}
-                    inputProps={{ 'aria-label': `${row.title} in-app notifications` }}
-                  />
-                  <Typography fontSize="var(--fs-12)" color="text.secondary">In-app</Typography>
-                </Stack>
-                <Stack direction="row" alignItems="center" gap={.4}>
-                  <Switch
-                    size="small"
-                    checked={preference?.emailEnabled ?? true}
-                    disabled={protectedCategory || update.isPending}
-                    onChange={(event) => update.mutate({ category: row.category, emailEnabled: event.target.checked })}
-                    inputProps={{ 'aria-label': `${row.title} email notifications` }}
-                  />
-                  <Typography fontSize="var(--fs-12)" color="text.secondary">Email</Typography>
-                </Stack>
-              </Stack>
-            </Stack>
+              <PreferenceSwitch
+                checked={valueFor(row.category, 'inAppEnabled')}
+                disabled={protectedCategory || Boolean(pendingKeys[`${row.category}:inAppEnabled`])}
+                onChange={(checked) => togglePreference(row.category, 'inAppEnabled', checked)}
+                label={`${row.title}: ${protectedCategory ? 'always enabled' : 'show in PixlPush'}`}
+                channelLabel="In PixlPush"
+                stateLabel={protectedCategory ? 'Required' : undefined}
+              />
+              <PreferenceSwitch
+                checked={valueFor(row.category, 'emailEnabled')}
+                disabled={protectedCategory || Boolean(pendingKeys[`${row.category}:emailEnabled`])}
+                onChange={(checked) => togglePreference(row.category, 'emailEnabled', checked)}
+                label={`${row.title}: ${protectedCategory ? 'always enabled' : 'send by email'}`}
+                channelLabel="By email"
+                stateLabel={protectedCategory ? 'Required' : undefined}
+              />
+            </Box>
           );
         })}
-      </Stack>
-      {update.isError && <Alert severity="error" sx={{ mt: 1 }}>Could not save that notification preference. Please try again.</Alert>}
-      {update.isSuccess && <Typography color="success.main" fontSize="var(--fs-12)" sx={{ mt: 1 }}>Notification preference saved.</Typography>}
+      </Box>
+      <Snackbar
+        open={Boolean(toast)}
+        autoHideDuration={3200}
+        onClose={() => setToast(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        {toast ? <Alert severity={toast.severity} variant="filled" onClose={() => setToast(null)}>{toast.message}</Alert> : undefined}
+      </Snackbar>
     </Box>
   );
+}
+
+function PreferenceSwitch({ checked, disabled, onChange, label, channelLabel, stateLabel }: { checked: boolean; disabled: boolean; onChange: (checked: boolean) => void; label: string; channelLabel: string; stateLabel?: string }) {
+  return (
+    <Box className={`notification-preference-control${disabled ? ' is-disabled' : ''}`} role="cell">
+      <span className="notification-preference-channel">{channelLabel}</span>
+      <Switch
+        className="notification-preference-switch"
+        checked={checked}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.checked)}
+        inputProps={{ 'aria-label': label }}
+      />
+      <span className="notification-preference-state" aria-hidden="true">{stateLabel ?? (checked ? 'Enabled' : 'Disabled')}</span>
+    </Box>
+  );
+}
+
+function removeOptimisticValue(values: Record<string, boolean>, key: string): Record<string, boolean> {
+  const next = { ...values };
+  delete next[key];
+  return next;
 }

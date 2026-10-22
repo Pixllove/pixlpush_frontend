@@ -3,8 +3,10 @@
 import { ReactNode, useEffect, useState } from "react";
 import {
   AddRounded,
+  ArrowForwardRounded,
   MenuRounded,
   RocketLaunchRounded,
+  WarningAmberRounded,
   WorkspacePremiumRounded,
 } from "@mui/icons-material";
 import {
@@ -17,12 +19,16 @@ import {
 } from "@mui/material";
 import { useActiveProject } from "@/hooks/projects/use-active-project";
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { useQuery } from '@tanstack/react-query';
 import DashboardSidebar from "./DashboardSidebar";
 import AccountMenu from "@/components/auth/AccountMenu";
 import NotificationMenu from "@/components/dashboard/NotificationMenu";
 import SupportChatWidget from "@/components/website/SupportChatWidget";
 import CreateProjectDialog from './CreateProjectDialog';
 import { useCurrentUser } from '@/hooks/auth/use-current-user';
+import { firebaseApi, onboardingApi } from '@/lib/projects/api';
+import { onboardingPercentage } from '@/lib/onboarding';
 
 export default function DashboardFrame({
   active,
@@ -48,6 +54,18 @@ export default function DashboardFrame({
   const [createOpen, setCreateOpen] = useState(false);
   const { active: activeProject, isEmpty, selectProject } = useActiveProject();
   const { data: currentUser, isPending: userPending } = useCurrentUser();
+  const onboarding = useQuery({
+    queryKey: ['projects', activeProject?.id, 'onboarding'],
+    queryFn: () => onboardingApi.get(activeProject!.id),
+    enabled: Boolean(activeProject?.id),
+    staleTime: 30_000,
+  });
+  const firebase = useQuery({
+    queryKey: ['projects', activeProject?.id, 'firebase'],
+    queryFn: () => firebaseApi.get(activeProject!.id),
+    enabled: Boolean(activeProject?.id),
+    staleTime: 30_000,
+  });
 
   const router = useRouter();
   useEffect(() => {
@@ -62,6 +80,13 @@ export default function DashboardFrame({
 
   // Only once the list has loaded and is truly empty; while loading the page renders as usual.
   const needsProject = requiresProject && isEmpty;
+  const onboardingPercent = activeProject && onboarding.data && !onboarding.isPending && !firebase.isPending
+    ? onboardingPercentage(
+      { ...onboarding.data, completed: Array.from(new Set([1, ...onboarding.data.completed])) },
+      firebase.data?.status === 'connected',
+    )
+    : null;
+  const showOnboardingWarning = active !== 'Onboarding Guide' && onboardingPercent !== null && onboardingPercent < 100;
   // Nothing invented: the heading names the real Project, or says there is none.
   const projectName = activeProject?.name ?? (isEmpty ? "No project" : "");
   return (
@@ -132,6 +157,38 @@ export default function DashboardFrame({
               </Typography>{" "}
               This project is currently read-only. Restore it from Project Settings
               before using project features again.
+            </Alert>
+          )}
+          {showOnboardingWarning && (
+            <Alert
+              severity="warning"
+              variant="standard"
+              icon={<WarningAmberRounded />}
+              action={
+                <Button
+                  component={Link}
+                  href="/dashboard/onboarding"
+                  color="inherit"
+                  size="small"
+                  endIcon={<ArrowForwardRounded fontSize="small" />}
+                  sx={{ whiteSpace: "nowrap", fontWeight: 700 }}
+                >
+                  Complete setup
+                </Button>
+              }
+              sx={{
+                mb: 2.5,
+                border: "1px solid",
+                borderColor: "warning.light",
+                borderRadius: 2,
+                alignItems: "center",
+                "& .MuiAlert-message": { flex: 1 },
+              }}
+            >
+              <Typography component="span" fontWeight={600}>
+                Onboarding is {onboardingPercent}% complete.
+              </Typography>{" "}
+              Finish your setup to get the most out of PixlPush.
             </Alert>
           )}
           {!hideHeader && (

@@ -63,11 +63,8 @@ export interface NotificationCountQuery {
 }
 
 export interface NotificationPreference {
-  id?: string;
-  accountId?: string;
   category: NotificationCategory;
   inAppEnabled: boolean;
   emailEnabled: boolean;
-  createdAt?: string;
-  updatedAt?: string;
+  locked: boolean;
 }
