@@ -32,7 +32,7 @@ export default function SegmentedTabs<T extends string | number>({ value, option
       className={`pp-segmented-tabs${className ? ` ${className}` : ""}`}
       sx={{ alignSelf: "center" }}
     >
-      {options.map((option) => <Tab value={option.value} label={option.label} icon={option.icon} iconPosition={option.icon ? option.iconPosition ?? "start" : undefined} aria-label={option.ariaLabel} disabled={disabled} key={String(option.value)} />)}
+      {options.map((option) => <Tab value={option.value} label={<span className="pp-segmented-tab-label">{option.label}</span>} icon={option.icon} iconPosition={option.icon ? option.iconPosition ?? "start" : undefined} aria-label={option.ariaLabel} disabled={disabled} key={String(option.value)} />)}
     </Tabs>
   );
 }

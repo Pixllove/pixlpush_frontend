@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Alert, Box, Skeleton, Snackbar, Switch, Typography } from '@mui/material';
+import { Alert, Box, Skeleton, Switch, Typography } from '@mui/material';
 import { EmailOutlined, NotificationsNoneOutlined } from '@mui/icons-material';
 import { useQueryClient } from '@tanstack/react-query';
+import { Toast } from '@/components/auth/AuthFeedback';
 import { notificationKeys, useNotificationPreferences, useUpdateNotificationPreference } from '@/hooks/notifications/use-notifications';
 import type { NotificationCategory, NotificationPreference } from '@/types/notifications';
 
@@ -22,7 +23,7 @@ const rows: Array<{ category: NotificationCategory; title: string; description: 
 type NotificationChannel = 'inAppEnabled' | 'emailEnabled';
 type PreferenceToast = { severity: 'success' | 'error'; message: string };
 
-export default function NotificationPreferences() {
+export default function NotificationPreferences({ embedded = false }: { embedded?: boolean }) {
   const preferences = useNotificationPreferences();
   const update = useUpdateNotificationPreference();
   const queryClient = useQueryClient();
@@ -67,12 +68,12 @@ export default function NotificationPreferences() {
   };
 
   return (
-    <Box className="notification-preferences">
+    <Box className={`notification-preferences${embedded ? ' is-embedded' : ''}`}>
       <Box className="notification-preferences-header">
         <Box>
-          <Typography variant="h3">Where should we send your updates?</Typography>
+          <Typography variant="h3">Choose how PixlPush contacts you</Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: .5 }}>
-            Choose where you want to receive updates from PixlPush. You can change this at any time.
+            Choose where each type of update should go. Your changes save automatically.
           </Typography>
         </Box>
         <Box className="notification-preferences-status" role="status">
@@ -83,23 +84,23 @@ export default function NotificationPreferences() {
       <Box className="notification-preferences-explainer">
         <Box className="notification-preferences-explainer-item">
           <span className="notification-preferences-explainer-icon"><NotificationsNoneOutlined fontSize="small" /></span>
-          <span><strong>In PixlPush</strong><small>See updates in the notification bell.</small></span>
+          <span><strong>Inside PixlPush</strong><small>View updates in your notification inbox.</small></span>
         </Box>
         <Box className="notification-preferences-explainer-item">
           <span className="notification-preferences-explainer-icon"><EmailOutlined fontSize="small" /></span>
-          <span><strong>By email</strong><small>Send updates to your account email.</small></span>
+          <span><strong>By email</strong><small>Get updates at your account email.</small></span>
         </Box>
       </Box>
       <Box className="notification-preferences-instruction">
         <strong>How it works</strong>
-        <span>Turn on a choice in a row to receive that type of update there. Turn it off to stop it. Security alerts stay on for your protection.</span>
+        <span>Use the switches to choose where each update appears. Security alerts stay on to help protect your account.</span>
       </Box>
       {preferences.isError && <Alert severity="error" className="notification-preferences-error">Could not load notification preferences.</Alert>}
       <Box className="notification-preferences-table" role="table" aria-label="Notification preferences">
         <Box className="notification-preferences-columns" role="row">
           <Typography component="span" role="columnheader">Update type</Typography>
-          <Box component="span" role="columnheader"><strong>In PixlPush</strong><small>Notification bell</small></Box>
-          <Box component="span" role="columnheader"><strong>By email</strong><small>Your account email</small></Box>
+          <Box component="span" role="columnheader"><strong>Inside PixlPush</strong><small>Notification inbox</small></Box>
+          <Box component="span" role="columnheader"><strong>Email</strong><small>Your account email</small></Box>
         </Box>
         {preferences.isPending ? [1, 2, 3].map((item) => (
           <Box className="notification-preference-row notification-preference-row-skeleton" key={item} role="row" aria-hidden="true">
@@ -127,9 +128,9 @@ export default function NotificationPreferences() {
                 checked={valueFor(row.category, 'inAppEnabled')}
                 disabled={protectedCategory || Boolean(pendingKeys[`${row.category}:inAppEnabled`])}
                 onChange={(checked) => togglePreference(row.category, 'inAppEnabled', checked)}
-                label={`${row.title}: ${protectedCategory ? 'always enabled' : 'show in PixlPush'}`}
+                label={`${row.title}: ${protectedCategory ? 'always enabled' : 'show inside PixlPush'}`}
                 channelLabel="In PixlPush"
-                stateLabel={protectedCategory ? 'Required' : undefined}
+                stateLabel={protectedCategory ? 'Always on' : undefined}
               />
               <PreferenceSwitch
                 checked={valueFor(row.category, 'emailEnabled')}
@@ -137,20 +138,17 @@ export default function NotificationPreferences() {
                 onChange={(checked) => togglePreference(row.category, 'emailEnabled', checked)}
                 label={`${row.title}: ${protectedCategory ? 'always enabled' : 'send by email'}`}
                 channelLabel="By email"
-                stateLabel={protectedCategory ? 'Required' : undefined}
+                stateLabel={protectedCategory ? 'Always on' : undefined}
               />
             </Box>
           );
         })}
       </Box>
-      <Snackbar
-        open={Boolean(toast)}
-        autoHideDuration={3200}
+      <Toast
+        message={toast?.message ?? null}
+        severity={toast?.severity}
         onClose={() => setToast(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        {toast ? <Alert severity={toast.severity} variant="filled" onClose={() => setToast(null)}>{toast.message}</Alert> : undefined}
-      </Snackbar>
+      />
     </Box>
   );
 }
@@ -166,7 +164,7 @@ function PreferenceSwitch({ checked, disabled, onChange, label, channelLabel, st
         onChange={(event) => onChange(event.target.checked)}
         inputProps={{ 'aria-label': label }}
       />
-      <span className="notification-preference-state" aria-hidden="true">{stateLabel ?? (checked ? 'Enabled' : 'Disabled')}</span>
+      <span className="notification-preference-state" aria-hidden="true">{stateLabel ?? (checked ? 'On' : 'Off')}</span>
     </Box>
   );
 }

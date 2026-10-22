@@ -8,7 +8,6 @@ import { useActiveProject } from '@/hooks/projects/use-active-project';
 import { billingApi } from '@/lib/projects/api';
 import ChangePasswordForm from './ChangePasswordForm';
 import TwoFactorSettings from './TwoFactorSettings';
-import NotificationPreferences from './NotificationPreferences';
 import UserAvatar from './UserAvatar';
 
 const display = (value: string | null | undefined) => value?.trim() || '-';
@@ -95,7 +94,6 @@ export default function AccountProfile({ section = 'all', showCompanyHeading = t
 
       {!embedded && companyContent}
 
-      {(section === 'all' || section === 'profile') && <NotificationPreferences />}
       {(section === 'all' || section === 'profile') && <TwoFactorSettings />}
       {(section === 'all' || section === 'profile') && <ChangePasswordForm />}
     </Card>

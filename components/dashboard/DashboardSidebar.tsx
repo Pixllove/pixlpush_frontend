@@ -21,7 +21,6 @@ const groups = [
     label: 'Workspace',
     items: [
       { label: 'Home', href: '/dashboard', icon: HomeOutlined },
-      { label: 'Notifications', href: '/dashboard/notifications', icon: NotificationsNoneOutlined },
       { label: 'Analytics', href: '/dashboard/analytics', icon: InsightsOutlined },
       { label: 'Users', href: '/dashboard/users', icon: PeopleAltOutlined },
       { label: 'Email', href: '/dashboard/email', icon: EmailOutlined },
@@ -36,6 +35,7 @@ const groups = [
       { label: 'SDK Integration Guide', href: '/dashboard/integrations/react-native/quickstart', icon: TuneOutlined },
       { label: 'Developer documentation', href: '/dashboard/developer-docs', icon: DescriptionOutlined },
       { label: 'Audit Logs', href: '/dashboard/audit-logs', icon: HistoryOutlined },
+      { label: 'Notifications', href: '/dashboard/notifications', icon: NotificationsNoneOutlined },
       { label: 'Billing & Usage', href: '/dashboard/billing', icon: BarChartOutlined },
       { label: 'Team & Access', href: '/dashboard/team', icon: GroupsOutlined },
       { label: 'Project Settings', href: '/dashboard/settings', icon: SettingsOutlined },

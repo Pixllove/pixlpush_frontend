@@ -130,8 +130,9 @@ function NotificationRow({
   };
 
   return (
-    <Box sx={{ position: 'relative', '&:hover .notification-dismiss': { opacity: 1 } }}>
+    <Box className="notification-row-shell" sx={{ position: 'relative', '&:hover .notification-dismiss': { opacity: 1 } }}>
       <ListItemButton
+        className="notification-row"
         onClick={open}
         sx={{
           px: compact ? 1.5 : 2,
@@ -229,26 +230,31 @@ export default function NotificationInbox({
   }), [category, compact, projectId, search, unreadOnly]);
   const notifications = useInfiniteNotifications(query, enabled);
   const items = notifications.data?.pages.flatMap((page) => page.items) ?? [];
+  const unreadCount = items.filter((item) => !item.readAt).length;
 
   return (
-    <Box sx={{ bgcolor: '#fff', border: compact ? 'none' : '1px solid', borderColor: 'divider', borderRadius: compact ? 0 : 3, p: compact ? 0 : { xs: 1.5, sm: 2.5 } }}>
+    <Box className={`notification-inbox${compact ? ' is-compact' : ''}`} sx={{ bgcolor: '#fff', border: compact ? 'none' : '1px solid', borderColor: 'divider', borderRadius: compact ? 0 : 3, p: compact ? 0 : { xs: 1.5, sm: 2.5 } }}>
       {!compact && (
-        <Stack direction={{ xs: 'column', md: 'row' }} alignItems={{ xs: 'stretch', md: 'center' }} justifyContent="space-between" gap={1.25} sx={{ mb: 2 }}>
-          <Stack direction="row" alignItems="center" gap={1}>
-            <Box sx={{ width: 36, height: 36, display: 'grid', placeItems: 'center', borderRadius: 2, color: 'primary.main', bgcolor: '#f3eefc' }}><NotificationsNoneRounded fontSize="small" /></Box>
+        <Box className="notification-inbox-header">
+          <Box className="notification-inbox-heading">
+            <Box className="notification-inbox-icon"><NotificationsNoneRounded fontSize="small" /></Box>
             <Box>
-              <Typography fontWeight={700}>Your notification inbox</Typography>
-              <Typography variant="body2" color="text.secondary">Account, project, team and security updates.</Typography>
+              <Typography className="notification-inbox-title">Your notification inbox</Typography>
+              <Typography className="notification-inbox-subtitle">Account, project, team and security updates.</Typography>
             </Box>
-          </Stack>
-          <Stack direction="row" gap={1} justifyContent="flex-end">
+          </Box>
+          <Box className="notification-inbox-actions">
+            <Box className="notification-inbox-count" aria-live="polite">
+              <span className="notification-inbox-count-dot" aria-hidden="true" />
+              {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
+            </Box>
             <Button size="small" variant="outlined" startIcon={<RefreshRounded />} onClick={() => void notifications.refetch()} disabled={notifications.isFetching}>Refresh</Button>
             <Button size="small" variant="text" startIcon={<CheckRounded />} onClick={() => markAll.mutate(undefined)} disabled={markAll.isPending}>Mark all read</Button>
-          </Stack>
-        </Stack>
+          </Box>
+        </Box>
       )}
 
-      <Stack direction={{ xs: 'column', sm: 'row' }} gap={1} sx={{ px: compact ? 1.5 : 0, pt: compact ? 1.2 : 0, pb: compact ? 1.2 : 1.5 }}>
+      <Stack className="notification-filter-bar" direction={{ xs: 'column', sm: 'row' }} gap={1} sx={{ px: compact ? 1.5 : 0, pt: compact ? 1.2 : 0, pb: compact ? 1.2 : 1.5 }}>
         {!compact && <TextField value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Search notifications" aria-label="Search notifications" sx={{ flex: 1, minWidth: 180 }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchRounded fontSize="small" /></InputAdornment> }} />}
         <FormControl size="small" sx={{ minWidth: compact ? '100%' : 160 }}>
           <InputLabel id={`notification-project-${compact ? 'menu' : 'page'}`}>Project</InputLabel>
@@ -283,7 +289,7 @@ export default function NotificationInbox({
         </Box>
       ) : (
         <>
-          <List disablePadding sx={{ p: compact ? 1 : 0 }}>{items.map((item) => <NotificationRow key={item.id} item={item} compact={compact} onNavigate={onNavigate} />)}</List>
+          <List className="notification-results" disablePadding sx={{ p: compact ? 1 : 0 }}>{items.map((item) => <NotificationRow key={item.id} item={item} compact={compact} onNavigate={onNavigate} />)}</List>
           {notifications.hasNextPage && <Button fullWidth size="small" onClick={() => void notifications.fetchNextPage()} disabled={notifications.isFetchingNextPage} sx={{ mt: .5 }}>{notifications.isFetchingNextPage ? 'Loading…' : 'Load more notifications'}</Button>}
         </>
       )}
