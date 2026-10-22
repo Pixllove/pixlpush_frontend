@@ -242,3 +242,46 @@ export async function callBackendWithRefresh<T>(
   // Retried exactly once; a second 401 is returned as-is.
   return callBackend<T>(path, { ...init, auth: true });
 }
+
+export interface UpstreamStreamResult {
+  status: number;
+  response: Response | null;
+}
+
+/**
+ * Streaming counterpart to callBackendWithRefresh. It deliberately does not
+ * read response.text(), so SSE stays open instead of being buffered in Next.
+ */
+async function callBackendStream(path: string): Promise<UpstreamStreamResult> {
+  const headers: Record<string, string> = {
+    'Cache-Control': 'no-cache',
+    ...SUPABASE_REGION,
+  };
+  const forwardedFor = requestHeaders().get('x-forwarded-for');
+  if (forwardedFor) headers['X-Forwarded-For'] = forwardedFor;
+
+  const token = getSessionToken();
+  if (!token) return { status: 401, response: null };
+  headers.Authorization = `Bearer ${token}`;
+
+  try {
+    const response = await fetch(`${API_URL}${path}`, {
+      method: 'GET',
+      headers,
+      cache: 'no-store',
+    });
+    return { status: response.status, response };
+  } catch {
+    return { status: 503, response: null };
+  }
+}
+
+export async function callBackendStreamWithRefresh(path: string): Promise<UpstreamStreamResult> {
+  const first = await callBackendStream(path);
+  if (first.status !== 401) return first;
+
+  await first.response?.body?.cancel().catch(() => undefined);
+  const refreshed = await refreshSession();
+  if (!refreshed?.ok) return first;
+  return callBackendStream(path);
+}

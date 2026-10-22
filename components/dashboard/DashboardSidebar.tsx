@@ -2,7 +2,7 @@
 
 import {
   AddRounded, BarChartOutlined, BoltOutlined, ChevronLeftRounded, ChevronRightRounded, DescriptionOutlined, EmailOutlined, GroupsOutlined,
-  HistoryOutlined, HomeOutlined, InsightsOutlined, PeopleAltOutlined, PersonOutlineOutlined, SettingsOutlined, SpaceDashboardOutlined, SupportAgentOutlined, TuneOutlined, UnfoldMoreRounded, ChecklistRounded,
+  HistoryOutlined, HomeOutlined, InsightsOutlined, NotificationsNoneOutlined, PeopleAltOutlined, PersonOutlineOutlined, SettingsOutlined, SpaceDashboardOutlined, SupportAgentOutlined, TuneOutlined, UnfoldMoreRounded, ChecklistRounded,
 } from '@mui/icons-material';
 import {
   Avatar, ButtonBase, Divider, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Menu, MenuItem, Tooltip, Typography,
@@ -20,6 +20,7 @@ const groups = [
     label: 'Workspace',
     items: [
       { label: 'Home', href: '/dashboard', icon: HomeOutlined },
+      { label: 'Notifications', href: '/dashboard/notifications', icon: NotificationsNoneOutlined },
       { label: 'Analytics', href: '/dashboard/analytics', icon: InsightsOutlined },
       { label: 'Users', href: '/dashboard/users', icon: PeopleAltOutlined },
       { label: 'Email', href: '/dashboard/email', icon: EmailOutlined },
