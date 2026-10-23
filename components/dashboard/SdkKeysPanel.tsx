@@ -7,6 +7,7 @@ import EmptyState from './EmptyState';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
 import { useSdkKeys } from '@/hooks/projects/use-project-settings';
 import SettingsStatus from './SettingsStatus';
+import IdentityVerificationCard from './IdentityVerificationCard';
 import type { ApiError } from '@/types/auth';
 import type { CreatedSdkKey } from '@/types/project';
 
@@ -103,6 +104,7 @@ export default function SdkKeysPanel() {
           </Stack>
         </Card>
       )}
+      {canManage && active && <IdentityVerificationCard projectId={active.id} role={active.role} />}
     </Stack>
   );
 }
