@@ -199,6 +199,23 @@ function rotate(refreshToken: string): Promise<RefreshResult> {
 }
 
 /**
+ * True only when the backend itself says the refresh token is dead. A 401 from
+ * anything in between (the Supabase gateway while a new version deploys, a
+ * proxy, an HTML error page) carries no such code and must not sign anyone out.
+ */
+export function isSessionOver(result: { status: number; body: unknown }): boolean {
+  const code = (result.body as { error?: { code?: string } } | null)?.error?.code;
+  return result.status === 401 && code === 'INVALID_REFRESH_TOKEN';
+}
+
+/** A failed refresh that is not a dead session, reported as a retryable outage. */
+const BACKEND_BUSY = {
+  ok: false,
+  status: 503,
+  body: { error: { code: 'BACKEND_UNAVAILABLE', message: 'Service is unavailable. Please try again.' } },
+} as const;
+
+/**
  * Exchanges the stored refresh token for a new pair and persists them.
  * Returns undefined when there is no refresh token at all.
  *
@@ -215,11 +232,15 @@ export async function refreshSession(): Promise<RefreshResult | undefined> {
   if (result.ok) {
     const tokens = (result.body as { data: SessionTokens }).data;
     setSessionCookies(tokens.accessToken, tokens.refreshToken);
-  } else if (result.status === 401) {
+    return result;
+  }
+  if (isSessionOver(result)) {
     // Expired, revoked or replayed: the session is over.
     clearSessionCookies();
+    return result;
   }
-  return result;
+  // Deploy, outage, gateway hiccup: keep the cookies and let the caller retry.
+  return result.status === 401 ? (BACKEND_BUSY as RefreshResult) : result;
 }
 
 /**
@@ -239,8 +260,7 @@ export async function callBackendWithRefresh<T>(
   if (!refreshed.ok) {
     // A backend outage or rate limit is reported as itself, so the browser
     // shows "try again" rather than treating the user as signed out.
-    const outage = refreshed.status >= 500 || refreshed.status === 429;
-    return outage ? (refreshed as UpstreamResult<T>) : first;
+    return isSessionOver(refreshed) ? first : (refreshed as unknown as UpstreamResult<T>);
   }
 
   // Retried exactly once; a second 401 is returned as-is.

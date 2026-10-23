@@ -61,7 +61,12 @@ async function renewSession(request: NextRequest, refreshToken: string): Promise
     return undefined; // Backend unreachable: not evidence of a dead session.
   }
 
-  if (upstream.status === 401) {
+  // Only the backend's own verdict ends the session; a 401 from the Supabase
+  // gateway mid-deploy has no INVALID_REFRESH_TOKEN code (see lib/auth/server.ts).
+  const verdict = upstream.status === 401
+    ? ((await upstream.clone().json().catch(() => null)) as { error?: { code?: string } } | null)?.error?.code
+    : undefined;
+  if (verdict === 'INVALID_REFRESH_TOKEN') {
     // Expired, revoked or replayed: the session is over.
     const url = request.nextUrl.clone();
     url.pathname = '/login';
