@@ -1,8 +1,8 @@
-// React Native SDK content, verified against pixlpush_backend/packages (core + react-native) at 0.3.3.
+// React Native SDK content, verified against pixlpush_backend/packages (core + react-native) at 0.3.5.
 // Every option, default, method and error code here exists in that source; keep it that way.
 
-export const SDK_VERSION = "0.3.3";
-export const REVIEWED_AGAINST = "@pixlpush/react-native 0.3.3";
+export const SDK_VERSION = "0.3.5";
+export const REVIEWED_AGAINST = "@pixlpush/react-native 0.3.5";
 
 export const installCommands = {
   Expo: "npx expo install @pixlpush/react-native @react-native-async-storage/async-storage",
@@ -74,7 +74,7 @@ export default function App() {
 // {
 //   configured: true,
 //   environment: "development",
-//   sdkVersion: "0.3.3",
+//   sdkVersion: "0.3.5",
 //   queueSize: 1,
 //   identified: false,
 //   pixlpushId: "pixlpush_c…",   // permanent PixlPush user ID
@@ -440,7 +440,7 @@ export const errorCodes: [string, string, string, string][] = [
   ["VALIDATION_ERROR", "no", "Invalid name, property, ID, or payload (422).", "Fix the call; rejected items are discarded."],
   ["PAYLOAD_TOO_LARGE", "no", "HTTP 413.", "Send fewer or smaller properties."],
   ["QUEUE_FULL", "no — reported, not thrown", "The queue hit maxQueueSize and dropped its oldest event (or, if none, its oldest item).", "Restore connectivity; raise maxQueueSize if offline periods are long."],
-  ["NO_IDENTIFIED_USER", "no", "Declared by the SDK; not thrown by 0.3.3 methods.", "—"],
+  ["NO_IDENTIFIED_USER", "no", "Declared by the SDK; not thrown by 0.3.5 methods.", "—"],
   ["STORAGE_ERROR", "no", "Declared by the SDK; storage failures fall back to memory instead.", "—"],
 ];
 
