@@ -53,6 +53,9 @@ async function renewSession(request: NextRequest, refreshToken: string): Promise
       headers: { 'Content-Type': 'application/json', ...(process.env.BACKEND_API_URL?.includes('.supabase.co') ? { 'x-region': 'ap-northeast-1' } : {}), ...(forwardedFor ? { 'X-Forwarded-For': forwardedFor } : {}) },
       body: JSON.stringify({ refreshToken }),
       cache: 'no-store',
+      // Give up before Vercel kills the middleware; the browser refreshes instead,
+      // and the backend honours the old token if this rotation's reply was lost.
+      signal: AbortSignal.timeout(15_000),
     });
   } catch {
     return undefined; // Backend unreachable: not evidence of a dead session.
