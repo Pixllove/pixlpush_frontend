@@ -1,11 +1,11 @@
-// Flutter SDK content reviewed against the published pixlpush 0.1.3 package.
+// Flutter SDK content reviewed against the published pixlpush 0.1.4 package.
 
-export const SDK_VERSION = "0.1.3";
-export const REVIEWED_AGAINST = "pixlpush Flutter SDK 0.1.3";
+export const SDK_VERSION = "0.1.4";
+export const REVIEWED_AGAINST = "pixlpush Flutter SDK 0.1.4";
 
 export const code = {
   install: `dependencies:
-  pixlpush: ^0.1.3`,
+  pixlpush: ^0.1.4`,
 
   key: `// Never commit a production key to a public repository.
 const sdkKey = String.fromEnvironment(
@@ -154,7 +154,7 @@ export const configOptions: [string, string, string, string][] = [
   ["environment", "Environment", "production", "development, staging or production."],
   ["appName", "String?", "null", "Application name included in device context."],
   ["appVersion", "String?", "auto-detected", "Application version override."],
-  ["sdkVersion", "String?", "0.1.3", "SDK version override for device context."],
+  ["sdkVersion", "String?", "0.1.4", "SDK version override for device context."],
   ["enableLogging", "bool", "false", "Verbose SDK and queue logging."],
   ["autoFlushInterval", "Duration", "15 seconds", "Automatic queue flush interval."],
   ["maxQueueSize", "int", "1000", "Maximum retained queue items."],
