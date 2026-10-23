@@ -50,7 +50,7 @@ async function renewSession(request: NextRequest, refreshToken: string): Promise
     const forwardedFor = request.headers.get('x-forwarded-for');
     upstream = await fetch(`${process.env.BACKEND_API_URL}/auth/refresh`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...(process.env.BACKEND_API_URL?.includes('.supabase.co') ? { 'x-region': 'ap-northeast-1' } : {}), ...(forwardedFor ? { 'X-Forwarded-For': forwardedFor } : {}) },
+      headers: { 'Content-Type': 'application/json', ...(process.env.BACKEND_API_URL?.includes('.supabase.co') ? { 'x-region': 'ap-northeast-1' } : {}), ...(process.env.BACKEND_GATEWAY_SECRET ? { 'x-pixlpush-gateway': process.env.BACKEND_GATEWAY_SECRET } : {}), ...(forwardedFor ? { 'X-Forwarded-For': forwardedFor } : {}) },
       body: JSON.stringify({ refreshToken }),
       cache: 'no-store',
       // Give up before Vercel kills the middleware; the browser refreshes instead,

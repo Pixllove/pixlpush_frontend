@@ -8,7 +8,11 @@ import type { ApiErrorBody } from '@/types/auth';
  */
 const API_URL = process.env.BACKEND_API_URL ?? 'http://localhost:3000/api/v1';
 /** Runs the Supabase Edge Function next to the database (Tokyo); only sent when the backend is on Supabase. */
-const SUPABASE_REGION: Record<string, string> = API_URL.includes('.supabase.co') ? { 'x-region': 'ap-northeast-1' } : {};
+const SUPABASE_REGION: Record<string, string> = {
+  ...(API_URL.includes('.supabase.co') ? { 'x-region': 'ap-northeast-1' } : {}),
+  // Proves the call comes from this server; the backend refuses /api/v1 without it.
+  ...(process.env.BACKEND_GATEWAY_SECRET ? { 'x-pixlpush-gateway': process.env.BACKEND_GATEWAY_SECRET } : {}),
+};
 
 export const SESSION_COOKIE = 'pixlpush_session';
 export const REFRESH_COOKIE = 'pixlpush_refresh';

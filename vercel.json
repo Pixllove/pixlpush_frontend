@@ -2,7 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
   "installCommand": "yarn install --frozen-lockfile",
-  "buildCommand": "next build && rm -rf .next/cache",
+  "buildCommand": "node scripts/sync-sdk-versions.mjs && next build && rm -rf .next/cache",
   "regions": ["hnd1"],
   "functions": {
     "app/api/**/route.ts": { "maxDuration": 60 }

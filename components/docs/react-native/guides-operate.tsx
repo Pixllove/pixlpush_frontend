@@ -101,7 +101,7 @@ const troubleshooting: Record<string, [string, string, string][]> = {
     ["SDK_KEY_INVALID", "Key revoked, deleted, mistyped, or from another backend.", "Create a new key in Project settings → SDK keys."],
     ["SDK_KEY_PROJECT_MISMATCH", "projectId isn’t the key’s project ID or slug.", "Fix projectId or remove it."],
     ["NETWORK_ERROR or timeouts on a real phone", "The key points at a Wi-Fi IP over http, or at a tunnel that has stopped.", "Create the key while the dashboard reaches the backend through a running HTTPS tunnel."],
-    ["Requiring unknown module \"react-native\" (or AsyncStorage, expo-device, Firebase Messaging)", "SDK before 0.3.4: Metro could not see its optional native imports.", "Upgrade to @pixlpush/react-native 0.3.6 and restart Metro with --clear."],
+    ["Requiring unknown module \"react-native\" (or AsyncStorage, expo-device, Firebase Messaging)", "SDK before 0.3.4: Metro could not see its optional native imports.", `Upgrade to @pixlpush/react-native ${SDK_VERSION} and restart Metro with --clear.`],
     ["App still runs old SDK code", "A cached copy of the same SDK version.", "Delete node_modules/@pixlpush, reinstall, and restart Metro with --clear."],
   ],
   delivery: [

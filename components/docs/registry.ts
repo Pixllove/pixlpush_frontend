@@ -1,3 +1,4 @@
+import versions from "./sdk-versions.json";
 // The documentation's single source of structure. A platform lists its guides; every guide lists its
 // sections. Navigation, routing, the table of contents, pagination, metadata and search are all built
 // from this file, so adding a platform means adding an entry here plus its guide renderers.
@@ -100,16 +101,16 @@ const reactNativeGuides: Guide[] = [
   },
   {
     slug: "reference", group: "Reference", title: "API reference",
-    description: "Every public method of @pixlpush/react-native 0.3.6, its error codes and its listener events.",
+    description: `Every public method of @pixlpush/react-native ${versions.reactNative}, its error codes and its listener events.`,
     sections: [s("setup-methods", "Setup", "configure getStatus onError flush"), s("identity-methods", "Identity", "identify updateUser reset"), s("event-methods", "Events & consent", "track trackBatch setConsent"), s("push-methods", "Push", "syncPushToken updatePushToken updatePushPermission handleNotification setInitialNotification getInitialNotification"), s("listener-methods", "Listeners", "addListener removeListener addNotificationReceivedListener addPushTokenListener addPushPermissionListener"), s("errors", "Error codes", "SDK_NOT_CONFIGURED SDK_ALREADY_CONFIGURED SDK_KEY_MISSING SDK_KEY_INVALID PROJECT_INACTIVE RATE_LIMITED QUEUE_FULL STORAGE_ERROR")],
   },
 ];
 
 export const platforms: Platform[] = [
-  { id: "react-native", label: "React Native", description: "Expo and bare React Native CLI apps.", status: "available", version: "0.3.6", groups: ["Get started", "Set up", "Integrate", "Segment guides", "Operate", "Reference"], guides: reactNativeGuides },
+  { id: "react-native", label: "React Native", description: "Expo and bare React Native CLI apps.", status: "available", version: versions.reactNative, groups: ["Get started", "Set up", "Integrate", "Segment guides", "Operate", "Reference"], guides: reactNativeGuides },
   { id: "web", label: "Web", description: "Browser SDK.", status: "coming-soon" },
   {
-    id: "flutter", label: "Flutter", description: "Flutter Android and iOS applications.", status: "available", version: "0.1.5",
+    id: "flutter", label: "Flutter", description: "Flutter Android and iOS applications.", status: "available", version: versions.flutter,
     groups: ["Get started", "Set up", "Integrate", "Operate", "Reference"], guides: [
       { slug: "", group: "Get started", title: "Flutter", description: "What the PixlPush Flutter SDK does, what it sends, and how notification opens are attributed.", sections: [s("what-it-does", "What it does"), s("app-states", "App states and responsibilities", "foreground background terminated"), s("data", "What the SDK sends", "identity event push open"), s("next", "Where to go next")] },
       { slug: "quickstart", group: "Get started", title: "Quickstart", description: "Install the published plugin, configure PixlPush, verify an event, and add push in one ordered path.", sections: [s("prerequisites", "Prerequisites"), s("install", "Install the package", "pub.dev pubspec path dependency"), s("key", "Create an SDK key", "pp_sk"), s("configure", "Configure once", "PixlPushConfig configure"), s("verify", "Verify analytics", "flush getStatus"), s("push", "Add push", "Firebase.initializeApp PixlPushFirebaseMessaging"), s("checkpoint", "Before production")] },
@@ -122,7 +123,7 @@ export const platforms: Platform[] = [
       { slug: "security", group: "Operate", title: "Security", description: "Understand what can ship in a Flutter bundle, what must stay in PixlPush or Firebase, and how projects are isolated.", sections: [s("credentials", "Public vs. secret"), s("bundle", "Keep secrets out of the app", "logs screenshots git"), s("isolation", "Project isolation", "projectId"), s("data", "Data minimization") ] },
       { slug: "production", group: "Operate", title: "Verify & ship", description: "Run the analytics and push checks that should pass before a Flutter release reaches production.", sections: [s("verify", "Verify step by step"), s("push-check", "Verify notification opens"), s("checklist", "Production checklist"), s("upgrade", "Upgrading the SDK") ] },
       { slug: "troubleshooting", group: "Operate", title: "Troubleshooting", description: "Fix configuration, delivery, identity, foreground display and notification-open attribution problems.", sections: [s("setup", "Configuration"), s("events", "Events"), s("push", "Push delivery"), s("opens", "Notification opens") ] },
-      { slug: "reference", group: "Reference", title: "API reference", description: "The public Flutter client, Firebase adapter, notification payload and error surface in package 0.1.5.", sections: [s("setup-methods", "Setup"), s("identity-methods", "Identity"), s("event-methods", "Events & consent"), s("push-methods", "Push"), s("listeners", "Listeners"), s("errors", "Error codes") ] },
+      { slug: "reference", group: "Reference", title: "API reference", description: `The public Flutter client, Firebase adapter, notification payload and error surface in package ${versions.flutter}.`, sections: [s("setup-methods", "Setup"), s("identity-methods", "Identity"), s("event-methods", "Events & consent"), s("push-methods", "Push"), s("listeners", "Listeners"), s("errors", "Error codes") ] },
     ],
   },
   { id: "ios", label: "iOS (Swift)", description: "Native iOS SDK.", status: "coming-soon" },

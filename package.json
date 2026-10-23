@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev --experimental-https",
-    "build": "next build",
+    "build": "node scripts/sync-sdk-versions.mjs && next build",
+    "sync:sdk-versions": "node scripts/sync-sdk-versions.mjs",
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run"
