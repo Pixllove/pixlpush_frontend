@@ -7,6 +7,7 @@ import { DocsProjectProvider } from '@/components/docs/DocsProject';
 import { searchDocs } from '@/components/docs/DocsSearchDialog';
 import { configOptions, documentedMethodNames, errorCodes, internalOptions } from '@/components/docs/react-native/content';
 import { reactNativeGuides } from '@/components/docs/react-native/guides-operate';
+import { flutterGuides } from '@/components/docs/flutter/guides';
 import { availablePlatforms, buildSearchIndex, getPlatform, guideHref, platforms } from '@/components/docs/registry';
 
 const push = vi.fn();
@@ -14,7 +15,7 @@ let pathname = '/docs/react-native/quickstart';
 vi.mock('next/navigation', () => ({ usePathname: () => pathname, useRouter: () => ({ push }) }));
 
 Element.prototype.scrollIntoView = () => {};
-const BACKEND = '/Users/apple/Job/pixlpush_backend/packages';
+const BACKEND = '/Users/apple/Job/pixlpush_backend/packages/react-native/src';
 
 describe('platform registry', () => {
   it('only lists guides for available platforms, each with a renderer and unique section ids', () => {
@@ -31,7 +32,16 @@ describe('platform registry', () => {
   it('builds base-aware URLs so a new platform needs no routing changes', () => {
     expect(guideHref('/docs', 'react-native')).toBe('/docs/react-native');
     expect(guideHref('/dashboard/integrations', 'react-native', 'push', 'tokens')).toBe('/dashboard/integrations/react-native/push#tokens');
-    expect(availablePlatforms.map((p) => p.id)).toEqual(['react-native']);
+    expect(availablePlatforms.map((p) => p.id)).toEqual(['react-native', 'flutter']);
+  });
+
+  it('registers every Flutter guide renderer and section', () => {
+    const flutter = getPlatform('flutter')!;
+    expect(new Set(flutter.guides!.map((g) => g.slug)).size).toBe(flutter.guides!.length);
+    for (const guide of flutter.guides!) {
+      expect(flutterGuides[guide.slug], guide.slug).toBeDefined();
+      expect(new Set(guide.sections.map((s) => s.id)).size).toBe(guide.sections.length);
+    }
   });
 });
 
@@ -69,16 +79,16 @@ describe('content', () => {
   });
 
   it.skipIf(!existsSync(BACKEND))('documents exactly the public methods the SDK exports', () => {
-    const source = readFileSync(`${BACKEND}/core/src/client.ts`, 'utf8') + readFileSync(`${BACKEND}/react-native/src/react-native-sdk.ts`, 'utf8');
+    const source = readFileSync(`${BACKEND}/core/client.ts`, 'utf8') + readFileSync(`${BACKEND}/react-native-sdk.ts`, 'utf8');
     const publicMethods = new Set([...source.matchAll(/^ {2}(?:override )?(?:async )?([a-zA-Z]+)(?:<[^>]+>)?\(/gm)].map((m) => m[1]));
     expect(new Set(documentedMethodNames)).toEqual(publicMethods);
   });
 
   it.skipIf(!existsSync(BACKEND))('documents every configuration option and error code', () => {
-    const types = readFileSync(`${BACKEND}/core/src/types.ts`, 'utf8');
+    const types = readFileSync(`${BACKEND}/core/types.ts`, 'utf8');
     const config = types.slice(types.indexOf('interface PixlPushConfig'), types.indexOf('interface PixlPushStatus'));
     expect(new Set([...configOptions, ...internalOptions].map(([name]) => name))).toEqual(new Set([...config.matchAll(/^ {2}(\w+)\??:/gm)].map((m) => m[1])));
-    const errors = readFileSync(`${BACKEND}/core/src/errors.ts`, 'utf8');
+    const errors = readFileSync(`${BACKEND}/core/errors.ts`, 'utf8');
     expect(new Set(errorCodes.map(([code]) => code))).toEqual(new Set([...errors.matchAll(/\| '([A-Z_]+)'/g)].map((m) => m[1])));
   });
 });

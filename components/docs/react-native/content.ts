@@ -1,8 +1,8 @@
-// React Native SDK content, verified against pixlpush_backend/packages (core + react-native) at 0.2.0.
+// React Native SDK content, verified against pixlpush_backend/packages (core + react-native) at 0.3.3.
 // Every option, default, method and error code here exists in that source; keep it that way.
 
-export const SDK_VERSION = "0.2.0";
-export const REVIEWED_AGAINST = "@pixlpush/react-native 0.2.0";
+export const SDK_VERSION = "0.3.3";
+export const REVIEWED_AGAINST = "@pixlpush/react-native 0.3.3";
 
 export const installCommands = {
   Expo: "npx expo install @pixlpush/react-native @react-native-async-storage/async-storage",
@@ -74,7 +74,7 @@ export default function App() {
 // {
 //   configured: true,
 //   environment: "development",
-//   sdkVersion: "0.2.0",
+//   sdkVersion: "0.3.3",
 //   queueSize: 1,
 //   identified: false,
 //   pixlpushId: "pixlpush_c…",   // permanent PixlPush user ID
@@ -208,15 +208,31 @@ PixlPush.addNotificationReceivedListener((notification) => {
   showInAppBanner(notification.title, notification.body);
 });`,
 
-  manualPush: `// Another library owns tokens and taps (set autoPush: false).
-await PixlPush.updatePushToken(fcmToken, "fcm", "granted");
-await PixlPush.updatePushPermission("denied");
+  cliModule: `import PixlPush, { type NotificationModule } from "@pixlpush/react-native";
 
-// Pass the library's tap/response object; PixlPush normalizes FCM, APNs and Expo shapes.
-await PixlPush.handleNotificationResponse(response);
+// Adapt your CLI notification library once. The SDK still owns normalization,
+// automatic open attribution and duplicate protection.
+const notificationModule: NotificationModule = {
+  addNotificationResponseReceivedListener(listener) {
+    const unsubscribe = registerLocalNotificationPress(listener);
+    return { remove: unsubscribe };
+  },
+  async scheduleNotificationAsync({ content }) {
+    return displayLocalNotification({
+      title: content.title,
+      body: content.body,
+      data: content.data, // preserve pp_job_id
+    });
+  },
+  async getLastNotificationResponseAsync() {
+    return getLocalNotificationLaunchResponse();
+  },
+};
 
-// Or, if you already extracted the job ID from the payload's pp_job_id:
-await PixlPush.recordPushOpened(jobId);`,
+await PixlPush.configure({
+  sdkKey: PIXLPUSH_SDK_KEY,
+  notificationModule,
+});`,
 
   expoToken: `// Android only: with expo-notifications, the device token is the FCM token.
 import * as Notifications from "expo-notifications";
@@ -424,7 +440,7 @@ export const errorCodes: [string, string, string, string][] = [
   ["VALIDATION_ERROR", "no", "Invalid name, property, ID, or payload (422).", "Fix the call; rejected items are discarded."],
   ["PAYLOAD_TOO_LARGE", "no", "HTTP 413.", "Send fewer or smaller properties."],
   ["QUEUE_FULL", "no — reported, not thrown", "The queue hit maxQueueSize and dropped its oldest event (or, if none, its oldest item).", "Restore connectivity; raise maxQueueSize if offline periods are long."],
-  ["NO_IDENTIFIED_USER", "no", "Declared by the SDK; not thrown by 0.2.0 methods.", "—"],
+  ["NO_IDENTIFIED_USER", "no", "Declared by the SDK; not thrown by 0.3.3 methods.", "—"],
   ["STORAGE_ERROR", "no", "Declared by the SDK; storage failures fall back to memory instead.", "—"],
 ];
 
@@ -449,11 +465,9 @@ export const methods: Record<"setup" | "identity" | "events" | "push" | "listene
   ],
   push: [
     { name: "syncPushToken", signature: "syncPushToken()", returns: "Promise<void>", description: "Reads Firebase permission: authorized/provisional sends the FCM token; denied sends permission \"denied\". No-op without @react-native-firebase/messaging.", notes: "Called automatically on configure and on every return to the foreground." },
-    { name: "updatePushToken", signature: 'updatePushToken(token: string, provider: "fcm" | "apns" | "web_push" = "fcm", permission?: string)', returns: "Promise<void>", description: "Registers or rotates a token for this installation. PixlPush 0.2.0 delivers through FCM only, so send FCM tokens." },
+    { name: "updatePushToken", signature: 'updatePushToken(token: string, provider: "fcm" | "apns" | "web_push" = "fcm", permission?: string)', returns: "Promise<void>", description: "Registers or rotates a token for this installation. The mobile push integration uses native FCM tokens." },
     { name: "updatePushPermission", signature: "updatePushPermission(permission: string)", returns: "Promise<void>", description: "Records the OS permission, e.g. \"granted\", \"denied\", \"provisional\"." },
     { name: "handleNotification", signature: "handleNotification(raw: unknown)", returns: "NormalizedPushPayload", description: "For foreground messages: normalizes the payload and emits notification_received. Does not record an open." },
-    { name: "handleNotificationResponse", signature: "handleNotificationResponse(response: unknown)", returns: "Promise<NormalizedPushPayload>", description: "For taps and actions: records the open when the payload has pp_job_id, then emits notification_action (for action buttons) or notification_opened." },
-    { name: "recordPushOpened", signature: "recordPushOpened(notificationJobId: string, payload?: NormalizedPushPayload)", returns: "Promise<void>", description: "Queues open attribution for a PixlPush job and flushes immediately." },
     { name: "setInitialNotification", signature: "setInitialNotification(raw: unknown)", returns: "NormalizedPushPayload", description: "Stores a cold-start payload your native layer captured, for getInitialNotification()." },
     { name: "getInitialNotification", signature: "getInitialNotification()", returns: "NormalizedPushPayload | null", description: "Returns and clears the payload stored by setInitialNotification. It does not query Firebase; the SDK handles Firebase cold starts itself." },
   ],

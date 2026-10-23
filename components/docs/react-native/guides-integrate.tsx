@@ -122,7 +122,7 @@ export function Push({ base }: GuideProps) {
         "PixlPush sends through FCM (FCM relays to APNs on iOS) with a pp_job_id in the data payload.",
         "A tap is reported back with that job ID, which attributes the open to the campaign or journey.",
       ]} />
-      <Callout tone="warning" title="FCM tokens only">PixlPush 0.2.0 delivers only to tokens registered with provider <code>&quot;fcm&quot;</code>. Raw APNs tokens and Expo push tokens are stored but never receive a notification.</Callout>
+      <Callout tone="warning" title="Use native FCM tokens">PixlPush mobile push delivery uses tokens registered with provider <code>&quot;fcm&quot;</code>. Expo push tokens are not interchangeable with the native FCM token used by Firebase Messaging.</Callout>
       <Body>Tokens rotate and can move between users on a shared device. Never use one as a user identifier.</Body>
     </Section>
     <Section id="listeners" title="Register listeners first">
@@ -148,7 +148,7 @@ export function Push({ base }: GuideProps) {
     </Section>
     <Section id="states" title="Foreground, background, cold start">
       <DataTable code={false} headers={["App state", "Receipt", "Tap"]} rows={[
-        ["Foreground", "Not shown by FCM. Forward onMessage (below).", "Automatic if you re-post with expo-notifications and keep data; otherwise call handleNotificationResponse() from your UI."],
+        ["Foreground", "Not shown by FCM. The SDK re-posts it through expo-notifications or an injected CLI notificationModule.", "Automatic when the notification module preserves data.pp_job_id."],
         ["Background", "Shown by the OS.", "Automatic: recorded and notification_opened emitted."],
         ["Quit (cold start)", "Shown by the OS.", "Automatic during configure() — which is why listeners must exist first."],
       ]} />
@@ -173,11 +173,12 @@ export function Push({ base }: GuideProps) {
     <Section id="expo-notifications" title="Using expo-notifications">
       <Body>If <code>expo-notifications</code> is installed, the SDK also records taps from its response listener. For tokens, React Native Firebase is the supported path on both platforms. Without it, Android can still register its FCM device token:</Body>
       <CodeBlock code={code.expoToken} />
-      <Body>On iOS <code>getDevicePushTokenAsync()</code> returns a raw APNs token, which PixlPush 0.2.0 can’t deliver to — use React Native Firebase on iOS.</Body>
+      <Body>On iOS, use React Native Firebase for the supported FCM registration path rather than passing an Expo push token to PixlPush.</Body>
     </Section>
-    <Section id="manual" title="Manual integration">
-      <Body>If another library (such as Notifee) owns tokens and taps, set <code>autoPush: false</code> and report them yourself.</Body>
-      <CodeBlock code={code.manualPush} />
+    <Section id="cli-module" title="React Native CLI adapter">
+      <Body>A bare React Native CLI app can use Notifee or another local-notification library. Pass a <code>NotificationModule</code> to <code>configure()</code>; the adapter forwards display and response callbacks to the SDK. Do not call a click endpoint or a manual PixlPush open method.</Body>
+      <CodeBlock code={code.cliModule} filename="src/notifications/notification-module.ts" />
+      <Callout tone="warning" title="Preserve the PixlPush data">When your local library displays the notification, keep <code>content.data</code> unchanged, especially <code>pp_job_id</code>. The SDK then records the tap automatically.</Callout>
     </Section>
     <Section id="test" title="Test matrix">
         <Checklist items={[

@@ -1,4 +1,4 @@
-import { ArrowForwardRounded, CodeRounded, EventNoteRounded, LibraryBooksRounded } from "@mui/icons-material";
+import { ArrowForwardRounded, CodeRounded, EventNoteRounded, LibraryBooksRounded, PhoneAndroidRounded } from "@mui/icons-material";
 import { Box, Card, CardContent, Chip, Stack, Typography } from "@mui/material";
 import DashboardFrame from "@/components/dashboard/DashboardFrame";
 import { LinkButton } from "@/components/docs/links";
@@ -13,6 +13,13 @@ const steps = [
     description: "Install the React Native SDK, create an SDK key, connect Firebase for push, and send your first verified event.",
     href: "/dashboard/integrations/react-native/quickstart",
     icon: CodeRounded,
+  },
+  {
+    step: "Step 1 · Flutter",
+    title: "Flutter SDK integration",
+    description: "Install the Flutter package, configure identity and events, connect Firebase, and verify automatic notification-open attribution on Android and iOS.",
+    href: "/dashboard/integrations/flutter/quickstart",
+    icon: PhoneAndroidRounded,
   },
   {
     step: "Step 2 · optional",

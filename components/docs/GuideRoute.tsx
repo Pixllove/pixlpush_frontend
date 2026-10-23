@@ -3,11 +3,12 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import DocsPage from "./DocsPage";
 import { reactNativeGuides } from "./react-native/guides-operate";
+import { flutterGuides } from "./flutter/guides";
 import type { GuideProps } from "./react-native/guides-setup";
 import { getGuide, getPlatform } from "./registry";
 
 // A new platform registers its renderers here, keyed by the slugs in registry.ts.
-const renderers: Record<string, Record<string, ComponentType<GuideProps>>> = { "react-native": reactNativeGuides };
+const renderers: Record<string, Record<string, ComponentType<GuideProps>>> = { "react-native": reactNativeGuides, flutter: flutterGuides };
 
 export function guideParams(platformId: string) {
   return (getPlatform(platformId)?.guides ?? []).map((guide) => ({ guide: guide.slug ? [guide.slug] : [] }));

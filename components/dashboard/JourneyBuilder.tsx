@@ -1064,7 +1064,7 @@ function MetricUsersPanel({ blockId, blockTitle, type, label, onClose }: OpenMet
                   >
                     <Stack direction="row" alignItems="center" gap={1}>
                       <Typography fontWeight={600} fontSize="var(--fs-14)" noWrap sx={{ flex: 1, minWidth: 0 }}>
-                        {user.name || user.email || user.externalUserId || "Unnamed user"}
+                        {user.name || user.email || user.externalUserId || user.id}
                       </Typography>
                       {statusText && (
                         <Box

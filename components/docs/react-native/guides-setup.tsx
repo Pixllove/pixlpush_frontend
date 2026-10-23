@@ -167,7 +167,7 @@ export function Installation({ base }: GuideProps) {
     <Section id="api-url" title="Where data is sent">
       <Body>There is no server URL to configure, in development or production. <b>The SDK key decides where data goes</b>, the way a Sentry DSN carries its host. To switch servers, switch keys.</Body>
       <Body>Create a development key and a production key in the dashboard, put each in the matching environment file, and you’re done.</Body>
-      <Body>The SDK also accepts <code>apiBaseUrl</code> and <code>sdkVersion</code>. Leave both unset: the key and the package already provide them.</Body>
+      <Body>Leave endpoint and SDK-version overrides unset. The SDK key selects the endpoint and the package reports its own version.</Body>
     </Section>
   </>;
 }

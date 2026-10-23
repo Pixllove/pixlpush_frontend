@@ -7,6 +7,7 @@ import BuildCircleOutlined from "@mui/icons-material/BuildCircleOutlined";
 import MenuBookRounded from "@mui/icons-material/MenuBookRounded";
 import KeyRounded from "@mui/icons-material/KeyRounded";
 import NotificationsActiveOutlined from "@mui/icons-material/NotificationsActiveOutlined";
+import PhoneAndroidRounded from "@mui/icons-material/PhoneAndroidRounded";
 import ShieldOutlined from "@mui/icons-material/ShieldOutlined";
 import { Box, Stack, Typography } from "@mui/material";
 import { tokens } from "@/lib/theme";
@@ -17,7 +18,7 @@ import { guideHref, platforms } from "@/components/docs/registry";
 
 export const metadata: Metadata = {
   title: "Developer docs | PixlPush",
-  description: "Integrate PixlPush in React Native and Expo: install the SDK, identify users, track events and deliver push notifications.",
+  description: "Integrate PixlPush in React Native, Expo and Flutter: identify users, track events and attribute push notification opens.",
 };
 
 const hero = `import PixlPush from "@pixlpush/react-native";
@@ -46,6 +47,7 @@ const cards = [
   { href: rn("firebase"), icon: <NotificationsActiveOutlined />, title: "Firebase & push setup", description: "Every file and key push needs, step by step." },
   { href: rn("sdk-keys"), icon: <KeyRounded />, title: "SDK keys", description: "Create, rotate, revoke, delete." },
   { href: rn("reference"), icon: <ApiRounded />, title: "API reference", description: "Every method and error code." },
+  { href: guideHref("/docs", "flutter", "quickstart"), icon: <PhoneAndroidRounded />, title: "Flutter SDK", description: "Flutter setup, Firebase push and automatic open attribution." },
   { href: rn("security"), icon: <ShieldOutlined />, title: "Security", description: "What is public and what never ships." },
   { href: rn("troubleshooting"), icon: <BuildCircleOutlined />, title: "Troubleshooting", description: "Symptoms, causes and fixes." },
 ];
@@ -58,7 +60,7 @@ export default function DocsHome() {
       <Box>
         <Typography component="p" sx={{ color: tokens.accent, fontSize: "var(--fs-12)", fontWeight: 600, letterSpacing: "var(--ls-overline)", textTransform: "uppercase" }}>PixlPush developer docs</Typography>
         <Typography component="h1" sx={{ mt: 1.5, color: tokens.text, fontSize: { xs: "var(--fs-32)", md: "var(--fs-48)" }, fontWeight: 600, lineHeight: 1.08, letterSpacing: "-0.035em" }}>Integrate PixlPush in your app.</Typography>
-        <Typography sx={{ mt: 2, maxWidth: 480, color: tokens.textSecondary, fontSize: { xs: "var(--fs-16)", md: "var(--fs-18)" }, lineHeight: 1.65 }}>Identify users, track product events, keep data flowing offline, and attribute every push notification — with the React Native & Expo SDK.</Typography>
+        <Typography sx={{ mt: 2, maxWidth: 480, color: tokens.textSecondary, fontSize: { xs: "var(--fs-16)", md: "var(--fs-18)" }, lineHeight: 1.65 }}>Identify users, track product events, keep data flowing offline, and attribute every push notification — with the React Native, Expo and Flutter SDKs.</Typography>
         <Stack direction={{ xs: "column", sm: "row" }} gap={1.5} sx={{ mt: 4, "& .MuiButton-root": { whiteSpace: "nowrap" } }}>
           <LinkButton href={rn("quickstart")} variant="contained" size="large">Start the quickstart</LinkButton>
         </Stack>
