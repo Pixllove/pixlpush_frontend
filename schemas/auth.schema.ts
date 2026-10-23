@@ -1,35 +1,48 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 /**
  * These mirror pixlpush/src/modules/auth/auth.schema.ts. The backend revalidates
  * everything; matching here only saves a round-trip and keeps messages identical.
  */
 
-const email = z.string().trim().toLowerCase().email('Enter a valid email address.').max(255);
+const email = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .email("Enter a valid email address.")
+  .max(255);
 
 /** Backend requires 12 characters minimum (length over composition rules). */
 const newPassword = z
   .string()
-  .min(12, 'Password must be at least 12 characters.')
-  .max(200, 'Password must be at most 200 characters.');
+  .min(12, "Password must be at least 12 characters.")
+  .max(200, "Password must be at most 200 characters.");
 
 const token = z.string().min(10).max(500);
 
 export const loginSchema = z.object({
   email,
-  // Login only checks non-empty: an existing short password must still work.
-  password: z.string().min(1, 'Enter your password.').max(200),
+  password: z.string().min(1, "Enter your password.").max(200),
 });
 
 const signupApiSchema = z.object({
   email,
   password: newPassword,
   name: z.string().trim().min(1).max(120).optional(),
-  company: z.string().trim().max(160, 'Company name must be at most 160 characters.').optional(),
+  company: z
+    .string()
+    .trim()
+    .max(160, "Company name must be at most 160 characters.")
+    .optional(),
 });
 
 export const signupSchema = signupApiSchema.extend({
-  legalAccepted: z.boolean().refine(Boolean, 'You must accept the Terms of Service and Privacy Policy before proceeding.'),
+  legalAccepted: z
+    .boolean()
+    .refine(
+      Boolean,
+      "You must accept the Terms of Service and Privacy Policy before proceeding.",
+    ),
 });
 
 export const forgotPasswordSchema = z.object({ email });
@@ -41,19 +54,19 @@ export const resetPasswordSchema = z
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: 'Passwords do not match.',
-    path: ['confirmPassword'],
+    message: "Passwords do not match.",
+    path: ["confirmPassword"],
   });
 
 export const changePasswordSchema = z
   .object({
-    currentPassword: z.string().min(1, 'Enter your current password.').max(200),
+    currentPassword: z.string().min(1, "Enter your current password.").max(200),
     newPassword,
     confirmPassword: z.string(),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
-    message: 'Passwords do not match.',
-    path: ['confirmPassword'],
+    message: "Passwords do not match.",
+    path: ["confirmPassword"],
   });
 
 /** Google-only accounts: first password, no current password to confirm. */
@@ -63,8 +76,8 @@ export const setPasswordSchema = z
     confirmPassword: z.string(),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
-    message: 'Passwords do not match.',
-    path: ['confirmPassword'],
+    message: "Passwords do not match.",
+    path: ["confirmPassword"],
   });
 
 export const verifyEmailSchema = z.object({ token });
