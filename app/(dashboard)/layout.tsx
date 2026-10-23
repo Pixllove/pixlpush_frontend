@@ -1,4 +1,5 @@
 import { HydrationBoundary, QueryClient, dehydrate } from '@tanstack/react-query';
+import SessionKeepAlive from '@/components/auth/SessionKeepAlive';
 import { authKeys } from '@/lib/auth/api';
 import { callBackend } from '@/lib/auth/server';
 import { projectKeys } from '@/lib/projects/api';
@@ -26,5 +27,10 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
   if (me.ok) queryClient.setQueryData(authKeys.currentUser(), (me.body as { data: unknown }).data);
   if (projects.ok) queryClient.setQueryData(projectKeys.list(), (projects.body as { data: unknown }).data);
 
-  return <HydrationBoundary state={dehydrate(queryClient)}>{children}</HydrationBoundary>;
+  return (
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <SessionKeepAlive />
+      {children}
+    </HydrationBoundary>
+  );
 }
