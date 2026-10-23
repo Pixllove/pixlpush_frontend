@@ -28,6 +28,8 @@ const nextConfig = {
   },
   async rewrites() {
     return [
+      // Public SDK endpoint: hides the Supabase project URL from published SDKs.
+      { source: '/sdk/v1/:path*', destination: 'https://qfhnreercknljxugaoit.supabase.co/functions/v1/pixlpush/sdk/v1/:path*' },
       {
         source: '/__/:path*',
         destination: `https://${process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}/__/:path*`,
