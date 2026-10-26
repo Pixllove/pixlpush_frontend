@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useState } from 'react';
+import NextLink from 'next/link';
 import { Box, Button, ButtonBase, Divider, Link, ListItemIcon, Menu, MenuItem, Stack, Typography } from '@mui/material';
 import ArrowOutwardRounded from '@mui/icons-material/ArrowOutwardRounded';
 import DashboardRounded from '@mui/icons-material/DashboardRounded';
@@ -104,11 +105,11 @@ export function SiteAccount() {
           </Box>
         </Stack>
         <Divider />
-        <MenuItem href="/dashboard" onClick={close} sx={{ px: 2.2, py: 1.25, '&:hover': { bgcolor: '#f5edff', color: 'primary.main' } }}>
+        <MenuItem component={NextLink} href="/dashboard" onClick={close} sx={{ px: 2.2, py: 1.25, '&:hover': { bgcolor: '#f5edff', color: 'primary.main' } }}>
           <ListItemIcon><DashboardRounded fontSize="small" /></ListItemIcon>
           Dashboard
         </MenuItem>
-        <MenuItem href="/dashboard/account" onClick={close} sx={{ px: 2.2, py: 1.25, '&:hover': { bgcolor: '#f5edff', color: 'primary.main' } }}>
+        <MenuItem component={NextLink} href="/dashboard/account" onClick={close} sx={{ px: 2.2, py: 1.25, '&:hover': { bgcolor: '#f5edff', color: 'primary.main' } }}>
           <ListItemIcon><PersonOutlineRounded fontSize="small" /></ListItemIcon>
           My profile
         </MenuItem>
