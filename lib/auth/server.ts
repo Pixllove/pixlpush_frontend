@@ -1,6 +1,7 @@
 import 'server-only';
 import { cookies, headers as requestHeaders } from 'next/headers';
 import type { ApiErrorBody } from '@/types/auth';
+import { SUPPORT_GUEST_COOKIE } from '@/lib/support/cookies';
 
 /**
  * The Fastify backend. Server-side only: the browser never calls it directly,
@@ -43,11 +44,14 @@ const cookieOptions = (maxAge: number) =>
 export function setSessionCookies(accessToken: string, refreshToken?: string): void {
   cookies().set(SESSION_COOKIE, accessToken, cookieOptions(SESSION_MAX_AGE));
   if (refreshToken) cookies().set(REFRESH_COOKIE, refreshToken, cookieOptions(REFRESH_MAX_AGE));
+  // A guest support token must never survive an account transition.
+  cookies().delete(SUPPORT_GUEST_COOKIE);
 }
 
 export function clearSessionCookies(): void {
   cookies().delete(SESSION_COOKIE);
   cookies().delete(REFRESH_COOKIE);
+  cookies().delete(SUPPORT_GUEST_COOKIE);
 }
 
 const transientCookieOptions = (maxAge: number) => ({ ...cookieOptions(maxAge), sameSite: 'strict' as const });
@@ -96,11 +100,12 @@ export interface UpstreamResult<T> {
  */
 export async function callBackend<T>(
   path: string,
-  init: { method?: string; body?: unknown; auth?: boolean; contentType?: string } = {},
+  init: { method?: string; body?: unknown; auth?: boolean; contentType?: string; headers?: Record<string, string> } = {},
 ): Promise<UpstreamResult<T>> {
   // A contentType means a raw text body (CSV user import), forwarded as-is.
   const headers: Record<string, string> = {
     'Content-Type': init.contentType ?? 'application/json',
+    ...init.headers,
     ...SUPABASE_REGION,
   };
 
@@ -250,7 +255,7 @@ export async function refreshSession(): Promise<RefreshResult | undefined> {
  */
 export async function callBackendWithRefresh<T>(
   path: string,
-  init: { method?: string; body?: unknown; contentType?: string } = {},
+  init: { method?: string; body?: unknown; contentType?: string; headers?: Record<string, string> } = {},
 ): Promise<UpstreamResult<T>> {
   const first = await callBackend<T>(path, { ...init, auth: true });
   if (first.status !== 401) return first;

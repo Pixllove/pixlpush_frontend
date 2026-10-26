@@ -93,7 +93,7 @@ export default function DashboardFrame({
     <>
     <Box className={`dashboard-app${sidebarCollapsed ? " sidebar-is-collapsed" : ""}${mobileOpen ? " mobile-navigation-open" : ""}`}>
       <DashboardSidebar
-        active={active}
+        active={supportOpen ? 'Contact support' : active}
         setActive={() => setMobileOpen(false)}
         mobileOpen={mobileOpen}
         collapsed={sidebarCollapsed}
@@ -247,7 +247,13 @@ export default function DashboardFrame({
       </Box>
     </Box>
     <CreateProjectDialog open={createOpen} onClose={() => setCreateOpen(false)} />
-    <SupportChatWidget showLauncher={false} isOpen={supportOpen} onClose={() => setSupportOpen(false)} />
+    <SupportChatWidget
+      showLauncher={false}
+      isOpen={supportOpen}
+      onClose={() => setSupportOpen(false)}
+      projectId={activeProject?.id}
+      authenticated={Boolean(currentUser?.account)}
+    />
     </>
   );
 }
