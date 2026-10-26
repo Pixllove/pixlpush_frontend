@@ -7,7 +7,9 @@ import { SUPPORT_GUEST_COOKIE } from '@/lib/support/cookies';
  * The Fastify backend. Server-side only: the browser never calls it directly,
  * so the access token can live in an httpOnly cookie that JS cannot read.
  */
-const API_URL = process.env.BACKEND_API_URL ?? 'http://localhost:3000/api/v1';
+// Keep the local frontend (3000) and Fastify API (4000) on separate ports even
+// when a developer has not created a .env.local file yet.
+const API_URL = process.env.BACKEND_API_URL ?? 'http://localhost:4000/api/v1';
 /** Runs the Supabase Edge Function next to the database (Tokyo); only sent when the backend is on Supabase. */
 const SUPABASE_REGION: Record<string, string> = {
   ...(API_URL.includes('.supabase.co') ? { 'x-region': 'ap-northeast-1' } : {}),
