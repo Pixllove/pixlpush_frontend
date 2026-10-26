@@ -9,6 +9,7 @@ import { CssBaseline, ThemeProvider } from '@mui/material';
 import { store } from '@/lib/store';
 import { theme } from '@/lib/theme';
 import { QueryProvider } from './QueryProvider';
+import NavigationProgress from './NavigationProgress';
 
 /**
  * Sends MUI's styles in the document head during server rendering.
@@ -48,5 +49,5 @@ function EmotionRegistry({ children }: { children: React.ReactNode }) {
 }
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
-  return <EmotionRegistry><Provider store={store}><QueryProvider><ThemeProvider theme={theme}><CssBaseline />{children}</ThemeProvider></QueryProvider></Provider></EmotionRegistry>;
+  return <EmotionRegistry><Provider store={store}><QueryProvider><ThemeProvider theme={theme}><CssBaseline /><NavigationProgress />{children}</ThemeProvider></QueryProvider></Provider></EmotionRegistry>;
 }

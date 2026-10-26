@@ -100,6 +100,7 @@ export default function DashboardFrame({
         onToggleCollapse={() => setSidebarCollapsed(value => !value)}
         onChangeProject={changeProject}
         onOpenSupport={() => setSupportOpen(true)}
+        onCloseSupport={() => setSupportOpen(false)}
       />
       {mobileOpen && (
         <Box

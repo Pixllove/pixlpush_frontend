@@ -44,7 +44,7 @@ const groups = [
   },
 ];
 
-export default function DashboardSidebar({ active, setActive, mobileOpen, collapsed, onToggleCollapse, onChangeProject, onOpenSupport }: {
+export default function DashboardSidebar({ active, setActive, mobileOpen, collapsed, onToggleCollapse, onChangeProject, onOpenSupport, onCloseSupport }: {
   active: string;
   setActive: (value: string) => void;
   mobileOpen: boolean;
@@ -53,6 +53,7 @@ export default function DashboardSidebar({ active, setActive, mobileOpen, collap
   /** A Project id, or `create` to start a new one. */
   onChangeProject: (value: string) => void;
   onOpenSupport: () => void;
+  onCloseSupport: () => void;
 }) {
   const { projects, active: activeProject, isPending } = useActiveProject();
   const unreadNotifications = useNotificationUnreadCount();
@@ -150,11 +151,11 @@ export default function DashboardSidebar({ active, setActive, mobileOpen, collap
                       component={Link}
                       href={href}
                       prefetch
-                      onClick={() => { setClicked(label); setActive(label); }}
                       className={`dashboard-nav${label === 'Onboarding Guide' ? ' onboarding-nav' : ''}${selected ? ' active' : ''}`}
                       selected={selected}
                       aria-current={selected ? 'page' : undefined}
                       aria-label={collapsed ? label : undefined}
+                      onClick={() => { setClicked(label); setActive(label); onCloseSupport(); }}
                     >
                       <ListItemIcon className="dashboard-nav-icon"><Icon /></ListItemIcon>
                       <ListItemText className="dashboard-nav-label" primary={label} />
@@ -177,7 +178,9 @@ export default function DashboardSidebar({ active, setActive, mobileOpen, collap
         <Tooltip title={collapsed ? 'Contact support' : ''} placement="right">
           <ListItemButton
             className={`dashboard-nav sidebar-support-link${current === 'Contact support' ? ' active' : ''}`}
+            selected={current === 'Contact support'}
             onClick={() => { setClicked('Contact support'); setActive('Contact support'); onOpenSupport(); }}
+            aria-current={current === 'Contact support' ? 'page' : undefined}
             aria-label="Contact support"
           >
             <ListItemIcon className="dashboard-nav-icon"><SupportAgentOutlined /></ListItemIcon>

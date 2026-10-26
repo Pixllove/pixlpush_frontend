@@ -1,6 +1,31 @@
 * {
   box-sizing: border-box;
 }
+
+.navigation-progress {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 2000;
+  height: 3px;
+  overflow: hidden;
+  pointer-events: none;
+  background: transparent;
+  transition: opacity 180ms ease;
+}
+.navigation-progress-bar {
+  height: 100%;
+  min-width: 1%;
+  background: linear-gradient(90deg, #7444df 0%, #b368e8 42%, #ffd36e 76%, #ff914f 100%);
+  box-shadow: 0 0 12px rgba(181, 105, 232, .72), 0 0 4px rgba(255, 211, 110, .82);
+  transition: width 180ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .navigation-progress,
+  .navigation-progress-bar { transition-duration: 0ms; }
+}
+
 :root {
   --fs-11: .6875rem;
   --fs-12: .75rem;
