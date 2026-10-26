@@ -4211,6 +4211,28 @@ a {
   white-space: nowrap;
   box-shadow: 0 3px 9px rgba(239, 91, 85, 0.28);
 }
+.support-nav-count {
+  flex: none;
+  min-width: 20px;
+  height: 20px;
+  margin-left: auto;
+  padding: 0 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #291534;
+  background: #ffd36e;
+  border: 2px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: 0 3px 9px rgba(255, 198, 109, 0.28);
+}
+.dashboard-nav.Mui-selected .support-nav-count {
+  background: #ffe08c;
+}
 .dashboard-nav.Mui-selected .notifications-nav-count {
   background: #ff7168;
 }
@@ -4242,6 +4264,18 @@ a {
   border: 2px solid var(--sb-canvas);
   font-size: 0;
   box-shadow: none;
+}
+.sidebar-is-collapsed .support-nav-count {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  min-width: 8px;
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border-width: 1px;
+  overflow: hidden;
+  color: transparent;
 }
 .sidebar-project.MuiButtonBase-root {
   box-sizing: border-box;
@@ -14605,6 +14639,25 @@ html:has(.home-experience) {
 html:has(.home-experience)::-webkit-scrollbar {
   display: none;
 }
+/* Marketing pages keep normal wheel, touch and keyboard scrolling, but use the
+   same clean edge-to-edge treatment as the dashboard home without showing a
+   browser scrollbar over the hero. Nested chat and content scroll areas remain
+   independently scrollable. */
+html:has(.reference-hero) {
+  scrollbar-width: none;
+}
+html:has(.reference-hero)::-webkit-scrollbar {
+  display: none;
+}
+/* Dashboard routes use the fixed navigation rail and shared shell. Keep the
+   document scrollable for tall panels, but remove the duplicate browser rail
+   so every dashboard tab has the same clean edge-to-edge frame. */
+html:has(.dashboard-app) {
+  scrollbar-width: none;
+}
+html:has(.dashboard-app)::-webkit-scrollbar {
+  display: none;
+}
 /* Home opens without a scrollbar: the hero's vertical rhythm follows the window's height (the orb and the
    gaps shrink first), and the page padding is trimmed, so everything fits from about 750px tall at desktop
    width. Shorter or narrower windows scroll as normal. The chat view keeps the standard page padding. */
@@ -18731,5 +18784,174 @@ body {
   .notification-workspace-tabs .MuiTab-root,
   .notification-row.MuiListItemButton-root {
     transition: none;
+  }
+}
+
+/* Support assistant response state: quiet, deliberate motion instead of a
+   generic spinner. This follows the 21st.dev thinking-indicator pattern while
+   keeping the PixlPush bubble, avatar, and gold accent palette. */
+@keyframes supportChatTypingBubble {
+  from { opacity: 0; transform: translateY(5px) scale(.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes supportChatTypingAvatar {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 211, 110, .18); transform: scale(1); }
+  50% { box-shadow: 0 0 0 5px rgba(255, 211, 110, 0); transform: scale(1.035); }
+}
+[role="status"][aria-label="PixlPush assistant is typing"] {
+  animation: supportChatTypingBubble .32s cubic-bezier(.22, 1, .36, 1);
+}
+[role="status"][aria-label="PixlPush assistant is typing"] .MuiAvatar-root {
+  animation: supportChatTypingAvatar 1.8s ease-in-out infinite;
+}
+[role="status"][aria-label="PixlPush assistant is typing"] > .MuiBox-root {
+  box-shadow: 0 8px 24px rgba(8, 2, 16, .18);
+}
+@media (prefers-reduced-motion: reduce) {
+  [role="status"][aria-label="PixlPush assistant is typing"],
+  [role="status"][aria-label="PixlPush assistant is typing"] .MuiAvatar-root {
+    animation: none;
+  }
+}
+
+/* Landing-page support launcher and modal motion. The launcher stays alive
+   without distracting the user, then gives clear hover/press feedback. */
+@keyframes supportLauncherBreath {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-2px) scale(1.025); }
+}
+@keyframes supportLauncherHalo {
+  0%, 100% { opacity: .42; transform: scale(.96); }
+  50% { opacity: .08; transform: scale(1.16); }
+}
+@keyframes supportLauncherWave {
+  0% { opacity: .68; transform: scale(.9); }
+  68%, 100% { opacity: 0; transform: scale(1.48); }
+}
+@keyframes supportLauncherPress {
+  0% { transform: scale(1); }
+  32% { transform: scale(.91); }
+  68% { transform: scale(1.035); }
+  100% { transform: scale(1); }
+}
+@keyframes supportModalEnter {
+  from { opacity: 0; transform: translateY(14px) scale(.96); filter: blur(2px); }
+  to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+button[aria-label^="Open PixlPush support chat"],
+button[aria-label^="Open support chat"] {
+  isolation: isolate;
+  animation: supportLauncherBreath 3.4s ease-in-out infinite;
+  transition: transform .2s cubic-bezier(.22, 1, .36, 1), box-shadow .2s ease, filter .2s ease !important;
+}
+button[aria-label^="Open PixlPush support chat"]::before,
+button[aria-label^="Open support chat"]::before {
+  content: "";
+  position: absolute;
+  inset: -10px;
+  z-index: -1;
+  border: 2px solid rgba(169, 107, 234, .48);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: supportLauncherWave 2.6s ease-out infinite;
+}
+button[aria-label^="Open PixlPush support chat"]::after,
+button[aria-label^="Open support chat"]::after {
+  content: "";
+  position: absolute;
+  inset: -10px;
+  z-index: -1;
+  border: 2px solid rgba(255, 211, 110, .42);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: supportLauncherWave 2.6s ease-out 1.3s infinite;
+}
+button[aria-label^="Open PixlPush support chat"]:hover,
+button[aria-label^="Open support chat"]:hover {
+  animation-play-state: paused;
+  filter: saturate(1.08) brightness(1.04);
+  transform: scale(1.025) !important;
+  box-shadow: 0 0 0 8px rgba(169, 107, 234, .16), 0 20px 44px rgba(34, 14, 56, .42) !important;
+}
+button[aria-label^="Open PixlPush support chat"]:active,
+button[aria-label^="Open support chat"]:active {
+  animation: supportLauncherPress .42s cubic-bezier(.22, 1, .36, 1) !important;
+  filter: brightness(.96);
+}
+button[aria-expanded="true"] {
+  animation: none;
+  transition: transform .22s cubic-bezier(.22, 1, .36, 1), box-shadow .2s ease !important;
+}
+.support-chat-close-button {
+  position: relative;
+  overflow: visible !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  border-radius: 50% !important;
+  transition: transform .28s cubic-bezier(.22, 1, .36, 1), color .2s ease, background-color .2s ease !important;
+}
+[role="dialog"][aria-label="PixlPush support chat"] .support-chat-close-button {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  padding: 0;
+}
+.support-chat-launcher.support-chat-close-button {
+  width: 68px;
+  height: 68px;
+  min-width: 68px;
+  padding: 0;
+}
+.support-chat-close-button::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border: 1px solid rgba(255, 211, 110, .34);
+  border-radius: 50%;
+  opacity: 0;
+  transform: scale(.72);
+  transition: opacity .22s ease, transform .28s cubic-bezier(.22, 1, .36, 1);
+  pointer-events: none;
+}
+.support-chat-close-button svg {
+  transition: transform .3s cubic-bezier(.22, 1, .36, 1);
+}
+.support-chat-close-button:hover {
+  color: #ffd36e !important;
+  background-color: rgba(255, 211, 110, .1) !important;
+  transform: scale(1.08);
+}
+.support-chat-close-button:hover::before {
+  opacity: 1;
+  transform: scale(1);
+}
+.support-chat-close-button:hover svg {
+  transform: rotate(90deg) scale(1.08);
+}
+.support-chat-close-button:active {
+  transform: scale(.9);
+}
+.support-chat-close-button:active svg {
+  transform: rotate(90deg) scale(.9);
+}
+[role="dialog"][aria-label="PixlPush support chat"] {
+  transform-origin: bottom right;
+  animation: supportModalEnter .34s cubic-bezier(.22, 1, .36, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  button[aria-label^="Open PixlPush support chat"],
+  button[aria-label^="Open support chat"],
+  button[aria-label^="Open PixlPush support chat"]::before,
+  button[aria-label^="Open support chat"]::before,
+  button[aria-label^="Open PixlPush support chat"]::after,
+  button[aria-label^="Open support chat"]::after,
+  .support-chat-close-button,
+  .support-chat-close-button::before,
+  .support-chat-close-button svg,
+  [role="dialog"][aria-label="PixlPush support chat"] {
+    animation: none;
+    transition: none !important;
   }
 }

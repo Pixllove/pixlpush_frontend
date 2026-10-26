@@ -51,6 +51,7 @@ export default function DashboardFrame({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
+  const [supportUnread, setSupportUnread] = useState(0);
   const [createOpen, setCreateOpen] = useState(false);
   const { active: activeProject, isEmpty, selectProject } = useActiveProject();
   const { data: currentUser, isPending: userPending } = useCurrentUser();
@@ -101,6 +102,7 @@ export default function DashboardFrame({
         onChangeProject={changeProject}
         onOpenSupport={() => setSupportOpen(true)}
         onCloseSupport={() => setSupportOpen(false)}
+        supportUnread={supportUnread}
       />
       {mobileOpen && (
         <Box
@@ -252,6 +254,7 @@ export default function DashboardFrame({
       showLauncher={false}
       isOpen={supportOpen}
       onClose={() => setSupportOpen(false)}
+      onUnreadChange={setSupportUnread}
       projectId={activeProject?.id}
       authenticated={Boolean(currentUser?.account)}
     />

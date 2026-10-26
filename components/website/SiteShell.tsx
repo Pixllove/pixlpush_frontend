@@ -41,6 +41,7 @@ import PhoneIphoneRounded from "@mui/icons-material/PhoneIphoneRounded";
 import AccountBalanceRounded from "@mui/icons-material/AccountBalanceRounded";
 import { SiteAccount, SiteAccountDrawer } from "./SiteAccount";
 import SupportChatWidget from "./SupportChatWidget";
+import { useCurrentUser } from "@/hooks/auth/use-current-user";
 
 const links = [
   ["Product", "/product"],
@@ -673,12 +674,14 @@ export function SiteFooter() {
   );
 }
 export function SiteShell({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  const { isAuthenticated } = useCurrentUser();
+
   return (
     <Box className={`website-shell ${className}`.trim()} sx={{ bgcolor: className.includes("pricing-experience") ? '#fffaf8' : '#160d20', color: className.includes("pricing-experience") ? '#241536' : '#f8f3fc' }}>
       <SiteHeader />
       {children}
       <SiteFooter />
-      <SupportChatWidget />
+      <SupportChatWidget authenticated={isAuthenticated} />
     </Box>
   );
 }

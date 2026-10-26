@@ -44,7 +44,7 @@ const groups = [
   },
 ];
 
-export default function DashboardSidebar({ active, setActive, mobileOpen, collapsed, onToggleCollapse, onChangeProject, onOpenSupport, onCloseSupport }: {
+export default function DashboardSidebar({ active, setActive, mobileOpen, collapsed, onToggleCollapse, onChangeProject, onOpenSupport, onCloseSupport, supportUnread = 0 }: {
   active: string;
   setActive: (value: string) => void;
   mobileOpen: boolean;
@@ -54,6 +54,7 @@ export default function DashboardSidebar({ active, setActive, mobileOpen, collap
   onChangeProject: (value: string) => void;
   onOpenSupport: () => void;
   onCloseSupport: () => void;
+  supportUnread?: number;
 }) {
   const { projects, active: activeProject, isPending } = useActiveProject();
   const unreadNotifications = useNotificationUnreadCount();
@@ -185,6 +186,7 @@ export default function DashboardSidebar({ active, setActive, mobileOpen, collap
           >
             <ListItemIcon className="dashboard-nav-icon"><SupportAgentOutlined /></ListItemIcon>
             <ListItemText className="dashboard-nav-label" primary="Contact support" />
+            {supportUnread > 0 && <span className="support-nav-count" aria-label={`${supportUnread} unread support messages`}>{formatNotificationCount(supportUnread)}</span>}
           </ListItemButton>
         </Tooltip>
       </div>
