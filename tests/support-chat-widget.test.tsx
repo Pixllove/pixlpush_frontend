@@ -6,7 +6,7 @@ import { supportApi, type SupportChatAnswer } from '@/lib/support/api';
 
 vi.mock('@/lib/support/api', () => ({
   supportApi: {
-    chat: vi.fn(), create: vi.fn(), list: vi.fn(), get: vi.fn(), listConversations: vi.fn(), getConversation: vi.fn(), send: vi.fn(), stream: vi.fn(() => () => undefined),
+    chat: vi.fn(), create: vi.fn(), list: vi.fn(), get: vi.fn(), listConversations: vi.fn(), getConversation: vi.fn(), send: vi.fn(), stream: vi.fn(() => () => undefined), seen: vi.fn(async () => ({ seen: true })),
   },
 }));
 

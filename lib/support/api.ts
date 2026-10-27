@@ -101,6 +101,8 @@ export const supportApi = {
     stream.onerror = () => { dropped = true; poll ??= window.setInterval(onMessage, fallbackMs); };
     return () => { stream.close(); window.clearInterval(poll); };
   },
+  /** Read receipt: lets the backend skip the reply email. Best effort. */
+  seen: (ticketId: string) => supportRequest<{ seen: true }>(`tickets/${encodeURIComponent(ticketId)}/seen`, { method: 'POST', body: '{}' }).catch(() => undefined),
   close: (ticketId: string) => supportRequest<SupportTicket>(`tickets/${encodeURIComponent(ticketId)}/close`, { method: 'POST', body: '{}' }),
   reopen: (ticketId: string) => supportRequest<SupportTicket>(`tickets/${encodeURIComponent(ticketId)}/reopen`, { method: 'POST', body: '{}' }),
 };
