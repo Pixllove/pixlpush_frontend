@@ -52,7 +52,7 @@ function HowItWorks() {
   { title: 'Launch, learn and improve', detail: 'Review performance, see how users respond and improve your campaigns and journeys over time.' },
   ];
 
-  return <Box id="how-it-works" sx={{ bgcolor: '#160d20', color: '#f8f3fc', py: { xs: 10, md: 16 }, scrollMarginTop: 90 }}>
+  return <Box id="how-it-works" sx={{ bgcolor: '#160d20', color: '#f8f3fc', py: { xs: 7, md: 16 }, scrollMarginTop: 90 }}>
     <Container maxWidth="lg">
       <SectionIntro eyebrow="HOW IT WORKS" title={<>AI <Box component="span" sx={accentText}>smart</Box> onboarding.</>} description="Max guides your onboarding step by step. Once your project and users are connected, the AI team helps you define a concrete goal and build the right email or push campaigns and journeys." />
       <Box sx={{ position: 'relative', display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(5, minmax(0, 1fr))' }, gap: { xs: 2.5, md: 2 }, '&::before': { content: '""', position: 'absolute', zIndex: 0, background: 'linear-gradient(180deg, rgba(255,226,122,.9), rgba(255,129,72,.65))', borderRadius: 99, left: { xs: '14px', md: '8%' }, right: { xs: 'auto', md: '8%' }, top: { xs: 18, md: 18 }, bottom: { xs: 18, md: 'auto' }, width: { xs: 2, md: 'auto' }, height: { xs: 'auto', md: 2 } } }}>

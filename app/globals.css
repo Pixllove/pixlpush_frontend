@@ -2616,9 +2616,58 @@ a {
   }
 }
 @media (max-width: 600px) {
+  .website-shell {
+    overflow-x: clip;
+  }
+  .website-shell .reference-hero {
+    overflow-x: clip;
+  }
+  .website-shell .reference-hero .MuiGrid-container,
+  .website-shell .reference-hero .MuiGrid-item {
+    min-width: 0;
+  }
+  .website-shell .reference-hero .MuiGrid-container {
+    width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+  .website-shell .reference-hero .MuiGrid-item {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+  .website-shell .reference-hero .MuiContainer-root {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+  }
+  .website-shell .reference-hero .MuiGrid-item > .MuiStack-root {
+    width: 100%;
+    min-width: 0;
+  }
+  .website-shell .reference-hero h1 {
+    width: 100%;
+    max-width: 100% !important;
+    overflow-wrap: anywhere;
+  }
+  .website-shell .reference-hero .MuiStack-root > .MuiStack-root {
+    width: 100%;
+    min-width: 0;
+  }
+  .website-shell .reference-hero .hero-start-button,
+  .website-shell .reference-hero .hero-demo-button {
+    min-width: 0;
+    flex: 1 1 0;
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
   .hero-team-network {
     height: 570px;
-    max-width: 430px;
+    width: min(100%, 390px);
+    max-width: 390px;
     transform: none;
     margin-top: 8px;
     margin-bottom: 0;
@@ -2632,7 +2681,7 @@ a {
     text-align: center;
   }
   .hero-team-max {
-    top: 4px;
+    top: 42px;
     width: 190px;
     left: calc(50% - 95px);
   }
@@ -2662,6 +2711,8 @@ a {
   .hero-team-role {
     max-width: 145px;
     font-size: 11px !important;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
   .hero-team-description {
     max-width: 145px;
@@ -3344,8 +3395,8 @@ a {
 @media (max-width: 650px) {
   .retention-story-container {
     display: block !important;
-    padding-top: 40px;
-    padding-bottom: 30px;
+    padding-top: 24px;
+    padding-bottom: 12px;
   }
   .retention-story-sticky {
     top: 74px;
@@ -3559,23 +3610,23 @@ a {
   .retention-story-mobile-visual {
     position: relative;
     display: block;
-    height: 250px;
+    height: 190px;
     overflow: hidden;
     isolation: isolate;
-    margin: 0 -4px 24px;
+    margin: 0 -4px 14px;
     border-radius: 18px;
   }
   .retention-story-mobile-visual .retention-scene {
     height: 100%;
-    min-height: 230px;
+    min-height: 190px;
     overflow: hidden;
   }
   .retention-story-mobile-visual .retention-journey-art {
-    min-height: 230px;
+    min-height: 190px;
   }
   .retention-story-step {
     min-height: 0;
-    padding: 28px 2px 38px;
+    padding: 18px 2px 24px;
     opacity: 1;
     transform: none;
   }
@@ -3814,8 +3865,8 @@ a {
     display: flex !important;
     flex-direction: column;
     align-items: stretch;
-    gap: 16px;
-    padding: 20px 18px !important;
+    gap: 12px;
+    padding: 16px 18px !important;
   }
   .translation-ai-copy {
     max-width: none;
@@ -18948,6 +18999,66 @@ button[aria-expanded="true"] {
   transform-origin: bottom right;
   animation: supportModalEnter .34s cubic-bezier(.22, 1, .36, 1);
 }
+
+/* Keep mobile marketing sections compact without changing desktop layouts. */
+@media (max-width: 650px) {
+  .website-shell .MuiContainer-root {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .website-shell .MuiGrid-container {
+    width: 100% !important;
+    max-width: 100%;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  .website-shell .MuiGrid-item,
+  .website-shell .MuiStack-root,
+  .website-shell .MuiBox-root {
+    min-width: 0;
+  }
+
+  .website-shell h1,
+  .website-shell h2,
+  .website-shell h3,
+  .website-shell .MuiTypography-h1,
+  .website-shell .MuiTypography-h2,
+  .website-shell .MuiTypography-h3 {
+    width: 100%;
+    max-width: 100% !important;
+    overflow-wrap: anywhere;
+  }
+
+  .website-shell p {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .website-shell .grain {
+    padding-top: 48px !important;
+    padding-bottom: 48px !important;
+  }
+
+  .website-shell #customer-stories,
+  .website-shell #how-it-works {
+    padding-top: 56px !important;
+    padding-bottom: 56px !important;
+  }
+
+  .website-shell .site-page-seam:not(.translation-ai-section) {
+    padding-top: 48px !important;
+    padding-bottom: 48px !important;
+  }
+
+  .website-shell .site-footer-seam > .MuiContainer-root {
+    padding-top: 40px !important;
+    padding-bottom: 40px !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   button[aria-label^="Open PixlPush support chat"],
   button[aria-label^="Open support chat"],
