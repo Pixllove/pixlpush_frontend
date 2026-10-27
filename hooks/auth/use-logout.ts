@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { authApi } from '@/lib/auth/api';
 import type { ApiError } from '@/types/auth';
 
-export function useLogout() {
+export function useLogout({ redirectTo = '/login' }: { redirectTo?: string } = {}) {
   const queryClient = useQueryClient();
   const router = useRouter();
 
@@ -18,7 +18,7 @@ export function useLogout() {
       // Everything, not just the auth keys: the next account to sign in on this
       // tab must not be shown the previous one's projects and users.
       queryClient.clear();
-      router.replace('/login');
+      router.replace(redirectTo);
       // Drops any cached RSC payload rendered for the signed-in user.
       router.refresh();
     },

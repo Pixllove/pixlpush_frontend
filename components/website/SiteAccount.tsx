@@ -23,7 +23,7 @@ const useBeforePaint = typeof window === 'undefined' ? useEffect : useLayoutEffe
  */
 export function SiteAccount() {
   const { account, isAuthenticated, isPending } = useCurrentUser();
-  const logout = useLogout();
+  const logout = useLogout({ redirectTo: '/' });
   const [anchor, setAnchor] = useState<null | HTMLElement>(null);
 
   // The session check takes a moment. Rather than a placeholder that then jumps to the real buttons, show at
@@ -126,7 +126,7 @@ export function SiteAccount() {
 /** The same choice for the mobile drawer, as plain stacked links. */
 export function SiteAccountDrawer({ onNavigate }: { onNavigate: () => void }) {
   const { account, isAuthenticated } = useCurrentUser();
-  const logout = useLogout();
+  const logout = useLogout({ redirectTo: '/' });
   const linkSx = { color: 'rgba(255,255,255,.84)' };
 
   if (!isAuthenticated || !account) {
