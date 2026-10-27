@@ -114,6 +114,34 @@ describe('support chatbot widget', () => {
     expect(screen.getByRole('link', { name: 'See pricing' })).toHaveAttribute('href', '/pricing');
   });
 
+  it('loads an admin reply and lets a signed-out guest continue the same ticket', async () => {
+    const ticket = {
+      id: 'guest-ticket-1', reference: 'PP-SUP-TEST0001', topic: 'general', subject: 'Talk to support',
+      status: 'open', priority: 'normal', source: 'website', guestEmail: 'guest@example.com', project: null,
+      lastMessageAt: '2026-10-27T10:00:00.000Z', createdAt: '2026-10-27T09:00:00.000Z', updatedAt: '2026-10-27T10:00:00.000Z',
+      messages: [
+        { id: 'customer-1', senderType: 'customer', body: 'Can I talk to support?', createdAt: '2026-10-27T09:00:00.000Z', sender: null },
+        { id: 'admin-1', senderType: 'admin', body: 'Hello, how can I help you?', createdAt: '2026-10-27T10:00:00.000Z', sender: null },
+      ],
+    };
+    const followUp = { ...ticket, messages: [...ticket.messages, { id: 'customer-2', senderType: 'customer', body: 'Thanks, I need help.', createdAt: '2026-10-27T10:01:00.000Z', sender: null }] };
+    api.list.mockResolvedValue({ items: [ticket as never], nextCursor: null });
+    api.get.mockResolvedValue(ticket as never);
+    api.send.mockResolvedValue(followUp as never);
+    const user = userEvent.setup();
+    render(<SupportChatWidget authenticated={false} />);
+    await user.click(screen.getByRole('button', { name: 'Open PixlPush support chat' }));
+
+    expect(await screen.findByText('Hello, how can I help you?')).toBeInTheDocument();
+    const composer = screen.getByRole('textbox', { name: 'Type your message' });
+    expect(composer).toBeEnabled();
+    await user.type(composer, 'Thanks, I need help.');
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    expect(await screen.findByText('Thanks, I need help.')).toBeInTheDocument();
+    expect(api.send).toHaveBeenCalledWith('guest-ticket-1', 'Thanks, I need help.', expect.any(String));
+  });
+
   it('shows an unread badge when a closed chat receives the assistant response', async () => {
     let finishResponse!: (answer: SupportChatAnswer) => void;
     api.chat.mockReturnValue(new Promise<SupportChatAnswer>((resolve) => { finishResponse = resolve; }));

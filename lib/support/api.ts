@@ -77,16 +77,29 @@ export const supportApi = {
     supportRequest<SupportChatAnswer>('chat', { method: 'POST', body: JSON.stringify({ message, transcript, ...options }) }),
   listConversations: () => supportRequest<{ items: SupportConversation[]; nextCursor: string | null }>('conversations'),
   getConversation: (conversationId: string) => supportRequest<SupportConversation>(`conversations/${encodeURIComponent(conversationId)}`),
-  create: (input: { email?: string; topic: SupportTopic; subject?: string; message: string; projectId?: string; source: 'website' | 'dashboard'; }) =>
-    supportRequest<{ ticket: SupportTicket; created: boolean }>('tickets', { method: 'POST', body: JSON.stringify({ ...input, pageUrl: typeof window === 'undefined' ? undefined : window.location.href, idempotencyKey: crypto.randomUUID() }) }),
+  create: (input: { email?: string; topic: SupportTopic; subject?: string; message: string; projectId?: string; source: 'website' | 'dashboard'; idempotencyKey?: string; }) =>
+    supportRequest<{ ticket: SupportTicket; created: boolean }>('tickets', { method: 'POST', body: JSON.stringify({ ...input, pageUrl: typeof window === 'undefined' ? undefined : window.location.href, idempotencyKey: input.idempotencyKey ?? crypto.randomUUID() }) }),
   list: () => supportRequest<{ items: SupportTicket[]; nextCursor: string | null }>('tickets'),
   get: (ticketId: string) => supportRequest<SupportTicket>(`tickets/${encodeURIComponent(ticketId)}`),
-  send: (ticketId: string, message: string) => supportRequest<SupportTicket>(`tickets/${encodeURIComponent(ticketId)}/messages`, { method: 'POST', body: JSON.stringify({ message, idempotencyKey: crypto.randomUUID() }) }),
-  stream: (ticketId: string, onMessage: () => void) => {
+  send: (ticketId: string, message: string, idempotencyKey = crypto.randomUUID()) => supportRequest<SupportTicket>(`tickets/${encodeURIComponent(ticketId)}/messages`, { method: 'POST', body: JSON.stringify({ message, idempotencyKey }) }),
+  /**
+   * Live ticket updates. Polls only while the stream is down, so a healthy
+   * connection costs no extra requests; catches up once after a reconnect.
+   */
+  stream: (ticketId: string, onMessage: () => void, onTyping?: () => void, fallbackMs = 20_000) => {
     const stream = new EventSource(`/api/support/tickets/${encodeURIComponent(ticketId)}/stream`);
+    let poll: number | undefined;
+    let dropped = false;
+    if (onTyping) stream.addEventListener('support.typing', onTyping);
     stream.addEventListener('support.message.created', onMessage);
-    stream.onerror = () => stream.close();
-    return () => stream.close();
+    stream.addEventListener('ticket.updated', onMessage);
+    stream.addEventListener('ready', () => {
+      window.clearInterval(poll); poll = undefined;
+      if (dropped) { dropped = false; onMessage(); }
+    });
+    // EventSource retries by itself; poll in the meantime so nothing is missed.
+    stream.onerror = () => { dropped = true; poll ??= window.setInterval(onMessage, fallbackMs); };
+    return () => { stream.close(); window.clearInterval(poll); };
   },
   close: (ticketId: string) => supportRequest<SupportTicket>(`tickets/${encodeURIComponent(ticketId)}/close`, { method: 'POST', body: '{}' }),
   reopen: (ticketId: string) => supportRequest<SupportTicket>(`tickets/${encodeURIComponent(ticketId)}/reopen`, { method: 'POST', body: '{}' }),

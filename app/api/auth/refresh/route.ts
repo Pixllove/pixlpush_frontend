@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { clearSessionCookies, refreshSession } from '@/lib/auth/server';
+import { clearAccountSessionCookies, refreshSession } from '@/lib/auth/server';
 
 /**
  * Rotates the session. The browser sends nothing: the refresh token comes from
@@ -11,7 +11,7 @@ export async function POST() {
   if (!result) {
     // Also drops a leftover access cookie, which would otherwise keep the
     // middleware bouncing /login back to /dashboard.
-    clearSessionCookies();
+    clearAccountSessionCookies();
     return NextResponse.json(
       { error: { code: 'NO_SESSION', message: 'Not signed in.' } },
       { status: 401 },

@@ -50,9 +50,13 @@ export function setSessionCookies(accessToken: string, refreshToken?: string): v
   cookies().delete(SUPPORT_GUEST_COOKIE);
 }
 
-export function clearSessionCookies(): void {
+export function clearAccountSessionCookies(): void {
   cookies().delete(SESSION_COOKIE);
   cookies().delete(REFRESH_COOKIE);
+}
+
+export function clearSessionCookies(): void {
+  clearAccountSessionCookies();
   cookies().delete(SUPPORT_GUEST_COOKIE);
 }
 
@@ -242,8 +246,9 @@ export async function refreshSession(): Promise<RefreshResult | undefined> {
     return result;
   }
   if (isSessionOver(result)) {
-    // Expired, revoked or replayed: the session is over.
-    clearSessionCookies();
+    // Expired, revoked or replayed: clear account credentials, but preserve an
+    // unrelated guest support capability so an open guest ticket can continue.
+    clearAccountSessionCookies();
     return result;
   }
   // Deploy, outage, gateway hiccup: keep the cookies and let the caller retry.
@@ -283,17 +288,20 @@ export interface UpstreamStreamResult {
  * Streaming counterpart to callBackendWithRefresh. It deliberately does not
  * read response.text(), so SSE stays open instead of being buffered in Next.
  */
-async function callBackendStream(path: string): Promise<UpstreamStreamResult> {
+async function callBackendStream(path: string, init: { auth?: boolean; headers?: Record<string, string> } = { auth: true }): Promise<UpstreamStreamResult> {
   const headers: Record<string, string> = {
     'Cache-Control': 'no-cache',
+    ...init.headers,
     ...SUPABASE_REGION,
   };
   const forwardedFor = requestHeaders().get('x-forwarded-for');
   if (forwardedFor) headers['X-Forwarded-For'] = forwardedFor;
 
-  const token = getSessionToken();
-  if (!token) return { status: 401, response: null };
-  headers.Authorization = `Bearer ${token}`;
+  if (init.auth) {
+    const token = getSessionToken();
+    if (!token) return { status: 401, response: null };
+    headers.Authorization = 'Bearer ' + token;
+  }
 
   try {
     const response = await fetch(`${API_URL}${path}`, {
@@ -308,11 +316,19 @@ async function callBackendStream(path: string): Promise<UpstreamStreamResult> {
 }
 
 export async function callBackendStreamWithRefresh(path: string): Promise<UpstreamStreamResult> {
-  const first = await callBackendStream(path);
+  const first = await callBackendStream(path, { auth: true });
   if (first.status !== 401) return first;
 
-  await first.response?.body?.cancel().catch(() => undefined);
+  void first.response?.body?.cancel().catch(() => undefined);
   const refreshed = await refreshSession();
   if (!refreshed?.ok) return first;
-  return callBackendStream(path);
+  return callBackendStream(path, { auth: true });
+}
+
+
+/** Streams a support ticket for an authenticated account or a guest capability. */
+export async function callBackendSupportStream(path: string, options: { authenticated: boolean; guestToken?: string }): Promise<UpstreamStreamResult> {
+  if (options.authenticated) return callBackendStreamWithRefresh(path);
+  const headers = options.guestToken ? { 'x-pixlpush-support-token': options.guestToken } : undefined;
+  return callBackendStream(path, { auth: false, headers });
 }

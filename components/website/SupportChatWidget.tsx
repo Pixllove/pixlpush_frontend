@@ -4,7 +4,6 @@ import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
 import NextLink from "next/link";
 import { Avatar, Badge, Box, Button, CircularProgress, IconButton, Paper, Stack, TextField, Typography } from "@mui/material";
 import ArrowForwardRounded from "@mui/icons-material/ArrowForwardRounded";
-import AutoAwesomeRounded from "@mui/icons-material/AutoAwesomeRounded";
 import CloseRounded from "@mui/icons-material/CloseRounded";
 import SendRounded from "@mui/icons-material/SendRounded";
 import SupportAgentRounded from "@mui/icons-material/SupportAgentRounded";
@@ -19,7 +18,11 @@ const topics: Array<{ label: string; value: SupportTopic }> = [
 ];
 const timeOf = (value: string | Date) => new Intl.DateTimeFormat("en", { hour: "numeric", minute: "2-digit" }).format(new Date(value));
 const initialChat: ChatLine = { id: "welcome", role: "assistant", content: "Hi! I can answer product and pricing questions, help with a special offer, or connect you with our support team." };
+/** PixlPush "P" mark, filled in the dark brand ink so it reads on the yellow avatar. */
+const markMask = "url(/assets/pixlpush-mark-mask.png) center / contain no-repeat";
+const BrandMark = () => <Box aria-hidden="true" sx={{ width: 13, height: 18, bgcolor: "#291534", mask: markMask, WebkitMask: markMask }} />;
 const responseDelayMs = 650;
+const adminCount = (ticket: SupportTicket) => (ticket.messages ?? []).filter((message) => message.senderType === "admin").length;
 const wait = (milliseconds: number) => new Promise<void>((resolve) => window.setTimeout(resolve, milliseconds));
 
 function supportRouteHref(href: string): string {
@@ -44,6 +47,8 @@ export default function SupportChatWidget({ showLauncher = true, isOpen, onClose
   const [ticketDetails, setTicketDetails] = useState("");
   const [draft, setDraft] = useState("");
   const [ticket, setTicket] = useState<SupportTicket | null>(null);
+  const [ticketHistory, setTicketHistory] = useState<SupportTicket[]>([]);
+  const [showTicketHistory, setShowTicketHistory] = useState(false);
   const [conversationId, setConversationId] = useState<string | undefined>();
   const [selectedTopic, setSelectedTopic] = useState<SupportTopic>("general");
   const [chat, setChat] = useState<ChatLine[]>([initialChat]);
@@ -60,6 +65,14 @@ export default function SupportChatWidget({ showLauncher = true, isOpen, onClose
   const scrollBehaviorRef = useRef<ScrollBehavior>("auto");
   const openRef = useRef(open);
   const previousAuthenticated = useRef(authenticated);
+  const createRequestRef = useRef<{ signature: string; key: string } | null>(null);
+  const sendRequestRef = useRef<{ ticketId: string; message: string; key: string } | null>(null);
+  const seenAdminRef = useRef(0);
+  // "Support is typing" from the admin's live signal; hides after 6s of silence.
+  const [supportTyping, setSupportTyping] = useState(false);
+  const typingTimerRef = useRef<number | undefined>(undefined);
+  const [startedFresh, setStartedFresh] = useState(false);
+  const startNewChat = () => { setTicket(null); setStartedFresh(true); setShowTicketHistory(false); setConversationId(undefined); setChat([initialChat]); setDraft(""); setError(""); };
   const changeOpen = (next: boolean) => { openRef.current = next; scrollBehaviorRef.current = "auto"; setLocalOpen(next); if (next) setUnreadCount(0); else onClose?.(); };
 
   useEffect(() => {
@@ -98,15 +111,42 @@ export default function SupportChatWidget({ showLauncher = true, isOpen, onClose
     onClose?.();
   }, [authenticated, onClose]);
 
+  // Restore the visitor's active ticket on page load (not only when opened),
+  // so a reload keeps the thread and replies can raise the unread badge.
   useEffect(() => {
-    if (!open || !authenticated || ticket) return;
+    if (ticket || startedFresh) return;
     let cancelled = false;
-    void supportApi.list().then((result) => { if (!cancelled && result.items[0]) void supportApi.get(result.items[0].id).then(setTicket).catch(() => undefined); }).catch(() => undefined);
+    void Promise.resolve().then(() => supportApi.list()).then((result) => {
+      if (cancelled || !result) return;
+      setTicketHistory(result.items);
+      const active = result.items.find((item) => item.status !== "closed");
+      if (active) void supportApi.get(active.id).then((full) => { if (!cancelled) { seenAdminRef.current = adminCount(full); setTicket(full); } }).catch(() => undefined);
+    }).catch(() => undefined);
     return () => { cancelled = true; };
-  }, [authenticated, open, ticket]);
+  }, [authenticated, ticket, startedFresh]);
+
+  // Email links for guests: /?support_access=<token> opens that ticket here.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const token = url.searchParams.get("support_access");
+    if (!token) return;
+    url.searchParams.delete("support_access");
+    window.history.replaceState(null, "", url.toString());
+    void fetch("/api/support/access", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token }) })
+      .then(async (response) => {
+        const payload = await response.json().catch(() => undefined);
+        if (!response.ok) throw new Error(payload?.error?.message ?? "This support link is no longer valid.");
+        const full = await supportApi.get(payload.data.ticketId);
+        seenAdminRef.current = adminCount(full);
+        setTicket(full);
+      })
+      .catch((caught) => setError(caught instanceof Error ? caught.message : "This support link is no longer valid."))
+      .finally(() => changeOpen(true));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
-    if (!open || ticket) return;
+    if (!open || ticket || startedFresh) return;
     let cancelled = false;
     void supportApi.listConversations().then((result) => {
       const latest = result.items[0];
@@ -127,16 +167,31 @@ export default function SupportChatWidget({ showLauncher = true, isOpen, onClose
       }).catch(() => undefined);
     }).catch(() => undefined);
     return () => { cancelled = true; };
-  }, [authenticated, open, ticket]);
+  }, [authenticated, open, ticket, startedFresh]);
 
+  // Listen for support replies even while the widget is closed: a reply to a
+  // resolved/closed ticket reopens it, and new replies raise the unread badge.
   const ticketId = ticket?.id;
-  const ticketStatus = ticket?.status;
   useEffect(() => {
-    if (!open || !ticketId || !ticketStatus || ["closed", "resolved"].includes(ticketStatus)) return;
-    const stopStream = supportApi.stream(ticketId, () => { void supportApi.get(ticketId).then(setTicket).catch(() => undefined); });
-    const poll = window.setInterval(() => { void supportApi.get(ticketId).then(setTicket).catch(() => undefined); }, 15_000);
-    return () => { stopStream(); window.clearInterval(poll); };
-  }, [open, ticketId, ticketStatus]);
+    if (!ticketId) return;
+    const refreshTicket = () => {
+      void supportApi.get(ticketId).then((updated) => {
+        const replies = adminCount(updated);
+        if (replies > seenAdminRef.current && !openRef.current) setUnreadCount((current) => current + replies - seenAdminRef.current);
+        if (replies > seenAdminRef.current) { window.clearTimeout(typingTimerRef.current); setSupportTyping(false); }
+        seenAdminRef.current = replies;
+        setTicket(updated);
+        setTicketHistory((current) => current.map((item) => item.id === updated.id ? updated : item));
+      }).catch(() => undefined);
+    };
+    const onTyping = () => {
+      setSupportTyping(true);
+      window.clearTimeout(typingTimerRef.current);
+      typingTimerRef.current = window.setTimeout(() => setSupportTyping(false), 6_000);
+    };
+    const stop = supportApi.stream(ticketId, refreshTicket, onTyping);
+    return () => { stop(); window.clearTimeout(typingTimerRef.current); setSupportTyping(false); };
+  }, [ticketId]);
 
   useEffect(() => {
     if (!open || !ticket) return;
@@ -156,7 +211,7 @@ export default function SupportChatWidget({ showLauncher = true, isOpen, onClose
       }
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [open, ticket?.id, ticket?.messages?.length, chat.length, assistantTyping, showTicketForm, showSalesForm, error, ticket]);
+  }, [open, ticket?.id, ticket?.messages?.length, chat.length, assistantTyping, supportTyping, showTicketForm, showSalesForm, error, ticket]);
 
   const transcript = () => chat.map((line) => `${line.role === "user" ? "Customer" : "PixlPush assistant"}: ${line.content}`).join("\n\n");
   const askChatbot = async (event?: FormEvent) => {
@@ -190,9 +245,16 @@ export default function SupportChatWidget({ showLauncher = true, isOpen, onClose
     if (!salesRequest && !subject.trim()) { setError("Add a short subject so the support team can route your request."); return; }
     if (!salesRequest && !ticketDetails.trim()) { setError("Describe the issue so the support team can help faster."); return; }
     if (salesRequest && (!sales.users.trim() || !sales.industry.trim() || !sales.channels.trim())) { setError("Add your user count, industry, and preferred channels."); return; }
+    const payload = { ...(authenticated ? {} : { email: email.trim() }), topic: salesRequest ? "general" : selectedTopic, subject: salesRequest ? "Special offer request" : subject.trim() || "Support request", message: finalMessage, projectId, source: authenticated ? "dashboard" as const : "website" as const };
+    const signature = JSON.stringify(payload);
+    const createRequest = createRequestRef.current?.signature === signature ? createRequestRef.current : { signature, key: crypto.randomUUID() };
+    createRequestRef.current = createRequest;
     setBusy(true); setError("");
     try {
-      const result = await supportApi.create({ ...(authenticated ? {} : { email: email.trim() }), topic: salesRequest ? "general" : selectedTopic, subject: salesRequest ? "Special offer request" : subject.trim() || "Support request", message: finalMessage, projectId, source: authenticated ? "dashboard" : "website" });
+      const result = await supportApi.create({ ...payload, idempotencyKey: createRequest.key });
+      createRequestRef.current = null;
+      setTicketHistory((current) => [result.ticket, ...current.filter((item) => item.id !== result.ticket.id)]);
+      seenAdminRef.current = 0; setStartedFresh(false);
       setTicket(result.ticket); setShowTicketForm(false); setShowSalesForm(false); setDraft("");
     } catch (caught) { setError(caught instanceof Error ? caught.message : "Unable to create the support ticket."); }
     finally { setBusy(false); }
@@ -203,8 +265,10 @@ export default function SupportChatWidget({ showLauncher = true, isOpen, onClose
     const message = draft.trim();
     if (!ticket || !message || busy) return;
     scrollBehaviorRef.current = "smooth";
+    const sendRequest = sendRequestRef.current?.ticketId === ticket.id && sendRequestRef.current.message === message ? sendRequestRef.current : { ticketId: ticket.id, message, key: crypto.randomUUID() };
+    sendRequestRef.current = sendRequest;
     setBusy(true); setError("");
-    try { setTicket(await supportApi.send(ticket.id, message)); setDraft(""); }
+    try { setTicket(await supportApi.send(ticket.id, message, sendRequest.key)); sendRequestRef.current = null; setDraft(""); }
     catch (caught) { setError(caught instanceof Error ? caught.message : "Unable to send your message."); }
     finally { setBusy(false); }
   };
@@ -290,7 +354,7 @@ export default function SupportChatWidget({ showLauncher = true, isOpen, onClose
     {open && <Paper elevation={0} role="dialog" aria-label="PixlPush support chat" sx={{ position: "absolute", right: 0, bottom: showLauncher ? 80 : 0, display: "flex", width: { xs: "min(calc(100vw - 32px), 410px)", sm: 410 }, height: { xs: "min(680px, calc(100dvh - 104px))", sm: 680 }, maxHeight: "calc(100dvh - 104px)", flexDirection: "column", overflow: "hidden", border: "1px solid rgba(226,207,247,.22)", borderRadius: "28px", bgcolor: "#160d20", color: "#f8f3fc", boxShadow: "0 32px 100px rgba(9, 3, 18, .62)" }}>
       <Stack direction="row" alignItems="center" gap={1.35} sx={{ px: 2.4, py: 2, borderBottom: "1px solid rgba(226,207,247,.13)", background: "linear-gradient(135deg, rgba(63,31,86,.95), rgba(37,20,53,.9))" }}><Box sx={{ display: "grid", width: 42, height: 42, placeItems: "center", borderRadius: "14px", color: "#291534", background: "linear-gradient(145deg, #ffd36e, #ff914f)" }}><SupportAgentRounded /></Box><Box sx={{ flex: 1 }}><Typography sx={{ fontSize: 15, fontWeight: 800 }}>PixlPush Support</Typography><Typography sx={{ mt: .35, color: "rgba(255,255,255,.62)", fontSize: 10.5 }}>{ticket ? ticket.reference : "Ask the assistant or contact our team"}</Typography></Box><IconButton className="support-chat-close-button" aria-label="Close support chat" onClick={() => changeOpen(false)} size="small" sx={{ color: "rgba(255,255,255,.75)" }}><CloseRounded fontSize="small" /></IconButton></Stack>
       {!ticket ? <>
-        <Box sx={{ flex: 1, overflowY: "auto", px: 2, py: 2, bgcolor: "rgba(22,13,32,.84)", ...scrollAreaSx }}><Stack gap={1.7}>{chat.map((line) => <Stack key={line.id} direction="row" justifyContent={line.role === "user" ? "flex-end" : "flex-start"} alignItems="flex-end" gap={.8}>{line.role === "assistant" && <Avatar sx={{ width: 28, height: 28, color: "#291534", bgcolor: "#ffc66d" }}><AutoAwesomeRounded sx={{ fontSize: 16 }} /></Avatar>}<Box sx={{ maxWidth: "86%" }}><Typography sx={{ mb: .45, color: "rgba(248,243,252,.42)", fontSize: 10 }}>{line.role === "user" ? "You" : "PixlPush assistant"}</Typography><Box sx={{ p: 1.4, borderRadius: line.role === "user" ? "16px 5px 16px 16px" : "5px 16px 16px 16px", color: "#f8f3fc", bgcolor: line.role === "user" ? "#7444df" : "rgba(255,255,255,.07)", border: line.role === "user" ? "none" : "1px solid rgba(226,207,247,.14)" }}><Typography sx={{ whiteSpace: "pre-wrap", fontSize: 12.5, lineHeight: 1.6 }}>{line.content}</Typography>{line.links?.length ? <Stack direction="row" flexWrap="wrap" gap={.6} sx={{ mt: 1 }}>{line.links.map((link) => { const href = supportRouteHref(link.href); return <Button key={link.href} component={NextLink} href={href} onClick={() => changeOpen(false)} size="small" sx={linkButtonSx} variant="outlined">{link.label}</Button>; })}</Stack> : null}</Box></Box></Stack>)}{assistantTyping && <Stack direction="row" alignItems="flex-end" gap={.8} role="status" aria-label="PixlPush assistant is typing"><Avatar sx={{ width: 28, height: 28, color: "#291534", bgcolor: "#ffc66d" }}><AutoAwesomeRounded sx={{ fontSize: 16 }} /></Avatar><Box sx={{ px: 1.35, py: 1.05, borderRadius: "5px 16px 16px 16px", color: "rgba(248,243,252,.82)", bgcolor: "rgba(255,255,255,.07)", border: "1px solid rgba(226,207,247,.14)" }}><Typography sx={{ mb: .55, color: "rgba(248,243,252,.48)", fontSize: 9.5 }}>PixlPush assistant</Typography><Stack direction="row" gap={.45} aria-hidden="true">{[0, 1, 2].map((index) => <Box key={index} sx={{ width: 5, height: 5, borderRadius: "50%", bgcolor: "#ffd36e", opacity: .45, animation: "supportChatTyping 1.15s ease-in-out infinite", animationDelay: `${index * 140}ms`, "@keyframes supportChatTyping": { "0%, 60%, 100%": { transform: "translateY(0)", opacity: .35 }, "30%": { transform: "translateY(-3px)", opacity: 1 } } }} />)}</Stack></Box></Stack>}</Stack>
+        <Box sx={{ flex: 1, overflowY: "auto", px: 2, py: 2, bgcolor: "rgba(22,13,32,.84)", ...scrollAreaSx }}><Stack gap={1.7}>{chat.map((line) => <Stack key={line.id} direction="row" justifyContent={line.role === "user" ? "flex-end" : "flex-start"} alignItems="flex-end" gap={.8}>{line.role === "assistant" && <Avatar sx={{ width: 28, height: 28, color: "#291534", bgcolor: "#ffc66d" }}><BrandMark /></Avatar>}<Box sx={{ maxWidth: "86%" }}><Typography sx={{ mb: .45, color: "rgba(248,243,252,.42)", fontSize: 10 }}>{line.role === "user" ? "You" : "PixlPush assistant"}</Typography><Box sx={{ p: 1.4, borderRadius: line.role === "user" ? "16px 5px 16px 16px" : "5px 16px 16px 16px", color: "#f8f3fc", bgcolor: line.role === "user" ? "#7444df" : "rgba(255,255,255,.07)", border: line.role === "user" ? "none" : "1px solid rgba(226,207,247,.14)" }}><Typography sx={{ whiteSpace: "pre-wrap", fontSize: 12.5, lineHeight: 1.6 }}>{line.content}</Typography>{line.links?.length ? <Stack direction="row" flexWrap="wrap" gap={.6} sx={{ mt: 1 }}>{line.links.map((link) => { const href = supportRouteHref(link.href); return <Button key={link.href} component={NextLink} href={href} onClick={() => changeOpen(false)} size="small" sx={linkButtonSx} variant="outlined">{link.label}</Button>; })}</Stack> : null}</Box></Box></Stack>)}{assistantTyping && <Stack direction="row" alignItems="flex-end" gap={.8} role="status" aria-label="PixlPush assistant is typing"><Avatar sx={{ width: 28, height: 28, color: "#291534", bgcolor: "#ffc66d" }}><BrandMark /></Avatar><Box sx={{ px: 1.35, py: 1.05, borderRadius: "5px 16px 16px 16px", color: "rgba(248,243,252,.82)", bgcolor: "rgba(255,255,255,.07)", border: "1px solid rgba(226,207,247,.14)" }}><Typography sx={{ mb: .55, color: "rgba(248,243,252,.48)", fontSize: 9.5 }}>PixlPush assistant</Typography><Stack direction="row" gap={.45} aria-hidden="true">{[0, 1, 2].map((index) => <Box key={index} sx={{ width: 5, height: 5, borderRadius: "50%", bgcolor: "#ffd36e", opacity: .45, animation: "supportChatTyping 1.15s ease-in-out infinite", animationDelay: `${index * 140}ms`, "@keyframes supportChatTyping": { "0%, 60%, 100%": { transform: "translateY(0)", opacity: .35 }, "30%": { transform: "translateY(-3px)", opacity: 1 } } }} />)}</Stack></Box></Stack>}</Stack>
           {showSalesForm && <Box ref={supportFormRef} component="form" onSubmit={(event) => void createTicket(event, true)} sx={{ mt: 2, p: 1.5, border: "1px solid rgba(255,198,109,.35)", borderRadius: 2, bgcolor: "rgba(255,198,109,.08)" }}><Typography sx={{ mb: 1, color: "#ffd36e", fontSize: 12, fontWeight: 800 }}>Prepare a special offer</Typography><Stack gap={1.5}>{([['name', 'Your name'], ['company', 'Company'], ['users', 'How many users?'], ['industry', 'Industry'], ['channels', 'Channels you want to use']] as const).map(([key, label]) => <TextField key={key} size="small" required={key !== "name" && key !== "company"} label={label} value={sales[key]} onChange={(event) => setSales((current) => ({ ...current, [key]: event.target.value }))} sx={fieldSx} />)}{!authenticated && <TextField size="small" required type="email" label="Your work email" value={email} onChange={(event) => setEmail(event.target.value)} sx={fieldSx} />}<Button type="submit" disabled={busy} variant="contained" sx={actionButtonSx}>Send to sales <ArrowForwardRounded sx={{ ml: .5, fontSize: 16 }} /></Button></Stack></Box>}
           {showTicketForm && !showSalesForm && <Box ref={supportFormRef} component="form" onSubmit={(event) => void createTicket(event)} sx={{ mt: 2, p: 1.5, border: "1px solid rgba(255,198,109,.35)", borderRadius: 2, bgcolor: "rgba(255,198,109,.08)" }}><Typography sx={{ mb: .4, color: "#ffd36e", fontSize: 12, fontWeight: 800 }}>Create a support ticket</Typography><Typography sx={{ mb: 1.5, color: "rgba(248,243,252,.58)", fontSize: 10.5, lineHeight: 1.45 }}>Add the key details below. Your chat transcript will be attached automatically.</Typography><Stack gap={1.5}>{!authenticated && <TextField fullWidth required type="email" size="small" label="Your work email" value={email} onChange={(event) => { setEmail(event.target.value); setError(""); }} sx={fieldSx} />}<Box><Typography sx={{ mb: .7, color: "rgba(248,243,252,.72)", fontSize: 12 }}>Topic <Box component="span" sx={{ color: "#ffd36e" }}>*</Box></Typography><Stack direction="row" flexWrap="wrap" gap={.7}>{topics.map((topic) => <Button key={topic.value} type="button" aria-pressed={selectedTopic === topic.value} onClick={() => { setSelectedTopic(topic.value); setError(""); }} sx={topicOptionSx(selectedTopic === topic.value)}>{topic.label}</Button>)}</Stack></Box><TextField fullWidth required size="small" label="Subject" placeholder="What do you need help with?" value={subject} onChange={(event) => { setSubject(event.target.value); setError(""); }} sx={fieldSx} /><TextField fullWidth required multiline minRows={3} maxRows={6} label="Describe the issue" placeholder="Tell us what happened, what you expected, and any safe error message." value={ticketDetails} onChange={(event) => { setTicketDetails(event.target.value); setError(""); }} sx={fieldSx} /><Button type="submit" disabled={busy} variant="contained" sx={actionButtonSx}>Create support ticket <ArrowForwardRounded sx={{ ml: .5, fontSize: 16 }} /></Button></Stack></Box>}
           {error && <Typography role="alert" sx={{ mt: 1, color: "#ffad9e", fontSize: 11 }}>{error}</Typography>}
@@ -298,9 +362,9 @@ export default function SupportChatWidget({ showLauncher = true, isOpen, onClose
         </Box>
         <Box component="form" onSubmit={(event) => void askChatbot(event)} sx={{ p: 1.5, borderTop: "1px solid rgba(226,207,247,.13)", bgcolor: "rgba(33,21,45,.96)" }}><Stack direction="row" alignItems="center" gap={.7} sx={{ p: .55, pl: 1.35, border: "1px solid rgba(226,207,247,.19)", borderRadius: "15px", bgcolor: "rgba(255,255,255,.04)" }}><TextField fullWidth size="small" value={draft} onChange={(event) => { setDraft(event.target.value); setError(""); }} onKeyDown={handleKeyDown} placeholder="Ask a question…" inputProps={{ "aria-label": "Ask support assistant" }} sx={composerSx} /><IconButton type="submit" aria-label="Send question" disabled={!draft.trim() || busy} sx={sendButtonSx}>{busy ? <CircularProgress size={16} /> : <SendRounded sx={{ fontSize: 17 }} />}</IconButton></Stack></Box>
       </> : <>
-        <Stack direction="row" justifyContent="space-between" sx={{ px: 2, py: 1.2, borderBottom: "1px solid rgba(226,207,247,.1)" }}><Typography sx={{ color: "rgba(248,243,252,.64)", fontSize: 10 }}>{ticket.status.replaceAll("_", " ")}</Typography><Typography sx={{ color: "rgba(248,243,252,.42)", fontSize: 9.5 }}>{ticket.topic}</Typography></Stack>
-        <Box sx={{ display: "flex", flex: 1, flexDirection: "column", gap: 1.7, overflowY: "auto", px: 2, py: 2, bgcolor: "rgba(22,13,32,.84)", ...scrollAreaSx }}>{(ticket.messages ?? []).map((message) => { const customer = message.senderType === "customer"; return <Stack key={message.id} direction="row" justifyContent={customer ? "flex-end" : "flex-start"} alignItems="flex-end" gap={.8}>{!customer && <Avatar sx={{ width: 28, height: 28, color: "#291534", bgcolor: "#ffc66d" }}><AutoAwesomeRounded sx={{ fontSize: 16 }} /></Avatar>}<Box sx={{ maxWidth: "82%" }}><Typography sx={{ mb: .45, color: "rgba(248,243,252,.42)", fontSize: 10 }}>{customer ? "You" : "PixlPush Support"}</Typography><Box sx={{ p: 1.4, borderRadius: customer ? "16px 5px 16px 16px" : "5px 16px 16px 16px", color: "#f8f3fc", bgcolor: customer ? "#7444df" : "rgba(255,255,255,.07)" }}><Typography sx={{ whiteSpace: "pre-wrap", fontSize: 12.5, lineHeight: 1.6 }}>{message.body}</Typography></Box><Typography sx={{ mt: .45, color: "rgba(248,243,252,.38)", fontSize: 9 }}>{timeOf(message.createdAt)}</Typography></Box></Stack>; })}<Box ref={messageEndRef} sx={{ height: "1px", flexShrink: 0 }} /></Box>
-        <Box component="form" onSubmit={sendMessage} sx={{ p: 1.5, borderTop: "1px solid rgba(226,207,247,.13)", bgcolor: "rgba(33,21,45,.96)" }}><Stack direction="row" alignItems="center" gap={.7} sx={{ p: .55, pl: 1.35, border: "1px solid rgba(226,207,247,.19)", borderRadius: "15px", bgcolor: "rgba(255,255,255,.04)" }}><TextField inputRef={inputRef} fullWidth size="small" value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={handleKeyDown} placeholder="Reply to support…" inputProps={{ "aria-label": "Type your message" }} sx={composerSx} /><IconButton type="submit" aria-label="Send message" disabled={!draft.trim() || busy} sx={sendButtonSx}>{busy ? <CircularProgress size={16} /> : <SendRounded sx={{ fontSize: 17 }} />}</IconButton></Stack>{error && <Typography role="alert" sx={{ mt: .8, color: "#ffad9e", fontSize: 10 }}>{error}</Typography>}</Box>
+        <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1} sx={{ px: 2, py: 1.2, borderBottom: "1px solid rgba(226,207,247,.1)" }}><Typography sx={{ color: "rgba(248,243,252,.72)", fontSize: 11, textTransform: "capitalize" }}>{ticket.status.replaceAll("_", " ")}</Typography><Stack direction="row" alignItems="center" gap={.6}><Typography sx={{ color: "rgba(248,243,252,.42)", fontSize: 10 }}>{ticket.topic}</Typography><Button size="small" onClick={() => setShowTicketHistory((value) => !value)} sx={{ minWidth: 0, px: 1, color: "#d7c1ff", fontSize: 10 }}>My requests{ticketHistory.length > 1 ? " (" + ticketHistory.length + ")" : ""}</Button><Button size="small" onClick={startNewChat} sx={{ minWidth: 0, px: 1, color: "#d7c1ff", fontSize: 10 }}>New chat</Button>{["closed", "resolved"].includes(ticket.status) && <Button size="small" onClick={() => { setBusy(true); void supportApi.reopen(ticket.id).then(setTicket).catch((caught) => setError(caught instanceof Error ? caught.message : "Unable to reopen this request.")).finally(() => setBusy(false)); }} disabled={busy} sx={{ minWidth: 0, px: 1, color: "#ffd36e", fontSize: 10 }}>Reopen</Button>}</Stack></Stack>{showTicketHistory && <Box sx={{ maxHeight: 180, overflowY: "auto", px: 1.5, py: 1, borderBottom: "1px solid rgba(226,207,247,.1)", bgcolor: "rgba(255,255,255,.035)", ...scrollAreaSx }}>{ticketHistory.length ? ticketHistory.map((item) => <Button key={item.id} fullWidth onClick={() => { setShowTicketHistory(false); void supportApi.get(item.id).then(setTicket).catch((caught) => setError(caught instanceof Error ? caught.message : "Unable to load this request.")); }} sx={{ display: "flex", justifyContent: "space-between", gap: 1, mb: .5, px: 1.2, py: .8, color: "#f8f3fc", textAlign: "left", bgcolor: item.id === ticket.id ? "rgba(169,107,234,.18)" : "transparent" }}><span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.subject || item.reference}</span><span style={{ flexShrink: 0, opacity: .62, fontSize: 10 }}>{item.status.replaceAll("_", " ")}</span></Button>) : <Typography sx={{ px: 1, py: .5, color: "rgba(248,243,252,.58)", fontSize: 11 }}>No previous requests yet.</Typography>}</Box>}
+        <Box sx={{ display: "flex", flex: 1, flexDirection: "column", gap: 1.7, overflowY: "auto", px: 2, py: 2, bgcolor: "rgba(22,13,32,.84)", ...scrollAreaSx }}>{(ticket.messages ?? []).map((message) => { const customer = message.senderType === "customer"; return <Stack key={message.id} direction="row" justifyContent={customer ? "flex-end" : "flex-start"} alignItems="flex-end" gap={.8}>{!customer && <Avatar sx={{ width: 28, height: 28, color: "#291534", bgcolor: "#ffc66d" }}><BrandMark /></Avatar>}<Box sx={{ maxWidth: "82%" }}><Typography sx={{ mb: .45, color: "rgba(248,243,252,.42)", fontSize: 10 }}>{customer ? "You" : "PixlPush Support"}</Typography><Box sx={{ p: 1.4, borderRadius: customer ? "16px 5px 16px 16px" : "5px 16px 16px 16px", color: "#f8f3fc", bgcolor: customer ? "#7444df" : "rgba(255,255,255,.07)" }}><Typography sx={{ whiteSpace: "pre-wrap", fontSize: 12.5, lineHeight: 1.6 }}>{message.body}</Typography></Box><Typography sx={{ mt: .45, color: "rgba(248,243,252,.38)", fontSize: 9 }}>{timeOf(message.createdAt)}</Typography></Box></Stack>; })}{!adminCount(ticket) && <Typography role="status" sx={{ alignSelf: "center", maxWidth: "90%", p: 1.2, borderRadius: 2, textAlign: "center", color: "rgba(248,243,252,.72)", bgcolor: "rgba(255,198,109,.08)", border: "1px solid rgba(255,198,109,.25)", fontSize: 11, lineHeight: 1.5 }}>Request {ticket.reference} received. Our team will reply here{ticket.guestEmail ? ` and email ${ticket.guestEmail}` : " and by email"}. You can close this window or reload — the conversation is saved.</Typography>}{supportTyping && <Stack direction="row" alignItems="flex-end" gap={.8} role="status" aria-label="PixlPush Support is typing"><Avatar sx={{ width: 28, height: 28, color: "#291534", bgcolor: "#ffc66d" }}><BrandMark /></Avatar><Box sx={{ px: 1.35, py: 1.05, borderRadius: "5px 16px 16px 16px", bgcolor: "rgba(255,255,255,.07)", border: "1px solid rgba(226,207,247,.14)" }}><Typography sx={{ mb: .55, color: "rgba(248,243,252,.48)", fontSize: 9.5 }}>PixlPush Support is typing</Typography><Stack direction="row" gap={.45} aria-hidden="true">{[0, 1, 2].map((index) => <Box key={index} sx={{ width: 5, height: 5, borderRadius: "50%", bgcolor: "#ffd36e", animation: "supportChatTyping 1.15s ease-in-out infinite", animationDelay: `${index * 140}ms`, "@keyframes supportChatTyping": { "0%, 60%, 100%": { transform: "translateY(0)", opacity: .35 }, "30%": { transform: "translateY(-3px)", opacity: 1 } } }} />)}</Stack></Box></Stack>}<Box ref={messageEndRef} sx={{ height: "1px", flexShrink: 0 }} /></Box>
+        <Box component="form" onSubmit={sendMessage} sx={{ p: 1.5, borderTop: "1px solid rgba(226,207,247,.13)", bgcolor: "rgba(33,21,45,.96)" }}><Stack direction="row" alignItems="center" gap={.7} sx={{ p: .55, pl: 1.35, border: "1px solid rgba(226,207,247,.19)", borderRadius: "15px", bgcolor: "rgba(255,255,255,.04)" }}><TextField inputRef={inputRef} fullWidth size="small" value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={handleKeyDown} disabled={busy || ticket.status === "closed"} placeholder={ticket.status === "closed" ? "Reopen this request to reply" : "Reply to support…"} inputProps={{ "aria-label": "Type your message" }} sx={composerSx} /><IconButton type="submit" aria-label="Send message" disabled={!draft.trim() || busy || ticket.status === "closed"} sx={sendButtonSx}>{busy ? <CircularProgress size={16} /> : <SendRounded sx={{ fontSize: 17 }} />}</IconButton></Stack>{error && <Typography role="alert" sx={{ mt: .8, color: "#ffad9e", fontSize: 10 }}>{error}</Typography>}</Box>
       </>}
     </Paper>}
     {showLauncher && <Box sx={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}><IconButton className={`support-chat-launcher${open ? " support-chat-close-button" : ""}`} onClick={() => changeOpen(!open)} aria-label={open ? "Close support chat" : unreadCount ? `Open support chat, ${unreadCount} new message${unreadCount === 1 ? "" : "s"}` : "Open PixlPush support chat"} aria-expanded={open} sx={{ width: 68, height: 68, minWidth: 68, borderRadius: "50% !important", color: "#291534", background: "linear-gradient(145deg,#ffd36e 0%,#ff914f 46%,#8a42dc 100%)", border: "3px solid rgba(255,255,255,.94)", boxShadow: "0 0 0 5px rgba(169,107,234,.1), 0 15px 38px rgba(34,14,56,.38)" }}><Badge badgeContent={unreadCount > 9 ? "9+" : unreadCount} invisible={!unreadCount} sx={{ "& .MuiBadge-badge": { minWidth: 20, height: 20, px: .5, color: "#291534", bgcolor: "#ffd36e", border: "2px solid #160d20", fontSize: 10, fontWeight: 800 } }}>{open ? <CloseRounded /> : <SupportAgentRounded sx={{ fontSize: 28 }} />}</Badge></IconButton></Box>}
