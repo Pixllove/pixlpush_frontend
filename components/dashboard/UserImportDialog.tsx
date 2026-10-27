@@ -1,6 +1,13 @@
 "use client";
 
-import { ChangeEvent, useCallback, useEffect, useRef, useState } from "react";
+import {
+  ChangeEvent,
+  DragEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowBackRounded,
@@ -130,6 +137,7 @@ export default function UserImportDialog({
   const projectId = active?.id ?? "";
   const queryClient = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
+  const dragDepthRef = useRef(0);
   const [step, setStep] = useState(0);
   const [consentConfirmed, setConsentConfirmed] = useState(false);
   const [fileName, setFileName] = useState("");
@@ -142,6 +150,7 @@ export default function UserImportDialog({
   const [uniqueMatchingEnabled, setUniqueMatchingEnabled] = useState(true);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDragActive, setIsDragActive] = useState(false);
   const [createAndUpdate, setCreateAndUpdate] = useState(true);
   const [addToAudienceGroup, setAddToAudienceGroup] = useState(false);
   const [audienceGroupName, setAudienceGroupName] = useState("");
@@ -252,6 +261,7 @@ export default function UserImportDialog({
     setUniqueMatchingEnabled(true);
     setUploadProgress(0);
     setIsUploading(false);
+    setIsDragActive(false);
     setCreateAndUpdate(true);
     setAddToAudienceGroup(false);
     setConsentConfirmed(false);
@@ -281,10 +291,13 @@ export default function UserImportDialog({
     }
   };
 
-  const parseCsv = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file || !projectId) return;
+  const uploadFile = async (file: File) => {
+    if (!projectId) return;
+    const isCsv = /\.(csv|tsv|txt)$/i.test(file.name);
+    if (!isCsv) {
+      setError("Choose a CSV, TSV, or TXT file to import users.");
+      return;
+    }
     setFileName(file.name);
     setFileSize(`${(file.size / 1024).toFixed(1)} KB`);
     setUploadProgress(0);
@@ -319,6 +332,45 @@ export default function UserImportDialog({
       window.clearInterval(progressTimer);
       window.setTimeout(() => setIsUploading(false), 450);
     }
+  };
+
+  const parseCsv = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (file) void uploadFile(file);
+  };
+
+  const hasDraggedFile = (event: DragEvent<HTMLElement>) =>
+    Array.from(event.dataTransfer.types).includes("Files");
+
+  const handleDragEnter = (event: DragEvent<HTMLElement>) => {
+    event.preventDefault();
+    if (isUploading || !hasDraggedFile(event)) return;
+    dragDepthRef.current += 1;
+    setIsDragActive(true);
+  };
+
+  const handleDragOver = (event: DragEvent<HTMLElement>) => {
+    event.preventDefault();
+    if (isUploading || !hasDraggedFile(event)) return;
+    event.dataTransfer.dropEffect = "copy";
+    setIsDragActive(true);
+  };
+
+  const handleDragLeave = (event: DragEvent<HTMLElement>) => {
+    event.preventDefault();
+    if (isUploading || !hasDraggedFile(event)) return;
+    dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+    if (dragDepthRef.current === 0) setIsDragActive(false);
+  };
+
+  const handleDrop = (event: DragEvent<HTMLElement>) => {
+    event.preventDefault();
+    dragDepthRef.current = 0;
+    setIsDragActive(false);
+    if (isUploading) return;
+    const file = event.dataTransfer.files?.[0];
+    if (file) void uploadFile(file);
   };
 
   /** Upload -> Map fields: the backend suggests a mapping for the file's header language. */
@@ -488,10 +540,12 @@ export default function UserImportDialog({
               ))}
             </Box>
             <Box
-              className={
-                isUploading ? "csv-upload-panel uploading" : "csv-upload-panel"
-              }
+              className={`csv-upload-panel${isUploading ? " uploading" : ""}${isDragActive ? " drag-over" : ""}`}
               onClick={() => !isUploading && inputRef.current?.click()}
+              onDragEnter={handleDragEnter}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
             >
               <input
                 ref={inputRef}
@@ -504,7 +558,9 @@ export default function UserImportDialog({
               <Typography fontWeight={600}>
                 {isUploading
                   ? "Uploading and reading your CSV…"
-                  : fileName || "Upload a CSV file"}
+                  : isDragActive
+                    ? "Drop your CSV file here"
+                    : fileName || "Upload a CSV file"}
               </Typography>
               {isUploading ? (
                 <Stack className="csv-upload-progress" gap={0.7}>
@@ -1094,7 +1150,14 @@ export default function UserImportDialog({
               {busy ? "Loading…" : step === 2 ? "Finish import" : "Continue"}
             </Button>
           ) : (
-            <Button variant="contained" onClick={close}>
+            <Button
+              variant="contained"
+              onClick={close}
+              disabled={
+                importJob?.status !== "completed" &&
+                importJob?.status !== "failed"
+              }
+            >
               Done
             </Button>
           )}
