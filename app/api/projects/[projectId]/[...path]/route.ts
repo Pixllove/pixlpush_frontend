@@ -39,6 +39,7 @@ const ALLOWED = [
   // Chat and drafts only return text to review; they never send or change
   // anything themselves.
   "ai",
+  "roadmap",
 ];
 
 type Params = { params: { projectId: string; path: string[] } };

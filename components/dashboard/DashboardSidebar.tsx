@@ -3,6 +3,7 @@
 import {
   AddRounded, BarChartOutlined, BoltOutlined, ChevronLeftRounded, ChevronRightRounded, DescriptionOutlined, EmailOutlined, GroupsOutlined,
   HistoryOutlined, HomeOutlined, InsightsOutlined, NotificationsNoneOutlined, PeopleAltOutlined, PersonOutlineOutlined, SettingsOutlined, SpaceDashboardOutlined, SupportAgentOutlined, TuneOutlined, UnfoldMoreRounded, ChecklistRounded,
+  MapOutlined,
 } from '@mui/icons-material';
 import {
   Avatar, ButtonBase, Divider, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Menu, MenuItem, Tooltip, Typography,
@@ -36,6 +37,7 @@ const groups = [
       { label: 'Developer documentation', href: '/dashboard/developer-docs', icon: DescriptionOutlined },
       { label: 'Audit Logs', href: '/dashboard/audit-logs', icon: HistoryOutlined },
       { label: 'Notifications', href: '/dashboard/notifications', icon: NotificationsNoneOutlined },
+      { label: 'Ideas & Roadmap', href: '/dashboard/roadmap', icon: MapOutlined },
       { label: 'Billing & Usage', href: '/dashboard/billing', icon: BarChartOutlined },
       { label: 'Team & Access', href: '/dashboard/team', icon: GroupsOutlined },
       { label: 'Project Settings', href: '/dashboard/settings', icon: SettingsOutlined },

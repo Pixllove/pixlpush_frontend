@@ -130,6 +130,38 @@ export const onboardingApi = {
     authRequest<OnboardingState>(at(projectId, "/onboarding"), input, BASE, "PATCH"),
 };
 
+export type RoadmapStage = 'under_consideration' | 'future' | 'planned' | 'in_progress' | 'done' | 'unlikely_to_build';
+export type RoadmapItem = {
+  id: string;
+  title: string;
+  description: string;
+  area: string;
+  tags: string[];
+  requestCount: number;
+  ownerName: string | null;
+  target: string | null;
+  stage: RoadmapStage;
+  status: 'approved' | 'pending_approval' | 'rejected';
+  source: 'admin' | 'customer';
+  account?: { id: string; name: string | null; email: string } | null;
+  project?: { id: string; name: string } | null;
+  createdAt: string;
+  updatedAt: string;
+};
+export type RoadmapPage = { items: RoadmapItem[]; nextCursor: string | null; pagination: { limit: number; hasNextPage: boolean; nextCursor: string | null } };
+
+/** The customer dashboard sees only approved cards for its active Project. */
+export const roadmapApi = {
+  list: (projectId: string, params: { search?: string; cursor?: string; limit?: number } = {}) => {
+    const query = new URLSearchParams({ limit: String(params.limit ?? 100) });
+    if (params.search) query.set('search', params.search);
+    if (params.cursor) query.set('cursor', params.cursor);
+    return authRequest<RoadmapPage>(at(projectId, `/roadmap?${query.toString()}`), undefined, BASE);
+  },
+  suggest: (projectId: string, input: { title: string; description: string; area?: string; tags?: string[] }) =>
+    authRequest<RoadmapItem>(at(projectId, '/roadmap/suggestions'), input, BASE),
+};
+
 export const sdkKeyApi = {
   list: (projectId: string) =>
     authRequest<SdkKey[]>(at(projectId, "/sdk-keys"), undefined, BASE),
