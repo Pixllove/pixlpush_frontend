@@ -93,6 +93,12 @@ export default function DashboardFrame({
   return (
     <>
     <Box className={`dashboard-app${sidebarCollapsed ? " sidebar-is-collapsed" : ""}${mobileOpen ? " mobile-navigation-open" : ""}`}>
+      {mobileOpen && (
+        <Box
+          className="dashboard-backdrop"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
       <DashboardSidebar
         active={supportOpen ? 'Contact support' : active}
         setActive={() => setMobileOpen(false)}
@@ -104,12 +110,6 @@ export default function DashboardFrame({
         onCloseSupport={() => setSupportOpen(false)}
         supportUnread={supportUnread}
       />
-      {mobileOpen && (
-        <Box
-          className="dashboard-backdrop"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
       <Box className="dashboard-main">
         <Box className="dashboard-topbar">
           <IconButton

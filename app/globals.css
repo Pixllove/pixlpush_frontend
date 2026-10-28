@@ -16572,6 +16572,31 @@ html:has(.dashboard-app) {
 body {
   padding-right: 0 !important;
 }
+
+/* Keep the mobile drawer above its dismissal layer so navigation links remain tappable.
+   The desktop sidebar keeps its existing stacking and interaction behavior. */
+@media (max-width: 760px) {
+  .dashboard-backdrop {
+    z-index: 999;
+    pointer-events: auto;
+    touch-action: none;
+  }
+
+  .dashboard-sidebar {
+    z-index: 1000;
+    pointer-events: auto;
+  }
+
+  .dashboard-sidebar .dashboard-nav,
+  .dashboard-sidebar .sidebar-project,
+  .dashboard-sidebar .sidebar-collapse-toggle,
+  .dashboard-sidebar a,
+  .dashboard-sidebar button {
+    pointer-events: auto;
+    touch-action: manipulation;
+  }
+}
+
 /* Analytics fixed overview + configurable widget canvas */
 /* ---- Analytics surfaces (DESIGN.md §6 "Analytics") ---- */
 /* The health block: one of the few surfaces allowed on var(--pp-hero). White text, hairlines at 16%. */
