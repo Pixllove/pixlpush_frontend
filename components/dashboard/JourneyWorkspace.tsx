@@ -38,6 +38,7 @@ import { useActiveProject } from "@/hooks/projects/use-active-project";
 import type { JourneyDisplayStatus, JourneyListItem } from "@/types/project";
 import SearchField from "./SearchField";
 import PremiumWorkspaceTabs from "./PremiumWorkspaceTabs";
+import { formatUserDateTime } from "@/lib/timezone";
 
 type JourneyStatus = "Running" | "Draft" | "Paused" | "Scheduled";
 type JourneyRow = {
@@ -60,16 +61,7 @@ const statusLabel: Record<JourneyDisplayStatus, JourneyRow["status"]> = {
   paused: "Paused",
   archived: "Archived",
 };
-const when = (value: string | null) =>
-  value
-    ? new Date(value).toLocaleString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : "—";
+const when = (value: string | null) => formatUserDateTime(value);
 const toRow = (journey: JourneyListItem): JourneyRow => ({
   id: journey.id,
   name: journey.name,

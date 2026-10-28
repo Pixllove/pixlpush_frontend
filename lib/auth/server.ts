@@ -115,6 +115,18 @@ export async function callBackend<T>(
     ...SUPABASE_REGION,
   };
 
+  // Preserve the browser's viewer timezone through the same-origin API proxy.
+  // Reject offset-only and malformed values rather than treating them as zones.
+  const timezone = requestHeaders().get('x-user-timezone');
+  if (timezone && timezone.length <= 100) {
+    try {
+      new Intl.DateTimeFormat('en', { timeZone: timezone });
+      headers['X-User-Timezone'] = timezone;
+    } catch {
+      // Invalid or unsupported IANA IDs are ignored; UTC instants are unchanged.
+    }
+  }
+
   // Every browser reaches the backend through this server, so without the
   // original address its per-IP auth limits would count all users as one.
   const forwardedFor = requestHeaders().get('x-forwarded-for');

@@ -31,6 +31,8 @@ import { auditApi } from '@/lib/projects/api';
 import type { ApiError } from '@/types/auth';
 import type { AuditCategory, AuditLogEntry, AuditLogQuery } from '@/types/project';
 import SearchField from '../SearchField';
+import AuditDatePicker from './AuditDatePicker';
+import { describeViewerTimezone, formatUserLocalDateTime } from '@/lib/timezone';
 
 export const CATEGORY_LABEL: Record<AuditCategory, string> = {
   team: 'Team & access',
@@ -52,21 +54,16 @@ const CATEGORY_COLOR: Record<AuditCategory, { color: string; bg: string }> = {
 
 const border = '1px solid #e7e5ec';
 const headCell = { fontSize: "var(--fs-11)", fontWeight: 500, letterSpacing: 0.6, textTransform: 'uppercase', color: '#6b6577', py: 1.2, bgcolor: '#fafafb' } as const;
+const AUDIT_PAGE_SIZE = 10;
 
 const errorText = (e: unknown) =>
   (e as ApiError)?.code === 'NETWORK_ERROR' ? 'Cannot reach the server. Check your connection.' : 'Audit logs could not be loaded. Please try again.';
 
 export const fullDate = (iso: string) =>
-  new Date(iso).toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  formatUserLocalDateTime(iso);
 
-/** "Just now", "12 min ago", "3 h ago", then the date. */
-export function relative(iso: string, now = Date.now()) {
-  const s = Math.round((now - new Date(iso).getTime()) / 1000);
-  if (s < 60) return 'Just now';
-  if (s < 3600) return `${Math.floor(s / 60)} min ago`;
-  if (s < 86_400) return `${Math.floor(s / 3600)} h ago`;
-  return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
-}
+/** Show a real viewer-local timestamp on every audit row, including recent events. */
+const displayTimestamp = (iso: string) => formatUserLocalDateTime(iso);
 
 const actorName = (e: AuditLogEntry) => (e.actor ? e.actor.name ?? e.actor.email : 'System');
 
@@ -108,7 +105,7 @@ export default function AuditLogsPanel() {
   };
   const feed = useInfiniteQuery({
     queryKey: ['audit-logs', query],
-    queryFn: ({ pageParam }) => auditApi.list({ ...query, limit: 25, cursor: pageParam }),
+    queryFn: ({ pageParam }) => auditApi.list({ ...query, limit: AUDIT_PAGE_SIZE, cursor: pageParam }),
     initialPageParam: null as string | null,
     getNextPageParam: (last) => last.nextCursor,
   });
@@ -143,8 +140,8 @@ export default function AuditLogsPanel() {
             <MenuItem value="">All users</MenuItem>
             {options.data?.actors.map((a) => <MenuItem key={a.id} value={a.id}>{a.name ?? a.email}</MenuItem>)}
           </TextField>
-          <TextField size="small" type="date" label="From" value={dates.from} onChange={(e) => setDates((d) => ({ ...d, from: e.target.value }))} InputLabelProps={{ shrink: true }} />
-          <TextField size="small" type="date" label="To" value={dates.to} onChange={(e) => setDates((d) => ({ ...d, to: e.target.value }))} InputLabelProps={{ shrink: true }} />
+          <AuditDatePicker label="From" value={dates.from} max={dates.to || undefined} onChange={(from) => setDates((d) => ({ ...d, from }))} />
+          <AuditDatePicker label="To" value={dates.to} min={dates.from || undefined} onChange={(to) => setDates((d) => ({ ...d, to }))} />
           {filtered ? <Button size="small" onClick={clear} sx={{ height: 40, textTransform: 'none' }}>Clear filters</Button> : <span />}
         </Box>
       </Box>
@@ -191,11 +188,20 @@ export default function AuditLogsPanel() {
                 key={entry.id}
                 hover
                 data-testid="audit-row"
+                tabIndex={0}
+                aria-label={`Open activity details: ${entry.description}`}
+                aria-haspopup="dialog"
                 onClick={() => setSelected(entry)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    setSelected(entry);
+                  }
+                }}
                 sx={{ cursor: 'pointer', '& td': { fontSize: "var(--fs-13)", py: 1.3, borderColor: '#efeef3' } }}
               >
                 <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                  <Tooltip title={fullDate(entry.createdAt)}><span>{relative(entry.createdAt)}</span></Tooltip>
+                  <Tooltip title={describeViewerTimezone(entry.createdAt)}><span>{displayTimestamp(entry.createdAt)}</span></Tooltip>
                 </TableCell>
                 <TableCell>
                   <Typography fontSize="var(--fs-13)" fontWeight={600}>{actorName(entry)}</Typography>
@@ -262,7 +268,7 @@ function DetailsDrawer({ entry, onClose }: { entry: AuditLogEntry | null; onClos
             <IconButton aria-label="Close details" onClick={onClose}><CloseRounded /></IconButton>
           </Stack>
           <Box>
-            <DetailRow k="When" v={<>{fullDate(entry.createdAt)} <Typography component="span" fontSize="var(--fs-12)" color="text.secondary">· {relative(entry.createdAt)}</Typography></>} />
+            <DetailRow k="When" v={<Tooltip title={describeViewerTimezone(entry.createdAt)}><span>{fullDate(entry.createdAt)}</span></Tooltip>} />
             <DetailRow k="User" v={<>{actorName(entry)}{entry.actor?.name && <Typography fontSize="var(--fs-12)" color="text.secondary">{entry.actor.email}</Typography>}</>} />
             <DetailRow k="Project" v={entry.project?.name ?? 'Account-level'} />
             <DetailRow k="Category" v={<CategoryChip category={entry.category} />} />

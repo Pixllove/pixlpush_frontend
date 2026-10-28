@@ -1,4 +1,5 @@
 import type { ApiError, ApiErrorBody } from '@/types/auth';
+import { getViewerTimezone } from '@/lib/timezone';
 
 /**
  * Browser-side client. It only ever talks to this app's own /api/auth/* route
@@ -71,7 +72,10 @@ async function rawRequest(path: string, body?: unknown, base = '/api/auth', meth
   const isFile = typeof body === 'string';
   return fetch(`${base}${path}`, {
     method: method ?? (body === undefined ? 'GET' : 'POST'),
-    headers: { 'Content-Type': isFile ? 'text/csv' : 'application/json' },
+    headers: {
+      'Content-Type': isFile ? 'text/csv' : 'application/json',
+      'X-User-Timezone': getViewerTimezone(),
+    },
     body: body === undefined ? undefined : isFile ? body : JSON.stringify(body),
     // Same-origin, but explicit so the session cookies are always sent.
     credentials: 'same-origin',

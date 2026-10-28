@@ -199,7 +199,7 @@ describe('Audit Logs', () => {
     wrap(<AuditLogsPanel />);
     await userEvent.click(await screen.findByRole('button', { name: 'Load more' }));
     expect(await screen.findByText('Updated the project details')).toBeInTheDocument();
-    expect(audit.list).toHaveBeenLastCalledWith(expect.objectContaining({ cursor: 'l1', limit: 25 }));
+    expect(audit.list).toHaveBeenLastCalledWith(expect.objectContaining({ cursor: 'l1', limit: 10 }));
 
     audit.list.mockResolvedValue({ items: [], nextCursor: null });
     await userEvent.click(screen.getByRole('tab', { name: 'Team & access' }));
@@ -209,7 +209,7 @@ describe('Audit Logs', () => {
     await userEvent.click(await screen.findByRole('option', { name: 'Project E1' }));
     await waitFor(() => expect(audit.list).toHaveBeenLastCalledWith(expect.objectContaining({ projectId: 'e1', category: 'team' })));
     await userEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
-    await waitFor(() => expect(audit.list).toHaveBeenLastCalledWith({ limit: 25, cursor: null }));
+    await waitFor(() => expect(audit.list).toHaveBeenLastCalledWith({ limit: 10, cursor: null }));
 
     audit.list.mockRejectedValue({ status: 0, code: 'NETWORK_ERROR', message: '' });
     await userEvent.click(screen.getByRole('tab', { name: 'Workspace' }));

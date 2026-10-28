@@ -45,6 +45,7 @@ import {
   TableRow,
   Typography,
 } from "@mui/material";
+import { formatUserDateTime } from "@/lib/timezone";
 import { useCurrentUser } from "@/hooks/auth/use-current-user";
 import { useActiveProject } from "@/hooks/projects/use-active-project";
 import { journeysApi } from "@/lib/projects/api";
@@ -351,9 +352,8 @@ function KpiCard({ kpi, range, loading }: { kpi: Kpi; range: RangeDays; loading:
   );
 }
 
-const dateTime = new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" });
 const displayCount = (value: unknown) => whole.format(numberData(value));
-const displayDate = (value: string | null | undefined) => value ? dateTime.format(new Date(value)) : "Not available";
+const displayDate = (value: string | null | undefined) => value ? formatUserDateTime(value) : "Not available";
 
 function DeliveryHistoryTable({ email, rows }: { email: boolean; rows: Array<AnalyticsEmailDelivery | AnalyticsPushDelivery> }) {
   return <Box className="reusable-table-wrap"><Table size="small"><TableHead><TableRow><TableCell>Recipient</TableCell><TableCell>Status</TableCell><TableCell>Sent</TableCell><TableCell>Engagement</TableCell></TableRow></TableHead><TableBody>{rows.length ? rows.slice(0, 10).map((row) => {

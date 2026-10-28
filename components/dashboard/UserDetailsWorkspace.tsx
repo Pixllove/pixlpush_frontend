@@ -43,14 +43,9 @@ import {
 import { useActiveProject } from "@/hooks/projects/use-active-project";
 import { eventsApi, usersApi } from "@/lib/projects/api";
 import type { UserActivity, UserProfile } from "@/types/project";
+import { formatUserDateTime } from "@/lib/timezone";
 
-const formatDate = (value?: string | null) =>
-  value
-    ? new Intl.DateTimeFormat(undefined, {
-        dateStyle: "medium",
-        timeStyle: "short",
-      }).format(new Date(value))
-    : "—";
+const formatDate = (value?: string | null) => formatUserDateTime(value);
 const display = (value: unknown) =>
   value === null || value === undefined || value === ""
     ? "—"

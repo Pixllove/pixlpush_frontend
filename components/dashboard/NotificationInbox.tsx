@@ -49,6 +49,7 @@ import {
   useMarkNotificationRead,
 } from '@/hooks/notifications/use-notifications';
 import type { AccountNotification, NotificationCategory, NotificationRecipient } from '@/types/notifications';
+import { formatUserDateTime } from '@/lib/timezone';
 
 const categoryLabels: Record<NotificationCategory, string> = {
   account: 'Account',
@@ -157,9 +158,11 @@ function NotificationRow({
             <Typography fontSize="var(--fs-13)" fontWeight={isUnread ? 700 : 600} color={isUnread ? 'text.primary' : 'text.secondary'} sx={{ lineHeight: 1.35 }}>
               {notification.title}
             </Typography>
-            <Typography component="time" dateTime={notification.createdAt} fontSize="var(--fs-11)" color="text.disabled" whiteSpace="nowrap" sx={{ pt: .15 }}>
-              {relativeTime(notification.createdAt)}
-            </Typography>
+            <Tooltip title={formatUserDateTime(notification.createdAt)}>
+              <Typography component="time" dateTime={notification.createdAt} fontSize="var(--fs-11)" color="text.disabled" whiteSpace="nowrap" sx={{ pt: .15 }}>
+                {relativeTime(notification.createdAt)}
+              </Typography>
+            </Tooltip>
           </Stack>
           <Typography fontSize="var(--fs-12)" color={isUnread ? 'text.secondary' : 'text.disabled'} sx={{ mt: .55, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: compact ? 2 : 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
             {notification.body}

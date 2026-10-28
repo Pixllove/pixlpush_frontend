@@ -56,6 +56,7 @@ import {
 } from "@/lib/projects/api";
 import Link from "next/link";
 import { useActiveProject } from "@/hooks/projects/use-active-project";
+import { formatUserDateTime } from "@/lib/timezone";
 import {
   ENTRANCE,
   EXIT,
@@ -881,9 +882,7 @@ type OpenMetric = { blockId: string; blockTitle: string; type: BlockType; label:
 const MetricPanelContext = createContext<(open: OpenMetric) => void>(() => {});
 
 const when = (date?: string | null) =>
-  date
-    ? new Date(date).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
-    : null;
+  date ? formatUserDateTime(date) : null;
 const number = (value: number) => value.toLocaleString();
 const JOURNEY_STATUS: Record<string, [string, string]> = {
   active: ["In progress", "green"],

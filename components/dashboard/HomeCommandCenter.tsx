@@ -1062,6 +1062,8 @@ export default function HomeCommandCenter() {
   const [contextError, setContextError] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const chatThreadRef = useRef<HTMLDivElement | null>(null);
+  const shouldStickToLatestRef = useRef(true);
   const [conversationId, setConversationId] = useState<string | undefined>();
   const [editing, setEditing] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
@@ -1396,9 +1398,18 @@ export default function HomeCommandCenter() {
     setSelectedAgent(name);
   };
 
+  useEffect(() => {
+    if (!messages.length || !shouldStickToLatestRef.current) return;
+    const frame = window.requestAnimationFrame(() => {
+      chatThreadRef.current?.scrollTo({ top: chatThreadRef.current.scrollHeight, behavior: "smooth" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [messages, thinking]);
+
   const sendMessage = (value = draft) => {
     const text = value.trim();
     if (!text || thinking) return;
+    shouldStickToLatestRef.current = true;
     if (isAnalysisRequest(text)) {
       setMessages((current) => [...current, { id: `user-${Date.now()}`, role: "user", text }]);
       setDraft("");
@@ -1508,6 +1519,7 @@ export default function HomeCommandCenter() {
 
   const openConversation = async (id: string) => {
     if (!projectId || thinking || openingConversationId) return;
+    shouldStickToLatestRef.current = true;
     setOpeningConversationId(id);
     setContextError(null);
     try {
@@ -1781,7 +1793,8 @@ export default function HomeCommandCenter() {
     if (!nextOpen) setConversationSearch("");
   };
 
-  const recentHistoryPanel = historyOpen && <Box className="home-history-panel" role="region" aria-label="Recent conversations">
+  const recentHistoryPanel = <Dialog open={historyOpen} onClose={toggleRecentHistory} maxWidth="sm" fullWidth className="home-history-dialog">
+  <Box className="home-history-panel" role="region" aria-label="Recent conversations">
     <Stack direction="row" alignItems="flex-start" justifyContent="space-between" gap={2} className="home-history-header">
       <Box>
         <Typography className="home-history-heading">Recent conversations</Typography>
@@ -1839,7 +1852,8 @@ export default function HomeCommandCenter() {
         </Box>;
       })}
     </Stack> : <Typography className="context-dialog-empty" color="text.secondary">{conversationSearchQuery.isError ? "Search is temporarily unavailable." : conversationSearch ? "No matching conversations." : "No conversations yet."}</Typography>}
-  </Box>;
+  </Box>
+  </Dialog>;
 
   return <Box className="home-experience">
     <Box className="home-backdrop" aria-hidden><span className="home-backdrop-mosaic" /></Box>
@@ -1849,6 +1863,7 @@ export default function HomeCommandCenter() {
       <Typography className="home-hero-subtitle">Let’s make your next growth move.</Typography>
 
       {composer()}
+      <Typography className="home-disclaimer">AI can make mistakes. Check important growth decisions.</Typography>
 
       <Stack direction="row" justifyContent="center" gap={1} flexWrap="wrap" className="home-prompt-row">
         {prompts.map(([label, Icon]) => <Button key={label} className="home-prompt" startIcon={<Icon />} onClick={() => sendMessage(label)}>{label}</Button>)}
@@ -1866,14 +1881,24 @@ export default function HomeCommandCenter() {
         {shortcuts.map(([Icon, title, description, flowId]) => <Button key={title} className="home-feature-card" onClick={() => startFlow(flowId)}><Box className="home-feature-icon"><Icon /></Box><Box className="home-feature-copy"><Typography>{title}</Typography><span>{description}</span></Box><ArrowForwardRounded className="home-feature-arrow" /></Button>)}
       </Box>
 
-      <Typography className="home-disclaimer">AI can make mistakes. Check important growth decisions.</Typography>
-    </Box> : <Box className="chat-experience">
+    </Box> : <Box className={`chat-experience${!isGuidedFlowStep && !analysisPhase && !journeyBusy ? " is-standard-chat" : ""}`}>
       <Stack direction="row" justifyContent="space-between" className="chat-topbar">
         <Button className="home-recent-link" startIcon={<AddRounded />} disabled={thinking} onClick={startNewChat}>New chat</Button>
         <Button className="home-recent-link" startIcon={<HistoryRounded />} onClick={(event) => setContextAnchor(event.currentTarget)}>Context</Button>
       </Stack>
       {recentHistoryPanel}
-      <Stack className="chat-thread" gap={2.5}>
+      <Stack
+        ref={chatThreadRef}
+        className="chat-thread"
+        gap={2.5}
+        role="log"
+        aria-label="Conversation messages"
+        aria-live="polite"
+        onScroll={(event) => {
+          const { scrollTop, clientHeight, scrollHeight } = event.currentTarget;
+          shouldStickToLatestRef.current = scrollHeight - scrollTop - clientHeight < 100;
+        }}
+      >
         {messages.map((message, index) => {
           const copyButton = <Tooltip title={copied === message.id ? "Copied" : "Copy"}><IconButton size="small" aria-label="Copy message" onClick={() => void copyMessage(message)}>{copied === message.id ? <CheckRounded /> : <ContentCopyRounded />}</IconButton></Tooltip>;
           const isLast = index === messages.length - 1;

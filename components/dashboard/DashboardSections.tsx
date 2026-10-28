@@ -78,6 +78,7 @@ import {
   ToggleButtonGroup,
 } from "@mui/material";
 import { RootState } from "@/lib/store";
+import { formatUserDateTime } from "@/lib/timezone";
 import { projectContext } from "@/lib/projects";
 import {
   audienceGroupsApi,
@@ -844,13 +845,7 @@ export function UsersSection() {
     },
   ];
   const users = usersQuery.data?.users ?? [];
-  const formatDate = (value: string | null) =>
-    value
-      ? new Intl.DateTimeFormat(undefined, {
-          dateStyle: "medium",
-          timeStyle: "short",
-        }).format(new Date(value))
-      : "Never";
+  const formatDate = (value: string | null) => value ? formatUserDateTime(value) : "Never";
   const exportUsers = () => {
     const columns = [
       "User",
@@ -987,7 +982,7 @@ export function UsersSection() {
       render: (row) => (
         <Typography color="#168c5b" fontSize="var(--fs-12)" fontWeight={500}>
           {row.updatedAt
-            ? `Updated ${new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(row.updatedAt))}`
+            ? `Updated ${formatUserDateTime(row.updatedAt)}`
             : "Updated automatically"}
         </Typography>
       ),
@@ -1091,9 +1086,7 @@ export function UsersSection() {
       render: (row) => (
         <Typography color="text.secondary" fontSize="var(--fs-12)">
           {row.updatedAt
-            ? new Intl.DateTimeFormat(undefined, {
-                dateStyle: "medium",
-              }).format(new Date(row.updatedAt))
+            ? formatUserDateTime(row.updatedAt)
             : "Updated automatically"}
         </Typography>
       ),
@@ -1653,14 +1646,7 @@ function EmailDataSection() {
     meta: string;
     status: string;
   };
-  const date = (value?: string) =>
-    value
-      ? new Date(value).toLocaleDateString(undefined, {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        })
-      : "—";
+  const date = (value?: string) => value ? formatUserDateTime(value) : "—";
   const templateRows: EmailRow[] = (templatesQuery.data?.items ?? []).map(
     (item: EmailTemplate) => ({
       id: item.id,
@@ -2281,14 +2267,7 @@ function PushSection() {
     sends: string;
     clicks: string;
   };
-  const formatDate = (value?: string) =>
-    value
-      ? new Date(value).toLocaleDateString(undefined, {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        })
-      : "—";
+  const formatDate = (value?: string) => value ? formatUserDateTime(value) : "—";
   const templateRows: PushRow[] = (templatesQuery.data?.items ?? []).map(
     (item: PushTemplate) => ({
       id: item.id,

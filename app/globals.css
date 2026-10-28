@@ -308,6 +308,7 @@ a {
     display: block;
   }
 }
+
 .hero-stage {
   position: relative;
   min-height: 510px;
@@ -19072,5 +19073,266 @@ button[aria-expanded="true"] {
   [role="dialog"][aria-label="PixlPush support chat"] {
     animation: none;
     transition: none !important;
+  }
+}
+
+/* Keep the idle Home canvas inside the viewport. Conversation history and recent threads
+   use their own scroll regions instead of moving the whole dashboard page. */
+@media (min-width: 761px) {
+  .dashboard-content:has(.home-hero) {
+    box-sizing: border-box;
+    height: calc(100dvh - 60px);
+    min-height: 0;
+    padding: 4px 30px 8px;
+    overflow: hidden;
+  }
+  .home-experience:has(.home-hero) {
+    height: 100%;
+    min-height: 0;
+  }
+  .home-hero {
+    box-sizing: border-box;
+    min-height: 100%;
+    margin: 0 auto;
+    justify-content: center;
+    padding: 0 24px;
+  }
+  .home-hero .max-orb {
+    --orb: clamp(72px, calc(22vh - 112px), 112px);
+    margin: clamp(0px, 0.5vh, 6px) 0 clamp(8px, 1.6vh, 18px);
+  }
+  .home-hero .home-composer {
+    margin-top: clamp(12px, 2vh, 22px);
+  }
+  .home-disclaimer {
+    margin-top: clamp(2px, 0.4vh, 6px) !important;
+  }
+  .home-prompt-row {
+    margin-top: clamp(8px, 1.2vh, 14px);
+  }
+  .home-hero .home-recent-link {
+    margin-top: clamp(3px, 0.7vh, 8px) !important;
+  }
+  .home-feature-intro {
+    margin-top: clamp(8px, 1.3vh, 14px);
+  }
+  .home-feature-row {
+    margin-top: clamp(6px, 0.9vh, 10px);
+  }
+  .home-feature-card {
+    min-height: 96px;
+    padding: 12px 14px !important;
+  }
+}
+
+/* Recent conversations is a focused overlay with its own bounded history list. */
+.home-history-dialog .MuiDialog-paper {
+  box-sizing: border-box;
+  width: min(820px, calc(100vw - 48px));
+  max-width: 820px;
+  max-height: calc(100dvh - 48px);
+  margin: 0 auto;
+  padding: 0;
+  border: 0 !important;
+  border-radius: 0;
+  outline: 0;
+  overflow: visible;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.home-history-panel {
+  display: flex;
+  box-sizing: border-box;
+  width: 100%;
+  max-height: calc(100dvh - 48px);
+  margin: 0;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(214, 200, 232, 0.95);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 24px 64px -24px rgba(44, 24, 66, 0.4), 0 4px 16px rgba(81, 47, 113, 0.08);
+}
+.home-history-list {
+  min-height: 0;
+  max-height: min(440px, 52dvh);
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(103, 79, 132, 0.38) transparent;
+}
+.home-history-list::-webkit-scrollbar,
+.chat-thread::-webkit-scrollbar {
+  width: 8px;
+}
+.home-history-list::-webkit-scrollbar-thumb,
+.chat-thread::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgba(103, 79, 132, 0.35);
+  background-clip: padding-box;
+}
+
+/* Active conversations keep the header and composer fixed while only the transcript scrolls. */
+.dashboard-content:has(.chat-experience.is-standard-chat) {
+  box-sizing: border-box;
+  height: calc(100dvh - 60px);
+  min-height: 0;
+  padding: 8px 30px 0;
+  overflow: hidden;
+}
+.chat-experience.is-standard-chat {
+  height: 100%;
+  min-height: 0;
+}
+.chat-experience.is-standard-chat .chat-thread {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(103, 79, 132, 0.38) transparent;
+  padding-bottom: 190px;
+}
+
+@media (max-height: 820px) and (min-width: 761px) {
+  .home-hero .max-orb {
+    --orb: clamp(64px, calc(18vh - 72px), 92px);
+    margin-bottom: 8px;
+  }
+  .home-hero .home-composer {
+    margin-top: 12px;
+  }
+  .home-feature-intro {
+    margin-top: 8px;
+  }
+  .home-feature-card {
+    min-height: 82px;
+    padding-block: 10px !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .home-history-dialog .MuiDialog-paper {
+    width: calc(100vw - 24px);
+    max-width: 560px;
+    max-height: calc(100dvh - 24px);
+    margin: 0 auto;
+  }
+  .home-history-panel {
+    max-height: calc(100dvh - 24px);
+    border-radius: 18px;
+  }
+  .home-history-list {
+    max-height: 52dvh;
+  }
+  .dashboard-content:has(.chat-experience.is-standard-chat) {
+    width: 100%;
+    height: calc(100dvh - 60px);
+    min-height: 0;
+    padding: 8px 0 0;
+  }
+  .chat-experience.is-standard-chat {
+    min-height: 0;
+  }
+  .chat-experience.is-standard-chat .chat-thread {
+    padding-bottom: 190px;
+  }
+}
+
+/* Tablet and compact laptop Home: use fewer columns and let the page grow instead of clipping cards. */
+@media (min-width: 761px) and (max-width: 1440px) {
+  .dashboard-content:has(.home-hero) {
+    height: auto;
+    min-height: calc(100dvh - 60px);
+    padding: 12px clamp(16px, 3vw, 32px) 32px;
+    overflow: visible;
+  }
+  .home-experience:has(.home-hero) {
+    height: auto;
+    min-height: calc(100dvh - 84px);
+  }
+  .home-hero {
+    min-height: 0;
+    justify-content: flex-start;
+    padding: clamp(16px, 3vh, 28px) clamp(8px, 2vw, 20px) 24px;
+  }
+  .home-hero .max-orb {
+    --orb: clamp(76px, 10vw, 112px);
+    margin: 4px 0 18px;
+  }
+  .home-feature-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .home-feature-card {
+    min-width: 0;
+    min-height: 100px;
+    padding: 14px !important;
+  }
+  .home-feature-copy {
+    min-width: 0;
+    padding-right: 14px;
+  }
+  .home-feature-copy p,
+  .home-feature-copy span {
+    overflow-wrap: anywhere;
+  }
+}
+
+/* iPad portrait and narrow tablet: switch the navigation to a drawer and stack shortcut cards. */
+@media (min-width: 761px) and (max-width: 1024px) {
+  .dashboard-app:has(.home-experience) {
+    --sidebar-width: 0px;
+  }
+  .dashboard-app:has(.home-experience).mobile-navigation-open {
+    --sidebar-width: 280px;
+  }
+  .dashboard-app:has(.home-experience) .dashboard-sidebar {
+    left: -300px;
+    width: 280px;
+    transition: left 0.2s ease;
+  }
+  .dashboard-app:has(.home-experience) .dashboard-sidebar.is-open {
+    left: 0;
+    box-shadow: 12px 0 30px rgba(19, 8, 29, 0.25);
+  }
+  .dashboard-app:has(.home-experience) .dashboard-main {
+    margin-left: 0;
+  }
+  .dashboard-app:has(.home-experience) .dashboard-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 29;
+    background: rgba(20, 10, 30, 0.35);
+  }
+  .dashboard-app:has(.home-experience) .dashboard-mobile-menu.MuiIconButton-root {
+    display: inline-flex !important;
+  }
+  .dashboard-app:has(.home-experience) .sidebar-collapse-toggle.MuiIconButton-root {
+    display: none;
+  }
+  .dashboard-app:has(.home-experience) .home-backdrop {
+    left: 0;
+  }
+  .home-feature-row {
+    grid-template-columns: 1fr;
+  }
+  .home-feature-card {
+    min-height: 88px;
+  }
+}
+
+@media (max-width: 760px) {
+  .home-hero .max-orb {
+    --orb: clamp(76px, 22vw, 104px);
+  }
+  .home-feature-card {
+    min-height: 84px;
+  }
+  .dashboard-content:has(.chat-experience.is-standard-chat) {
+    height: calc(100dvh - 64px);
   }
 }
