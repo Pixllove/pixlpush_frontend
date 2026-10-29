@@ -152,6 +152,7 @@ export default function ProjectDetailsPanel({ showHeading = true }: { showHeadin
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [idCopied, setIdCopied] = useState(false);
   const [error, setError] = useState<string>();
@@ -163,9 +164,20 @@ export default function ProjectDetailsPanel({ showHeading = true }: { showHeadin
     setName(project.name);
     setDescription(project.description ?? '');
     setLogoFile(null);
+    setLogoPreviewUrl(null);
     setSaved(false);
     setError(undefined);
   }, [project]);
+
+  useEffect(() => {
+    if (!logoFile) {
+      setLogoPreviewUrl(null);
+      return;
+    }
+    const previewUrl = URL.createObjectURL(logoFile);
+    setLogoPreviewUrl(previewUrl);
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [logoFile]);
 
   // Only an owner or admin may change these; the backend enforces it too.
   const canEdit = project?.role === 'owner' || project?.role === 'admin';
@@ -240,7 +252,7 @@ export default function ProjectDetailsPanel({ showHeading = true }: { showHeadin
               <Typography fontWeight={600} fontSize="var(--fs-13)">Project logo</Typography>
               <Typography color="text.secondary" fontSize="var(--fs-12)">Upload a logo for the project avatar and future email branding.</Typography>
               <Stack direction="row" alignItems="center" gap={1.5}>
-                {project?.logoUrl && <Box component="img" src={project.logoUrl} alt="Current project logo" sx={{ width: 48, height: 48, borderRadius: 2, objectFit: 'cover', border: '1px solid #eeeaf3' }} />}
+                {(logoPreviewUrl || project?.logoUrl) && <Box component="img" src={logoPreviewUrl ?? project?.logoUrl ?? undefined} alt={logoPreviewUrl ? 'Selected project logo preview' : 'Current project logo'} sx={{ width: 48, height: 48, borderRadius: 2, objectFit: 'cover', border: '1px solid #eeeaf3' }} />}
                 <Button component="label" variant="outlined" disabled={disabled}>
                   {logoFile ? logoFile.name : project?.logoUrl ? 'Replace logo' : 'Choose logo'}
                   <input hidden type="file" accept="image/png,image/jpeg,image/gif,image/webp" onChange={(event) => setLogoFile(event.target.files?.[0] ?? null)} />
