@@ -83,6 +83,17 @@ export const projectApi = {
       "PATCH",
     ),
 
+  uploadLogo: async (projectId: string, file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return authRequest<{ id: string; logoUrl: string | null; updatedAt: string }>(
+      `/${encodeURIComponent(projectId)}/logo`,
+      form,
+      BASE,
+      "PUT",
+    );
+  },
+
   /** Owner only. Starts the recovery window; does not cancel billing. */
   deactivate: (projectId: string) =>
     authRequest<Project>(

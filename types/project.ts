@@ -13,6 +13,7 @@ export interface Project {
   id: string;
   name: string;
   slug: string;
+  logoUrl?: string | null;
   status: ProjectStatus;
   role: ProjectRole;
   /** Same as role; present on list responses. */
@@ -421,6 +422,7 @@ export interface AudienceGroupSchema {
 /** PATCH /projects/:projectId. Omitted keys are left unchanged. */
 export interface UpdateProjectInput {
   name?: string;
+  logoUrl?: string | null;
   description?: string | null;
   environment?: ProjectEnvironment;
 }

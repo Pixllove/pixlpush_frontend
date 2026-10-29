@@ -68,15 +68,17 @@ function leaveIfSignedOut(): void {
 }
 
 async function rawRequest(path: string, body?: unknown, base = '/api/auth', method?: string, options?: AuthRequestOptions): Promise<Response> {
-  // A string body is a raw file (CSV user import); everything else is JSON.
+  // A string body is a raw file (CSV user import). FormData must keep the
+  // browser-generated multipart boundary, so it intentionally has no content type header.
   const isFile = typeof body === 'string';
+  const isMultipart = typeof FormData !== 'undefined' && body instanceof FormData;
   return fetch(`${base}${path}`, {
     method: method ?? (body === undefined ? 'GET' : 'POST'),
     headers: {
-      'Content-Type': isFile ? 'text/csv' : 'application/json',
+      ...(isMultipart ? {} : { 'Content-Type': isFile ? 'text/csv' : 'application/json' }),
       'X-User-Timezone': getViewerTimezone(),
     },
-    body: body === undefined ? undefined : isFile ? body : JSON.stringify(body),
+    body: body === undefined ? undefined : isFile || isMultipart ? body as BodyInit : JSON.stringify(body),
     // Same-origin, but explicit so the session cookies are always sent.
     credentials: 'same-origin',
     signal: options?.signal,

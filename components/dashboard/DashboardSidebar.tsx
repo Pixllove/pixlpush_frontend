@@ -119,7 +119,7 @@ export default function DashboardSidebar({ active, setActive, mobileOpen, collap
             aria-expanded={Boolean(menu)}
             onClick={(event) => setMenu(event.currentTarget)}
           >
-            <Avatar className="sidebar-project-mark" aria-hidden="true">{activeProject ? activeProject.name.charAt(0) : '+'}</Avatar>
+            <Avatar className="sidebar-project-mark" src={activeProject?.logoUrl ?? undefined} aria-hidden="true">{activeProject ? activeProject.name.charAt(0) : '+'}</Avatar>
             <span className="sidebar-project-copy">
               <span className="sidebar-project-name">{projectName}</span>
               <span className="sidebar-project-meta">{projectPlan}</span>

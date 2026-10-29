@@ -11,6 +11,7 @@ import SubmitButton from '@/components/auth/SubmitButton';
 import type { ApiError } from '@/types/auth';
 import AccountProfile from '@/components/auth/AccountProfile';
 import { aiApi } from '@/lib/projects/ai';
+import { projectApi } from '@/lib/projects/api';
 
 function BusinessContextPanel({ projectId }: { projectId?: string }) {
   const contextQuery = useQuery({
@@ -150,6 +151,7 @@ export default function ProjectDetailsPanel({ showHeading = true }: { showHeadin
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [logoFile, setLogoFile] = useState<File | null>(null);
   const [saved, setSaved] = useState(false);
   const [idCopied, setIdCopied] = useState(false);
   const [error, setError] = useState<string>();
@@ -160,6 +162,7 @@ export default function ProjectDetailsPanel({ showHeading = true }: { showHeadin
     if (!project) return;
     setName(project.name);
     setDescription(project.description ?? '');
+    setLogoFile(null);
     setSaved(false);
     setError(undefined);
   }, [project]);
@@ -175,11 +178,15 @@ export default function ProjectDetailsPanel({ showHeading = true }: { showHeadin
     setSaved(false);
 
     try {
+      if (logoFile && active?.id) {
+        await projectApi.uploadLogo(active.id, logoFile);
+      }
       await updateProject.mutateAsync({
         name: name.trim(),
         // Empty means "no note", which the backend stores as null.
         description: description.trim() || null,
       });
+      setLogoFile(null);
       setSaved(true);
     } catch (cause) {
       setError((cause as ApiError).message ?? 'Could not save. Please try again.');
@@ -229,6 +236,17 @@ export default function ProjectDetailsPanel({ showHeading = true }: { showHeadin
               </Button>
             </Stack>
             <TextField label="Description" value={description} onChange={(e) => setDescription(e.target.value)} disabled={disabled} multiline minRows={3} />
+            <Stack gap={1}>
+              <Typography fontWeight={600} fontSize="var(--fs-13)">Project logo</Typography>
+              <Typography color="text.secondary" fontSize="var(--fs-12)">Upload a logo for the project avatar and future email branding.</Typography>
+              <Stack direction="row" alignItems="center" gap={1.5}>
+                {project?.logoUrl && <Box component="img" src={project.logoUrl} alt="Current project logo" sx={{ width: 48, height: 48, borderRadius: 2, objectFit: 'cover', border: '1px solid #eeeaf3' }} />}
+                <Button component="label" variant="outlined" disabled={disabled}>
+                  {logoFile ? logoFile.name : project?.logoUrl ? 'Replace logo' : 'Choose logo'}
+                  <input hidden type="file" accept="image/png,image/jpeg,image/gif,image/webp" onChange={(event) => setLogoFile(event.target.files?.[0] ?? null)} />
+                </Button>
+              </Stack>
+            </Stack>
             <SubmitButton type="submit" variant="contained" pending={updateProject.isPending} disabled={disabled || !name.trim()} sx={{ alignSelf: 'flex-start' }}>
               Save changes
             </SubmitButton>
