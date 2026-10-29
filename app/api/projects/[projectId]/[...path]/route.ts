@@ -5,6 +5,7 @@ import { callBackendWithRefresh } from "@/lib/auth/server";
 const ALLOWED = [
   "deactivate",
   "restore",
+  "logo",
   "firebase",
   "onboarding",
   "sdk-keys",
