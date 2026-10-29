@@ -1,7 +1,7 @@
-import 'server-only';
-import { cookies, headers as requestHeaders } from 'next/headers';
-import type { ApiErrorBody } from '@/types/auth';
-import { SUPPORT_GUEST_COOKIE } from '@/lib/support/cookies';
+import "server-only";
+import { cookies, headers as requestHeaders } from "next/headers";
+import type { ApiErrorBody } from "@/types/auth";
+import { SUPPORT_GUEST_COOKIE } from "@/lib/support/cookies";
 
 /**
  * The Fastify backend. Server-side only: the browser never calls it directly,
@@ -9,43 +9,48 @@ import { SUPPORT_GUEST_COOKIE } from '@/lib/support/cookies';
  */
 // Keep the local frontend (3000) and Fastify API (4000) on separate ports even
 // when a developer has not created a .env.local file yet.
-const API_URL = process.env.BACKEND_API_URL ?? 'http://localhost:4000/api/v1';
+const API_URL = process.env.BACKEND_API_URL ?? "http://localhost:4000/api/v1";
 /** Runs the Supabase Edge Function next to the database (Tokyo); only sent when the backend is on Supabase. */
 const SUPABASE_REGION: Record<string, string> = {
-  ...(API_URL.includes('.supabase.co') ? { 'x-region': 'ap-northeast-1' } : {}),
+  ...(API_URL.includes(".supabase.co") ? { "x-region": "ap-northeast-1" } : {}),
   // Proves the call comes from this server; the backend refuses /api/v1 without it.
-  ...(process.env.BACKEND_GATEWAY_SECRET ? { 'x-pixlpush-gateway': process.env.BACKEND_GATEWAY_SECRET } : {}),
+  ...(process.env.BACKEND_GATEWAY_SECRET
+    ? { "x-pixlpush-gateway": process.env.BACKEND_GATEWAY_SECRET }
+    : {}),
 };
 
-export const SESSION_COOKIE = 'pixlpush_session';
-export const REFRESH_COOKIE = 'pixlpush_refresh';
-export const MFA_PENDING_COOKIE = 'pixlpush_mfa_pending';
-export const MFA_ENROLLMENT_COOKIE = 'pixlpush_mfa_enrollment';
+export const SESSION_COOKIE = "pixlpush_session";
+export const REFRESH_COOKIE = "pixlpush_refresh";
+export const MFA_PENDING_COOKIE = "pixlpush_mfa_pending";
+export const MFA_ENROLLMENT_COOKIE = "pixlpush_mfa_enrollment";
 
 /** Matches the backend's JWT_EXPIRES_IN (15m). */
 const SESSION_MAX_AGE = 15 * 60;
 
-/** Matches the backend's REFRESH_TOKEN_TTL_DAYS (30d). */
+/** Matches the backend's REFRESH_TOKEN_TTL_DAYS (30d). Renewed on every refresh. */
 const REFRESH_MAX_AGE = 30 * 24 * 60 * 60;
 const MFA_PENDING_MAX_AGE = 5 * 60;
 const MFA_ENROLLMENT_MAX_AGE = 10 * 60;
 
-const cookieOptions = (maxAge: number) =>
-  ({
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax' as const,
-    path: '/',
-    maxAge,
-  });
+const cookieOptions = (maxAge: number) => ({
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax" as const,
+  path: "/",
+  maxAge,
+});
 
 /**
  * Stores both halves of a session. The refresh token is httpOnly like the access
  * token, so no part of the session is reachable from JavaScript.
  */
-export function setSessionCookies(accessToken: string, refreshToken?: string): void {
+export function setSessionCookies(
+  accessToken: string,
+  refreshToken?: string,
+): void {
   cookies().set(SESSION_COOKIE, accessToken, cookieOptions(SESSION_MAX_AGE));
-  if (refreshToken) cookies().set(REFRESH_COOKIE, refreshToken, cookieOptions(REFRESH_MAX_AGE));
+  if (refreshToken)
+    cookies().set(REFRESH_COOKIE, refreshToken, cookieOptions(REFRESH_MAX_AGE));
   // A guest support token must never survive an account transition.
   cookies().delete(SUPPORT_GUEST_COOKIE);
 }
@@ -60,10 +65,17 @@ export function clearSessionCookies(): void {
   cookies().delete(SUPPORT_GUEST_COOKIE);
 }
 
-const transientCookieOptions = (maxAge: number) => ({ ...cookieOptions(maxAge), sameSite: 'strict' as const });
+const transientCookieOptions = (maxAge: number) => ({
+  ...cookieOptions(maxAge),
+  sameSite: "strict" as const,
+});
 
 export function setMfaPendingCookie(token: string): void {
-  cookies().set(MFA_PENDING_COOKIE, token, transientCookieOptions(MFA_PENDING_MAX_AGE));
+  cookies().set(
+    MFA_PENDING_COOKIE,
+    token,
+    transientCookieOptions(MFA_PENDING_MAX_AGE),
+  );
 }
 
 export function clearMfaPendingCookie(): void {
@@ -75,7 +87,11 @@ export function getMfaPendingToken(): string | undefined {
 }
 
 export function setMfaEnrollmentCookie(token: string): void {
-  cookies().set(MFA_ENROLLMENT_COOKIE, token, transientCookieOptions(MFA_ENROLLMENT_MAX_AGE));
+  cookies().set(
+    MFA_ENROLLMENT_COOKIE,
+    token,
+    transientCookieOptions(MFA_ENROLLMENT_MAX_AGE),
+  );
 }
 
 export function clearMfaEnrollmentCookie(): void {
@@ -106,22 +122,28 @@ export interface UpstreamResult<T> {
  */
 export async function callBackend<T>(
   path: string,
-  init: { method?: string; body?: unknown; auth?: boolean; contentType?: string; headers?: Record<string, string> } = {},
+  init: {
+    method?: string;
+    body?: unknown;
+    auth?: boolean;
+    contentType?: string;
+    headers?: Record<string, string>;
+  } = {},
 ): Promise<UpstreamResult<T>> {
   // A contentType means a raw text body (CSV user import), forwarded as-is.
   const headers: Record<string, string> = {
-    'Content-Type': init.contentType ?? 'application/json',
+    "Content-Type": init.contentType ?? "application/json",
     ...init.headers,
     ...SUPABASE_REGION,
   };
 
   // Preserve the browser's viewer timezone through the same-origin API proxy.
   // Reject offset-only and malformed values rather than treating them as zones.
-  const timezone = requestHeaders().get('x-user-timezone');
+  const timezone = requestHeaders().get("x-user-timezone");
   if (timezone && timezone.length <= 100) {
     try {
-      new Intl.DateTimeFormat('en', { timeZone: timezone });
-      headers['X-User-Timezone'] = timezone;
+      new Intl.DateTimeFormat("en", { timeZone: timezone });
+      headers["X-User-Timezone"] = timezone;
     } catch {
       // Invalid or unsupported IANA IDs are ignored; UTC instants are unchanged.
     }
@@ -129,8 +151,8 @@ export async function callBackend<T>(
 
   // Every browser reaches the backend through this server, so without the
   // original address its per-IP auth limits would count all users as one.
-  const forwardedFor = requestHeaders().get('x-forwarded-for');
-  if (forwardedFor) headers['X-Forwarded-For'] = forwardedFor;
+  const forwardedFor = requestHeaders().get("x-forwarded-for");
+  if (forwardedFor) headers["X-Forwarded-For"] = forwardedFor;
 
   if (init.auth) {
     const token = getSessionToken();
@@ -138,7 +160,7 @@ export async function callBackend<T>(
       return {
         ok: false,
         status: 401,
-        body: { error: { code: 'UNAUTHORIZED', message: 'Not signed in.' } },
+        body: { error: { code: "UNAUTHORIZED", message: "Not signed in." } },
       };
     }
     headers.Authorization = `Bearer ${token}`;
@@ -147,7 +169,7 @@ export async function callBackend<T>(
   let response: Response;
   try {
     response = await fetch(`${API_URL}${path}`, {
-      method: init.method ?? 'GET',
+      method: init.method ?? "GET",
       headers,
       body:
         init.body === undefined
@@ -157,30 +179,46 @@ export async function callBackend<T>(
             : init.contentType
               ? String(init.body)
               : JSON.stringify(init.body),
-      cache: 'no-store',
+      cache: "no-store",
     });
   } catch {
     // Backend unreachable. The reason is deliberately not echoed to the client.
     return {
       ok: false,
       status: 503,
-      body: { error: { code: 'BACKEND_UNAVAILABLE', message: 'Service is unavailable. Please try again.' } },
+      body: {
+        error: {
+          code: "BACKEND_UNAVAILABLE",
+          message: "Service is unavailable. Please try again.",
+        },
+      },
     };
   }
 
   // The backend answered, so this is never "unavailable". A 204 (DELETE) or any
   // other empty reply has no body; a non-JSON reply (gateway error page) keeps
   // its status with a generic error.
-  const text = await response.text().catch(() => '');
+  const text = await response.text().catch(() => "");
   let body: unknown = null;
   if (text) {
     try {
       body = JSON.parse(text);
     } catch {
-      body = response.ok ? null : { error: { code: 'UPSTREAM_ERROR', message: 'Unexpected response from the server.' } };
+      body = response.ok
+        ? null
+        : {
+            error: {
+              code: "UPSTREAM_ERROR",
+              message: "Unexpected response from the server.",
+            },
+          };
     }
   }
-  return { ok: response.ok, status: response.status, body: body as UpstreamResult<T>['body'] };
+  return {
+    ok: response.ok,
+    status: response.status,
+    body: body as UpstreamResult<T>["body"],
+  };
 }
 
 interface SessionTokens {
@@ -204,18 +242,30 @@ type RefreshResult = UpstreamResult<{ data: SessionTokens }>;
  * ponytail: per-process. Across server instances the backend covers the same
  * race by honouring a just-rotated token once more.
  */
-const shared = globalThis as typeof globalThis & { __pixlpushRotations?: Map<string, Promise<RefreshResult>> };
-const rotations = (shared.__pixlpushRotations ??= new Map<string, Promise<RefreshResult>>());
+const shared = globalThis as typeof globalThis & {
+  __pixlpushRotations?: Map<string, Promise<RefreshResult>>;
+};
+const rotations = (shared.__pixlpushRotations ??= new Map<
+  string,
+  Promise<RefreshResult>
+>());
 const ROTATION_REUSE_MS = 10_000;
 
 function rotate(refreshToken: string): Promise<RefreshResult> {
   let pending = rotations.get(refreshToken);
   if (!pending) {
-    pending = callBackend<{ data: SessionTokens }>('/auth/refresh', { method: 'POST', body: { refreshToken } });
+    pending = callBackend<{ data: SessionTokens }>("/auth/refresh", {
+      method: "POST",
+      body: { refreshToken },
+    });
     rotations.set(refreshToken, pending);
     void pending.then((result) => {
       if (!result.ok) rotations.delete(refreshToken);
-      else setTimeout(() => rotations.delete(refreshToken), ROTATION_REUSE_MS).unref?.();
+      else
+        setTimeout(
+          () => rotations.delete(refreshToken),
+          ROTATION_REUSE_MS,
+        ).unref?.();
     });
   }
   return pending;
@@ -226,16 +276,25 @@ function rotate(refreshToken: string): Promise<RefreshResult> {
  * anything in between (the Supabase gateway while a new version deploys, a
  * proxy, an HTML error page) carries no such code and must not sign anyone out.
  */
-export function isSessionOver(result: { status: number; body: unknown }): boolean {
-  const code = (result.body as { error?: { code?: string } } | null)?.error?.code;
-  return result.status === 401 && code === 'INVALID_REFRESH_TOKEN';
+export function isSessionOver(result: {
+  status: number;
+  body: unknown;
+}): boolean {
+  const code = (result.body as { error?: { code?: string } } | null)?.error
+    ?.code;
+  return result.status === 401 && code === "INVALID_REFRESH_TOKEN";
 }
 
 /** A failed refresh that is not a dead session, reported as a retryable outage. */
 const BACKEND_BUSY = {
   ok: false,
   status: 503,
-  body: { error: { code: 'BACKEND_UNAVAILABLE', message: 'Service is unavailable. Please try again.' } },
+  body: {
+    error: {
+      code: "BACKEND_UNAVAILABLE",
+      message: "Service is unavailable. Please try again.",
+    },
+  },
 } as const;
 
 /**
@@ -274,7 +333,12 @@ export async function refreshSession(): Promise<RefreshResult | undefined> {
  */
 export async function callBackendWithRefresh<T>(
   path: string,
-  init: { method?: string; body?: unknown; contentType?: string; headers?: Record<string, string> } = {},
+  init: {
+    method?: string;
+    body?: unknown;
+    contentType?: string;
+    headers?: Record<string, string>;
+  } = {},
 ): Promise<UpstreamResult<T>> {
   const first = await callBackend<T>(path, { ...init, auth: true });
   if (first.status !== 401) return first;
@@ -284,7 +348,9 @@ export async function callBackendWithRefresh<T>(
   if (!refreshed.ok) {
     // A backend outage or rate limit is reported as itself, so the browser
     // shows "try again" rather than treating the user as signed out.
-    return isSessionOver(refreshed) ? first : (refreshed as unknown as UpstreamResult<T>);
+    return isSessionOver(refreshed)
+      ? first
+      : (refreshed as unknown as UpstreamResult<T>);
   }
 
   // Retried exactly once; a second 401 is returned as-is.
@@ -300,26 +366,29 @@ export interface UpstreamStreamResult {
  * Streaming counterpart to callBackendWithRefresh. It deliberately does not
  * read response.text(), so SSE stays open instead of being buffered in Next.
  */
-async function callBackendStream(path: string, init: { auth?: boolean; headers?: Record<string, string> } = { auth: true }): Promise<UpstreamStreamResult> {
+async function callBackendStream(
+  path: string,
+  init: { auth?: boolean; headers?: Record<string, string> } = { auth: true },
+): Promise<UpstreamStreamResult> {
   const headers: Record<string, string> = {
-    'Cache-Control': 'no-cache',
+    "Cache-Control": "no-cache",
     ...init.headers,
     ...SUPABASE_REGION,
   };
-  const forwardedFor = requestHeaders().get('x-forwarded-for');
-  if (forwardedFor) headers['X-Forwarded-For'] = forwardedFor;
+  const forwardedFor = requestHeaders().get("x-forwarded-for");
+  if (forwardedFor) headers["X-Forwarded-For"] = forwardedFor;
 
   if (init.auth) {
     const token = getSessionToken();
     if (!token) return { status: 401, response: null };
-    headers.Authorization = 'Bearer ' + token;
+    headers.Authorization = "Bearer " + token;
   }
 
   try {
     const response = await fetch(`${API_URL}${path}`, {
-      method: 'GET',
+      method: "GET",
       headers,
-      cache: 'no-store',
+      cache: "no-store",
     });
     return { status: response.status, response };
   } catch {
@@ -327,7 +396,9 @@ async function callBackendStream(path: string, init: { auth?: boolean; headers?:
   }
 }
 
-export async function callBackendStreamWithRefresh(path: string): Promise<UpstreamStreamResult> {
+export async function callBackendStreamWithRefresh(
+  path: string,
+): Promise<UpstreamStreamResult> {
   const first = await callBackendStream(path, { auth: true });
   if (first.status !== 401) return first;
 
@@ -337,10 +408,14 @@ export async function callBackendStreamWithRefresh(path: string): Promise<Upstre
   return callBackendStream(path, { auth: true });
 }
 
-
 /** Streams a support ticket for an authenticated account or a guest capability. */
-export async function callBackendSupportStream(path: string, options: { authenticated: boolean; guestToken?: string }): Promise<UpstreamStreamResult> {
+export async function callBackendSupportStream(
+  path: string,
+  options: { authenticated: boolean; guestToken?: string },
+): Promise<UpstreamStreamResult> {
   if (options.authenticated) return callBackendStreamWithRefresh(path);
-  const headers = options.guestToken ? { 'x-pixlpush-support-token': options.guestToken } : undefined;
+  const headers = options.guestToken
+    ? { "x-pixlpush-support-token": options.guestToken }
+    : undefined;
   return callBackendStream(path, { auth: false, headers });
 }
