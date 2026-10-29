@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { callBackendWithRefresh, getRefreshToken, getSessionToken } from '@/lib/auth/server';
+import { callBackendWithRefresh, clearAccountSessionCookies, getRefreshToken, getSessionToken } from '@/lib/auth/server';
 
 export async function GET() {
   // A visitor with no session cookies is simply signed out: answer that
@@ -7,5 +7,12 @@ export async function GET() {
   if (!getSessionToken() && !getRefreshToken()) return NextResponse.json({ data: { account: null, projects: [] } });
   // Transparently refreshes once if the access token has expired.
   const result = await callBackendWithRefresh('/auth/me');
+  return NextResponse.json(result.body, { status: result.status });
+}
+
+export async function DELETE(request: Request) {
+  const body = await request.json().catch(() => ({}));
+  const result = await callBackendWithRefresh('/auth/me', { method: 'DELETE', body });
+  if (result.ok) clearAccountSessionCookies();
   return NextResponse.json(result.body, { status: result.status });
 }

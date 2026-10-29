@@ -31,6 +31,10 @@ export const authApi = {
 
   me: () => authRequest<CurrentUser>('/me'),
 
+  deletionPreflight: () => authRequest<AccountDeletionPreflight>('/me/deletion-preflight'),
+
+  deleteMe: (confirmEmail: string) => authRequest<AccountDeletionResult>('/me', { confirmEmail }, undefined, 'DELETE'),
+
   skipOnboarding: () => authRequest<{ skipped: boolean }>('/onboarding/skip', {}),
 
   setActiveProject: (projectId: string) =>
@@ -55,6 +59,15 @@ export const authApi = {
   resendVerification: (input: ResendVerificationInput) =>
     authRequest<{ message: string }>('/resend-verification', input),
 };
+
+export type AccountDeletionProject = { id: string; name: string; slug: string; role: string };
+export type AccountDeletionPreflight = {
+  canDelete: boolean;
+  blockingProjects: AccountDeletionProject[];
+  preservedProjects: AccountDeletionProject[];
+  projectsToTransfer: Array<AccountDeletionProject & { replacementAccountId: string | null; replacementRole: string | null; replacementName: string | null; replacementEmail: string | null }>;
+};
+export type AccountDeletionResult = { accountId: string; status: 'deleted'; deletedAt: string; purgeAfter: string; projectsPreserved: number; projectsTransferred: number; sessionsRevoked: number };
 
 export const authKeys = {
   all: ['auth'] as const,

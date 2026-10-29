@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Alert, Box, Button, Card, Chip, Skeleton, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Card, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Skeleton, Stack, TextField, Typography } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCurrentUser } from '@/hooks/auth/use-current-user';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
 import { billingApi } from '@/lib/projects/api';
+import { authApi } from '@/lib/auth/api';
 import ChangePasswordForm from './ChangePasswordForm';
 import TwoFactorSettings from './TwoFactorSettings';
 import UserAvatar from './UserAvatar';
@@ -24,6 +25,15 @@ export default function AccountProfile({ section = 'all', showCompanyHeading = t
   const queryClient = useQueryClient();
   const billingQuery = useQuery({ queryKey: ['projects', 'billing', active?.id, 'subscription'], queryFn: () => billingApi.subscription(active!.id), enabled: Boolean(active?.id) });
   const [company, setCompany] = useState('');
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [confirmEmail, setConfirmEmail] = useState('');
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const deletionQuery = useQuery({ queryKey: ['auth', 'account-deletion-preflight'], queryFn: authApi.deletionPreflight, enabled: section !== 'company' });
+  const deleteAccount = useMutation({
+    mutationFn: () => authApi.deleteMe(confirmEmail.trim()),
+    onSuccess: () => { window.location.assign('/login?deleted=1'); },
+    onError: (cause) => setDeleteError((cause as { message?: string }).message ?? 'We could not delete your account. Please try again.'),
+  });
   useEffect(() => setCompany(billingQuery.data?.billingContact?.company ?? ''), [billingQuery.data?.billingContact?.company]);
   const saveCompany = useMutation({
     mutationFn: () => billingApi.updateContact(active!.id, {
@@ -96,6 +106,29 @@ export default function AccountProfile({ section = 'all', showCompanyHeading = t
 
       {(section === 'all' || section === 'profile') && <TwoFactorSettings />}
       {(section === 'all' || section === 'profile') && <ChangePasswordForm />}
+      {(section === 'all' || section === 'profile') && <Box className="pp-profile-section">
+        <div>
+          <Typography variant="h3">Delete personal account</Typography>
+          <Typography color="text.secondary" sx={{ mt: .5 }}>This signs you out everywhere and permanently removes your personal access after the recovery period.</Typography>
+        </div>
+        <Box sx={{ minWidth: 0 }}>
+          {deletionQuery.isLoading ? <Skeleton width="70%" /> : deletionQuery.isError ? <Alert severity="error">We could not check account deletion eligibility. Please refresh and try again.</Alert> : deletionQuery.data?.canDelete ? <>
+            <Typography color="text.secondary" fontSize="var(--fs-12)">Eligible projects stay active. If you created one, ownership will be transferred to another owner or admin.</Typography>
+            <Button color="error" variant="outlined" sx={{ mt: 2 }} onClick={() => { setDeleteError(null); setConfirmEmail(''); setDeleteOpen(true); }}>Delete personal account</Button>
+          </> : <Alert severity="warning">Delete or transfer ownership of {deletionQuery.data?.blockingProjects.length ?? 0} project{deletionQuery.data?.blockingProjects.length === 1 ? '' : 's'} before deleting your account.</Alert>}
+        </Box>
+      </Box>}
     </Card>
+    <Dialog open={deleteOpen} onClose={() => !deleteAccount.isPending && setDeleteOpen(false)} maxWidth="sm" fullWidth>
+      <DialogTitle>Delete your personal account?</DialogTitle>
+      <DialogContent>
+        <Stack gap={2} sx={{ mt: 1 }}>
+          <Alert severity="warning">You will be signed out everywhere. Active projects will not be deleted when another owner or admin can continue managing them.</Alert>
+          {deleteError && <Alert severity="error">{deleteError}</Alert>}
+          <TextField label={`Type “${account?.email ?? ''}” to confirm`} value={confirmEmail} onChange={(event) => setConfirmEmail(event.target.value)} autoComplete="off" fullWidth />
+        </Stack>
+      </DialogContent>
+      <DialogActions><Button onClick={() => setDeleteOpen(false)} disabled={deleteAccount.isPending}>Cancel</Button><Button color="error" variant="contained" disabled={confirmEmail.trim().toLowerCase() !== account?.email?.toLowerCase() || deleteAccount.isPending} onClick={() => deleteAccount.mutate()}>{deleteAccount.isPending ? 'Deleting…' : 'Delete account'}</Button></DialogActions>
+    </Dialog>
   </Stack>;
 }

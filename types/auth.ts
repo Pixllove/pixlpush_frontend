@@ -57,7 +57,7 @@ export interface ApiErrorBody {
   error: {
     code: string;
     message: string;
-    details?: Array<{ path: string; message: string }>;
+    details?: unknown;
   };
 }
 

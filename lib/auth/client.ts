@@ -16,10 +16,10 @@ function normalizeError(status: number, body: unknown): ApiError {
 
   // A 422 carries per-field messages; map them onto form field names so
   // react-hook-form can show them next to the right input.
-  const fieldErrors = error.details?.reduce<Record<string, string>>((acc, detail) => {
+  const fieldErrors = Array.isArray(error.details) ? error.details.reduce<Record<string, string>>((acc, detail) => {
     if (detail.path && !acc[detail.path]) acc[detail.path] = detail.message;
     return acc;
-  }, {});
+  }, {}) : undefined;
 
   return {
     status,
