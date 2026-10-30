@@ -17,14 +17,15 @@ const statusLabels: Record<SupportTicket["status"], string> = {
 };
 
 export default function SupportPage() {
-  useActiveProject();
+  const { active: activeProject } = useActiveProject();
+  const [view, setView] = useState<'account' | 'project'>('account');
   const client = useQueryClient();
   // Reply emails link to /dashboard/support?ticket=<id>.
   const [selectedId, setSelectedId] = useState<string | null>(null);
   useEffect(() => { const linked = new URLSearchParams(window.location.search).get("ticket"); if (linked) setSelectedId(linked); }, []);
   const [draft, setDraft] = useState("");
   const pendingSend = useRef<{ ticketId: string; message: string; key: string } | null>(null);
-  const tickets = useQuery({ queryKey: supportKeys.tickets(), queryFn: supportApi.list });
+  const tickets = useQuery({ queryKey: [...supportKeys.tickets(), view, activeProject?.id], queryFn: () => supportApi.list(view === 'project' && activeProject ? { projectId: activeProject.id } : {}), enabled: view === 'account' || Boolean(activeProject) });
   const selected = useQuery({ queryKey: supportKeys.ticket(selectedId ?? ""), queryFn: () => supportApi.get(selectedId!), enabled: Boolean(selectedId) });
   useEffect(() => {
     if (!selectedId) return;
@@ -46,6 +47,7 @@ export default function SupportPage() {
         <Card className="pp-panel" sx={{ width: { xs: "100%", md: 330 }, p: 2 }}>
           <Typography variant="h3" sx={{ mb: 1 }}>Your support tickets</Typography>
           <Typography color="text.secondary" sx={{ mb: 2, fontSize: 13 }}>Questions from the website and dashboard appear here.</Typography>
+          <Stack direction="row" gap={1} sx={{ mb: 2 }}><Button size="small" variant={view === 'account' ? 'contained' : 'outlined'} onClick={() => setView('account')}>Account tickets</Button><Button size="small" variant={view === 'project' ? 'contained' : 'outlined'} onClick={() => setView('project')} disabled={!activeProject}>Current project</Button></Stack>
           {tickets.isPending ? <CircularProgress size={22} /> : tickets.isError ? <Alert severity="error">Unable to load support tickets.</Alert> : tickets.data.items.length === 0 ? <Typography color="text.secondary">No tickets yet. Use Contact support to start one.</Typography> : <Stack divider={<Divider flexItem />}>
             {tickets.data.items.map((ticket) => <Button key={ticket.id} onClick={() => setSelectedId(ticket.id)} sx={{ justifyContent: "flex-start", alignItems: "flex-start", py: 1.4, textAlign: "left", color: "text.primary", bgcolor: selectedId === ticket.id ? "action.hover" : "transparent" }}><Box><Typography fontWeight={700}>{ticket.subject || `${ticket.topic} support`}</Typography><Typography color="text.secondary" sx={{ display: "block", mt: .35, fontSize: 12 }}>{ticket.reference} · {statusLabels[ticket.status]}</Typography></Box></Button>)}
           </Stack>}

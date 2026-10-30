@@ -376,6 +376,7 @@ export default function DashboardFrame({
       openTicketId={supportTicketId}
       onUnreadChange={setSupportUnread}
       projectId={activeProject?.id}
+      projects={projects.map((project) => ({ id: project.id, name: project.name }))}
       authenticated={Boolean(currentUser?.account)}
     />
     </>

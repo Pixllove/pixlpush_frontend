@@ -19,6 +19,7 @@ export type SupportTicket = {
   status: SupportStatus;
   priority: SupportPriority;
   source: 'website' | 'dashboard';
+  isPotentialCustomer: boolean;
   guestEmail?: string | null;
   project: { id: string; name: string; slug: string } | null;
   lastMessageAt: string;
@@ -79,7 +80,7 @@ export const supportApi = {
   getConversation: (conversationId: string) => supportRequest<SupportConversation>(`conversations/${encodeURIComponent(conversationId)}`),
   create: (input: { email?: string; topic: SupportTopic; subject?: string; message: string; projectId?: string; source: 'website' | 'dashboard'; idempotencyKey?: string; }) =>
     supportRequest<{ ticket: SupportTicket; created: boolean }>('tickets', { method: 'POST', body: JSON.stringify({ ...input, pageUrl: typeof window === 'undefined' ? undefined : window.location.href, idempotencyKey: input.idempotencyKey ?? crypto.randomUUID() }) }),
-  list: () => supportRequest<{ items: SupportTicket[]; nextCursor: string | null }>('tickets'),
+  list: (params: { projectId?: string } = {}) => supportRequest<{ items: SupportTicket[]; nextCursor: string | null }>(`tickets${params.projectId ? `?projectId=${encodeURIComponent(params.projectId)}` : ''}`),
   get: (ticketId: string) => supportRequest<SupportTicket>(`tickets/${encodeURIComponent(ticketId)}`),
   send: (ticketId: string, message: string, idempotencyKey = crypto.randomUUID()) => supportRequest<SupportTicket>(`tickets/${encodeURIComponent(ticketId)}/messages`, { method: 'POST', body: JSON.stringify({ message, idempotencyKey }) }),
   /**
