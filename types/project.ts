@@ -2,7 +2,7 @@
 export type ProjectRole =
   "owner" | "admin" | "developer" | "analyst" | "read_only" | "billing";
 
-export type ProjectStatus = "active" | "deactivated";
+export type ProjectStatus = "active" | "suspended" | "deactivated";
 
 export type ProjectEnvironment = "development" | "staging" | "production";
 
@@ -15,6 +15,7 @@ export interface Project {
   slug: string;
   logoUrl?: string | null;
   status: ProjectStatus;
+  suspensionReason?: string | null;
   role: ProjectRole;
   /** Same as role; present on list responses. */
   myRole?: ProjectRole;

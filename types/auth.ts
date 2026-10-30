@@ -6,6 +6,8 @@ export interface Account {
   id: string;
   email: string;
   name: string | null;
+  /** active | blocked | deleted. Blocked customers can sign in to appeal, but cannot access project workspaces. */
+  status?: 'active' | 'blocked' | 'deleted';
   emailVerified: boolean;
   /** False for Google-only accounts: they can set a first password without a current one. */
   hasPassword?: boolean;
@@ -22,7 +24,8 @@ export interface AccountProject {
   id: string;
   name: string;
   slug: string;
-  status: 'active' | 'deactivated';
+  status: 'active' | 'suspended' | 'deactivated';
+  suspensionReason: string | null;
   deactivatedAt: string | null;
   recoveryUntil: string | null;
   role: 'owner' | 'admin' | 'developer' | 'analyst' | 'read_only' | 'billing';

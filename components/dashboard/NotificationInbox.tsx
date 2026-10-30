@@ -117,13 +117,20 @@ function NotificationRow({
   const read = useMarkNotificationRead();
   const dismiss = useDismissNotification();
   const notification = item.notification;
-  const style = categoryStyles[notification.category];
+  const style = notification.type === 'account_unblocked'
+    ? { color: '#15803d', background: '#e8f5ec', Icon: CheckCircleOutlineRounded }
+    : categoryStyles[notification.category];
   const Icon = style.Icon;
   const href = internalHref(notification);
   const isUnread = !item.readAt;
 
   const open = () => {
     if (isUnread) read.mutate(notification.id);
+    if (compact) {
+      router.push('/dashboard/notifications');
+      onNavigate?.();
+      return;
+    }
     if (href) {
       router.push(href);
       onNavigate?.();

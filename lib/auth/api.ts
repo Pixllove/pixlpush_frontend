@@ -19,7 +19,7 @@ export const authApi = {
   mfaStatus: () => authRequest<{ enabled: boolean; enabledAt: string | null }>('/mfa/status'),
   startMfaEnrollment: () => authRequest<MfaEnrollment>('/mfa/enrollment/start', {}),
   confirmMfaEnrollment: (code: string) => authRequest<{ recoveryCodes: string[] }>('/mfa/enrollment/confirm', { code }),
-  verifyMfaLogin: (input: { method: 'totp' | 'recovery'; code: string }) => authRequest<{ account: Account; recoveryUsed: boolean }>('/mfa/login/verify', input),
+  verifyMfaLogin: (input: { method: 'totp' | 'recovery'; code: string }) => authRequest<{ account: Account; recoveryUsed?: boolean }>('/mfa/login/verify', input),
   regenerateMfaRecoveryCodes: (currentPassword?: string) => authRequest<{ recoveryCodes: string[] }>('/mfa/recovery-codes/regenerate', { currentPassword }),
   disableMfa: (currentPassword?: string) => authRequest<{ account: Account }>('/mfa/disable', { currentPassword }),
 
@@ -30,6 +30,10 @@ export const authApi = {
   logout: () => authRequest<{ message: string }>('/logout', {}),
 
   me: () => authRequest<CurrentUser>('/me'),
+
+  /** Submit an appeal while signed in to the blocked-account screen. */
+  appeal: (message: string, idempotencyKey: string) =>
+    authRequest<{ ticketId: string; reference: string; created: boolean }>('/me/appeal', { message, idempotencyKey }),
 
   deletionPreflight: () => authRequest<AccountDeletionPreflight>('/me/deletion-preflight'),
 

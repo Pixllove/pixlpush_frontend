@@ -13,9 +13,11 @@ export function useProjects() {
     queryFn: projectApi.list,
     // A 401/403 will not start succeeding on retry.
     retry: (count, error) => !isPermanentAuthError(error) && count < 2,
-    // Every Project mutation invalidates projectKeys.all, so the list only
-    // goes stale through someone else's change.
-    staleTime: 5 * 60_000,
+    // Platform admins can suspend a Project outside this browser session. Fetch
+    // the list on each workspace-page mount so the reason and appeal prompt show
+    // on the first tab the customer opens after a suspension.
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 }
 

@@ -1,8 +1,10 @@
 import { HydrationBoundary, QueryClient, dehydrate } from '@tanstack/react-query';
 import SessionKeepAlive from '@/components/auth/SessionKeepAlive';
+import BlockedScreen from '@/components/auth/BlockedScreen';
 import { authKeys } from '@/lib/auth/api';
 import { callBackend } from '@/lib/auth/server';
 import { projectKeys } from '@/lib/projects/api';
+import type { CurrentUser } from '@/types/auth';
 
 /**
  * Loads the signed-in user and their Projects while the page is rendered, and
@@ -24,13 +26,16 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
     callBackend<{ data: unknown }>('/projects', { auth: true }),
   ]);
 
-  if (me.ok) queryClient.setQueryData(authKeys.currentUser(), (me.body as { data: unknown }).data);
+  const currentUser = me.ok ? (me.body as { data: CurrentUser }).data : null;
+  if (currentUser) queryClient.setQueryData(authKeys.currentUser(), currentUser);
   if (projects.ok) queryClient.setQueryData(projectKeys.list(), (projects.body as { data: unknown }).data);
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
       <SessionKeepAlive />
-      {children}
+      {currentUser?.account.status === 'blocked'
+        ? <BlockedScreen accountId={currentUser.account.id} email={currentUser.account.email} />
+        : children}
     </HydrationBoundary>
   );
 }

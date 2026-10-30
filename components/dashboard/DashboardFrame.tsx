@@ -15,6 +15,7 @@ import {
   Button,
   IconButton,
   Stack,
+  TextField,
   Typography,
 } from "@mui/material";
 import { useActiveProject } from "@/hooks/projects/use-active-project";
@@ -29,6 +30,7 @@ import CreateProjectDialog from './CreateProjectDialog';
 import { useCurrentUser } from '@/hooks/auth/use-current-user';
 import { firebaseApi, onboardingApi } from '@/lib/projects/api';
 import { onboardingPercentage } from '@/lib/onboarding';
+import { supportApi } from '@/lib/support/api';
 
 export default function DashboardFrame({
   active,
@@ -53,18 +55,27 @@ export default function DashboardFrame({
   const [supportOpen, setSupportOpen] = useState(false);
   const [supportUnread, setSupportUnread] = useState(0);
   const [createOpen, setCreateOpen] = useState(false);
-  const { active: activeProject, isEmpty, selectProject } = useActiveProject();
+  const [appealDetails, setAppealDetails] = useState('');
+  const [appealFormOpen, setAppealFormOpen] = useState(false);
+  const [appealSending, setAppealSending] = useState(false);
+  const [appealError, setAppealError] = useState('');
+  const [appealReference, setAppealReference] = useState('');
+  const { projects, active: activeProject, isEmpty, selectProject } = useActiveProject();
   const { data: currentUser, isPending: userPending } = useCurrentUser();
+  useEffect(() => {
+    setAppealFormOpen(false);
+    setAppealDetails(''); setAppealError(''); setAppealReference('');
+  }, [active, activeProject?.id, activeProject?.status, requiresProject]);
   const onboarding = useQuery({
     queryKey: ['projects', activeProject?.id, 'onboarding'],
     queryFn: () => onboardingApi.get(activeProject!.id),
-    enabled: Boolean(activeProject?.id),
+    enabled: Boolean(activeProject?.id) && activeProject?.status === 'active',
     staleTime: 30_000,
   });
   const firebase = useQuery({
     queryKey: ['projects', activeProject?.id, 'firebase'],
     queryFn: () => firebaseApi.get(activeProject!.id),
-    enabled: Boolean(activeProject?.id),
+    enabled: Boolean(activeProject?.id) && activeProject?.status === 'active',
     staleTime: 30_000,
   });
 
@@ -78,6 +89,22 @@ export default function DashboardFrame({
       ? setCreateOpen(true)
       : selectProject(value);
   };
+  const sendProjectAppeal = async () => {
+    if (!activeProject || appealDetails.trim().length < 10 || appealSending || appealReference) return;
+    setAppealSending(true); setAppealError('');
+    try {
+      const result = await supportApi.create({
+        topic: 'account_access',
+        subject: 'Project suspension appeal',
+        projectId: activeProject.id,
+        source: 'dashboard',
+        message: `I believe the suspension of project “${activeProject.name}” may be a mistake. Please review it.\n\nReason shown: ${activeProject.suspensionReason || 'No reason was provided.'}\n\nMy appeal: ${appealDetails.trim()}`,
+      });
+      setAppealReference(result.ticket.reference);
+    } catch (cause) {
+      setAppealError(cause instanceof Error ? cause.message : 'We could not send your appeal. Please try again.');
+    } finally { setAppealSending(false); }
+  };
 
   // Only once the list has loaded and is truly empty; while loading the page renders as usual.
   const needsProject = requiresProject && isEmpty;
@@ -87,7 +114,7 @@ export default function DashboardFrame({
       firebase.data?.status === 'connected',
     )
     : null;
-  const showOnboardingWarning = active !== 'Onboarding Guide' && onboardingPercent !== null && onboardingPercent < 100;
+  const showOnboardingWarning = activeProject?.status !== 'suspended' && active !== 'Onboarding Guide' && onboardingPercent !== null && onboardingPercent < 100;
   // Nothing invented: the heading names the real Project, or says there is none.
   const projectName = activeProject?.name ?? (isEmpty ? "No project" : "");
   return (
@@ -242,6 +269,24 @@ export default function DashboardFrame({
                   </div>
                 ))}
               </div>
+            </Box>
+          ) : activeProject?.status === 'suspended' && requiresProject ? (
+            <Box component="section" aria-labelledby="project-suspended-title" sx={{ width: '100%', maxWidth: 760, mx: 'auto', p: { xs: 2.5, sm: 4 }, border: '1px solid', borderColor: 'warning.light', borderRadius: 3, bgcolor: 'background.paper' }}>
+              <Typography id="project-suspended-title" variant="h2" sx={{ fontWeight: 700 }}>This project is suspended</Typography>
+              <Typography color="text.secondary" sx={{ mt: 1 }}>Your PixlPush account is still available, but this project’s workspace is paused. Review the reason below. If you think this is a mistake, you can ask our team to review it.</Typography>
+              <Alert severity="warning" sx={{ mt: 2.5 }}><strong>Reason:</strong> {activeProject.suspensionReason || 'No reason was provided.'}</Alert>
+              {appealReference ? (
+                <Alert severity="success" sx={{ mt: 2 }}>Your appeal was sent to the support team. Reference: <strong>{appealReference}</strong></Alert>
+              ) : appealFormOpen ? (
+                <TextField multiline minRows={4} fullWidth label="Why do you think this is a mistake?" value={appealDetails} onChange={(event) => { setAppealDetails(event.target.value); setAppealError(''); }} helperText={`${appealDetails.trim().length}/10 characters minimum`} sx={{ mt: 2 }} />
+              ) : null}
+              {appealError && <Alert severity="error" role="alert" sx={{ mt: 2 }}>{appealError}</Alert>}
+              <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="flex-end" spacing={1.5} sx={{ mt: 2.5 }}>
+                {!appealReference && (appealFormOpen ? <>
+                  <Button variant="outlined" onClick={() => { setAppealFormOpen(false); setAppealDetails(''); setAppealError(''); }} disabled={appealSending}>Cancel</Button>
+                  <Button variant="contained" onClick={() => void sendProjectAppeal()} disabled={appealSending || appealDetails.trim().length < 10}>{appealSending ? 'Sending…' : 'Send appeal'}</Button>
+                </> : <Button variant="contained" onClick={() => setAppealFormOpen(true)}>Appeal this suspension</Button>)}
+              </Stack>
             </Box>
           ) : (
             children

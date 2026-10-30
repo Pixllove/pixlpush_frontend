@@ -2,10 +2,10 @@ import { NextResponse } from 'next/server';
 import { callBackend, clearMfaPendingCookie, getMfaPendingToken, setSessionCookies } from '@/lib/auth/server';
 
 interface SessionData {
-  accessToken: string;
-  refreshToken: string;
+  accessToken?: string;
+  refreshToken?: string;
   account: unknown;
-  recoveryUsed: boolean;
+  recoveryUsed?: boolean;
 }
 
 export async function POST(request: Request) {
@@ -15,6 +15,7 @@ export async function POST(request: Request) {
   const result = await callBackend<{ data: SessionData }>('/auth/mfa/login/verify', { method: 'POST', body: { ...body, challengeToken: pendingToken } });
   if (!result.ok) return NextResponse.json(result.body, { status: result.status });
   const data = (result.body as { data: SessionData }).data;
+  if (!data.accessToken || !data.refreshToken) return NextResponse.json({ error: { code: 'AUTH_SESSION_INVALID', message: 'Could not start a secure session.' } }, { status: 502 });
   setSessionCookies(data.accessToken, data.refreshToken);
   clearMfaPendingCookie();
   return NextResponse.json({ data: { account: data.account, recoveryUsed: data.recoveryUsed } });

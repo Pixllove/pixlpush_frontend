@@ -81,7 +81,7 @@ export default function DashboardSidebar({ active, setActive, mobileOpen, collap
   const projectPlan = activeProject
     ? activeProject.status === 'deactivated'
       ? `Deactivated${activeProject.recoveryUntil ? ` · restores ${formatShortDate(activeProject.recoveryUntil)}` : ''}`
-      : planLabel(activeProject)
+      : activeProject.status === 'suspended' ? 'Suspended' : planLabel(activeProject)
     : 'Not set up yet';
   const onboardingPercent = !activeProject
     ? '0%'
@@ -131,8 +131,8 @@ export default function DashboardSidebar({ active, setActive, mobileOpen, collap
           {projects.map((project) => (
             <MenuItem key={project.id} selected={project.id === activeProject?.id} onClick={() => switchProject(project.id)}>
                <Typography component="span" variant="inherit" noWrap>{project.name}</Typography>
-               <Typography component="span" variant="caption" color={project.status === 'deactivated' ? 'error.main' : 'text.secondary'} sx={{ ml: 'auto', pl: 2 }}>
-                 {project.status === 'deactivated' ? 'Deactivated' : planLabel(project)}
+               <Typography component="span" variant="caption" color={project.status === 'active' ? 'text.secondary' : 'error.main'} sx={{ ml: 'auto', pl: 2 }}>
+                 {project.status === 'deactivated' ? 'Deactivated' : project.status === 'suspended' ? 'Suspended' : planLabel(project)}
                </Typography>
             </MenuItem>
           ))}
