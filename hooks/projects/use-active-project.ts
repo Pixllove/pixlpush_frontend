@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/lib/store';
 import { setSelectedProject } from '@/lib/uiSlice';
@@ -27,6 +27,7 @@ export function useActiveProject() {
   const selectedId = useSelector((state: RootState) => state.ui.selectedProject);
   const { data: projects, isPending, isError } = useProjects();
   const { data: currentUser } = useCurrentUser();
+  const handledProjectLink = useRef<string | null>(null);
 
   // Restore the last selection before the list arrives, so switching pages
   // does not momentarily fall back to a different Project. A ?project= link
@@ -37,6 +38,17 @@ export function useActiveProject() {
    */
   useEffect(() => {
     if (!projects?.length) return;
+    const requestedProject = new URLSearchParams(window.location.search).get('project');
+    if (requestedProject && projects.some((project) => project.id === requestedProject)) {
+      if (handledProjectLink.current !== requestedProject) {
+        handledProjectLink.current = requestedProject;
+        if (requestedProject === selectedId) return;
+        void authApi.setActiveProject(requestedProject).then(() => {
+          dispatch(setSelectedProject(requestedProject));
+        }).catch(() => undefined);
+      }
+      return;
+    }
     if (selectedId && projects.some((project) => project.id === selectedId)) return;
     const preferred = currentUser?.activeProjectId && projects.some((project) => project.id === currentUser.activeProjectId)
       ? currentUser.activeProjectId

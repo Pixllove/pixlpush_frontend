@@ -13,6 +13,7 @@ import {
   Alert,
   Box,
   Button,
+  CircularProgress,
   IconButton,
   Stack,
   TextField,
@@ -271,22 +272,84 @@ export default function DashboardFrame({
               </div>
             </Box>
           ) : activeProject?.status === 'suspended' && requiresProject ? (
-            <Box component="section" aria-labelledby="project-suspended-title" sx={{ width: '100%', maxWidth: 760, mx: 'auto', p: { xs: 2.5, sm: 4 }, border: '1px solid', borderColor: 'warning.light', borderRadius: 3, bgcolor: 'background.paper' }}>
-              <Typography id="project-suspended-title" variant="h2" sx={{ fontWeight: 700 }}>This project is suspended</Typography>
-              <Typography color="text.secondary" sx={{ mt: 1 }}>Your PixlPush account is still available, but this project’s workspace is paused. Review the reason below. If you think this is a mistake, you can ask our team to review it.</Typography>
-              <Alert severity="warning" sx={{ mt: 2.5 }}><strong>Reason:</strong> {activeProject.suspensionReason || 'No reason was provided.'}</Alert>
-              {appealReference ? (
-                <Alert severity="success" sx={{ mt: 2 }}>Your appeal was sent to the support team. Reference: <strong>{appealReference}</strong></Alert>
-              ) : appealFormOpen ? (
-                <TextField multiline minRows={4} fullWidth label="Why do you think this is a mistake?" value={appealDetails} onChange={(event) => { setAppealDetails(event.target.value); setAppealError(''); }} helperText={`${appealDetails.trim().length}/10 characters minimum`} sx={{ mt: 2 }} />
-              ) : null}
-              {appealError && <Alert severity="error" role="alert" sx={{ mt: 2 }}>{appealError}</Alert>}
-              <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="flex-end" spacing={1.5} sx={{ mt: 2.5 }}>
-                {!appealReference && (appealFormOpen ? <>
-                  <Button variant="outlined" onClick={() => { setAppealFormOpen(false); setAppealDetails(''); setAppealError(''); }} disabled={appealSending}>Cancel</Button>
-                  <Button variant="contained" onClick={() => void sendProjectAppeal()} disabled={appealSending || appealDetails.trim().length < 10}>{appealSending ? 'Sending…' : 'Send appeal'}</Button>
-                </> : <Button variant="contained" onClick={() => setAppealFormOpen(true)}>Appeal this suspension</Button>)}
-              </Stack>
+            <Box component="section" aria-labelledby="project-suspended-title" sx={{ width: '100%', maxWidth: 820, mx: 'auto', border: '1px solid #e9e2f1', borderRadius: 4, bgcolor: 'background.paper', overflow: 'hidden', boxShadow: '0 18px 55px rgba(37, 19, 55, .07)' }}>
+              <Box sx={{ p: { xs: 2.5, sm: 4 }, background: 'linear-gradient(120deg, #faf7ff 0%, #fffaf3 100%)', borderBottom: '1px solid #eee7f3' }}>
+                <Stack direction="row" spacing={2} alignItems="flex-start">
+                  <Box sx={{ width: 54, height: 54, borderRadius: 3, display: 'grid', placeItems: 'center', flexShrink: 0, color: '#a85b12', bgcolor: '#fff0d8', border: '1px solid #f4d7a8' }}>
+                    <WarningAmberRounded sx={{ fontSize: 28 }} />
+                  </Box>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: .75 }}>
+                      <Typography component="span" sx={{ color: 'primary.main', fontSize: 12, fontWeight: 800, letterSpacing: '.09em', textTransform: 'uppercase' }}>Project status</Typography>
+                      <Box component="span" sx={{ px: 1, py: .25, borderRadius: 99, color: '#9a5412', bgcolor: '#fff0d8', fontSize: 11, fontWeight: 700 }}>Suspended</Box>
+                    </Stack>
+                    <Typography id="project-suspended-title" variant="h2" sx={{ fontWeight: 750, fontSize: { xs: 25, sm: 30 }, letterSpacing: '-.025em' }}>This project is suspended</Typography>
+                    <Typography color="text.secondary" sx={{ mt: 1, maxWidth: 650, lineHeight: 1.7 }}>
+                      Your PixlPush account is still available, but this project’s workspace is paused. Its campaigns and automated journeys are stopped while the suspension is in place.
+                    </Typography>
+                  </Box>
+                </Stack>
+
+                <Box sx={{ mt: 3, p: { xs: 2, sm: 2.25 }, display: 'flex', gap: 1.5, alignItems: 'flex-start', border: '1px solid #f0d49e', borderRadius: 2.5, bgcolor: '#fff8e9' }}>
+                  <WarningAmberRounded sx={{ mt: .1, color: '#ad651b', flexShrink: 0 }} />
+                  <Box>
+                    <Typography sx={{ color: '#81440f', fontSize: 13, fontWeight: 750 }}>Reason for suspension</Typography>
+                    <Typography sx={{ mt: .35, color: '#754c27', lineHeight: 1.6 }}>{activeProject.suspensionReason || 'No reason was provided. You can ask our team to review this decision.'}</Typography>
+                  </Box>
+                </Box>
+
+                <Typography color="text.secondary" sx={{ mt: 2, fontSize: 13, lineHeight: 1.6 }}>
+                  Think this may be a mistake? Send a review request and our support team will follow up by email.
+                </Typography>
+              </Box>
+
+              <Box sx={{ p: { xs: 2.5, sm: 4 } }}>
+                {appealReference ? (
+                  <Alert severity="success" sx={{ borderRadius: 2.5, '& .MuiAlert-message': { lineHeight: 1.6 } }}>
+                    <strong>Review request received.</strong> Our support team will follow up by email. Reference: <strong>{appealReference}</strong>
+                  </Alert>
+                ) : (
+                  <>
+                    {appealFormOpen ? (
+                      <Box component="form" onSubmit={(event) => { event.preventDefault(); void sendProjectAppeal(); }}>
+                        <Typography variant="h3" sx={{ fontWeight: 700, fontSize: 18 }}>Tell us why you think this is a mistake</Typography>
+                        <Typography color="text.secondary" sx={{ mt: .5, mb: 2, fontSize: 13, lineHeight: 1.6 }}>
+                          Share a few details so our team can review the project and get back to you.
+                        </Typography>
+                        <TextField
+                          id="project-appeal-message"
+                          multiline
+                          minRows={4}
+                          fullWidth
+                          label="Your message"
+                          placeholder="Explain what happened and why you’re asking us to review the suspension."
+                          value={appealDetails}
+                          onChange={(event) => { setAppealDetails(event.target.value); setAppealError(''); }}
+                          helperText={`${appealDetails.trim().length}/10 characters minimum`}
+                          inputProps={{ maxLength: 5000, 'aria-describedby': 'project-appeal-message-helper-text' }}
+                        />
+                        {appealError && <Alert severity="error" role="alert" sx={{ mt: 2, borderRadius: 2 }}>{appealError}</Alert>}
+                        <Stack direction={{ xs: 'column-reverse', sm: 'row' }} justifyContent="flex-end" spacing={1.25} sx={{ mt: 2.5 }}>
+                          <Button variant="text" onClick={() => { setAppealFormOpen(false); setAppealDetails(''); setAppealError(''); }} disabled={appealSending}>Cancel</Button>
+                          <Button type="submit" variant="contained" disabled={appealSending || appealDetails.trim().length < 10} startIcon={appealSending ? <CircularProgress size={16} color="inherit" /> : <ArrowForwardRounded />} aria-busy={appealSending} sx={{ minHeight: 42, px: 2.25, borderRadius: 2.25, boxShadow: '0 7px 18px rgba(85,23,184,.2)' }}>
+                            {appealSending ? 'Sending…' : 'Send review request'}
+                          </Button>
+                        </Stack>
+                      </Box>
+                    ) : (
+                      <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'stretch', sm: 'center' }} justifyContent="space-between" spacing={2}>
+                        <Box sx={{ maxWidth: 430 }}>
+                          <Typography sx={{ fontWeight: 700, fontSize: 15 }}>Request a review</Typography>
+                          <Typography color="text.secondary" sx={{ mt: .35, fontSize: 13, lineHeight: 1.55 }}>Tell us what happened. We’ll review your request and contact you by email.</Typography>
+                        </Box>
+                        <Button variant="contained" onClick={() => setAppealFormOpen(true)} endIcon={<ArrowForwardRounded />} sx={{ minHeight: 44, px: 2.25, borderRadius: 2.25, whiteSpace: 'nowrap', boxShadow: '0 7px 18px rgba(85,23,184,.2)' }}>
+                          Appeal this suspension
+                        </Button>
+                      </Stack>
+                    )}
+                  </>
+                )}
+              </Box>
             </Box>
           ) : (
             children

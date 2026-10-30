@@ -127,7 +127,7 @@ function NotificationRow({
   const open = () => {
     if (isUnread) read.mutate(notification.id);
     if (compact) {
-      router.push('/dashboard/notifications');
+      router.push(href || '/dashboard/notifications');
       onNavigate?.();
       return;
     }
@@ -239,7 +239,16 @@ export default function NotificationInbox({
     unread: unreadOnly || undefined,
   }), [category, compact, projectId, search, unreadOnly]);
   const notifications = useInfiniteNotifications(query, enabled);
-  const items = notifications.data?.pages.flatMap((page) => page.items) ?? [];
+  const items = useMemo(() => {
+    const rows = notifications.data?.pages.flatMap((page) => page.items) ?? [];
+    return [...rows].sort((a, b) => {
+      const notificationOrder = Date.parse(b.notification.createdAt) - Date.parse(a.notification.createdAt);
+      if (Number.isFinite(notificationOrder) && notificationOrder !== 0) return notificationOrder;
+      const recipientOrder = Date.parse(b.createdAt) - Date.parse(a.createdAt);
+      if (Number.isFinite(recipientOrder) && recipientOrder !== 0) return recipientOrder;
+      return b.id.localeCompare(a.id);
+    });
+  }, [notifications.data]);
   const unreadCount = items.filter((item) => !item.readAt).length;
 
   return (

@@ -28,7 +28,11 @@ export default function SupportPage() {
   const selected = useQuery({ queryKey: supportKeys.ticket(selectedId ?? ""), queryFn: () => supportApi.get(selectedId!), enabled: Boolean(selectedId) });
   useEffect(() => {
     if (!selectedId) return;
-    return supportApi.stream(selectedId, () => { void client.invalidateQueries({ queryKey: supportKeys.ticket(selectedId) }); void client.invalidateQueries({ queryKey: supportKeys.tickets() }); });
+    const stop = supportApi.stream(selectedId, () => { void client.invalidateQueries({ queryKey: supportKeys.ticket(selectedId) }); void client.invalidateQueries({ queryKey: supportKeys.tickets() }); });
+    const markSeen = () => { if (document.visibilityState === "visible") void supportApi.seen(selectedId); };
+    markSeen();
+    document.addEventListener("visibilitychange", markSeen);
+    return () => { stop(); document.removeEventListener("visibilitychange", markSeen); };
   }, [client, selectedId]);
   const send = useMutation({
     mutationFn: () => { const message = draft.trim(); const pending = pendingSend.current?.ticketId === selectedId && pendingSend.current.message === message ? pendingSend.current : { ticketId: selectedId!, message, key: crypto.randomUUID() }; pendingSend.current = pending; return supportApi.send(selectedId!, message, pending.key); },
