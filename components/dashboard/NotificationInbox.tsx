@@ -104,6 +104,12 @@ function internalHref(notification: AccountNotification): string | null {
   return null;
 }
 
+function supportChatTicketId(notification: AccountNotification): string | null {
+  if (notification.type !== 'support_reply' && notification.payload?.openSupportChat !== true) return null;
+  const ticketId = notification.payload?.ticketId;
+  return typeof ticketId === 'string' && ticketId ? ticketId : null;
+}
+
 function NotificationRow({
   item,
   compact,
@@ -126,6 +132,12 @@ function NotificationRow({
 
   const open = () => {
     if (isUnread) read.mutate(notification.id);
+    const supportTicketId = supportChatTicketId(notification);
+    if (supportTicketId) {
+      window.dispatchEvent(new CustomEvent('pixlpush:open-support-chat', { detail: { ticketId: supportTicketId } }));
+      onNavigate?.();
+      return;
+    }
     if (compact) {
       router.push(href || '/dashboard/notifications');
       onNavigate?.();

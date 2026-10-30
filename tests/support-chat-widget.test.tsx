@@ -142,6 +142,26 @@ describe('support chatbot widget', () => {
     expect(api.send).toHaveBeenCalledWith('guest-ticket-1', 'Thanks, I need help.', expect.any(String));
   });
 
+  it('shows all chats as a standalone list without back navigation controls', async () => {
+    const ticket = {
+      id: 'ticket-1', reference: 'PP-SUP-TEST0002', topic: 'general', subject: 'Project help',
+      status: 'closed', priority: 'normal', source: 'dashboard', project: null,
+      lastMessageAt: '2026-10-27T10:00:00.000Z', createdAt: '2026-10-27T09:00:00.000Z', updatedAt: '2026-10-27T10:00:00.000Z',
+      messages: [{ id: 'message-1', senderType: 'customer', body: 'I need help.', createdAt: '2026-10-27T09:00:00.000Z', sender: null }],
+    };
+    api.list.mockResolvedValue({ items: [ticket as never], nextCursor: null });
+    api.get.mockResolvedValue(ticket as never);
+    const user = userEvent.setup();
+    render(<SupportChatWidget authenticated />);
+    await user.click(screen.getByRole('button', { name: 'Open PixlPush support chat' }));
+    expect(await screen.findByText('I need help.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Back to chats' }));
+    expect(await screen.findByText('Your chats')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Back to chats' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /View all chats/ })).not.toBeInTheDocument();
+    expect(screen.getByText('Project help')).toBeInTheDocument();
+  });
+
   it('shows an unread badge when a closed chat receives the assistant response', async () => {
     let finishResponse!: (answer: SupportChatAnswer) => void;
     api.chat.mockReturnValue(new Promise<SupportChatAnswer>((resolve) => { finishResponse = resolve; }));

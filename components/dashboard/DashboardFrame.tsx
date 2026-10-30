@@ -54,6 +54,7 @@ export default function DashboardFrame({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
+  const [supportTicketId, setSupportTicketId] = useState<string | null>(null);
   const [supportUnread, setSupportUnread] = useState(0);
   const [createOpen, setCreateOpen] = useState(false);
   const [appealDetails, setAppealDetails] = useState('');
@@ -67,6 +68,16 @@ export default function DashboardFrame({
     setAppealFormOpen(false);
     setAppealDetails(''); setAppealError(''); setAppealReference('');
   }, [active, activeProject?.id, activeProject?.status, requiresProject]);
+  useEffect(() => {
+    const openSupportChat = (event: Event) => {
+      const ticketId = (event as CustomEvent<{ ticketId?: unknown }>).detail?.ticketId;
+      if (typeof ticketId !== 'string' || !ticketId) return;
+      setSupportTicketId(ticketId);
+      setSupportOpen(true);
+    };
+    window.addEventListener('pixlpush:open-support-chat', openSupportChat);
+    return () => window.removeEventListener('pixlpush:open-support-chat', openSupportChat);
+  }, []);
   const onboarding = useQuery({
     queryKey: ['projects', activeProject?.id, 'onboarding'],
     queryFn: () => onboardingApi.get(activeProject!.id),
@@ -361,7 +372,8 @@ export default function DashboardFrame({
     <SupportChatWidget
       showLauncher={false}
       isOpen={supportOpen}
-      onClose={() => setSupportOpen(false)}
+      onClose={() => { setSupportOpen(false); setSupportTicketId(null); }}
+      openTicketId={supportTicketId}
       onUnreadChange={setSupportUnread}
       projectId={activeProject?.id}
       authenticated={Boolean(currentUser?.account)}
