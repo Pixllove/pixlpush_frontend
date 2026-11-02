@@ -7,7 +7,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCurrentUser } from '@/hooks/auth/use-current-user';
 import { useLocalPricing } from '@/hooks/use-local-pricing';
 import { authApi, authKeys } from '@/lib/auth/api';
-import { getDeviceTimezone, offsetLabel, setTimezoneOverride } from '@/lib/timezone';
+import { canonicalZone, countryTimezones, getDeviceTimezone, modernZone, offsetLabel, primaryTimezone, setTimezoneOverride, zoneInCountry } from '@/lib/timezone';
 
 /** ISO 3166-1 alpha-2 codes; names come from the browser in the viewer's language. */
 const COUNTRY_CODES = (
@@ -19,6 +19,9 @@ const COUNTRY_CODES = (
 ).split(' ');
 
 const flag = (code: string) => String.fromCodePoint(...[...code].map((c) => 0x1f1a5 + c.charCodeAt(0)));
+
+/// Browsers still report some zones by their old names; people know the new ones.
+const MODERN_CITY: Record<string, string> = { Calcutta: 'Kolkata', Kiev: 'Kyiv', Godthab: 'Nuuk', Ponape: 'Pohnpei', Truk: 'Chuuk', Saigon: 'Ho Chi Minh', Katmandu: 'Kathmandu', Rangoon: 'Yangon', 'Buenos Aires': 'Buenos Aires', Asmera: 'Asmara' };
 
 interface Country { code: string; name: string }
 interface Zone { id: string; city: string; region: string; offset: string; minutes: number }
@@ -35,15 +38,20 @@ const minutesOf = (offset: string) => {
   return m ? (m[1] === '-' ? -1 : 1) * (Number(m[2]) * 60 + Number(m[3])) : 0;
 };
 
+const toZone = (id: string, now: Date): Zone => {
+  const offset = offsetLabel(now, id);
+  const [region, ...rest] = id.split('/');
+  const city = (rest.at(-1) ?? id).replace(/_/g, ' ');
+  return { id, offset, minutes: minutesOf(offset), region: rest.length ? region : 'Other', city: MODERN_CITY[city] ?? city };
+};
+
+/** Every zone the browser knows, one entry per canonical zone. */
 function useZones(): Zone[] {
   return useMemo(() => {
     const now = new Date();
     const ids = (Intl as unknown as { supportedValuesOf?: (key: string) => string[] }).supportedValuesOf?.('timeZone') ?? [getDeviceTimezone(), 'UTC'];
-    return ids.map((id) => {
-      const offset = offsetLabel(now, id);
-      const [region, ...rest] = id.split('/');
-      return { id, offset, minutes: minutesOf(offset), region: rest.length ? region : 'Other', city: (rest.at(-1) ?? id).replace(/_/g, ' ') };
-    }).sort((a, b) => a.region.localeCompare(b.region) || a.minutes - b.minutes || a.city.localeCompare(b.city));
+    const unique = Array.from(new Set(ids.map(canonicalZone)));
+    return unique.map((id) => toZone(id, now)).sort((a, b) => a.region.localeCompare(b.region) || a.minutes - b.minutes || a.city.localeCompare(b.city));
   }, []);
 }
 
@@ -61,8 +69,9 @@ function useClock(timeZone: string | null) {
 
 /**
  * Profile section: country/region and the time zone dates are shown in.
- * Like Slack and Google Account, the zone follows the device by default and
- * can be pinned to a fixed zone instead.
+ * As in Slack and Google: the zone follows the device by default; picking a
+ * country whose time differs from the device switches to that country's zone
+ * (and says so), and a mismatch is never left silent.
  */
 export default function RegionSettings() {
   const { account, isLoading } = useCurrentUser();
@@ -70,31 +79,58 @@ export default function RegionSettings() {
   const queryClient = useQueryClient();
   const countries = useCountries();
   const zones = useZones();
-  const device = getDeviceTimezone();
+  const device = canonicalZone(getDeviceTimezone());
 
   const [country, setCountry] = useState<string | null>(null);
   const [auto, setAuto] = useState(true);
   const [zone, setZone] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   useEffect(() => {
     if (!account) return;
     setCountry(account.country ?? null);
     setAuto(account.timezoneAuto !== false);
-    setZone(account.timezone ?? device);
+    setZone(account.timezone ? canonicalZone(account.timezone) : device);
+    setNotice(null);
   }, [account, device]);
   // First visit: suggest the country from the visitor's IP; it is saved only when they confirm.
   const suggested = !account?.country && !country && detectedCountry ? detectedCountry : null;
   const shownCountry = country ?? suggested;
+  const countryName = (code: string | null) => countries.find((c) => c.code === code)?.name ?? code ?? '';
+  const inCountry = useMemo(() => new Set(countryTimezones(shownCountry)), [shownCountry]);
 
   const effectiveZone = auto ? device : zone;
   const clock = useClock(effectiveZone);
+  const zoneOf = (id: string | null) => (id ? zones.find((z) => z.id === canonicalZone(id)) ?? toZone(id, new Date()) : null);
+  // Automatic zone, but the device is outside the chosen country: say so and offer the country's time.
+  const mismatch = auto && shownCountry && !zoneInCountry(device, shownCountry) ? primaryTimezone(shownCountry) : null;
+
+  /** Picking a country moves the zone to that country's, unless the device is already there. */
+  const chooseCountry = (code: string | null) => {
+    setCountry(code); save.reset(); setNotice(null);
+    if (!code) return;
+    const current = auto ? device : zone ?? device;
+    if (zoneInCountry(current, code)) return;
+    const main = primaryTimezone(code);
+    if (!main) return;
+    setAuto(false); setZone(main);
+    const many = countryTimezones(code).length > 1;
+    setNotice(`Time zone set to ${countryName(code)} (${zoneLabel(zoneOf(main)!)}).${many ? ` ${countryName(code)} has several time zones: pick yours below.` : ''} Turn on “Set time zone automatically” to follow this device instead.`);
+  };
+
+  const useCountryTime = () => {
+    if (!mismatch) return;
+    setAuto(false); setZone(mismatch); save.reset();
+    setNotice(null);
+  };
+
   const dirty = Boolean(account) && (
     (shownCountry ?? null) !== (account?.country ?? null)
     || auto !== (account?.timezoneAuto !== false)
-    || (!auto && zone !== (account?.timezone ?? null))
+    || (!auto && zone !== (account?.timezone ? canonicalZone(account.timezone) : null))
   );
 
   const save = useMutation({
-    mutationFn: () => authApi.updatePreferences({ country: shownCountry, timezoneAuto: auto, timezone: auto ? device : zone }),
+    mutationFn: () => authApi.updatePreferences({ country: shownCountry, timezoneAuto: auto, timezone: modernZone((auto ? device : zone) ?? device) }),
     onSuccess: ({ account: saved }) => {
       setTimezoneOverride(saved.timezoneAuto ? null : saved.timezone ?? null);
       queryClient.setQueryData(authKeys.currentUser(), (current: unknown) => current && typeof current === 'object' ? { ...current, account: saved } : current);
@@ -102,8 +138,10 @@ export default function RegionSettings() {
   });
 
   const selectedCountry = countries.find((c) => c.code === shownCountry) ?? null;
-  const selectedZone = zones.find((z) => z.id === zone) ?? null;
-  const deviceZone = zones.find((z) => z.id === device);
+  const deviceZone = zoneOf(device);
+  // The chosen country's zones come first, under the country's name.
+  const groupOf = (option: Zone) => (inCountry.has(option.id) ? `Time zones in ${countryName(shownCountry)}` : option.region);
+  const zoneOptions = useMemo(() => [...zones.filter((z) => inCountry.has(z.id)), ...zones.filter((z) => !inCountry.has(z.id))], [zones, inCountry]);
 
   return (
     <section className="pp-profile-section" aria-labelledby="region-settings-title">
@@ -118,7 +156,7 @@ export default function RegionSettings() {
           <Autocomplete
             options={countries}
             value={selectedCountry}
-            onChange={(_, value) => { setCountry(value?.code ?? null); save.reset(); }}
+            onChange={(_, value) => chooseCountry(value?.code ?? null)}
             getOptionLabel={(option) => option.name}
             isOptionEqualToValue={(a, b) => a.code === b.code}
             autoHighlight
@@ -141,21 +179,28 @@ export default function RegionSettings() {
 
         <Box>
           <FormControlLabel
-            control={<Switch checked={auto} onChange={(event) => { setAuto(event.target.checked); save.reset(); }} />}
+            control={<Switch checked={auto} onChange={(event) => { setAuto(event.target.checked); setNotice(null); save.reset(); }} />}
             label="Set time zone automatically"
           />
           <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ ml: 6, mt: -.5 }}>
-            {auto ? `Using this device's time zone: ${deviceZone ? zoneLabel(deviceZone) : device}.` : 'Dates always use the time zone below, on every device.'}
+            {auto ? `Follows this device, also when you travel. Now: ${deviceZone ? zoneLabel(deviceZone) : device}.` : 'Dates always use the time zone below, on every device.'}
           </Typography>
         </Box>
 
+        {mismatch && (
+          <Alert severity="warning" data-testid="zone-mismatch" action={<Button color="inherit" size="small" onClick={useCountryTime} sx={{ whiteSpace: 'nowrap' }}>Use {countryName(shownCountry)} time</Button>}>
+            This device is in {deviceZone?.city ?? device} ({deviceZone?.offset}), which is not in {countryName(shownCountry)}.
+          </Alert>
+        )}
+        {notice && <Alert severity="info" onClose={() => setNotice(null)} data-testid="zone-notice">{notice}</Alert>}
+
         {isLoading ? <Skeleton variant="rounded" height={56} /> : (
           <Autocomplete
-            options={zones}
-            value={auto ? deviceZone ?? null : selectedZone}
-            onChange={(_, value) => { setZone(value?.id ?? null); save.reset(); }}
+            options={zoneOptions}
+            value={auto ? deviceZone : zoneOf(zone)}
+            onChange={(_, value) => { setZone(value?.id ?? null); setNotice(null); save.reset(); }}
             disabled={auto}
-            groupBy={(option) => option.region}
+            groupBy={groupOf}
             getOptionLabel={zoneLabel}
             filterOptions={(options, state) => {
               const q = state.inputValue.trim().toLowerCase();

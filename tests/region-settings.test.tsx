@@ -4,6 +4,9 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import RegionSettings from '@/components/auth/RegionSettings';
 import { getDeviceTimezone, getViewerTimezone, setTimezoneOverride } from '@/lib/timezone';
+
+// This device is in Pakistan for every test.
+vi.mock('@/lib/timezone', async (load) => ({ ...(await load<typeof import('@/lib/timezone')>()), getDeviceTimezone: () => 'Asia/Karachi' }));
 import type { Account } from '@/types/auth';
 
 let account: Account;
@@ -14,6 +17,8 @@ vi.mock('@/hooks/use-local-pricing', () => ({ useLocalPricing: () => ({ data: de
 vi.mock('@/lib/auth/api', () => ({ authKeys: { currentUser: () => ['auth', 'me'] }, authApi: { updatePreferences: (input: unknown) => updatePreferences(input) } }));
 
 const base: Account = { id: 'a1', email: 'k@example.com', name: 'K', emailVerified: true, createdAt: '2026-10-22T00:00:00Z', country: null, timezone: null, timezoneAuto: true };
+/** The country option whose code column shows `code`. */
+const countryOption = async (code: string) => (await screen.findAllByRole('option')).find((o) => o.textContent?.trim().endsWith(code))!;
 const renderIt = () => render(<QueryClientProvider client={new QueryClient()}><RegionSettings /></QueryClientProvider>);
 
 beforeEach(() => {
@@ -80,6 +85,64 @@ describe('RegionSettings', () => {
     renderIt();
     await userEvent.click(screen.getByRole('button', { name: 'Save changes' }));
     expect(await screen.findByText('Use an IANA time zone such as Asia/Karachi')).toBeInTheDocument();
+  });
+});
+
+describe('country drives the time zone', () => {
+  it('picking a country in another time zone switches to that country and says so', async () => {
+    account = { ...base, country: 'PK', timezone: 'Asia/Karachi' };
+    renderIt();
+    const input = screen.getByRole('combobox', { name: 'Country or region' });
+    await userEvent.clear(input);
+    await userEvent.type(input, 'India');
+    await userEvent.click(await countryOption('IN'));
+    expect(screen.getByRole('checkbox', { name: 'Set time zone automatically' })).not.toBeChecked();
+    expect(screen.getByRole('combobox', { name: 'Time zone' })).toHaveValue('(UTC+05:30) Kolkata');
+    expect(screen.getByTestId('zone-notice')).toHaveTextContent('Time zone set to India');
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => expect(updatePreferences).toHaveBeenCalledWith({ country: 'IN', timezoneAuto: false, timezone: 'Asia/Kolkata' }));
+  });
+
+  it('a multi-zone country picks its main zone and lists its zones first', async () => {
+    account = { ...base, country: 'PK', timezone: 'Asia/Karachi' };
+    renderIt();
+    const input = screen.getByRole('combobox', { name: 'Country or region' });
+    await userEvent.clear(input);
+    await userEvent.type(input, 'United States');
+    await userEvent.click(await countryOption('US'));
+    expect((screen.getByRole('combobox', { name: 'Time zone' }) as HTMLInputElement).value).toMatch(/\) New York$/);
+    expect(screen.getByTestId('zone-notice')).toHaveTextContent('several time zones');
+    await userEvent.click(screen.getByRole('combobox', { name: 'Time zone' }));
+    expect(screen.getAllByRole('listitem')[0]).toHaveTextContent('Time zones in United States');
+  });
+
+  it('a country that matches the device keeps the automatic zone', async () => {
+    account = { ...base, country: 'IN', timezone: 'Asia/Karachi' };
+    renderIt();
+    const input = screen.getByRole('combobox', { name: 'Country or region' });
+    await userEvent.clear(input);
+    await userEvent.type(input, 'Pakistan');
+    await userEvent.click(await screen.findByRole('option', { name: /Pakistan/ }));
+    expect(screen.getByRole('checkbox', { name: 'Set time zone automatically' })).toBeChecked();
+    expect(screen.queryByTestId('zone-notice')).toBeNull();
+  });
+
+  it('saved country with an automatic zone elsewhere: warns and offers the country time', async () => {
+    account = { ...base, country: 'IN', timezone: 'Asia/Karachi', timezoneAuto: true };
+    renderIt();
+    expect(screen.getByTestId('zone-mismatch')).toHaveTextContent('This device is in Karachi (UTC+05:00), which is not in India.');
+    await userEvent.click(screen.getByRole('button', { name: 'Use India time' }));
+    expect(screen.queryByTestId('zone-mismatch')).toBeNull();
+    expect(screen.getByRole('combobox', { name: 'Time zone' })).toHaveValue('(UTC+05:30) Kolkata');
+  });
+});
+
+describe('saved Kolkata', () => {
+  it('shows a saved modern name as the same zone, with nothing to save', () => {
+    account = { ...base, country: 'IN', timezone: 'Asia/Kolkata', timezoneAuto: false };
+    renderIt();
+    expect(screen.getByRole('combobox', { name: 'Time zone' })).toHaveValue('(UTC+05:30) Kolkata');
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
   });
 });
 

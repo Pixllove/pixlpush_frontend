@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getDeviceTimezone, setTimezoneOverride } from '@/lib/timezone';
+import { canonicalZone, getDeviceTimezone, modernZone, setTimezoneOverride } from '@/lib/timezone';
 import { authApi, authKeys } from '@/lib/auth/api';
 import { isPermanentAuthError } from '@/lib/auth/client';
 import type { CurrentUser } from '@/types/auth';
@@ -29,7 +29,7 @@ export function useCurrentUser() {
     const auto = account.timezoneAuto !== false;
     setTimezoneOverride(auto ? null : account.timezone ?? null);
     const device = getDeviceTimezone();
-    if (auto && account.timezone !== device) authApi.updatePreferences({ timezone: device }).catch(() => undefined);
+    if (auto && (!account.timezone || canonicalZone(account.timezone) !== canonicalZone(device))) authApi.updatePreferences({ timezone: modernZone(device) }).catch(() => undefined);
   }, [account]);
 
   return {
