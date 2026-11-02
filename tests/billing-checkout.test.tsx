@@ -50,8 +50,8 @@ beforeEach(() => {
   search = 'plan=pro&interval=month';
   api.prices.mockResolvedValue(PUBLIC_PRICES);
   api.subscription.mockResolvedValue({ subscription: null, billingContact: null });
-  api.previewCheckout.mockResolvedValue({ currency: 'aed', subtotal: 29000, tax: 5510, discount: 0, total: 34510 });
-  api.createCheckoutSubscription.mockResolvedValue({ subscriptionId: 'sub_1', clientSecret: 'pi_secret', currency: 'aed', subtotal: 29000, tax: 5510, discount: 0, total: 34510 });
+  api.previewCheckout.mockResolvedValue({ currency: 'usd', subtotal: 29000, tax: 5510, discount: 0, total: 34510 });
+  api.createCheckoutSubscription.mockResolvedValue({ subscriptionId: 'sub_1', clientSecret: 'pi_secret', currency: 'usd', subtotal: 29000, tax: 5510, discount: 0, total: 34510 });
   elements.submit.mockResolvedValue({});
   stripe.confirmPayment.mockResolvedValue({ paymentIntent: { status: 'succeeded' } });
 });
@@ -64,9 +64,9 @@ describe('in-app checkout', () => {
     expect(screen.getByRole('button', { name: 'Pay securely' })).toBeDisabled();
 
     await fillAddress();
-    expect(await screen.findByText('AED 55.10')).toBeInTheDocument();
-    expect(api.previewCheckout).toHaveBeenCalledWith('p1', { plan: 'pro', interval: 'month', address: expect.objectContaining({ country: 'DE', postalCode: '10115' }) });
-    const pay = await screen.findByRole('button', { name: 'Pay AED 345.10' });
+    expect(await screen.findByText('USD 55.10')).toBeInTheDocument();
+    expect(api.previewCheckout).toHaveBeenCalledWith('p1', { plan: 'pro', interval: 'month', currency: 'usd', address: expect.objectContaining({ country: 'DE', postalCode: '10115' }) });
+    const pay = await screen.findByRole('button', { name: 'Pay USD 345.10' });
 
     await userEvent.click(pay);
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/dashboard/billing?checkout=success'));
@@ -79,10 +79,10 @@ describe('in-app checkout', () => {
     stripe.confirmPayment.mockResolvedValueOnce({ error: { type: 'card_error', message: 'Your card was declined.' } });
     await renderCheckout();
     await fillAddress();
-    await userEvent.click(await screen.findByRole('button', { name: 'Pay AED 345.10' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Pay USD 345.10' }));
     expect(await screen.findByText('Your card was declined.')).toBeInTheDocument();
     expect(replace).not.toHaveBeenCalled();
-    await userEvent.click(screen.getByRole('button', { name: 'Pay AED 345.10' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Pay USD 345.10' }));
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/dashboard/billing?checkout=success'));
   });
 
@@ -90,7 +90,7 @@ describe('in-app checkout', () => {
     elements.submit.mockResolvedValue({ error: { message: 'Your card number is incomplete.' } });
     await renderCheckout();
     await fillAddress();
-    await userEvent.click(await screen.findByRole('button', { name: 'Pay AED 345.10' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Pay USD 345.10' }));
     expect(await screen.findByText('Your card number is incomplete.')).toBeInTheDocument();
     expect(api.createCheckoutSubscription).not.toHaveBeenCalled();
   });

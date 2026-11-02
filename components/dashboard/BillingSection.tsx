@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLocalPricing } from "@/hooks/use-local-pricing";
 import {
   AccountBalanceWalletRounded,
   AutoGraphRounded,
@@ -83,28 +84,11 @@ const toneColor = { success: "#a6f2b4", info: "#bcd7ff", warning: "#ffd98a", err
 const MAX_POLLS = 20;
 
 const number = (value: number) => value.toLocaleString("en-US");
-// Display-only rate follows the localized PKR estimate already used on the public Pricing page.
-const usdToPkrDisplayRate = 278.34;
-const formatAiCreditPackagePrice = (amount: number, packageCurrency: BillingCurrency, displayCurrency: string) => {
-  if (displayCurrency === "pkr" && packageCurrency === "usd") {
-    const pkrAmount = Math.round((amount / 100) * usdToPkrDisplayRate);
-    return `PKR ${number(pkrAmount)}`;
-  }
-  return formatMoney(amount, packageCurrency);
-};
-const creditEuroCountries = new Set(["AT", "BE", "BG", "CY", "DE", "EE", "ES", "FI", "FR", "GR", "HR", "IE", "IT", "LT", "LU", "LV", "MT", "NL", "PT", "SI", "SK"]);
-
-function detectDeviceCreditCurrency(): string | null {
-  if (typeof window === "undefined") return null;
-  const locale = window.navigator.language || "";
-  let region = "";
-  try { region = new Intl.Locale(locale).region?.toUpperCase() ?? ""; } catch { /* Unknown locale; use the device timezone. */ }
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
-  if (region === "AE" || timezone === "Asia/Dubai") return "aed";
-  if (region === "PK" || timezone === "Asia/Karachi") return "pkr";
-  if (creditEuroCountries.has(region)) return "eur";
-  return null;
-}
+/** A USD package shown in the visitor's currency is an estimate; checkout charges USD and Stripe localizes it. */
+const formatAiCreditPackagePrice = (amount: number, packageCurrency: BillingCurrency, displayCurrency: string, usdRate: number | null) =>
+  displayCurrency !== packageCurrency && packageCurrency === "usd" && usdRate
+    ? `≈ ${formatMoney(Math.round(amount * usdRate), displayCurrency)}`
+    : formatMoney(amount, packageCurrency);
 
 export function BillingSection() {
   const { active } = useActiveProject();
@@ -313,7 +297,8 @@ export function BillingSection() {
   const creditPackages = aiCreditsQuery.data?.packages ?? [];
   const creditCurrencies = Array.from(new Set(creditPackages.map((item) => item.currency)));
   const creditCurrenciesKey = creditCurrencies.join(",");
-  const detectedCreditCurrency = detectDeviceCreditCurrency();
+  const localPricing = useLocalPricing().data;
+  const detectedCreditCurrency = localPricing && localPricing.currency !== "usd" ? localPricing.currency : null;
   const preferredLocationCurrency = detectedCreditCurrency && creditCurrencies.includes(detectedCreditCurrency as BillingCurrency)
     ? detectedCreditCurrency as BillingCurrency
     : creditCurrencies.includes("usd") ? "usd" : creditCurrencies[0];
@@ -323,12 +308,22 @@ export function BillingSection() {
   const displayCreditCurrency = creditCurrencyMode === "location"
     ? detectedCreditCurrency ?? creditCurrency
     : creditCurrency;
-  const pkrUsesUsdCheckout = displayCreditCurrency === "pkr" && creditCurrency === "usd";
+  const localUsesUsdCheckout = displayCreditCurrency !== creditCurrency && creditCurrency === "usd";
   const creditPackageNames: Record<AiCreditPackageName, string> = { starter: "Starter", growth: "Growth", scale: "Scale" };
   const selectedCreditPackages = creditPackages.filter((item) => item.currency === creditCurrency);
   const monthlyAiLimit = usage?.limits.aiCreditsPerMonth ?? 0;
   const monthlyAiUsed = usage?.usage.ai_credits ?? 0;
   const monthlyAiRemaining = Math.max(monthlyAiLimit - monthlyAiUsed, 0);
+  const enterpriseOffer = useQuery({
+    queryKey: ["projects", "billing", projectId, "enterprise"],
+    queryFn: () => billingApi.enterpriseOffer(projectId!),
+    enabled: Boolean(projectId),
+  }).data;
+  const enterpriseCheckout = useMutation({
+    mutationFn: (interval: BillingInterval) => billingApi.enterpriseCheckout(projectId!, { interval }),
+    onSuccess: ({ url }) => { window.location.assign(url); },
+    onError: (failure) => setError(billingErrorMessage(failure, "We could not open Enterprise checkout. Please try again.")),
+  });
   const creditCheckoutMutation = useMutation({
     mutationFn: ({ pkg, currency }: { pkg: AiCreditPackageName; currency: BillingCurrency }) =>
       billingApi.createAiCreditCheckout(projectId!, { package: pkg, currency }),
@@ -430,6 +425,34 @@ export function BillingSection() {
       {tab === "overview" && !overviewLoading && (
         <Stack gap={2.5}>
           {checkoutBanner && <Alert severity={checkoutBanner.severity} sx={{ borderRadius: 2 }}>{checkoutBanner.text}</Alert>}
+          {enterpriseOffer && (
+            <Card variant="outlined" sx={{ borderRadius: 2, borderColor: "#e27b4f", p: 2.5 }}>
+              <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" gap={2}>
+                <Box>
+                  <Typography fontSize="var(--fs-12)" fontWeight={600} sx={{ color: "#e27b4f", textTransform: "uppercase", letterSpacing: ".06em" }}>Enterprise {enterpriseOffer.status === "active" ? "plan" : "offer"}</Typography>
+                  <Typography fontSize="var(--fs-20)" fontWeight={600} sx={{ mt: .5 }}>{enterpriseOffer.name}</Typography>
+                  <Typography fontSize="var(--fs-13)" color="text.secondary" sx={{ mt: .5 }}>
+                    {Object.entries(enterpriseOffer.features).filter(([, value]) => value.enabled).map(([key, value]) => `${value.enabled && !value.unlimited ? `${number(value.limit)} ` : ""}${key.replace(/_/g, " ")}`).join(" · ")}
+                  </Typography>
+                </Box>
+                <Stack gap={1} alignItems={{ xs: "stretch", md: "flex-end" }}>
+                  {enterpriseOffer.prices.filter((price) => price.currency === "usd").map((price) => (
+                    <Typography key={price.interval} fontSize="var(--fs-14)" fontWeight={600}>{formatMoney(Math.round(Number(price.amount) * 100), price.currency)} / {price.interval}</Typography>
+                  ))}
+                  {enterpriseOffer.status === "awaiting_payment" && canManage && (
+                    <Stack direction="row" gap={1}>
+                      {(["month", "year"] as const).filter((value) => enterpriseOffer.prices.some((price) => price.interval === value && price.payable)).map((value) => (
+                        <Button key={value} variant={value === "month" ? "contained" : "outlined"} disabled={enterpriseCheckout.isPending} onClick={() => enterpriseCheckout.mutate(value)} sx={{ textTransform: "none" }}>
+                          {enterpriseCheckout.isPending && enterpriseCheckout.variables === value ? "Opening…" : `Pay ${value === "month" ? "monthly" : "yearly"}`}
+                        </Button>
+                      ))}
+                    </Stack>
+                  )}
+                  {enterpriseOffer.status === "active" && <Chip label="Active" color="success" size="small" />}
+                </Stack>
+              </Stack>
+            </Card>
+          )}
           {canManage && state.message && state.label !== "Active" && (
             <Alert
               severity={state.tone}
@@ -793,8 +816,8 @@ export function BillingSection() {
                     <Tab value="usd" label="USD" />
                     <Tab value="location" label={(detectedCreditCurrency ?? preferredLocationCurrency ?? "USD").toUpperCase()} />
                   </Tabs>
-                  {pkrUsesUsdCheckout && (
-                    <Typography fontSize="var(--fs-12)" color="text.secondary" sx={{ mt: 0.4 }}>PKR prices are estimates; checkout is charged in USD.</Typography>
+                  {localUsesUsdCheckout && (
+                    <Typography fontSize="var(--fs-12)" color="text.secondary" sx={{ mt: 0.4 }}>{displayCreditCurrency.toUpperCase()} prices are estimates. You pay in USD, and Stripe shows the amount in your currency at checkout.</Typography>
                   )}
                 </Box>
               )}
@@ -847,10 +870,10 @@ export function BillingSection() {
                             {item.package === "growth" && <Chip label="Popular" size="small" sx={{ mb: 0.5, height: 20, color: "#6422c5", backgroundColor: "#eee6ff", fontSize: "var(--fs-12)" }} />}
                             <Typography fontSize="var(--fs-12)" fontWeight={600}>{creditPackageNames[item.package]}</Typography>
                             <Typography fontSize="var(--fs-20)" fontWeight={600} sx={{ mt: 0.5, color: "#261735" }}>{number(item.credits)}</Typography>
-                            <Typography fontSize="var(--fs-12)" color="text.secondary">credits · {formatAiCreditPackagePrice(item.unitAmount, item.currency, displayCreditCurrency)}</Typography>
+                            <Typography fontSize="var(--fs-12)" color="text.secondary">credits · {formatAiCreditPackagePrice(item.unitAmount, item.currency, displayCreditCurrency, localPricing?.usdRate ?? null)}</Typography>
                             {canManage ? (
                               <Button fullWidth size="small" variant={item.package === "growth" ? "contained" : "outlined"} disabled={creditCheckoutMutation.isPending} onClick={() => creditCheckoutMutation.mutate({ pkg: item.package, currency: item.currency })} sx={{ mt: 1.25, textTransform: "none", whiteSpace: "nowrap" }}>
-                                {creditCheckoutMutation.isPending && creditCheckoutMutation.variables?.pkg === item.package ? "Opening…" : pkrUsesUsdCheckout ? "Buy once · USD" : "Buy once"}
+                                {creditCheckoutMutation.isPending && creditCheckoutMutation.variables?.pkg === item.package ? "Opening…" : localUsesUsdCheckout ? "Buy once · USD" : "Buy once"}
                               </Button>
                             ) : <Typography fontSize="var(--fs-12)" color="text.secondary" sx={{ mt: 1.25 }}>Ask a billing manager to purchase.</Typography>}
                           </Box>

@@ -104,7 +104,7 @@ function CheckoutForm({ projectId, plan, interval, onInterval, unitAmount, curre
     const id = ++previewId.current;
     setPreviewing(true);
     const timer = window.setTimeout(() => {
-      billingApi.previewCheckout(projectId, { plan, interval, address })
+      billingApi.previewCheckout(projectId, { plan, interval, address, currency })
         .then((next) => { if (id === previewId.current) { setTotals(next); setTaxError(null); elements?.update({ amount: next.total }); } })
         .catch((failure) => { if (id === previewId.current) { setTotals(null); setTaxError(billingErrorMessage(failure, "We could not calculate tax for this address. Check the country and postal code.")); } })
         .finally(() => { if (id === previewId.current) setPreviewing(false); });
@@ -124,7 +124,7 @@ function CheckoutForm({ projectId, plan, interval, onInterval, unitAmount, curre
       // 2. The backend creates the unpaid subscription at the approved price and returns its payment's secret.
       let clientSecret: string;
       try {
-        ({ clientSecret } = await billingApi.createCheckoutSubscription(projectId, { plan, interval, address }));
+        ({ clientSecret } = await billingApi.createCheckoutSubscription(projectId, { plan, interval, address, currency }));
       } catch (failure) {
         setError(billingErrorMessage(failure, "We could not start the payment right now. Please try again."));
         return;

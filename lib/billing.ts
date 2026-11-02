@@ -7,14 +7,15 @@ import type { BillingInterval, BillingPrice, PaidPlan, ProjectRole, Subscription
  * frontend only ever sends a plan and an interval, never an amount or a Stripe price id.
  */
 export const PUBLIC_PRICES: BillingPrice[] = [
-  { plan: "starter", interval: "month", unitAmount: 10700, currency: "aed", taxExclusive: true },
-  { plan: "starter", interval: "year", unitAmount: 107000, currency: "aed", taxExclusive: true },
-  { plan: "pro", interval: "month", unitAmount: 29000, currency: "aed", taxExclusive: true },
-  { plan: "pro", interval: "year", unitAmount: 290000, currency: "aed", taxExclusive: true },
+  { plan: "starter", interval: "month", unitAmount: 2900, currency: "usd", taxExclusive: true },
+  { plan: "starter", interval: "year", unitAmount: 29000, currency: "usd", taxExclusive: true },
+  { plan: "pro", interval: "month", unitAmount: 7900, currency: "usd", taxExclusive: true },
+  { plan: "pro", interval: "year", unitAmount: 79000, currency: "usd", taxExclusive: true },
 ];
 
-export const priceOf = (prices: BillingPrice[], plan: PaidPlan, interval: BillingInterval) =>
-  prices.find((price) => price.plan === plan && price.interval === interval)
+/** Plans are charged in USD; Stripe shows the buyer's local currency at payment. */
+export const priceOf = (prices: BillingPrice[], plan: PaidPlan, interval: BillingInterval, currency = "usd") =>
+  prices.find((price) => price.plan === plan && price.interval === interval && price.currency === currency)
   ?? PUBLIC_PRICES.find((price) => price.plan === plan && price.interval === interval)!;
 
 /** "AED 107" / "AED 304.50": amounts arrive in the smallest currency unit. */
@@ -76,6 +77,8 @@ const ERRORS: Record<string, string> = {
   ENTERPRISE_REQUIRES_SALES: "Enterprise is arranged with our sales team.",
   BILLING_ADDRESS_REQUIRED: "Stripe needs a complete billing address before tax can be calculated.",
   BILLING_NOT_CONFIGURED: "Payments are not available on this server yet.",
+  AI_CREDITS_EXHAUSTED: "You have used all AI credits for this period. Buy a credit package or upgrade your plan.",
+  PLAN_LIMIT_REACHED: "You have reached a limit of your plan. Upgrade to add more.",
   NO_BILLING_ACCOUNT: "There is no billing account yet. Choose a plan to start.",
   CHECKOUT_REQUIRED: "Choose a plan to start a subscription first.",
   SUBSCRIPTION_ENDED: "This subscription has already ended. Choose a plan to start a new one.",

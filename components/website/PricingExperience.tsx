@@ -36,59 +36,52 @@ import {
   Tabs,
 } from '@mui/material';
 import { SiteShell } from './SiteShell';
+import { toMinor, useLocalPricing, type LocalPricing } from '@/hooks/use-local-pricing';
 import { ProviderComparison } from './ProviderComparison';
 import { useCurrentUser } from '@/hooks/auth/use-current-user';
 import type { BillingInterval, PaidPlan } from '@/types/project';
 
-type Currency = 'usd' | 'eur' | 'aed' | 'pkr';
+type Currency = string;
 type PlanKey = 'free' | PaidPlan | 'enterprise';
 type FeatureValue = 'Included' | 'Limited' | 'Not included' | 'Custom' | 'Upgrade' | 'Basic' | 'Advanced' | 'Partial' | 'Priority' | 'Optional' | 'Unlimited' | 'Multiple' | '1' | '3' | '5' | '10' | '20' | '2,000' | '5,000' | '10,000' | '20,000' | '25,000' | '50,000' | '250,000' | '1,000,000' | '100' | '500' | '$0.01' | '$0.008' | '20,000\n+ $1 / 1,000 additional emails' | '50,000\n+ $1 / 1,000 additional emails' | '250,000\n+ $1 / 1,000 additional emails' | 'Talk to Sales';
 
-const currencyMeta: Record<Currency, { label: string; symbol: string }> = {
-  usd: { label: 'USD', symbol: '$' },
-  eur: { label: 'EUR', symbol: '€' },
-  aed: { label: 'AED', symbol: 'AED' },
-  pkr: { label: 'PKR', symbol: 'PKR' },
-};
 
-const euroRegions = new Set(['AT', 'BE', 'BG', 'CY', 'DE', 'EE', 'ES', 'FI', 'FR', 'GR', 'HR', 'IE', 'IT', 'LT', 'LU', 'LV', 'MT', 'NL', 'PT', 'SI', 'SK']);
-
-function detectLocalCurrency(): Currency | null {
-  if (typeof window === 'undefined') return null;
-  const locale = window.navigator.language || '';
-  const region = (() => {
-    try {
-      return new Intl.Locale(locale).region?.toUpperCase();
-    } catch {
-      return undefined;
-    }
-  })();
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
-  if (region === 'AE' || timezone === 'Asia/Dubai') return 'aed';
-  if (region === 'PK' || timezone === 'Asia/Karachi') return 'pkr';
-  if (region && euroRegions.has(region)) return 'eur';
-  return null;
+/** Everything priced on this page, in one currency. Amounts in the smallest unit. */
+interface Pricing {
+  currency: Currency;
+  prices: Record<PaidPlan, { month: number; year: number }>;
+  /// Converted from USD for display; checkout is charged in USD.
+  approximate: boolean;
+  /// Per 1,000 Starter email overage sends.
+  emailOverage: number;
+  /// Per additional reachable user, major units.
+  reachableRate: Record<'starter' | 'pro', number>;
+  savePercent: number;
 }
 
-const prices: Record<Currency, Record<PaidPlan, { month: number; year: number }>> = {
-  usd: { starter: { month: 2900, year: 29000 }, pro: { month: 7900, year: 79000 } },
-  eur: { starter: { month: 2700, year: 27000 }, pro: { month: 7300, year: 73000 } },
-  aed: { starter: { month: 10700, year: 107000 }, pro: { month: 29000, year: 290000 } },
-  // Localized display estimates for Pakistan; configure matching server-side Stripe prices before enabling PKR checkout.
-  pkr: { starter: { month: 807200, year: 8072000 }, pro: { month: 2187760, year: 21877600 } },
-};
+const USD_PRICES: Pricing['prices'] = { starter: { month: 2900, year: 29000 }, pro: { month: 7900, year: 79000 } };
+const USD_PRICING: Pricing = { currency: 'usd', prices: USD_PRICES, approximate: false, emailOverage: 100, reachableRate: { starter: 0.01, pro: 0.008 }, savePercent: 17 };
 
-// Smallest currency unit per 1,000 Starter email overage sends.
-const starterEmailOverageUnitAmount: Record<Currency, number> = { usd: 100, eur: 100, aed: 400, pkr: 27800 };
-
-// Reachable-user overage rates per user. Starter starts at 5k users; Pro starts at 10k.
-// The backend uses the same currency-specific rates for dynamic invoices.
-const reachableUserOverageRate: Record<Currency, Record<'starter' | 'pro', number>> = {
-  usd: { starter: 0.01, pro: 0.008 },
-  eur: { starter: 0.008, pro: 0.007 },
-  aed: { starter: 0.037, pro: 0.029 },
-  pkr: { starter: 2.8, pro: 2.2 },
-};
+/** Plan prices come from the API (exact when stored, else converted); overage rates are converted from USD. */
+export function buildPricing(currency: Currency, data: LocalPricing | undefined): Pricing {
+  if (!data) return USD_PRICING;
+  const rate = currency === 'usd' ? 1 : data.usdRate;
+  if (!rate) return USD_PRICING;
+  const side = currency === 'usd' ? 'usd' : 'local';
+  const amount = (plan: PaidPlan, interval: BillingInterval) => {
+    const quote = data.plans.find((p) => p.code === plan)?.display[interval]?.[side];
+    return quote && quote.currency === currency ? toMinor(quote.amount) : Math.round(USD_PRICES[plan][interval] * rate);
+  };
+  const starter = data.plans.find((p) => p.code === 'starter');
+  return {
+    currency,
+    prices: { starter: { month: amount('starter', 'month'), year: amount('starter', 'year') }, pro: { month: amount('pro', 'month'), year: amount('pro', 'year') } },
+    approximate: currency !== 'usd' && (starter?.display.month?.local?.approximate ?? true),
+    emailOverage: Math.round(USD_PRICING.emailOverage * rate),
+    reachableRate: { starter: USD_PRICING.reachableRate.starter * rate, pro: USD_PRICING.reachableRate.pro * rate },
+    savePercent: Math.round(Number(starter?.annualDiscountPercent ?? 17)),
+  };
+}
 
 const planDetails: Record<PlanKey, { label: string; summary: string; features: string[] }> = {
   free: { label: 'Free', summary: 'For teams starting with retention', features: ['2,000 reachable users', '10,000 emails incl.', 'Unlimited push notifications', '1 active Journey', '5 lifecycle segments', '5 audience groups', '100 AI Credits / month'] },
@@ -168,8 +161,6 @@ const faq = [
 const money = (minor: number, currency: Currency) => new Intl.NumberFormat('en-US', { style: 'currency', currency: currency.toUpperCase(), maximumFractionDigits: 0 }).format(minor / 100);
 const moneyExact = (minor: number, currency: Currency) => minor === 0 ? money(0, currency) : new Intl.NumberFormat('en-US', { style: 'currency', currency: currency.toUpperCase(), minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(minor / 100);
 const moneyPerUser = (rate: number, currency: Currency) => new Intl.NumberFormat('en-US', { style: 'currency', currency: currency.toUpperCase(), minimumFractionDigits: rate < 0.01 ? 3 : 2, maximumFractionDigits: 3 }).format(rate);
-const yearlySaving = (plan: PaidPlan, currency: Currency) => prices[currency][plan].month * 12 - prices[currency][plan].year;
-const yearlySavingPercent = Math.round((1 - prices.usd.starter.year / (prices.usd.starter.month * 12)) * 100);
 const number = (value: number) => value.toLocaleString('en-US');
 
 function CostTooltip({ title, children }: { title: string; children: ReactNode }) {
@@ -188,7 +179,9 @@ function CostTooltip({ title, children }: { title: string; children: ReactNode }
 }
 
 function planHref(plan: PaidPlan, interval: BillingInterval, currency: Currency, authenticated: boolean) {
-  const query = `plan=${plan}&interval=${interval}&currency=${currency}`;
+  // Charged in USD; Stripe Adaptive Pricing shows the buyer's currency at checkout.
+  void currency;
+  const query = `plan=${plan}&interval=${interval}&currency=usd`;
   return authenticated ? `/dashboard/billing/checkout?${query}` : `/get-started?${query}`;
 }
 
@@ -258,24 +251,25 @@ export default function PricingExperience() {
   const { isAuthenticated } = useCurrentUser();
   const [interval, setInterval] = useState<BillingInterval>('month');
   const [currency, setCurrency] = useState<Currency>('usd');
-  const [localCurrency, setLocalCurrency] = useState<Currency | null>(null);
+  const { data: local } = useLocalPricing();
+  // The visitor's currency by IP. Shown by default unless they picked USD before.
+  const localCurrency = local && local.currency !== 'usd' && local.usdRate ? local.currency : null;
+  useEffect(() => {
+    if (!localCurrency) return;
+    const stored = window.localStorage.getItem('pixlpush-pricing-currency');
+    setCurrency(stored === 'usd' ? 'usd' : localCurrency);
+  }, [localCurrency]);
+  const pricing = useMemo(() => buildPricing(currency, local), [currency, local]);
   const [sales, setSales] = useState(false);
   const [pushReachable, setPushReachable] = useState(2000);
   const [emailSends, setEmailSends] = useState(10000);
   const calculatorRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const detected = detectLocalCurrency();
-    setLocalCurrency(detected);
-    const stored = window.localStorage.getItem('pixlpush-pricing-currency');
-    if (stored === 'usd' || (detected && stored === detected)) setCurrency(stored as Currency);
-  }, []);
-
   const chooseCurrency = (value: Currency) => {
     setCurrency(value);
     window.localStorage.setItem('pixlpush-pricing-currency', value);
   };
-  const displayCurrencies: Currency[] = localCurrency && localCurrency !== 'usd' ? ['usd', localCurrency] : ['usd'];
+  const displayCurrencies: Currency[] = localCurrency ? ['usd', localCurrency] : ['usd'];
   const scrollToCalculator = () => calculatorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   const calculator = useMemo(() => {
     const audience = Math.max(0, pushReachable);
@@ -284,13 +278,13 @@ export default function PricingExperience() {
       : audience < 10000 ? ['starter', 'pro'] : ['pro'];
     const costs = eligible.map((plan) => {
       const included = plan === 'free' ? 2000 : plan === 'starter' ? 5000 : 10000;
-      const rate = plan === 'starter' || plan === 'pro' ? reachableUserOverageRate[currency][plan] : 0;
+      const rate = plan === 'starter' || plan === 'pro' ? pricing.reachableRate[plan] : 0;
       const additional = Math.max(0, audience - included);
       const overage = Math.round(additional * rate * 100);
       const includedEmails = plan === 'free' ? 10000 : plan === 'starter' ? 20000 : Number.POSITIVE_INFINITY;
-      const emailOverage = plan === 'free' || plan === 'pro' ? 0 : Math.ceil(Math.max(0, emailSends - includedEmails) / 1000) * starterEmailOverageUnitAmount[currency];
-      const baseMonthly = plan === 'free' || plan === 'enterprise' ? 0 : prices[currency][plan].month;
-      const baseYearly = plan === 'free' || plan === 'enterprise' ? 0 : prices[currency][plan].year;
+      const emailOverage = plan === 'free' || plan === 'pro' ? 0 : Math.ceil(Math.max(0, emailSends - includedEmails) / 1000) * pricing.emailOverage;
+      const baseMonthly = plan === 'free' || plan === 'enterprise' ? 0 : pricing.prices[plan].month;
+      const baseYearly = plan === 'free' || plan === 'enterprise' ? 0 : pricing.prices[plan].year;
       const monthlyTotal = baseMonthly + overage + emailOverage;
       const fullAnnualTotal = monthlyTotal * 12;
       const annualTotal = baseYearly + (overage + emailOverage) * 12;
@@ -299,7 +293,7 @@ export default function PricingExperience() {
     });
     const best = costs.sort((first, second) => first.comparisonTotal - second.comparisonTotal)[0];
     return { audience, costs, best };
-  }, [currency, emailSends, interval, pushReachable]);
+  }, [pricing, emailSends, interval, pushReachable]);
 
   const recommendedPlan = calculator.best?.plan ?? 'free';
   const platformCost = calculator.best ? (interval === 'year' ? calculator.best.baseYearly / 12 : calculator.best.baseMonthly) : 0;
@@ -328,7 +322,7 @@ export default function PricingExperience() {
   const emailTooltip = recommendedPlan === 'pro'
     ? 'Pro includes unlimited email sends per month at no additional charge.'
     : emailOverageCost > 0
-    ? `${planDetails[recommendedPlan].label} includes ${number(includedEmails)} email sends per month. ${number(additionalEmails)} additional sends are charged at ${moneyExact(starterEmailOverageUnitAmount[currency], currency)} per 1,000 sends, for an estimated ${moneyExact(emailOverageCost, currency)}.`
+    ? `${planDetails[recommendedPlan].label} includes ${number(includedEmails)} email sends per month. ${number(additionalEmails)} additional sends are charged at ${moneyExact(pricing.emailOverage, currency)} per 1,000 sends, for an estimated ${moneyExact(emailOverageCost, currency)}.`
     : `${planDetails[recommendedPlan].label} includes up to ${number(includedEmails)} email sends per month at no additional charge.`;
   const monthlyTotalTooltip = interval === 'year'
     ? `Monthly equivalent of the ${planDetails[recommendedPlan].label} annual plan, including any reachable-user and email overage charges.`
@@ -352,22 +346,22 @@ export default function PricingExperience() {
           <Box sx={{ position: 'relative', minHeight: 52, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: { xs: 'stretch', md: 'center' }, justifyContent: 'space-between', gap: { xs: 1.5, md: 2 } }}>
             <Tabs value={interval} onChange={(_, value) => setInterval(value)} aria-label="Billing interval" sx={{ mb: 0 }}>
               <Tab value="month" label="Monthly" />
-              <Tab value="year" label={<>Yearly<Chip label={`Save ${yearlySavingPercent}%`} size="small" color="success" /></>} />
+              <Tab value="year" label={<>Yearly<Chip label={`Save ${pricing.savePercent}%`} size="small" color="success" /></>} />
             </Tabs>
             <Box sx={{ alignSelf: { xs: 'flex-end', md: 'auto' } }}>
               <Tabs value={currency} onChange={(_, value) => chooseCurrency(value)} aria-label="Currency" sx={{ mb: 0 }}>
-                {displayCurrencies.map((value) => <Tab key={value} value={value} label={currencyMeta[value].label} />)}
+                {displayCurrencies.map((value) => <Tab key={value} value={value} label={value.toUpperCase()} />)}
               </Tabs>
             </Box>
           </Box>
         </Stack>
         <Grid container spacing={2.25} alignItems="stretch" sx={{ order: 2 }}>
-          <PricingCard plan="free" interval={interval} currency={currency} authenticated={isAuthenticated} onEstimate={scrollToCalculator} />
-          <PricingCard plan="starter" interval={interval} currency={currency} authenticated={isAuthenticated} recommended onEstimate={scrollToCalculator} />
-          <PricingCard plan="pro" interval={interval} currency={currency} authenticated={isAuthenticated} onEstimate={scrollToCalculator} />
-          <PricingCard plan="enterprise" interval={interval} currency={currency} authenticated={isAuthenticated} onSales={() => setSales(true)} onEstimate={scrollToCalculator} />
+          <PricingCard plan="free" interval={interval} pricing={pricing} currency={currency} authenticated={isAuthenticated} onEstimate={scrollToCalculator} />
+          <PricingCard plan="starter" interval={interval} pricing={pricing} currency={currency} authenticated={isAuthenticated} recommended onEstimate={scrollToCalculator} />
+          <PricingCard plan="pro" interval={interval} pricing={pricing} currency={currency} authenticated={isAuthenticated} onEstimate={scrollToCalculator} />
+          <PricingCard plan="enterprise" interval={interval} pricing={pricing} currency={currency} authenticated={isAuthenticated} onSales={() => setSales(true)} onEstimate={scrollToCalculator} />
         </Grid>
-        <Box sx={{ order: 3 }}><ComparisonTable interval={interval} currency={currency} authenticated={isAuthenticated} onSales={() => setSales(true)} /></Box>
+        <Box sx={{ order: 3 }}><ComparisonTable interval={interval} pricing={pricing} currency={currency} authenticated={isAuthenticated} onSales={() => setSales(true)} /></Box>
 
         <Box ref={calculatorRef} sx={{ mt: 6, scrollMarginTop: 28, order: 5 }}>
           <Box sx={{ position: 'relative', mb: 2.5 }}>
@@ -381,7 +375,7 @@ export default function PricingExperience() {
               <Box sx={{ position: 'absolute', top: { xs: 10, md: 14 }, right: { xs: 10, md: 18 }, zIndex: 2 }}>
                 <Tabs value={interval} onChange={(_, value) => setInterval(value)} aria-label="Estimate billing interval">
                   <Tab value="month" label="Monthly" />
-                  <Tab value="year" label={<Stack direction="row" alignItems="center" gap={.6}>Yearly<Chip label={`Save ${yearlySavingPercent}%`} size="small" color="success" /></Stack>} />
+                  <Tab value="year" label={<Stack direction="row" alignItems="center" gap={.6}>Yearly<Chip label={`Save ${pricing.savePercent}%`} size="small" color="success" /></Stack>} />
                 </Tabs>
               </Box>
               <Grid container spacing={0}>
@@ -459,12 +453,14 @@ export default function PricingExperience() {
   );
 }
 
-function PricingCard({ plan, interval, currency, authenticated, recommended, onSales, onEstimate }: { plan: PlanKey; interval: BillingInterval; currency: Currency; authenticated: boolean; recommended?: boolean; onSales?: () => void; onEstimate: () => void }) {
+function PricingCard({ plan, interval, pricing, currency, authenticated, recommended, onSales, onEstimate }: { plan: PlanKey; interval: BillingInterval; pricing: Pricing; currency: Currency; authenticated: boolean; recommended?: boolean; onSales?: () => void; onEstimate: () => void }) {
   const detail = planDetails[plan];
   const isPaid = plan === 'starter' || plan === 'pro';
-  const monthly = isPaid ? prices[currency][plan].month : 0;
-  const annual = isPaid ? prices[currency][plan].year : 0;
+  const monthly = isPaid ? pricing.prices[plan].month : 0;
+  const annual = isPaid ? pricing.prices[plan].year : 0;
   const annualMonthly = isPaid ? Math.round(annual / 12) : 0;
+  // Long local amounts (PKR 21,862) get a smaller size so "/ month" stays on the same line.
+  const priceLabel = isPaid ? money(interval === 'year' ? annualMonthly : monthly, currency) : plan === 'free' ? money(0, currency) : 'Custom';
   const href = isPaid ? planHref(plan, interval, currency, authenticated) : '/get-started?plan=free';
   const accent = plan === 'enterprise' ? '#e27b4f' : recommended ? '#6422c5' : '#7e5bb7';
   const tag = plan === 'free' ? 'Start simple' : plan === 'starter' ? 'For growing teams' : plan === 'pro' ? 'For scaling teams' : 'Tailored partnership';
@@ -485,9 +481,9 @@ function PricingCard({ plan, interval, currency, authenticated, recommended, onS
           </Stack>
           <Box sx={{ mt: 1.5, p: 1.4, minHeight: interval === 'year' && isPaid ? 124 : 108, borderRadius: 2, backgroundColor: priceSurface, border: '1px solid', borderColor: recommended ? '#dcc8ff' : 'rgba(100,34,197,.1)' }}>
             <Stack gap={.35}>
-              {interval === 'year' && isPaid && <Stack direction="row" alignItems="center" gap={.7} flexWrap="wrap"><Typography component="span" color="text.disabled" sx={{ textDecoration: 'line-through', fontSize: "var(--fs-13)", whiteSpace: 'nowrap' }}>{money(monthly, currency)}</Typography><Chip label={`Save ${yearlySavingPercent}%`} size="small" sx={{ height: 22, color: '#16764a', backgroundColor: '#e7f8ed', fontWeight: 500, fontSize: "var(--fs-12)" }} /></Stack>}
+              {interval === 'year' && isPaid && <Stack direction="row" alignItems="center" gap={.7} flexWrap="wrap"><Typography component="span" color="text.disabled" sx={{ textDecoration: 'line-through', fontSize: "var(--fs-13)", whiteSpace: 'nowrap' }}>{money(monthly, currency)}</Typography><Chip label={`Save ${pricing.savePercent}%`} size="small" sx={{ height: 22, color: '#16764a', backgroundColor: '#e7f8ed', fontWeight: 500, fontSize: "var(--fs-12)" }} /></Stack>}
               <Stack direction="row" alignItems="baseline" gap={.6} flexWrap="wrap">
-                <Typography fontSize={{ xs: "var(--fs-32)", md: "var(--fs-32)" }} fontWeight={600} sx={{ color: '#241536', whiteSpace: 'nowrap' }}>{isPaid ? money(interval === 'year' ? annualMonthly : monthly, currency) : plan === 'free' ? money(0, currency) : 'Custom'}</Typography>
+                <Typography fontSize={priceLabel.length > 9 ? "var(--fs-24)" : "var(--fs-32)"} fontWeight={600} sx={{ color: '#241536', whiteSpace: 'nowrap' }}>{priceLabel}</Typography>
                 {(isPaid || plan === 'free') && <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ whiteSpace: 'nowrap' }}>/ month</Typography>}
               </Stack>
               {detail.summary && <Typography color="text.secondary" fontSize="var(--fs-12)" lineHeight={1.35} sx={{ mt: .45, minHeight: 32, whiteSpace: 'pre-line' }}>{detail.summary}</Typography>}
@@ -505,7 +501,7 @@ function PricingCard({ plan, interval, currency, authenticated, recommended, onS
   );
 }
 
-function ComparisonTable({ interval, currency, authenticated, onSales }: { interval: BillingInterval; currency: Currency; authenticated: boolean; onSales: () => void }) {
+function ComparisonTable({ interval, pricing, currency, authenticated, onSales }: { interval: BillingInterval; pricing: Pricing; currency: Currency; authenticated: boolean; onSales: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const visibleGroups = expanded ? comparisonGroups : comparisonGroups.slice(0, 3);
   const rows = visibleGroups.flatMap((category) => [
@@ -540,8 +536,8 @@ function ComparisonTable({ interval, currency, authenticated, onSales }: { inter
   const planPrice = (plan: PlanKey) => {
     if (plan === 'free') return `${money(0, currency)}/mo`;
     if (plan === 'enterprise') return 'Custom';
-    const monthlyPrice = `${money(prices[currency][plan].month, currency)}/mo`;
-    return interval === 'year' ? `${monthlyPrice} · ${money(prices[currency][plan].year, currency)}/yr` : monthlyPrice;
+    const monthlyPrice = `${money(pricing.prices[plan].month, currency)}/mo`;
+    return interval === 'year' ? `${monthlyPrice} · ${money(pricing.prices[plan].year, currency)}/yr` : monthlyPrice;
   };
   return (
     <Box sx={{ mt: 4 }}>

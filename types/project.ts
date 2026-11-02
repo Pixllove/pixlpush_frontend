@@ -130,6 +130,8 @@ export interface AiCreditPackage {
 export interface AiCreditBalance {
   /** Unspent credits from confirmed one-time purchases; monthly included credits are reported separately in usage. */
   balance: number;
+  /** Monthly plan allowance (null = unlimited) and purchased credits left; AI requests spend 1 credit each. */
+  usage?: { periodStart: string; monthlyAllowance: number | null; usedThisPeriod: number; monthlyRemaining: number | null; purchasedBalance: number; available: number | null };
   packages: AiCreditPackage[];
 }
 
@@ -563,6 +565,8 @@ export interface UserStats {
 export interface CheckoutInput {
   plan: PaidPlan;
   interval: BillingInterval;
+  /// The stored price currency (USD). Stripe localizes what the buyer sees.
+  currency?: string;
   address: { name: string; line1: string; line2?: string; city?: string; state?: string; postalCode?: string; country: string };
 }
 
@@ -646,4 +650,15 @@ export interface JourneyListItem extends Omit<Journey, "steps"> {
   active: number;
   completed: number;
   exited: number;
+}
+
+/** An Enterprise configuration offered to this project by PixlPush. */
+export interface EnterpriseOffer {
+  code: string;
+  name: string;
+  version: number;
+  annualDiscountPercent: string | null;
+  prices: { currency: string; interval: BillingInterval; amount: string; payable: boolean }[];
+  features: Record<string, { enabled: false } | { enabled: true; unlimited: true } | { enabled: true; unlimited: false; limit: number }>;
+  status: "active" | "awaiting_payment";
 }

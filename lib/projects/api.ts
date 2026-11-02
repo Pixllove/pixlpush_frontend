@@ -18,6 +18,7 @@ import type {
   BillingPaymentMethod,
   SavedCard,
   CheckoutInput,
+  EnterpriseOffer,
   CheckoutTotals,
   BillingPrice,
   BillingSubscription,
@@ -597,6 +598,11 @@ export const billingApi = {
     authRequest<BillingPrice[]>(at(projectId, "/billing/prices"), undefined, BASE),
   invoices: (projectId: string) =>
     authRequest<BillingInvoice[]>(at(projectId, "/billing/invoices"), undefined, BASE),
+  /** This project's Enterprise offer from PixlPush, or null. */
+  enterpriseOffer: (projectId: string) =>
+    authRequest<EnterpriseOffer | null>(at(projectId, "/billing/enterprise"), undefined, BASE),
+  enterpriseCheckout: (projectId: string, input: { interval: BillingInterval; currency?: string }) =>
+    authRequest<{ url: string }>(at(projectId, "/billing/enterprise/checkout-session"), input, BASE, "POST"),
   aiCredits: (projectId: string) =>
     authRequest<AiCreditBalance>(at(projectId, "/billing/credits"), undefined, BASE),
   aiCreditPurchases: (projectId: string) =>

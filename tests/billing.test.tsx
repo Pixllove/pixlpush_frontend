@@ -72,14 +72,14 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('prices', () => {
-  it('shows AED, before tax, for each plan and interval; yearly is ten monthly payments', () => {
-    expect(formatMoney(priceOf([], 'starter', 'month').unitAmount)).toBe('AED 107');
-    expect(formatMoney(priceOf([], 'starter', 'year').unitAmount)).toBe('AED 1,070');
-    expect(formatMoney(priceOf([], 'pro', 'month').unitAmount)).toBe('AED 290');
-    expect(formatMoney(priceOf([], 'pro', 'year').unitAmount)).toBe('AED 2,900');
+  it('charges USD, before tax, for each plan and interval; yearly is ten monthly payments', () => {
+    expect(formatMoney(priceOf([], 'starter', 'month').unitAmount, 'usd')).toBe('USD 29');
+    expect(formatMoney(priceOf([], 'starter', 'year').unitAmount, 'usd')).toBe('USD 290');
+    expect(formatMoney(priceOf([], 'pro', 'month').unitAmount, 'usd')).toBe('USD 79');
+    expect(formatMoney(priceOf([], 'pro', 'year').unitAmount, 'usd')).toBe('USD 790');
     expect(formatMoney(30450)).toBe('AED 304.50');
-    expect(yearlySaving([], 'pro')).toBe(58000); // two monthly payments
-    expect(PUBLIC_PRICES.every((price) => price.taxExclusive && price.currency === 'aed')).toBe(true);
+    expect(yearlySaving([], 'pro')).toBe(15800); // two monthly payments of USD 79
+    expect(PUBLIC_PRICES.every((price) => price.taxExclusive && price.currency === 'usd')).toBe(true);
   });
 
   it('the public pricing page switches interval and sends a visitor through the billing page, not straight to Stripe', async () => {
