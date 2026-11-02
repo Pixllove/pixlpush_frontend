@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   AutoAwesomeRounded,
   CheckCircleRounded,
-  CloseRounded,
   ExpandMoreRounded,
 } from '@mui/icons-material';
 import {
@@ -16,12 +16,8 @@ import {
   Card,
   Chip,
   Container,
-  Dialog,
-  DialogContent,
-  DialogTitle,
   Divider,
   Grid,
-  IconButton,
   Stack,
   Table,
   TableBody,
@@ -248,6 +244,7 @@ const featureDescriptions: Record<string, string> = {
 };
 
 export default function PricingExperience() {
+  const router = useRouter();
   const { isAuthenticated } = useCurrentUser();
   const [interval, setInterval] = useState<BillingInterval>('month');
   const [currency, setCurrency] = useState<Currency>('usd');
@@ -260,7 +257,6 @@ export default function PricingExperience() {
     setCurrency(stored === 'usd' ? 'usd' : localCurrency);
   }, [localCurrency]);
   const pricing = useMemo(() => buildPricing(currency, local), [currency, local]);
-  const [sales, setSales] = useState(false);
   const [pushReachable, setPushReachable] = useState(2000);
   const [emailSends, setEmailSends] = useState(10000);
   const calculatorRef = useRef<HTMLDivElement>(null);
@@ -271,6 +267,7 @@ export default function PricingExperience() {
   };
   const displayCurrencies: Currency[] = localCurrency ? ['usd', localCurrency] : ['usd'];
   const scrollToCalculator = () => calculatorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const goToSales = () => router.push('/contact-sales');
   const calculator = useMemo(() => {
     const audience = Math.max(0, pushReachable);
     const eligible: PlanKey[] = audience <= 2000 && emailSends <= 10000
@@ -359,9 +356,9 @@ export default function PricingExperience() {
           <PricingCard plan="free" interval={interval} pricing={pricing} currency={currency} authenticated={isAuthenticated} onEstimate={scrollToCalculator} />
           <PricingCard plan="starter" interval={interval} pricing={pricing} currency={currency} authenticated={isAuthenticated} recommended onEstimate={scrollToCalculator} />
           <PricingCard plan="pro" interval={interval} pricing={pricing} currency={currency} authenticated={isAuthenticated} onEstimate={scrollToCalculator} />
-          <PricingCard plan="enterprise" interval={interval} pricing={pricing} currency={currency} authenticated={isAuthenticated} onSales={() => setSales(true)} onEstimate={scrollToCalculator} />
+          <PricingCard plan="enterprise" interval={interval} pricing={pricing} currency={currency} authenticated={isAuthenticated} onSales={goToSales} onEstimate={scrollToCalculator} />
         </Grid>
-        <Box sx={{ order: 3 }}><ComparisonTable interval={interval} pricing={pricing} currency={currency} authenticated={isAuthenticated} onSales={() => setSales(true)} /></Box>
+        <Box sx={{ order: 3 }}><ComparisonTable interval={interval} pricing={pricing} currency={currency} authenticated={isAuthenticated} onSales={goToSales} /></Box>
 
         <Box ref={calculatorRef} sx={{ mt: 6, scrollMarginTop: 28, order: 5 }}>
           <Box sx={{ position: 'relative', mb: 2.5 }}>
@@ -401,7 +398,7 @@ export default function PricingExperience() {
                         <Box>
                           <Typography fontSize="var(--fs-16)" fontWeight={600}>Need more customize offer?</Typography>
                         </Box>
-                        <Button variant="contained" onClick={() => setSales(true)} sx={{ flexShrink: 0, minHeight: 38, px: 2, borderRadius: 1, color: '#32114d', backgroundColor: '#fff', textTransform: 'none', '&:hover': { backgroundColor: '#f5edff' } }}>Talk to sales</Button>
+                        <Button variant="contained" onClick={goToSales} sx={{ flexShrink: 0, minHeight: 38, px: 2, borderRadius: 1, color: '#32114d', backgroundColor: '#fff', textTransform: 'none', '&:hover': { backgroundColor: '#f5edff' } }}>Talk to sales</Button>
                       </Stack>
                     </Card>}
                   </Stack>
@@ -448,7 +445,6 @@ export default function PricingExperience() {
         <Box sx={{ mt: 7, order: 7 }}><Typography fontSize="var(--fs-12)" fontWeight={500} letterSpacing=".13em" color="primary.main">QUESTIONS, ANSWERED</Typography><Typography variant="h2" sx={{ fontSize: { xs: "var(--fs-32)", md: "var(--fs-40)" }, mt: 0.5, mb: 2.5 }}>Pricing without surprises.</Typography><Box sx={{ border: '1px solid #ded5e8', borderRadius: 2, overflow: 'hidden', backgroundColor: '#fff', boxShadow: '0 14px 32px rgba(69,30,91,.1)' }}>{faq.map(([question, answer]) => <Accordion key={question} disableGutters elevation={0} sx={{ border: 0, borderBottom: '1px solid #eee8f3', borderRadius: 0, '&:last-child': { borderBottom: 0 }, '&:before': { display: 'none' } }}><AccordionSummary expandIcon={<ExpandMoreRounded />} sx={{ minHeight: 52, '& .MuiAccordionSummary-content': { my: 1.4 } }}><Typography fontWeight={600}>{question}</Typography></AccordionSummary><AccordionDetails sx={{ pt: 0, pb: 2.2 }}><Typography color="text.secondary" fontSize="var(--fs-14)" lineHeight={1.6}>{answer}</Typography></AccordionDetails></Accordion>)}</Box></Box>
       </Container>
       </Box>
-      <Dialog open={sales} onClose={() => setSales(false)} maxWidth="sm" fullWidth><DialogTitle>Talk to Sales<IconButton onClick={() => setSales(false)} aria-label="Close" sx={{ position: 'absolute', right: 12, top: 12 }}><CloseRounded /></IconButton></DialogTitle><DialogContent><Typography color="text.secondary" fontSize="var(--fs-13)" lineHeight={1.6}>Enterprise plans are arranged with our team: custom limits, permissions, integrations, onboarding, and support. Tell us about your audience and we’ll shape the right Project setup.</Typography><Button variant="contained" size="large" href="/get-started?intent=enterprise" fullWidth sx={{ mt: 2, textTransform: 'none' }}>Continue to contact sales</Button></DialogContent></Dialog>
     </SiteShell>
   );
 }
