@@ -153,6 +153,9 @@ export async function callBackend<T>(
   // original address its per-IP auth limits would count all users as one.
   const forwardedFor = requestHeaders().get("x-forwarded-for");
   if (forwardedFor) headers["X-Forwarded-For"] = forwardedFor;
+  // The browser's own user agent, so audit logs show the real device instead of "node".
+  const userAgent = requestHeaders().get("user-agent");
+  if (userAgent) headers["User-Agent"] = userAgent;
 
   if (init.auth) {
     const token = getSessionToken();
@@ -377,6 +380,9 @@ async function callBackendStream(
   };
   const forwardedFor = requestHeaders().get("x-forwarded-for");
   if (forwardedFor) headers["X-Forwarded-For"] = forwardedFor;
+  // The browser's own user agent, so audit logs show the real device instead of "node".
+  const userAgent = requestHeaders().get("user-agent");
+  if (userAgent) headers["User-Agent"] = userAgent;
 
   if (init.auth) {
     const token = getSessionToken();
