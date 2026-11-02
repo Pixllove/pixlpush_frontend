@@ -16,6 +16,12 @@ export interface Account {
   twoFactorEnabled?: boolean;
   /** Google profile photo; null or absent for accounts that never signed in with Google. */
   avatarUrl?: string | null;
+  /** ISO country code ("PK"); null until set. */
+  country?: string | null;
+  /** IANA time zone dates are shown in; null until known. */
+  timezone?: string | null;
+  /** True: follow this device's time zone. */
+  timezoneAuto?: boolean;
   createdAt: string;
 }
 

@@ -30,6 +30,8 @@ export const authApi = {
   logout: () => authRequest<{ message: string }>('/logout', {}),
 
   me: () => authRequest<CurrentUser>('/me'),
+  updatePreferences: (input: { country?: string | null; timezone?: string | null; timezoneAuto?: boolean }) =>
+    authRequest<{ account: Account }>('/me/preferences', input, undefined, 'PATCH'),
 
   /** Submit an appeal while signed in to the blocked-account screen. */
   appeal: (message: string, idempotencyKey: string) =>

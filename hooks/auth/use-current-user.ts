@@ -1,6 +1,8 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { getDeviceTimezone, setTimezoneOverride } from '@/lib/timezone';
 import { authApi, authKeys } from '@/lib/auth/api';
 import { isPermanentAuthError } from '@/lib/auth/client';
 import type { CurrentUser } from '@/types/auth';
@@ -18,6 +20,17 @@ export function useCurrentUser() {
     // Past this it is shown from cache and re-checked in the background.
     staleTime: 5 * 60_000,
   });
+
+  // Dates follow the profile: a manual zone is applied everywhere; an automatic
+  // one follows this device and is saved when the device's zone changes (travel).
+  const account = query.data?.account;
+  useEffect(() => {
+    if (!account) return;
+    const auto = account.timezoneAuto !== false;
+    setTimezoneOverride(auto ? null : account.timezone ?? null);
+    const device = getDeviceTimezone();
+    if (auto && account.timezone !== device) authApi.updatePreferences({ timezone: device }).catch(() => undefined);
+  }, [account]);
 
   return {
     ...query,

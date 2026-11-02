@@ -9,6 +9,7 @@ import { billingApi } from '@/lib/projects/api';
 import { authApi } from '@/lib/auth/api';
 import ChangePasswordForm from './ChangePasswordForm';
 import TwoFactorSettings from './TwoFactorSettings';
+import RegionSettings from './RegionSettings';
 import UserAvatar from './UserAvatar';
 
 const display = (value: string | null | undefined) => value?.trim() || '-';
@@ -101,6 +102,8 @@ export default function AccountProfile({ section = 'all', showCompanyHeading = t
           <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: .5 }}>Managed in Team & Access.</Typography>
         </Box>
       </section>}
+
+      {(section === 'all' || section === 'profile') && <RegionSettings />}
 
       {!embedded && companyContent}
 

@@ -1,5 +1,32 @@
 /** Viewer-local timezone helpers. Timestamps remain UTC instants at the API boundary. */
+
+const OVERRIDE_KEY = "pixlpush-timezone";
+
+const isZone = (value: string) => {
+  try { new Intl.DateTimeFormat("en", { timeZone: value }); return true; } catch { return false; }
+};
+
+/**
+ * The profile's manual time zone, or null to follow the device. Kept in
+ * localStorage so every page (and the X-User-Timezone header) uses it at once.
+ */
+export function setTimezoneOverride(timeZone: string | null) {
+  if (typeof window === "undefined") return;
+  if (timeZone && isZone(timeZone)) window.localStorage.setItem(OVERRIDE_KEY, timeZone);
+  else window.localStorage.removeItem(OVERRIDE_KEY);
+}
+
+/** The zone dates are shown in: the profile's manual choice, else this device's zone. */
 export function getViewerTimezone(): string {
+  if (typeof window !== "undefined") {
+    const chosen = window.localStorage.getItem(OVERRIDE_KEY);
+    if (chosen && isZone(chosen)) return chosen;
+  }
+  return getDeviceTimezone();
+}
+
+/** This device's own zone, ignoring the profile setting. */
+export function getDeviceTimezone(): string {
   try {
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     if (timezone) {
@@ -13,7 +40,8 @@ export function getViewerTimezone(): string {
   return "UTC";
 }
 
-function offsetLabel(date: Date, timeZone: string): string {
+/** "UTC+05:00" for a zone at a moment (daylight saving aware). */
+export function offsetLabel(date: Date, timeZone: string): string {
   try {
     const name = new Intl.DateTimeFormat("en", {
       timeZone,
