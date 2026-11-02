@@ -25,6 +25,8 @@ export interface Project {
   deactivatedAt: string | null;
   recoveryUntil: string | null;
   subscription?: { plan: PlanName; status: string } | null;
+  /** Payment state: grace (payment failed, access kept until graceEndsAt) or locked (workspace paused). */
+  billing?: BillingAccess;
 }
 
 /** GET /projects/:projectId adds the settings fields, plan period and counts. */
@@ -661,4 +663,11 @@ export interface EnterpriseOffer {
   prices: { currency: string; interval: BillingInterval; amount: string; payable: boolean }[];
   features: Record<string, { enabled: false } | { enabled: true; unlimited: true } | { enabled: true; unlimited: false; limit: number }>;
   status: "active" | "awaiting_payment";
+}
+
+export interface BillingAccess {
+  state: "ok" | "grace" | "locked";
+  graceEndsAt: string | null;
+  daysLeft: number | null;
+  reason: string | null;
 }

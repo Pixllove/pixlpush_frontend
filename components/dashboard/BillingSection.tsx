@@ -103,7 +103,8 @@ export function BillingSection() {
   const creditCheckout = searchParams.get("credits");
   const wantedPlan = paidPlans.find((plan) => plan === searchParams.get("plan"));
 
-  const [tab, setTab] = useState<BillingTab>("overview");
+  // ?tab=methods (from the payment alarm) opens that tab directly.
+  const [tab, setTab] = useState<BillingTab>((["overview", "history", "methods", "profile"] as const).find((value) => value === searchParams.get("tab")) ?? "overview");
   const [interval, setInterval] = useState<BillingInterval>(searchParams.get("interval") === "year" ? "year" : "month");
   // One action at a time: a second click cannot open a second Checkout Session.
   const [busy, setBusy] = useState<string | null>(null);

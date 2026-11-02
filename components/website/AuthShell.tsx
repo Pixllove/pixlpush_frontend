@@ -94,7 +94,8 @@ export default function AuthShell({ children, mode, back = true }: { children: R
             className={`auth-form-view${activeMode === childMode ? ' is-active' : ''}`}
             aria-hidden={activeMode !== childMode}
           >
-            {cloneElement(child, { active: activeMode === childMode, onSwitch: switchMode })}
+            {/* Only form components take these props; a plain element (<div>) would put them on the DOM. */}
+            {typeof child.type === 'string' ? child : cloneElement(child, { active: activeMode === childMode, onSwitch: switchMode })}
           </Box>
         );
       })

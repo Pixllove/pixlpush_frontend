@@ -79,6 +79,7 @@ const ERRORS: Record<string, string> = {
   BILLING_NOT_CONFIGURED: "Payments are not available on this server yet.",
   AI_CREDITS_EXHAUSTED: "You have used all AI credits for this period. Buy a credit package or upgrade your plan.",
   PLAN_LIMIT_REACHED: "You have reached a limit of your plan. Upgrade to add more.",
+  BILLING_LOCKED: "This workspace is paused because a payment is overdue. Update your payment method to restore access.",
   NO_BILLING_ACCOUNT: "There is no billing account yet. Choose a plan to start.",
   CHECKOUT_REQUIRED: "Choose a plan to start a subscription first.",
   SUBSCRIPTION_ENDED: "This subscription has already ended. Choose a plan to start a new one.",

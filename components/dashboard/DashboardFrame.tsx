@@ -28,6 +28,7 @@ import AccountMenu from "@/components/auth/AccountMenu";
 import NotificationMenu from "@/components/dashboard/NotificationMenu";
 import SupportChatWidget from "@/components/website/SupportChatWidget";
 import CreateProjectDialog from './CreateProjectDialog';
+import { BillingAlarm, BillingLockGate } from './BillingAccessNotice';
 import { useCurrentUser } from '@/hooks/auth/use-current-user';
 import { firebaseApi, onboardingApi } from '@/lib/projects/api';
 import { onboardingPercentage } from '@/lib/onboarding';
@@ -126,7 +127,7 @@ export default function DashboardFrame({
       firebase.data?.status === 'connected',
     )
     : null;
-  const showOnboardingWarning = activeProject?.status !== 'suspended' && active !== 'Onboarding Guide' && onboardingPercent !== null && onboardingPercent < 100;
+  const showOnboardingWarning = activeProject?.status !== 'suspended' && activeProject?.billing?.state !== 'locked' && active !== 'Onboarding Guide' && onboardingPercent !== null && onboardingPercent < 100;
   // Nothing invented: the heading names the real Project, or says there is none.
   const projectName = activeProject?.name ?? (isEmpty ? "No project" : "");
   return (
@@ -201,6 +202,8 @@ export default function DashboardFrame({
               before using project features again.
             </Alert>
           )}
+          {/* Pinned on every page while a payment is failing or overdue. */}
+          <BillingAlarm project={activeProject} />
           {showOnboardingWarning && (
             <Alert
               severity="warning"
@@ -363,7 +366,8 @@ export default function DashboardFrame({
               </Box>
             </Box>
           ) : (
-            children
+            // Billing stays usable so a locked project can pay; everything else opens the paused dialog.
+            active === "Billing & Usage" ? children : <BillingLockGate project={activeProject}>{children}</BillingLockGate>
           )}
         </Box>
       </Box>
