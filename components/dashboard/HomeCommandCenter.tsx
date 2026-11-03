@@ -1,6 +1,6 @@
 "use client";
 
-import { AddRounded, ArrowForwardRounded, ArrowUpwardRounded, AutoAwesomeRounded, AutoGraphRounded, CampaignRounded, CheckRounded, CloseRounded, ContentCopyRounded, DeleteOutlineRounded, EditOutlined, ExpandMoreRounded, HistoryRounded, InfoOutlined, InsightsRounded, LinkRounded, PeopleAltOutlined, PhoneIphoneRounded, PsychologyRounded, ReplayRounded, RouteRounded, SearchRounded, StopRounded, TrendingDownRounded } from "@mui/icons-material";
+import { AddRounded, ArrowForwardRounded, ArrowUpwardRounded, AutoAwesomeRounded, AutoGraphRounded, CampaignRounded, CheckRounded, CloseRounded, ContentCopyRounded, DeleteOutlineRounded, EditOutlined, PushPinOutlined, PushPinRounded, ViewSidebarOutlined, ExpandMoreRounded, HistoryRounded, InfoOutlined, InsightsRounded, LinkRounded, PeopleAltOutlined, PhoneIphoneRounded, PsychologyRounded, ReplayRounded, RouteRounded, SearchRounded, StopRounded, TrendingDownRounded } from "@mui/icons-material";
 import { Alert, Box, Button, ButtonBase, Dialog, DialogContent, DialogTitle, IconButton, InputBase, Menu, MenuItem, Stack, TextField, Tooltip, Typography } from "@mui/material";
 import Image from "next/image";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
@@ -1041,8 +1041,15 @@ function conversationTime(value: string) {
 
 function conversationGroup(value: string) {
   const relative = conversationTime(value);
-  return relative === "Today" || relative === "Yesterday" ? relative : "Older";
+  if (relative === "Today" || relative === "Yesterday") return relative;
+  const days = (Date.now() - new Date(value).getTime()) / 86_400_000;
+  return days <= 7 ? "Previous 7 days" : days <= 30 ? "Previous 30 days" : "Older";
 }
+
+/** The sidebar sits beside the content from this width; below it, it slides over the page. */
+const HISTORY_DOCKED_QUERY = "(min-width: 1200px)";
+const HISTORY_PREF_KEY = "pixlpush.home.historySidebar";
+const historyDocked = () => typeof window !== "undefined" && window.matchMedia(HISTORY_DOCKED_QUERY).matches;
 
 function conversationTitle(prompt: string, fallback: string) {
   const compact = prompt.trim().replace(/\s+/g, " ");
@@ -1071,6 +1078,24 @@ export default function HomeCommandCenter() {
   const [context, setContext] = useState<"recent" | "insight" | "handoff">("recent");
   const [contextOpen, setContextOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [pinOverrides, setPinOverrides] = useState<Record<string, string | null>>({});
+  // Docked sidebar opens by default on wide screens and remembers the user's choice.
+  useEffect(() => {
+    if (historyDocked() && window.localStorage.getItem(HISTORY_PREF_KEY) !== "closed") setHistoryOpen(true);
+  }, []);
+  // The fixed sidebar starts right under the dashboard top bar, whatever height it has on this screen.
+  useEffect(() => {
+    const topbar = document.querySelector<HTMLElement>(".dashboard-topbar");
+    if (!topbar) return;
+    const sync = () => document.documentElement.style.setProperty("--home-topbar-h", `${Math.max(0, topbar.getBoundingClientRect().bottom)}px`);
+    sync();
+    const observer = new ResizeObserver(sync);
+    observer.observe(topbar);
+    window.addEventListener("resize", sync);
+    return () => { observer.disconnect(); window.removeEventListener("resize", sync); };
+  }, []);
+  /** Opening or starting a chat only hides the sidebar when it covers the page. */
+  const closeHistoryIfOverlay = () => { if (!historyDocked()) setHistoryOpen(false); };
   const [conversationSearch, setConversationSearch] = useState("");
   const [openingConversationId, setOpeningConversationId] = useState<string | null>(null);
   const [deletedConversationIds, setDeletedConversationIds] = useState<Set<string>>(new Set());
@@ -1349,7 +1374,7 @@ export default function HomeCommandCenter() {
         setFlowConfirming(false);
         setBusinessContext(emptyBusinessContext);
         setBusinessContextComplete(false);
-        setHistoryOpen(false);
+        closeHistoryIfOverlay();
         setConversationSearch("");
       }
       setContextError(null);
@@ -1566,7 +1591,7 @@ export default function HomeCommandCenter() {
 
   const startNewChat = () => {
     if (thinking) return;
-    setHistoryOpen(false);
+    closeHistoryIfOverlay();
     setConversationSearch("");
     setMessages([]);
     setConversationId(undefined);
@@ -1643,7 +1668,7 @@ export default function HomeCommandCenter() {
       setBusinessContextComplete(false);
       businessContextHydratedRef.current = false;
       setContextOpen(false);
-      setHistoryOpen(false);
+      closeHistoryIfOverlay();
       setConversationSearch("");
     } catch (error) {
       setContextError(apiMessage(error, "That conversation could not be opened. Please try again."));
@@ -1880,7 +1905,7 @@ export default function HomeCommandCenter() {
       setHistoryOpen(true);
       return;
     }
-    setHistoryOpen(false);
+    closeHistoryIfOverlay();
     setContextOpen(true);
   };
 
@@ -1891,8 +1916,10 @@ export default function HomeCommandCenter() {
   const recentConversations = Array.from(new Map(
     (deferredConversationSearch ? [...(conversationSearchQuery.data?.items ?? []), ...localSearchMatches] : contextConversations)
       .filter((conversation) => !deletedConversationIds.has(conversation.id))
-      .map((conversation) => [conversation.id, conversation] as const),
-  ).values()).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      .map((conversation) => [conversation.id, { ...conversation, pinnedAt: conversation.id in pinOverrides ? pinOverrides[conversation.id] : conversation.pinnedAt ?? null }] as const),
+  ).values()).sort((a, b) => Number(Boolean(b.pinnedAt)) - Number(Boolean(a.pinnedAt))
+    || (a.pinnedAt && b.pinnedAt ? new Date(b.pinnedAt).getTime() - new Date(a.pinnedAt).getTime() : 0)
+    || new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
   const conversationListLoading = contextQuery.isPending || Boolean(deferredConversationSearch && conversationSearchQuery.isPending);
   const conversationSearchError = deferredConversationSearch && conversationSearchQuery.isError
     ? apiMessage(conversationSearchQuery.error, "Search is temporarily unavailable. Showing recent conversations.")
@@ -1901,74 +1928,113 @@ export default function HomeCommandCenter() {
   const toggleRecentHistory = () => {
     const nextOpen = !historyOpen;
     setHistoryOpen(nextOpen);
+    if (historyDocked()) window.localStorage.setItem(HISTORY_PREF_KEY, nextOpen ? "open" : "closed");
     setContext("recent");
     setContextError(null);
     if (!nextOpen) setConversationSearch("");
   };
 
-  const recentHistoryPanel = <Dialog open={historyOpen} onClose={toggleRecentHistory} maxWidth="sm" fullWidth className="home-history-dialog">
-  <Box className="home-history-panel" role="region" aria-label="Recent conversations">
-    <Stack direction="row" alignItems="flex-start" justifyContent="space-between" gap={2} className="home-history-header">
-      <Box>
-        <Typography className="home-history-heading">Recent conversations</Typography>
-        <Typography className="home-history-subtitle">Search and resume a Home AI thread.</Typography>
-      </Box>
-      <IconButton size="small" aria-label="Close recent conversations" onClick={toggleRecentHistory}><CloseRounded /></IconButton>
-    </Stack>
-    <Box className="context-search-box home-history-search">
-      <SearchRounded aria-hidden />
-      <InputBase
-        fullWidth
-        value={conversationSearch}
-        onChange={(event) => setConversationSearch(event.target.value)}
-        placeholder="Search conversations"
-        inputProps={{ "aria-label": "Search conversations" }}
-      />
-      {conversationSearch && <IconButton size="small" aria-label="Clear conversation search" onClick={() => setConversationSearch("")}><CloseRounded /></IconButton>}
-    </Box>
-    {(contextError || conversationSearchError) && <Typography className="context-dialog-error" role="alert">{contextError || conversationSearchError}</Typography>}
-    {conversationListLoading ? <Typography className="context-dialog-empty" color="text.secondary">{deferredConversationSearch ? "Searching conversations…" : "Loading conversations…"}</Typography> : recentConversations.length ? <Stack className="context-dialog-list home-history-list">
-      {recentConversations.map((item, index) => {
-        const group = conversationGroup(item.updatedAt);
-        const previousGroup = index > 0 ? conversationGroup(recentConversations[index - 1].updatedAt) : null;
-        return <Box key={item.id}>
-          {group !== previousGroup && <Typography className="context-dialog-group">{group}</Typography>}
-          <Box className={`context-dialog-row${conversationId === item.id ? " is-active" : ""}`}>
-            <ButtonBase
-              className="context-dialog-open"
-              onClick={() => void openConversation(item.id)}
-              disabled={Boolean(openingConversationId) || thinking || deleteConversationMutation.isPending}
-              aria-label={`Open conversation ${item.title || item.lastMessage?.content || "AI conversation"}`}
-              aria-current={conversationId === item.id ? "true" : undefined}
-            >
-              <Box className="conversation-icon"><PsychologyRounded /></Box>
-              <Box sx={{ flex: 1, minWidth: 0, textAlign: "left" }}>
-                <Typography fontSize="var(--fs-13)" fontWeight={600} noWrap>{item.title || item.lastMessage?.content || "AI conversation"}</Typography>
-                <Typography fontSize="var(--fs-12)" color="text.secondary">{item.assistant}{item._count.messages > 1 ? ` · ${item._count.messages} messages` : ""}</Typography>
-              </Box>
-              <Typography className="context-dialog-time" fontSize="var(--fs-12)" color="text.secondary">{openingConversationId === item.id ? "Opening…" : conversationTime(item.updatedAt)}</Typography>
-            </ButtonBase>
-            <Tooltip title="Delete conversation">
-              <span>
-                <IconButton
-                  className="context-dialog-delete"
-                  size="small"
-                  aria-label={`Delete conversation ${item.title || "AI conversation"}`}
-                  onClick={() => deleteConversation(item)}
-                  disabled={Boolean(openingConversationId) || thinking || deleteConversationMutation.isPending}
-                >
-                  <DeleteOutlineRounded />
-                </IconButton>
-              </span>
-            </Tooltip>
-          </Box>
-        </Box>;
-      })}
-    </Stack> : <Typography className="context-dialog-empty" color="text.secondary">{conversationSearchQuery.isError ? "Search is temporarily unavailable." : conversationSearch ? "No matching conversations." : "No conversations yet."}</Typography>}
-  </Box>
-  </Dialog>;
+  // Pin state shows at once; it rolls back if the server refuses.
+  const togglePin = (conversation: AiConversationPreview) => {
+    if (!projectId) return;
+    const pinned = !conversation.pinnedAt;
+    const previous = conversation.pinnedAt ?? null;
+    setPinOverrides((current) => ({ ...current, [conversation.id]: pinned ? new Date().toISOString() : null }));
+    aiApi.pinConversation(projectId, conversation.id, pinned)
+      .then(() => {
+        void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "ai", "context"] });
+        void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "ai", "conversations"] });
+      })
+      .catch((error) => {
+        setPinOverrides((current) => ({ ...current, [conversation.id]: previous }));
+        setContextError(apiMessage(error, "The conversation could not be pinned. Please try again."));
+      });
+  };
 
-  return <Box className="home-experience">
+  /** Long titles scroll on hover to show the full text; the distance is measured so short titles stay still. */
+  const slideTitle = (event: { currentTarget: HTMLElement }) => {
+    const box = event.currentTarget.querySelector<HTMLElement>(".home-history-title");
+    const text = box?.firstElementChild as HTMLElement | null;
+    if (!box || !text) return;
+    // The pin and delete buttons cover the end of the row while hovered, so stop the text before them.
+    const actionsWidth = 64;
+    const shift = Math.max(0, text.scrollWidth - (box.clientWidth - actionsWidth));
+    box.style.setProperty("--slide", `-${shift}px`);
+    box.style.setProperty("--slide-time", `${Math.min(6, Math.max(0.8, shift / 45))}s`);
+  };
+  const historyBusy = Boolean(openingConversationId) || thinking || deleteConversationMutation.isPending;
+  const recentHistoryPanel = <>
+    <Box className={`home-history-scrim${historyOpen ? " is-open" : ""}`} onClick={toggleRecentHistory} aria-hidden />
+    <Box component="aside" className={`home-history-sidebar${historyOpen ? " is-open" : ""}`} aria-label="Conversations" aria-hidden={!historyOpen} inert={!historyOpen}>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" className="home-history-header">
+        <Typography className="home-history-heading">Conversations</Typography>
+        <Tooltip title="Close"><IconButton size="small" className="home-history-close" aria-label="Close conversations" onClick={toggleRecentHistory}><CloseRounded /></IconButton></Tooltip>
+      </Stack>
+      <ButtonBase className="home-history-new" onClick={() => { startNewChat(); }} disabled={thinking}>
+        <EditOutlined /> New chat
+      </ButtonBase>
+      <Box className="context-search-box home-history-search">
+        <SearchRounded aria-hidden />
+        <InputBase
+          fullWidth
+          value={conversationSearch}
+          onChange={(event) => setConversationSearch(event.target.value)}
+          placeholder="Search conversations"
+          inputProps={{ "aria-label": "Search conversations" }}
+        />
+        {conversationSearch && <IconButton size="small" aria-label="Clear conversation search" onClick={() => setConversationSearch("")}><CloseRounded /></IconButton>}
+      </Box>
+      {(contextError || conversationSearchError) && <Typography className="context-dialog-error" role="alert">{contextError || conversationSearchError}</Typography>}
+      <Box className="home-history-list">
+        {conversationListLoading
+          ? Array.from({ length: 6 }, (_, index) => <Box key={index} className="home-history-row is-skeleton"><span /></Box>)
+          : recentConversations.length ? recentConversations.map((item, index) => {
+            const groupOf = (conversation: AiConversationPreview) => conversation.pinnedAt ? "Pinned" : conversationGroup(conversation.updatedAt);
+            const group = groupOf(item);
+            const previousGroup = index > 0 ? groupOf(recentConversations[index - 1]) : null;
+            const label = item.title || item.lastMessage?.content || "AI conversation";
+            return <Box key={item.id}>
+              {group !== previousGroup && <Typography className="home-history-group">{group}</Typography>}
+              <Box className={`home-history-row${conversationId === item.id ? " is-active" : ""}${item.pinnedAt ? " is-pinned" : ""}`}>
+                <ButtonBase
+                  className="home-history-open"
+                  onMouseEnter={slideTitle}
+                  onFocus={slideTitle}
+                  onClick={() => void openConversation(item.id)}
+                  disabled={historyBusy}
+                  aria-label={`Open conversation ${label}`}
+                  aria-current={conversationId === item.id ? "true" : undefined}
+                >
+                  <Typography className="home-history-title" component="span"><span className="home-history-title-text">{openingConversationId === item.id ? "Opening…" : label}</span></Typography>
+                  <Typography className="home-history-meta" noWrap>{item.assistant}</Typography>
+                </ButtonBase>
+                <Stack direction="row" className="home-history-actions">
+                  <Tooltip title={item.pinnedAt ? "Unpin" : "Pin"}>
+                    <IconButton size="small" className="home-history-pin" aria-label={`${item.pinnedAt ? "Unpin" : "Pin"} conversation ${label}`} aria-pressed={Boolean(item.pinnedAt)} onClick={() => togglePin(item)}>
+                      {item.pinnedAt ? <PushPinRounded /> : <PushPinOutlined />}
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Delete">
+                    <span>
+                      <IconButton size="small" className="home-history-delete" aria-label={`Delete conversation ${label}`} onClick={() => deleteConversation(item)} disabled={historyBusy}>
+                        <DeleteOutlineRounded />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                </Stack>
+              </Box>
+            </Box>;
+          }) : <Stack alignItems="center" gap={1} className="home-history-empty">
+            <HistoryRounded />
+            <Typography>{conversationSearchQuery.isError ? "Search is temporarily unavailable." : conversationSearch ? "No matching conversations." : "Your conversations with Max and the team will appear here."}</Typography>
+          </Stack>}
+      </Box>
+    </Box>
+  </>;
+
+  return <Box className={`home-layout${historyOpen ? " has-history" : ""}`}>
+  {recentHistoryPanel}
+  <Box className="home-experience">
     <Box className="home-backdrop" aria-hidden><span className="home-backdrop-mosaic" /></Box>
     {messages.length === 0 ? <Box className="home-hero">
       <MaxMark />
@@ -1982,9 +2048,8 @@ export default function HomeCommandCenter() {
         {prompts.map(([label, Icon]) => <Button key={label} className="home-prompt" startIcon={<Icon />} onClick={() => sendMessage(label)}>{label}</Button>)}
       </Stack>
 
-      <Button className={`home-recent-link${historyOpen ? " is-active" : ""}`} startIcon={<HistoryRounded />} onClick={toggleRecentHistory}>{historyOpen ? "Hide recent conversations" : "Recent conversations"}</Button>
+      {!historyOpen && <Button className="home-recent-link" startIcon={<HistoryRounded />} onClick={toggleRecentHistory}>Recent conversations</Button>}
 
-      {recentHistoryPanel}
 
       <Stack className="home-feature-intro" alignItems="center" gap={.5}>
         <Typography>What would you like Max to create for you?</Typography>
@@ -1997,9 +2062,11 @@ export default function HomeCommandCenter() {
     </Box> : <Box className={`chat-experience${!isGuidedFlowStep && !analysisPhase && !journeyBusy ? " is-standard-chat" : ""}`}>
       <Stack direction="row" justifyContent="space-between" className="chat-topbar">
         <Button className="home-recent-link" startIcon={<AddRounded />} disabled={thinking} onClick={startNewChat}>New chat</Button>
-        <Button className="home-recent-link" startIcon={<HistoryRounded />} onClick={(event) => setContextAnchor(event.currentTarget)}>Context</Button>
+        <Stack direction="row" gap={1}>
+          {!historyOpen && <Button className="home-recent-link" startIcon={<ViewSidebarOutlined />} onClick={toggleRecentHistory}>Conversations</Button>}
+          <Button className="home-recent-link" startIcon={<HistoryRounded />} onClick={(event) => setContextAnchor(event.currentTarget)}>Context</Button>
+        </Stack>
       </Stack>
-      {recentHistoryPanel}
       <Stack
         ref={chatThreadRef}
         className="chat-thread"
@@ -2099,5 +2166,6 @@ export default function HomeCommandCenter() {
       title="Are you sure you want to delete this conversation?"
       description="This conversation and all of its messages will be permanently deleted. This action cannot be undone."
     />
+  </Box>
   </Box>;
 }

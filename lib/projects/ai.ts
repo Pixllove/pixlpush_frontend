@@ -60,6 +60,7 @@ export interface AiConversationPreview {
   assistant: AiAssistantId;
   title: string | null;
   flowId: AiFlowId | null;
+  pinnedAt?: string | null;
   createdAt: string;
   updatedAt: string;
   _count: { messages: number };
@@ -228,6 +229,13 @@ export const aiApi = {
     const query = search?.trim() ? `?search=${encodeURIComponent(search.trim())}` : "";
     return authRequest<AiConversationListResponse>(at(projectId, `/conversations${query}`), undefined, BASE);
   },
+  pinConversation: (projectId: string, conversationId: string, pinned: boolean) =>
+    authRequest<{ conversationId: string; pinnedAt: string | null }>(
+      at(projectId, `/conversations/${encodeURIComponent(conversationId)}`),
+      { pinned },
+      BASE,
+      "PATCH",
+    ),
   deleteConversation: (projectId: string, conversationId: string) =>
     authRequest<{ conversationId: string; deleted: true }>(
       at(projectId, `/conversations/${encodeURIComponent(conversationId)}`),

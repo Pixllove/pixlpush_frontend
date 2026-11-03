@@ -13825,22 +13825,6 @@ footer > div > div > div:first-child > p {
 .context-dialog-row .conversation-icon svg {
   font-size: 19px;
 }
-.home-history-panel {
-  box-sizing: border-box;
-  width: min(100%, 820px);
-  margin: 20px auto 28px;
-  padding: 20px;
-  border: 1px solid rgba(214, 200, 232, 0.95);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow:
-    0 18px 42px -18px rgba(81, 47, 113, 0.28),
-    0 2px 8px rgba(81, 47, 113, 0.06);
-  text-align: left;
-  -webkit-backdrop-filter: blur(18px);
-  backdrop-filter: blur(18px);
-  animation: home-history-in 220ms ease both;
-}
 .home-history-header {
   padding: 0 2px 2px;
 }
@@ -19385,5 +19369,288 @@ button[aria-expanded="true"] {
   }
   .dashboard-content:has(.chat-experience.is-standard-chat) {
     height: calc(100dvh - 64px);
+  }
+}
+
+/* Home conversations sidebar: fixed to the right edge under the top bar, slides in and out on every screen.
+   From 1200px the page makes room for it; below that it slides over the page with a scrim. */
+.home-layout {
+  --history-w: 340px;
+  transition: padding-right 260ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.home-history-sidebar {
+  box-sizing: border-box;
+  position: fixed;
+  top: var(--home-topbar-h, 60px);
+  right: 0;
+  bottom: 0;
+  display: flex;
+  width: var(--history-w);
+  flex-direction: column;
+  padding: 16px 12px 12px;
+  /* Top fades in from transparent so the panel flows out of the header with no hard edge. */
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.55) 84px, rgba(247, 241, 255, 0.58) 55%, rgba(243, 234, 255, 0.62) 100%);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  transform: translateX(100%);
+  visibility: hidden;
+  transition:
+    transform 260ms cubic-bezier(0.32, 0.72, 0, 1),
+    visibility 0s linear 260ms;
+  z-index: 20;
+}
+.home-history-sidebar::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 1px;
+  background: linear-gradient(180deg, rgba(214, 200, 232, 0) 0%, rgba(214, 200, 232, 0.75) 96px);
+  pointer-events: none;
+}
+.home-history-sidebar.is-open {
+  transform: translateX(0);
+  visibility: visible;
+  transition: transform 260ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.home-history-scrim {
+  display: none;
+}
+@media (min-width: 1200px) {
+  .home-layout.has-history {
+    padding-right: calc(var(--history-w) - 12px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-layout,
+  .home-history-sidebar,
+  .home-history-sidebar.is-open {
+    transition: none;
+  }
+}
+.home-history-sidebar .home-history-header {
+  padding: 0 4px 0 8px;
+}
+.home-history-sidebar .home-history-heading {
+  font-size: 15px !important;
+}
+.home-history-new {
+  display: flex !important;
+  justify-content: flex-start !important;
+  gap: 10px;
+  margin: 12px 0 4px !important;
+  padding: 9px 10px !important;
+  border-radius: 10px;
+  color: var(--pp-text) !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+}
+.home-history-new svg {
+  font-size: 18px;
+  color: var(--ai-violet);
+}
+.home-history-new:hover {
+  background: rgba(122, 69, 214, 0.07);
+}
+.home-history-sidebar .home-history-search {
+  border-color: rgba(214, 200, 232, 0.9);
+  background: rgba(255, 255, 255, 0.7);
+}
+.home-history-sidebar .home-history-close.MuiIconButton-root {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 10px;
+  color: var(--pp-text-2);
+  background: transparent;
+}
+.home-history-sidebar .home-history-close.MuiIconButton-root:hover {
+  color: var(--ai-violet-deep);
+  background: rgba(122, 69, 214, 0.08);
+}
+.home-history-sidebar .home-history-close svg {
+  font-size: 20px;
+}
+.home-history-sidebar .home-history-search {
+  margin: 6px 0 8px;
+}
+.home-history-sidebar .home-history-list {
+  min-height: 0;
+  flex: 1;
+  max-height: none;
+  overflow-y: auto;
+  margin: 0 -4px;
+  padding: 0 4px;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+.home-history-group {
+  padding: 14px 10px 4px;
+  color: var(--pp-text-3);
+  font-size: 12px !important;
+  font-weight: 500 !important;
+}
+.home-history-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  border-radius: 10px;
+}
+.home-history-row {
+  --row-bg: transparent;
+  background: var(--row-bg);
+}
+.home-history-row:hover,
+.home-history-row:focus-within {
+  --row-bg: #f1eafb;
+}
+.home-history-row.is-active {
+  --row-bg: #ebe1fa;
+}
+.home-history-open {
+  display: flex !important;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start !important;
+  padding: 7px 10px !important;
+  text-align: left;
+}
+.home-history-title {
+  max-width: 100%;
+  color: var(--pp-text);
+  font-size: 14px !important;
+  line-height: 1.35 !important;
+}
+.home-history-row.is-active .home-history-title {
+  color: var(--ai-violet-deep);
+  font-weight: 500 !important;
+}
+.home-history-meta {
+  color: var(--pp-text-3);
+  font-size: 12px !important;
+}
+/* Actions float over the end of the row on hover only, so titles use the full width at rest. */
+.home-history-actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  align-items: center;
+  gap: 2px;
+  padding: 0 6px 0 28px;
+  border-radius: 0 10px 10px 0;
+  /* Same color as the row behind it, faded in from the left so the title tucks under. */
+  background: linear-gradient(90deg, transparent 0, var(--row-bg) 24px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 140ms ease;
+}
+.home-history-row:hover .home-history-actions,
+.home-history-row:focus-within .home-history-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.home-history-actions .MuiIconButton-root {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: var(--pp-text-3);
+}
+.home-history-actions svg {
+  font-size: 17px;
+}
+.home-history-pin:hover,
+.home-history-row.is-pinned .home-history-pin {
+  color: var(--ai-violet) !important;
+}
+.home-history-pin:hover {
+  background: var(--pp-accent-soft) !important;
+}
+.home-history-delete:hover {
+  color: #b42318 !important;
+  background: #fff1f0 !important;
+}
+.home-history-row.is-skeleton {
+  padding: 0 10px;
+}
+.home-history-row.is-skeleton span {
+  width: 80%;
+  height: 12px;
+  border-radius: 6px;
+  background: var(--pp-subtle);
+}
+.home-history-empty {
+  padding: 36px 16px;
+  color: var(--pp-text-3);
+  text-align: center;
+}
+.home-history-empty p {
+  font-size: 13px !important;
+}
+@media (hover: none) {
+  .home-history-actions {
+    opacity: 1;
+    pointer-events: auto;
+    background: linear-gradient(90deg, rgba(246, 241, 253, 0) 0, rgba(246, 241, 253, 0.92) 24px);
+  }
+}
+@media (max-width: 1199.98px) {
+  .home-history-sidebar {
+    top: 0;
+    width: min(90vw, 360px);
+    border-radius: 16px 0 0 16px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(246, 240, 255, 0.92) 100%);
+    box-shadow: -18px 0 40px -24px rgba(81, 47, 113, 0.35);
+    z-index: 1300;
+  }
+  .home-history-sidebar::before {
+    display: none;
+  }
+  .home-history-scrim {
+    position: fixed;
+    inset: 0;
+    display: block;
+    background: rgba(27, 16, 37, 0.32);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 260ms ease;
+    z-index: 1299;
+  }
+  .home-history-scrim.is-open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+/* Conversation title: ellipsis at rest, slides to reveal the full text on hover or keyboard focus. */
+.home-history-title {
+  display: block !important;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.home-history-title-text {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: top;
+  transition: transform 300ms ease;
+}
+.home-history-open:hover .home-history-title-text,
+.home-history-open:focus-visible .home-history-title-text {
+  max-width: none;
+  overflow: visible;
+  transform: translateX(var(--slide, 0px));
+  transition: transform var(--slide-time, 1s) linear 250ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-history-title-text,
+  .home-history-open:hover .home-history-title-text {
+    transition: none;
   }
 }
