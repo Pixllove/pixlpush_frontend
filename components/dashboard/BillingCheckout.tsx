@@ -19,8 +19,8 @@ const plans: Record<PaidPlan, { label: string; description: string; features: st
 
 // ISO 3166 country codes; the names come from the browser in the user's language.
 const COUNTRY_CODES = "AD AE AF AG AI AL AM AO AR AT AU AW AZ BA BB BD BE BF BG BH BI BJ BM BN BO BR BS BT BW BY BZ CA CD CF CG CH CI CK CL CM CN CO CR CV CW CY CZ DE DJ DK DM DO DZ EC EE EG ES ET FI FJ FO FR GA GB GD GE GG GH GI GL GM GN GR GT GU GY HK HN HR HT HU ID IE IL IM IN IQ IS IT JE JM JO JP KE KG KH KM KN KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MG MK ML MM MN MO MR MT MU MV MW MX MY MZ NA NE NG NI NL NO NP NZ OM PA PE PF PG PH PK PL PR PS PT PY QA RO RS RW SA SB SC SE SG SI SK SL SM SN SO SR ST SV SZ TC TD TG TH TJ TL TM TN TO TR TT TW TZ UA UG US UY UZ VC VE VG VN VU WS YE ZA ZM ZW".split(" ");
-const regionNames = new Intl.DisplayNames(["en"], { type: "region" });
-const COUNTRIES = COUNTRY_CODES.map((code) => ({ code, name: regionNames.of(code) ?? code })).sort((a, b) => a.name.localeCompare(b.name));
+export const regionNames = new Intl.DisplayNames(["en"], { type: "region" });
+export const COUNTRIES = COUNTRY_CODES.map((code) => ({ code, name: regionNames.of(code) ?? code })).sort((a, b) => a.name.localeCompare(b.name));
 type AddressForm = { name: string; country: string; line1: string; line2: string; city: string; state: string; postalCode: string };
 
 const sectionSx = { p: { xs: 2.5, md: 3 }, borderRadius: 2, border: "1px solid #ebe5f0", boxShadow: "0 14px 35px rgba(58,34,96,.06)" } as const;
