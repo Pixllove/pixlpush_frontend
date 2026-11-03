@@ -19654,3 +19654,31 @@ button[aria-expanded="true"] {
     transition: none;
   }
 }
+
+/* Chat input is fixed to the window: when the docked conversations sidebar is open,
+   center it in the space left between the two sidebars, moving with the slide. */
+.home-layout .chat-composer-area {
+  transition:
+    left 260ms cubic-bezier(0.32, 0.72, 0, 1),
+    right 260ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+@media (min-width: 1200px) {
+  .home-layout.has-history .chat-composer-area {
+    --free-w: calc(100vw - var(--sidebar-width) - var(--history-w));
+    right: calc(var(--history-w) + max(28px, calc((var(--free-w) - 820px) / 2)));
+    left: calc(var(--sidebar-width) + max(28px, calc((var(--free-w) - 820px) / 2)));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-layout .chat-composer-area {
+    transition: none;
+  }
+}
+
+/* With the docked sidebar open, Home has ~600px less room: switch the four cards to two
+   until the window is wide enough to fit four comfortably. */
+@media (min-width: 1200px) and (max-width: 1599.98px) {
+  .home-layout.has-history .home-feature-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
