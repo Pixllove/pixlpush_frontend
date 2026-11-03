@@ -14105,6 +14105,32 @@ footer > div > div > div:first-child > p {
   line-height: 1.65 !important;
   white-space: pre-wrap;
 }
+.chat-handoff-card {
+  width: min(100%, 560px);
+  margin-top: 12px;
+  padding: 14px 16px;
+  border: 1px solid rgba(122, 69, 214, 0.2);
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(255,255,255,.98), rgba(248,243,255,.94));
+  box-shadow: 0 8px 24px rgba(84, 48, 139, .08);
+}
+.chat-handoff-title {
+  color: var(--pp-text);
+  font-size: 13px !important;
+  font-weight: 650 !important;
+}
+.chat-handoff-copy {
+  margin-top: 4px !important;
+  color: var(--pp-text-2);
+  font-size: 12px !important;
+  line-height: 1.5 !important;
+}
+.chat-handoff-card .MuiButton-root {
+  min-height: 34px;
+  border-radius: 8px;
+  font-size: 11px;
+  text-transform: none;
+}
 .chat-creation-options,
 .chat-created-resources {
   width: min(100%, 620px);

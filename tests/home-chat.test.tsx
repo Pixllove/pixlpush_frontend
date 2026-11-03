@@ -70,14 +70,14 @@ describe('Home chat', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('unavailable right now');
     api.chat.mockResolvedValueOnce(reply('You have 12 users.'));
     await user.click(screen.getByRole('button', { name: 'Try again' }));
-    expect(await screen.findByText('You have 12 users.')).toBeInTheDocument();
+    expect(await screen.findByText('You have 12 users.', {}, { timeout: 3500 })).toBeInTheDocument();
     expect(api.chat).toHaveBeenLastCalledWith('p1', { assistant: 'Max', prompt: 'how many users do I have', conversationId: 'c1' }, expect.any(AbortSignal));
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 
     // The answer is stored now: Retry replaces that turn on the server.
     api.regenerate.mockResolvedValueOnce(reply('12 users, 9 reachable.'));
     await user.click(screen.getByRole('button', { name: 'Retry answer' }));
-    expect(await screen.findByText('12 users, 9 reachable.')).toBeInTheDocument();
+    expect(await screen.findByText('12 users, 9 reachable.', {}, { timeout: 3500 })).toBeInTheDocument();
     expect(api.regenerate).toHaveBeenLastCalledWith('p1', 'c1', { assistant: 'Max', prompt: 'how many users do I have' }, expect.any(AbortSignal));
     expect(screen.queryByText('You have 12 users.')).not.toBeInTheDocument();
 
@@ -88,7 +88,7 @@ describe('Home chat', () => {
     const editor = screen.getByRole('textbox', { name: 'Edit message' });
     await user.clear(editor);
     await user.type(editor, 'how many are inactive{Enter}');
-    expect(await screen.findByText('3 users are inactive.')).toBeInTheDocument();
+    expect(await screen.findByText('3 users are inactive.', {}, { timeout: 3500 })).toBeInTheDocument();
     expect(api.regenerate).toHaveBeenLastCalledWith('p1', 'c1', { assistant: 'Max', prompt: 'how many are inactive' }, expect.any(AbortSignal));
     expect(api.chat).toHaveBeenLastCalledWith('p1', { assistant: 'Max', prompt: 'how many are inactive', conversationId: 'c1' }, expect.any(AbortSignal));
     expect(screen.queryByText('how many users do I have')).not.toBeInTheDocument();
@@ -96,7 +96,47 @@ describe('Home chat', () => {
     const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue();
     await user.click(screen.getAllByRole('button', { name: 'Copy message' }).at(-1)!);
     await waitFor(() => expect(writeText).toHaveBeenCalledWith('3 users are inactive.'));
-  });
+  }, 15_000);
+
+  it('automatically transfers a request to the owning specialist', async () => {
+    const user = userEvent.setup();
+    api.chat.mockResolvedValueOnce({
+      conversationId: 'c1',
+      assistant: 'Max',
+      provider: 'rules',
+      message: 'This is Nova’s area. I’m connecting you to Nova for a more complete answer.',
+      nextActions: [],
+      evidence: [],
+      handoff: { assistant: 'Nova', name: 'Nova', role: 'Campaign & Journey Creator', reason: 'Creates journeys.' },
+      context: { generatedAt: '' },
+    } as never);
+    api.regenerate.mockResolvedValueOnce(reply('Nova has prepared the next journey step.'));
+    render(<QueryClientProvider client={new QueryClient({ defaultOptions: { mutations: { retry: false } } })}><HomeCommandCenter /></QueryClientProvider>);
+
+    await user.type(screen.getByRole('textbox', { name: 'Message Max' }), 'How should I improve this journey?{Enter}');
+    expect(await screen.findByText('This is Nova’s area. I’m connecting you to Nova for a more complete answer.', {}, { timeout: 3500 })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Review switch to Nova' })).not.toBeInTheDocument();
+
+    expect(await screen.findByText('Nova has prepared the next journey step.', {}, { timeout: 7000 })).toBeInTheDocument();
+    expect(api.regenerate).toHaveBeenCalledWith('p1', 'c1', { assistant: 'Nova', prompt: 'How should I improve this journey?' }, expect.any(AbortSignal));
+  }, 12_000);
+
+  it('shows a deliberate thinking state before a manual agent switch', async () => {
+    const user = userEvent.setup();
+    api.chat.mockResolvedValueOnce(reply('Max has reviewed the project context.'));
+    api.regenerate.mockResolvedValueOnce(reply('Nova has reviewed the project context.'));
+    render(<QueryClientProvider client={new QueryClient({ defaultOptions: { mutations: { retry: false } } })}><HomeCommandCenter /></QueryClientProvider>);
+
+    await user.type(screen.getByRole('textbox', { name: 'Message Max' }), 'What should I do next?{Enter}');
+    expect(await screen.findByText('Max has reviewed the project context.', {}, { timeout: 3500 })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Assistant: Max. Change assistant' }));
+    await user.click(screen.getByRole('menuitem', { name: /Nova Campaign & Journey Creator/ }));
+
+    expect(screen.getByRole('status')).toHaveTextContent('Reviewing this conversation for Nova');
+    expect(screen.queryByRole('alertdialog', { name: 'Switch to Nova' })).not.toBeInTheDocument();
+    expect(await screen.findByText('Nova has reviewed the project context.', {}, { timeout: 7000 })).toBeInTheDocument();
+    expect(api.regenerate).toHaveBeenCalledWith('p1', 'c1', { assistant: 'Nova', prompt: 'What should I do next?' }, expect.any(AbortSignal));
+  }, 12_000);
 
   it('searches recent conversations and resumes the selected thread', async () => {
     const user = userEvent.setup();
@@ -221,7 +261,7 @@ describe('Home chat', () => {
     render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><HomeCommandCenter /></QueryClientProvider>);
 
     await user.click(await screen.findByRole('button', { name: /Create journey/ }));
-    expect(await screen.findByRole('heading', { name: 'Tell me about your business' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Tell me about your business' }, { timeout: 6000 })).toBeInTheDocument();
     expect(await screen.findByLabelText('Website URL')).toBeInTheDocument();
     expect(screen.queryByRole('textbox', { name: 'Message Max' })).not.toBeInTheDocument();
     await user.type(screen.getByLabelText('Website URL'), 'www.example.com');
@@ -229,15 +269,15 @@ describe('Home chat', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('The public page could not be reached.');
     await user.click(screen.getByRole('button', { name: 'Skip' }));
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    await user.type(screen.getByLabelText('Business or product description'), 'A subscription app for teams.');
+    await user.type(screen.getByLabelText('Additional business information'), 'A subscription app for teams.');
     await user.click(screen.getByRole('button', { name: 'Continue' }));
-    expect(await screen.findByText('Do you have an iOS or Android app?')).toBeInTheDocument();
+    expect(await screen.findByText(/Do you have an iOS or Android app/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /No app yet/ }));
     expect(await screen.findByText('Review your business context')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Continue to journey' }));
 
     expect(await screen.findByText(/Thanks — I now understand your business, product and audience context\./)).toBeInTheDocument();
     expect(await screen.findByText('What is the purpose of this journey?')).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'Message Max' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Engagement Bring users back/ })).toBeInTheDocument();
   });
 });

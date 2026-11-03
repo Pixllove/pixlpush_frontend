@@ -5,7 +5,9 @@ const BASE = "/api/projects";
 const at = (projectId: string, path = "") =>
   `/${encodeURIComponent(projectId)}/ai${path}`;
 
-export type AiAssistantId = "Max" | "Ben" | "Nova" | "Anna";
+/** Agents come from the backend registry; known ids keep autocomplete. */
+export type AiAssistantId = "Max" | "Ben" | "Nova" | "Anna" | (string & {});
+export interface AiHandoff { assistant: AiAssistantId; name: string; role: string; reason?: string }
 export type AiFlowId = "campaigns" | "journey" | "segment" | "audience-group" | "engagement";
 export type AiResourceType = "journey" | "segment" | "audience-group" | "campaign";
 
@@ -23,8 +25,13 @@ export interface AiAssistant {
   name: string;
   role: string;
   description: string;
+  avatar?: string;
   capabilities?: string[];
+  canCreate?: AiResourceType[];
+  coordinator?: boolean;
   instructions?: string;
+  knowledge?: string[];
+  boundaries?: string[];
 }
 
 export interface AiFlowDefinition {
@@ -168,6 +175,8 @@ export interface AiChatResponse {
     channel?: "email" | "push" | "both";
   };
   createdResources?: AiCreatedResource[];
+  /** Set when another agent owns the request; the UI offers a switch. */
+  handoff?: AiHandoff | null;
   context: { generatedAt: string };
 }
 

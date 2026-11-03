@@ -3,12 +3,12 @@
 import { AddRounded, ArrowForwardRounded, ArrowUpwardRounded, AutoAwesomeRounded, AutoGraphRounded, CampaignRounded, CheckRounded, CloseRounded, ContentCopyRounded, DeleteOutlineRounded, EditOutlined, ExpandMoreRounded, HistoryRounded, InfoOutlined, InsightsRounded, LinkRounded, PeopleAltOutlined, PhoneIphoneRounded, PsychologyRounded, ReplayRounded, RouteRounded, SearchRounded, StopRounded, TrendingDownRounded } from "@mui/icons-material";
 import { Alert, Box, Button, ButtonBase, Dialog, DialogContent, DialogTitle, IconButton, InputBase, Menu, MenuItem, Stack, TextField, Tooltip, Typography } from "@mui/material";
 import Image from "next/image";
-import { useDeferredValue, useEffect, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCurrentUser } from "@/hooks/auth/use-current-user";
 import { useActiveProject } from "@/hooks/projects/use-active-project";
 import { accountGreetingName } from "@/lib/auth/display-name";
-import { aiApi, type AiAssistantId, type AiBusinessContext, type AiBusinessContextUpdate, type AiConversationMessage, type AiConversationPreview, type AiCreatedResource, type AiFlowId, type AiFlowDraftResponse, type AiProjectContext, type AiResourceType } from "@/lib/projects/ai";
+import { aiApi, type AiAssistantId, type AiBusinessContext, type AiBusinessContextUpdate, type AiConversationMessage, type AiConversationPreview, type AiCreatedResource, type AiFlowId, type AiFlowDraftResponse, type AiHandoff, type AiProjectContext, type AiResourceType } from "@/lib/projects/ai";
 import { audienceGroupsApi, emailApi, firebaseApi, journeysApi, lifecycleSegmentsApi, pushApi, sdkKeyApi } from "@/lib/projects/api";
 import type { AudienceGroup, LifecycleSegment } from "@/types/project";
 import DeleteConfirmDialog from "@/components/dashboard/DeleteConfirmDialog";
@@ -23,6 +23,7 @@ type ChatMessage = {
   suggestedFlow?: Exclude<AiFlowId, "engagement">;
   createdResources?: AiCreatedResource[];
   assistant?: AiAssistantId;
+  handoff?: AiHandoff;
 };
 type DraftInput = { flowId: AiFlowId; answers: Record<string, string>; conversationId?: string; assistant?: AiAssistantId };
 type FlowChoice = { label: string; description: string; disabled?: boolean };
@@ -46,7 +47,8 @@ const prompts = [
   ["Improve my onboarding", AutoGraphRounded],
 ] as const;
 
-const agents = [
+/** Shown until the backend agent catalog loads. */
+const fallbackAgents: ReadonlyArray<readonly [string, string, string, string]> = [
   ["Max", "Growth Concierge", "Coordinates the team and turns your goal into a clear next step.", "/assets/agent-avatar-max-v4.webp"],
   ["Ben", "Lifecycle & Campaign Data Analyst", "Analyzes retention, churn, campaigns and audience behavior.", "/assets/agent-avatar-ben-v4.webp"],
   ["Nova", "Campaign & Journey Creator", "Creates new journeys and improves existing campaigns and journeys.", "/assets/agent-avatar-nova-v4.webp"],
@@ -523,7 +525,7 @@ function BusinessContextCard({
   const saveDescriptionAndContinue = async () => {
     try {
       await applyUpdate({ businessDescription: description.trim() || null });
-      setPhase("review");
+      setPhase("app-choice");
     } catch (cause) {
       setError(apiMessage(cause, "I couldn’t save that business description. Please try again."));
     }
@@ -904,6 +906,13 @@ function apiMessage(error: unknown, fallback: string) {
   return message || fallback;
 }
 
+// Keep the thinking state visible long enough for the interaction to feel deliberate.
+// This is presentation pacing only; it does not expose or fabricate hidden reasoning.
+const MIN_AI_RESPONSE_MS = 1_800;
+const FLOW_HANDOFF_THINKING_MS = 2_200;
+const AGENT_SWITCH_THINKING_MS = 1_600;
+const AUTO_HANDOFF_THINKING_MS = 1_400;
+
 function isAnalysisRequest(value: string) {
   return /\b(?:analy[sz]e|analyse|performance|results?|metrics?)\b/i.test(value)
     && /\b(?:campaign|journey|email|push|retention|churn|audience|users?)\b/i.test(value);
@@ -1005,7 +1014,14 @@ export function persistedMessageToChatMessage(message: AiConversationMessage): C
       createdResources: storedCreatedResources(metadata.createdResources),
     };
   }
-  return { id: message.id, role: message.role === "assistant" ? "assistant" : "user", text: message.content };
+  const handoff = objectValue(metadata.handoff);
+  return {
+    id: message.id,
+    role: message.role === "assistant" ? "assistant" : "user",
+    text: message.content,
+    ...(typeof metadata.assistant === "string" && message.role === "assistant" ? { assistant: metadata.assistant } : {}),
+    ...(typeof handoff.assistant === "string" ? { handoff: { assistant: handoff.assistant, name: String(handoff.name ?? handoff.assistant), role: String(handoff.role ?? ""), reason: typeof handoff.reason === "string" ? handoff.reason : undefined } } : {}),
+  };
 }
 
 function draftMessage(result: AiFlowDraftResponse) {
@@ -1078,21 +1094,57 @@ export default function HomeCommandCenter() {
   const [businessContext, setBusinessContext] = useState<AiBusinessContext>(emptyBusinessContext);
   const [businessContextSaving, setBusinessContextSaving] = useState(false);
   const [businessContextComplete, setBusinessContextComplete] = useState(false);
+  const businessContextHydratedRef = useRef(false);
   const [analysisPhase, setAnalysisPhase] = useState<AnalysisPhase | null>(null);
   const [analysisType, setAnalysisType] = useState<AnalysisType | null>(null);
   const [analysisResource, setAnalysisResource] = useState<{ id: string; name: string } | null>(null);
   const [analysisPeriod, setAnalysisPeriod] = useState<string | null>(null);
   const [selectedAgent, setSelectedAgent] = useState<string>("Max");
+  const [responsePacing, setResponsePacing] = useState(false);
+  const [thinkingLabel, setThinkingLabel] = useState("Thinking");
+  const responsePacingRef = useRef<{ timer: number; cancelled: boolean } | null>(null);
   const activeRequestRef = useRef<AbortController | null>(null);
   const openingRequestRef = useRef(0);
-  const [, agentRole, , agentAvatar] = agents.find(([name]) => name === selectedAgent) ?? agents[0];
 
+  const scheduleThinking = (label: string, duration: number, onComplete: () => void) => {
+    if (responsePacingRef.current) {
+      responsePacingRef.current.cancelled = true;
+      window.clearTimeout(responsePacingRef.current.timer);
+    }
+    const pacing = { timer: 0, cancelled: false };
+    responsePacingRef.current = pacing;
+    setThinkingLabel(label);
+    setResponsePacing(true);
+    pacing.timer = window.setTimeout(() => {
+      if (pacing.cancelled) return;
+      responsePacingRef.current = null;
+      setResponsePacing(false);
+      setThinkingLabel("Thinking");
+      onComplete();
+    }, duration);
+  };
+
+  const cancelThinking = () => {
+    if (!responsePacingRef.current) return;
+    responsePacingRef.current.cancelled = true;
+    window.clearTimeout(responsePacingRef.current.timer);
+    responsePacingRef.current = null;
+    setResponsePacing(false);
+    setThinkingLabel("Thinking");
+  };
+
+  useEffect(() => () => cancelThinking(), []);
   const contextQuery = useQuery({
     queryKey: ["projects", projectId, "ai", "context"],
     queryFn: () => aiApi.context(projectId!),
     enabled: Boolean(projectId),
     staleTime: 30_000,
   });
+  const catalogAgents = contextQuery.data?.catalog?.assistants;
+  const agents = useMemo(() => catalogAgents?.length
+    ? catalogAgents.map((agent) => [agent.id, agent.role, agent.description, agent.avatar ?? fallbackAgents.find(([name]) => name === agent.id)?.[3] ?? fallbackAgents[0][3]] as const)
+    : fallbackAgents, [catalogAgents]);
+  const [, agentRole, , agentAvatar] = agents.find(([name]) => name === selectedAgent) ?? agents[0];
   const businessContextQuery = useQuery({
     queryKey: ["projects", projectId, "ai", "business-context"],
     queryFn: () => aiApi.businessContext(projectId!),
@@ -1170,40 +1222,50 @@ export default function HomeCommandCenter() {
         }
         if (input.replace && input.conversationId) {
           try {
-            return await aiApi.regenerate(projectId, threadId, { assistant, prompt: input.prompt }, controller.signal);
+            const response = await aiApi.regenerate(projectId, threadId, { assistant, prompt: input.prompt }, controller.signal);
+            return response;
           } catch (error) {
             // Keep compatibility with an older edge deployment while the route rolls out.
             if ((error as { code?: string } | null)?.code !== "ROUTE_NOT_FOUND") throw error;
           }
         }
-        return await aiApi.chat(projectId, { assistant, prompt: input.prompt, conversationId: threadId }, controller.signal);
+        const response = await aiApi.chat(projectId, { assistant, prompt: input.prompt, conversationId: threadId }, controller.signal);
+        return response;
       } finally {
         if (activeRequestRef.current === controller) activeRequestRef.current = null;
       }
     },
-    onSuccess: (response) => {
-      setConversationId(response.conversationId);
-      const createdResources = response.createdResources ?? [];
-      const suggestedFlow = response.creationIntent && !createdResources.length
-        ? flowForResource(response.creationIntent.resourceType)
-        : undefined;
-      setMessages((current) => response.cancelled
-        ? current.some((message) => message.text === "Generation stopped.") ? current : [...current, { id: `assistant-stopped-${Date.now()}`, role: "assistant", text: response.message }]
-        : [...current, { id: `assistant-${Date.now()}`, role: "assistant", text: response.message, suggestedFlow, createdResources }]);
-      void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "ai", "context"] });
-      if (response.createdResources?.length) {
-        // The AI endpoint creates only editable drafts. Refresh the resource
-        // lists so the new draft is visible immediately when the user opens
-        // the corresponding workspace, without changing the Home layout.
-        for (const resource of response.createdResources) {
-          const key = resource.type === "journey"
-            ? "journeys"
-            : resource.type === "campaign"
-              ? resource.channel === "push" ? "push-campaigns" : "email-campaigns"
-              : resource.type === "segment" ? "lifecycle-segments" : "audience-groups";
-          void queryClient.invalidateQueries({ queryKey: ["projects", projectId, key] });
+    onSuccess: (response, input) => {
+      scheduleThinking("Thinking through your request", MIN_AI_RESPONSE_MS, () => {
+        setConversationId(response.conversationId);
+        const createdResources = response.createdResources ?? [];
+        const suggestedFlow = response.creationIntent && !createdResources.length
+          ? flowForResource(response.creationIntent.resourceType)
+          : undefined;
+        setMessages((current) => response.cancelled
+          ? current.some((message) => message.text === "Generation stopped.") ? current : [...current, { id: `assistant-stopped-${Date.now()}`, role: "assistant", text: response.message }]
+          : [...current, { id: `assistant-${Date.now()}`, role: "assistant", assistant: response.assistant, text: response.message, suggestedFlow, createdResources, ...(response.handoff ? { handoff: response.handoff } : {}) }]);
+        void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "ai", "context"] });
+        if (response.createdResources?.length) {
+          // The AI endpoint creates only editable drafts. Refresh the resource
+          // lists so the new draft is visible immediately when the user opens
+          // the corresponding workspace, without changing the Home layout.
+          for (const resource of response.createdResources) {
+            const key = resource.type === "journey"
+              ? "journeys"
+              : resource.type === "campaign"
+                ? resource.channel === "push" ? "push-campaigns" : "email-campaigns"
+                : resource.type === "segment" ? "lifecycle-segments" : "audience-groups";
+            void queryClient.invalidateQueries({ queryKey: ["projects", projectId, key] });
+          }
         }
-      }
+        if (!response.cancelled && response.handoff && response.handoff.assistant !== response.assistant) {
+          selectAgentDirect(response.handoff.assistant);
+          scheduleThinking(`Connecting you to ${response.handoff.name}`, AUTO_HANDOFF_THINKING_MS, () => {
+            chatMutation.mutate({ prompt: input.prompt, conversationId: response.conversationId, replace: true, assistant: response.handoff!.assistant });
+          });
+        }
+      });
     },
     onError: (error) => {
       if ((error as { code?: string } | null)?.code === "ABORTED") return;
@@ -1300,7 +1362,7 @@ export default function HomeCommandCenter() {
     },
   });
 
-  const thinking = openingFlow || chatMutation.isPending || recommendationMutation.isPending || draftMutation.isPending;
+  const thinking = openingFlow || chatMutation.isPending || responsePacing || recommendationMutation.isPending || draftMutation.isPending;
   const journeyBusy = activeFlow?.id === "journey" && (recommendationMutation.isPending || draftMutation.isPending);
   const emailAnalysisItems = (emailCampaignsQuery.data?.items ?? []).map((item) => ({ id: item.id, name: item.name }));
   const pushAnalysisItems = (pushCampaignsQuery.data?.items ?? []).map((item) => ({ id: item.id, name: item.name }));
@@ -1327,6 +1389,8 @@ export default function HomeCommandCenter() {
 
   useEffect(() => {
     if (activeFlow?.id !== "journey" || !flowReady || flowConfirming || businessContextLoading) return;
+    if (businessContextHydratedRef.current) return;
+    businessContextHydratedRef.current = true;
     if (hasSavedBusinessContext && !businessContextComplete && savedBusinessContext) {
       setBusinessContext(savedBusinessContext);
       setBusinessContextComplete(true);
@@ -1380,6 +1444,7 @@ export default function HomeCommandCenter() {
     setFlowConfirming(false);
     setBusinessContext(emptyBusinessContext);
     setBusinessContextComplete(false);
+    businessContextHydratedRef.current = false;
     setAnalysisPhase(null);
     setAnalysisType(null);
     setAnalysisResource(null);
@@ -1394,14 +1459,36 @@ export default function HomeCommandCenter() {
     if (savedBusinessContext) setBusinessContext(savedBusinessContext);
   }, [savedBusinessContext]);
 
-  const selectAgent = (name: string) => {
+  const selectAgentDirect = (name: string) => {
     setSelectedAgent(name);
+  };
+
+  const requestAgentSelection = (name: string) => {
+    if (name === selectedAgent || thinking) return;
+    if (!messages.length) {
+      selectAgentDirect(name);
+      return;
+    }
+    const currentLastUserIndex = messages.map((message) => message.role).lastIndexOf("user");
+    const currentLastTurnIsChat = currentLastUserIndex >= 0 && !messages[currentLastUserIndex].flow;
+    if (!currentLastTurnIsChat) {
+      selectAgentDirect(name);
+      return;
+    }
+    const prompt = messages[currentLastUserIndex].text;
+    setMessages((current) => current.slice(0, currentLastUserIndex + 1));
+    scheduleThinking(`Reviewing this conversation for ${name}`, AGENT_SWITCH_THINKING_MS, () => {
+      selectAgentDirect(name);
+      chatMutation.mutate({ prompt, conversationId, replace: true, assistant: name as AiAssistantId });
+    });
   };
 
   useEffect(() => {
     if (!messages.length || !shouldStickToLatestRef.current) return;
     const frame = window.requestAnimationFrame(() => {
-      chatThreadRef.current?.scrollTo({ top: chatThreadRef.current.scrollHeight, behavior: "smooth" });
+      if (chatThreadRef.current && typeof chatThreadRef.current.scrollTo === "function") {
+        chatThreadRef.current.scrollTo({ top: chatThreadRef.current.scrollHeight, behavior: "smooth" });
+      }
     });
     return () => window.cancelAnimationFrame(frame);
   }, [messages, thinking]);
@@ -1414,7 +1501,7 @@ export default function HomeCommandCenter() {
       setMessages((current) => [...current, { id: `user-${Date.now()}`, role: "user", text }]);
       setDraft("");
       setEditing(null);
-      startAnalysisRequest();
+      startAnalysisRequest(text);
       return;
     }
     const creationFlow = detectCreationFlow(text);
@@ -1435,6 +1522,7 @@ export default function HomeCommandCenter() {
   const stopGeneration = () => {
     const stoppedConversationId = conversationId;
     activeRequestRef.current?.abort();
+    cancelThinking();
     openingRequestRef.current += 1;
     if (projectId && stoppedConversationId) void aiApi.cancelConversation(projectId, stoppedConversationId);
     if (openingFlow) {
@@ -1497,16 +1585,30 @@ export default function HomeCommandCenter() {
     setAnalysisPeriod(null);
   };
 
-  const startAnalysisRequest = () => {
+  const beginAnalysisFlow = (prompt?: string, approved = false) => {
+    if (!approved && selectedAgent !== "Ben") {
+      setMessages((current) => [...current, {
+        id: `assistant-max-handoff-${Date.now()}`,
+        role: "assistant",
+        assistant: selectedAgent,
+        text: "This analysis is best handled by Ben, our Lifecycle & Campaign Data Analyst. I’m connecting you to Ben now.",
+      }]);
+      scheduleThinking("Connecting you to Ben", FLOW_HANDOFF_THINKING_MS, () => {
+        beginAnalysisFlow(prompt, true);
+      });
+      return;
+    }
+    selectAgentDirect("Ben");
     setMessages((current) => [...current,
-      { id: `assistant-max-handoff-${Date.now()}`, role: "assistant", assistant: "Max", text: "Alles klar. Ich leite die Analyse an Ben weiter. Er wird zuerst den Analysebereich, die konkrete Kampagne oder Journey und den Zeitraum mit dir festlegen." },
-      { id: `assistant-ben-entry-${Date.now() + 1}`, role: "assistant", assistant: "Ben", text: "Hallo, ich bin Ben. Ich kann deine Kampagnen und Journeys anhand von Zustellungen, Öffnungen, Klicks, Conversions und Abbrüchen analysieren. Was möchtest du analysieren?" },
+      { id: `assistant-ben-entry-${Date.now()}`, role: "assistant", assistant: "Ben", text: "Hi, I'm Ben. I can analyze your campaigns and journeys using deliveries, opens, clicks, conversions and drop-offs. What would you like to analyze?" },
     ]);
     setAnalysisType(null);
     setAnalysisResource(null);
     setAnalysisPeriod(null);
     setAnalysisPhase("type");
   };
+
+  const startAnalysisRequest = (prompt?: string) => beginAnalysisFlow(prompt);
 
   const startBenAnalysis = () => {
     if (!analysisType || !analysisResource || !analysisPeriod) return;
@@ -1529,7 +1631,7 @@ export default function HomeCommandCenter() {
         .map(persistedMessageToChatMessage);
       setMessages(loadedMessages);
       setConversationId(conversation.id);
-      if (agents.some(([name]) => name === conversation.assistant)) setSelectedAgent(conversation.assistant);
+      if (agents.some(([name]) => name === conversation.assistant)) selectAgentDirect(conversation.assistant);
       setEditing(null);
       setLastDraft(null);
       setActiveFlow(null);
@@ -1539,6 +1641,7 @@ export default function HomeCommandCenter() {
       setFlowConfirming(false);
       setBusinessContext(emptyBusinessContext);
       setBusinessContextComplete(false);
+      businessContextHydratedRef.current = false;
       setContextOpen(false);
       setHistoryOpen(false);
       setConversationSearch("");
@@ -1555,7 +1658,7 @@ export default function HomeCommandCenter() {
     setDeleteTarget(conversation);
   };
 
-  const startFlow = (flowId: string, prompt?: string) => {
+  const startFlow = (flowId: string, prompt?: string, approved = false) => {
     const flow = guidedFlows.find((item) => item.id === flowId);
     if (!flow || !projectId || thinking) return;
     const isJourney = flowId === "journey";
@@ -1563,6 +1666,15 @@ export default function HomeCommandCenter() {
     const openingPrompt = flowId === "segment"
       ? prompt || "I want to create a new audience segment. Help me define the right filters and walk me through setting it up."
       : prompt || `Help me with ${flow.title.toLowerCase()}. Ask me what you need, one step at a time.`;
+    if (isJourney && !approved && selectedAgent !== "Nova") {
+      setMessages([
+        { id: `user-${Date.now()}`, role: "user", flow: true, text: openingPrompt },
+      ]);
+      scheduleThinking("Reviewing your request and connecting you to Nova", FLOW_HANDOFF_THINKING_MS, () => {
+        startFlow(flowId, openingPrompt, true);
+      });
+      return;
+    }
     const openingResponse = isJourney
       ? hasSavedBusinessContext
         ? prompt
@@ -1572,16 +1684,17 @@ export default function HomeCommandCenter() {
           ? "Hi, I’m Nova. Max shared your request with me. I’ll first review your business context, then ask the right questions to create the journey."
           : "Hi, I’m Nova. I’ll first review your business context, then ask the right questions to create the journey."
       : flow.subtitle;
-    setSelectedAgent(flowAssistant);
+    selectAgentDirect(flowAssistant);
     setMessages([
       { id: `user-${Date.now()}`, role: "user", flow: true, text: openingPrompt },
-      ...(isJourney && prompt ? [{ id: `assistant-handoff-${Date.now()}`, role: "assistant" as const, assistant: "Max" as const, flow: true, text: "I understand. I’m handing this over to Nova, who specializes in creating journeys." }] : []),
+      ...(isJourney && prompt ? [{ id: `assistant-handoff-${Date.now()}`, role: "assistant" as const, assistant: "Max" as const, flow: true, text: "I understand. I’m connecting you to Nova, who specializes in creating journeys." }] : []),
     ]);
     setActiveFlow(flow);
     setFlowStep(0);
     setFlowAnswers({});
     setFlowConfirming(false);
     setJourneyRecommendation(null);
+    businessContextHydratedRef.current = false;
     setBusinessContext(aiContext?.businessContext ?? emptyBusinessContext);
     setBusinessContextComplete(flowId !== "journey" || hasSavedBusinessContext);
     setFlowReady(false);
@@ -1644,7 +1757,7 @@ export default function HomeCommandCenter() {
   const completeBusinessContext = (updated: AiBusinessContext) => {
     setBusinessContext(updated);
     setBusinessContextComplete(true);
-    setSelectedAgent("Nova");
+    selectAgentDirect("Nova");
     setFlowStep(0);
     setMessages((current) => [...current, {
       id: `assistant-business-context-${Date.now()}`,
@@ -1943,7 +2056,7 @@ export default function HomeCommandCenter() {
             </Box>
           </Stack>;
         })}
-        {thinking && !journeyBusy && <Stack direction="row" gap={1.5} alignItems="center" className="chat-thinking" role="status" aria-live="polite"><Box className="chat-agent-mark is-thinking"><Image src={agentAvatar} alt={`${selectedAgent} avatar`} width={38} height={38} /></Box><Box className="chat-thinking-copy"><Typography>Thinking<span className="thinking-dots">…</span></Typography><Box className="thinking-bars" aria-hidden><span /><span /><span /></Box></Box></Stack>}
+        {thinking && !journeyBusy && <Stack direction="row" gap={1.5} alignItems="center" className="chat-thinking" role="status" aria-live="polite"><Box className="chat-agent-mark is-thinking"><Image src={agentAvatar} alt={`${selectedAgent} avatar`} width={38} height={38} /></Box><Box className="chat-thinking-copy"><Typography>{thinkingLabel}<span className="thinking-dots">…</span></Typography><Box className="thinking-bars" aria-hidden><span /><span /><span /></Box></Box></Stack>}
         {isBusinessContextStep && !businessContextLoading && <BusinessContextCard key={`business-context-${conversationId ?? "new"}`} context={businessContext} loading={businessContextLoading} saving={businessContextSaving} onUpdate={updateBusinessContext} onAnalyze={analyzeBusinessContext} onDetectLinks={detectBusinessContextLinks} onComplete={completeBusinessContext} onCancel={cancelFlow} />}
         {analysisPhase && <AnalysisRequestCard phase={analysisPhase} selectedType={analysisType} selectedResourceId={analysisResource?.id ?? null} selectedResourceName={analysisResource?.name ?? null} selectedPeriod={analysisPeriod} emailItems={emailAnalysisItems} pushItems={pushAnalysisItems} journeyItems={journeyAnalysisItems} onType={(type) => { setAnalysisType(type); setAnalysisResource(null); setAnalysisPeriod(null); setAnalysisPhase("resource"); setMessages((current) => [...current, { id: `assistant-ben-scope-${Date.now()}`, role: "assistant", assistant: "Ben", text: `Which concrete ${type === "email" ? "email campaign" : type === "push" ? "push campaign" : "journey"} should I analyze?` }]); }} onResource={(id, name) => { setAnalysisResource({ id, name }); setAnalysisPhase("period"); setMessages((current) => [...current, { id: `assistant-ben-period-${Date.now()}`, role: "assistant", assistant: "Ben", text: "Which time period should I use?" }]); }} onPeriod={(period) => { setAnalysisPeriod(period); setAnalysisPhase("confirm"); }} onConfirm={startBenAnalysis} onBack={() => setAnalysisPhase(analysisPhase === "confirm" ? "period" : analysisPhase === "period" ? "resource" : "type")} onCancel={() => { setAnalysisPhase(null); setMessages((current) => [...current, { id: `assistant-ben-cancel-${Date.now()}`, role: "assistant", assistant: "Ben", text: "No problem. I won’t run an analysis until you ask again." }]); }} />}
         {activeFlow && flowReady && !flowConfirming && (activeFlow.id !== "journey" || businessContextComplete) && <GuidedFlowCard flow={activeFlow} steps={visibleFlowSteps} step={flowStep} answers={flowAnswers} onSelect={(value) => setFlowAnswers((current) => ({ ...current, [flowStep]: value }))} onNext={() => advanceFlow()} onBack={() => setFlowStep((current) => Math.max(0, current - 1))} onSkip={() => advanceFlow(true)} onCancel={cancelFlow} onContinueWithoutAudience={continueJourneyWithoutAudience} sdkIntegrated={sdkIntegrated} paywallEventsReady={paywallEventsReady} eventActionReady={eventActionReady} pushReady={pushReady} pushUnavailableReason={pushUnavailableReason} purposeRecommendation={purposeRecommendation} />}
@@ -1956,7 +2069,7 @@ export default function HomeCommandCenter() {
     </Box>}
 
     <Menu anchorEl={agentAnchor} open={Boolean(agentAnchor)} onClose={() => setAgentAnchor(null)} className="agent-menu">
-      {agents.map(([name, role, description, avatar]) => <MenuItem key={name} selected={selectedAgent === name} className="agent-menu-item" onClick={() => { selectAgent(name); setAgentAnchor(null); }}>
+      {agents.map(([name, role, description, avatar]) => <MenuItem key={name} selected={selectedAgent === name} className="agent-menu-item" onClick={() => { requestAgentSelection(name); setAgentAnchor(null); }}>
         <Image className="ai-agent-dot" src={avatar} alt={`${name} avatar`} width={34} height={34} />
         <Box sx={{ flex: 1, minWidth: 0 }}><Typography className="agent-menu-name">{name} <span>{role}</span></Typography><Typography className="agent-menu-description">{description}</Typography></Box>
         {selectedAgent === name && <CheckRounded className="agent-menu-check" />}
