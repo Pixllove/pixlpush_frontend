@@ -8,17 +8,22 @@ import {
   Box,
   Button,
   Container,
+  MenuItem,
   Stack,
   TextField,
   Typography,
 } from '@mui/material';
+import { PHONE_COUNTRIES } from '@/lib/phone-country-codes';
 import { SiteShell } from './SiteShell';
 
 type FormValues = {
   name: string;
   email: string;
+  phoneCountryCode: string;
   phone: string;
   company: string;
+  userCount: string;
+  channels: string;
   description: string;
   website: string;
 };
@@ -26,8 +31,11 @@ type FormValues = {
 const initialValues: FormValues = {
   name: '',
   email: '',
+  phoneCountryCode: '',
   phone: '',
   company: '',
+  userCount: '',
+  channels: '',
   description: '',
   website: '',
 };
@@ -51,7 +59,12 @@ export default function ContactSalesForm() {
       const response = await fetch('/api/sales-leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...values, pageUrl: window.location.href }),
+        body: JSON.stringify({
+          ...values,
+          phoneNumber: values.phone,
+          phone: `${values.phoneCountryCode} ${values.phone}`.trim(),
+          pageUrl: window.location.href,
+        }),
       });
       const body = await response.json().catch(() => null) as { error?: { message?: string } } | null;
       if (!response.ok) throw new Error(body?.error?.message || 'We could not send your request. Please try again.');
@@ -92,8 +105,26 @@ export default function ContactSalesForm() {
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                   <TextField label="Full name" value={values.name} onChange={update('name')} required fullWidth autoComplete="name" />
                   <TextField label="Work email" type="email" value={values.email} onChange={update('email')} required fullWidth autoComplete="email" />
-                  <TextField label="Phone number" type="tel" value={values.phone} onChange={update('phone')} required fullWidth autoComplete="tel" />
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(132px, .42fr) 1fr', sm: 'minmax(144px, .48fr) 1fr' }, gap: 1 }}>
+                    <TextField select label="Code" value={values.phoneCountryCode} onChange={update('phoneCountryCode')} required fullWidth aria-label="Phone country code" SelectProps={{
+                      renderValue: (selected) => {
+                        const country = PHONE_COUNTRIES.find((item) => item.dialCode === selected);
+                        return country ? <Stack direction="row" alignItems="center" gap={.75} sx={{ whiteSpace: 'nowrap' }}><Box component="span" sx={{ fontSize: 19, lineHeight: 1 }}>{country.flag}</Box><Box component="span">{country.dialCode}</Box></Stack> : 'Select country';
+                      },
+                      MenuProps: { PaperProps: { sx: { maxHeight: 360, minWidth: 320 } } },
+                    }}>
+                      <MenuItem value="" disabled>Select country</MenuItem>
+                      {PHONE_COUNTRIES.map((country) => <MenuItem key={country.code} value={country.dialCode} sx={{ gap: 1, minHeight: 42 }}>
+                        <Box component="span" sx={{ width: 25, fontSize: 19, lineHeight: 1 }}>{country.flag}</Box>
+                        <Box component="span" sx={{ width: 62, fontWeight: 600 }}>{country.dialCode}</Box>
+                        <Box component="span">{country.name}</Box>
+                      </MenuItem>)}
+                    </TextField>
+                    <TextField label="Phone number" type="tel" value={values.phone} onChange={update('phone')} required fullWidth autoComplete="tel-national" />
+                  </Box>
                   <TextField label="Company (optional)" value={values.company} onChange={update('company')} fullWidth autoComplete="organization" />
+                  <TextField label="How many users do you have? (optional)" value={values.userCount} onChange={update('userCount')} fullWidth placeholder="e.g. 10,000" />
+                  <TextField label="What kind of channels? (optional)" value={values.channels} onChange={update('channels')} fullWidth placeholder="e.g. Email, push notifications, or in-app messaging" />
                 </Box>
                 <TextField label="How can we help?" value={values.description} onChange={update('description')} required fullWidth multiline minRows={6} sx={{ mt: 2 }} placeholder="Tell us about your audience, monthly volume, integrations, or enterprise requirements." />
 
