@@ -34,7 +34,7 @@ function BusinessContextPanel({ projectId }: { projectId?: string }) {
     let y = 46;
     const date = new Date();
     const dateLabel = `${date.toLocaleDateString('en-GB')}, ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-    const logoData = await fetch('/assets/logo.webp').then((response) => response.blob()).then((blob) => new Promise<string>((resolve, reject) => {
+    const logoData = await fetch('/assets/logo-dark-text.png').then((response) => response.blob()).then((blob) => new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(String(reader.result));
       reader.onerror = reject;
@@ -85,6 +85,7 @@ function BusinessContextPanel({ projectId }: { projectId?: string }) {
     pdf.setFontSize(11);
     pdf.setTextColor(215, 203, 234);
     pdf.text('Prepared from the saved PixlPush business context', margin, 137);
+    // jsPDF cannot read WebP: the PNG logo with dark "Pixl" text for the white page (480×170, so 126×45 keeps its shape).
     if (logoData) pdf.addImage(logoData, 'PNG', pageWidth - margin - 126, 76, 126, 45, undefined, 'FAST');
     y = 232;
     addSection('30-second elevator pitch');
