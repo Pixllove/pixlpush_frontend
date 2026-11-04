@@ -321,7 +321,7 @@ worker-src 'self';`,
 };
 
 export const configOptions: [string, string, string, string][] = [
-  ["sdkKey", "string", "required", "Public SDK key (pp_sk_…). The server address comes from the key, so there is no URL option."],
+  ["sdkKey", "string", "required", "Public SDK key (pp_sk_…). The SDK always sends to the PixlPush API; there is no URL option."],
   ["projectId", "string", "none", "Optional; the server checks the key belongs to this project (id or slug)."],
   ["environment", "string", "\"production\"", "\"development\", \"staging\" or \"production\"."],
   ["serviceWorkerPath", "string", "\"/pixlpush-sw.js\"", "Where your site serves the worker."],
@@ -413,7 +413,7 @@ When you are done, the site initializes PixlPush once on the client, identifies 
 <sdk_facts>
 - One npm package: ${PACKAGE}. Entry points: "${PACKAGE}/react" (PixlPushProvider, usePixlPush), "${PACKAGE}/vue" (PixlPushPlugin, usePixlPush), "${PACKAGE}/angular" (providePixlPush, PIXLPUSH), "${PACKAGE}" (PixlPush singleton for anything else).
 - It never throws and never rejects; on the server (SSR) every call is a no-op. Failures go to PixlPush.onError.
-- The only required option is sdkKey (a public pp_sk_… key; safe in browser code). The API address is inside the key: there is NO apiBaseUrl/url option.
+- The only required option is sdkKey (a public pp_sk_… key; safe in browser code). The SDK always sends to the PixlPush API: there is NO apiBaseUrl/url option.
 - page_viewed (every navigation) and app_opened (once per session) are tracked automatically. Do not track them yourself.
 - Push needs a service worker file served from the site root at /pixlpush-sw.js. The SDK registers it under its own scope (/pixlpush/), so an existing service worker (PWA, caching) is untouched.
 </sdk_facts>

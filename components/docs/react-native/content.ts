@@ -425,7 +425,7 @@ export const configOptions: [string, string, string, string][] = [
 
 // Options the SDK accepts but apps must not set: the key decides the server, the package sets the version.
 export const internalOptions: [string, string][] = [
-  ["apiBaseUrl", "Leave unset. Your SDK key already decides where data goes."],
+  ["apiBaseUrl", "Leave unset. The SDK always sends to the PixlPush API."],
   ["sdkVersion", "Leave unset. The package reports its own version."],
 ];
 

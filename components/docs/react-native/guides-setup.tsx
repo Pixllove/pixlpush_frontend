@@ -165,9 +165,9 @@ export function Installation({ base }: GuideProps) {
       <DataTable headers={["Option", "Type", "Default", "Description"]} rows={configOptions} minWidth={760} />
     </Section>
     <Section id="api-url" title="Where data is sent">
-      <Body>There is no server URL to configure, in development or production. <b>The SDK key decides where data goes</b>, the way a Sentry DSN carries its host. To switch servers, switch keys.</Body>
+      <Body>There is no server URL to configure. <b>The SDK always sends to the PixlPush API</b>, whatever <code>environment</code> you set; the key decides which project the data belongs to.</Body>
       <Body>Create a development key and a production key in the dashboard, put each in the matching environment file, and you’re done.</Body>
-      <Body>Leave endpoint and SDK-version overrides unset. The SDK key selects the endpoint and the package reports its own version.</Body>
+      <Body>Leave endpoint and SDK-version overrides unset. The package reports its own version.</Body>
     </Section>
   </>;
 }

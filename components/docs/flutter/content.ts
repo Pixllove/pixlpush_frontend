@@ -200,7 +200,7 @@ export const errorCodes: [string, string, string][] = [
   ["SDK_KEY_PROJECT_MISMATCH", "projectId does not belong to the key.", "Use the project ID/slug from the same PixlPush project or omit it."],
   ["PROJECT_INACTIVE", "The project is not active.", "Reactivate the project before sending data."],
   ["VALIDATION_ERROR", "An event, identity or configuration value is invalid.", "Fix the value named by the error."],
-  ["NETWORK_ERROR", "The device could not reach the endpoint.", "Check connectivity and use a reachable development key URL."],
+  ["NETWORK_ERROR", "The device could not reach the PixlPush API.", "Check connectivity; queued work retries automatically."],
   ["QUEUE_FULL", "The offline queue reached maxQueueSize.", "Flush/reconnect or increase the limit deliberately."],
   ["STORAGE_ERROR", "Persistent storage failed.", "Check platform storage configuration and available space."],
 ];

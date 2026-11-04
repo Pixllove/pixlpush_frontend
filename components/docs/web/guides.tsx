@@ -48,7 +48,7 @@ export function Overview({ base }: WebGuideProps) {
       <DataTable code={false} headers={["Piece", "Runs where", "Its job"]} rows={[
         [<code key="s">{PACKAGE}</code>, "Your site’s JavaScript (browser)", "Identity, events, the offline queue, asking for push permission."],
         [<code key="w">pixlpush-sw.js</code>, "The browser, in the background (service worker)", "Shows notifications even when your site is closed, and records clicks."],
-        ["PixlPush API", "PixlPush’s servers (the address inside your SDK key)", "Stores users and events, runs campaigns and journeys, sends push."],
+        ["PixlPush API", "PixlPush’s servers (built into the SDK)", "Stores users and events, runs campaigns and journeys, sends push."],
         ["Your backend", "Your server", <>Nothing required. Optional: compute <code key="h">userHash</code> for <A href={web(base, "identity", "verification")}>identity verification</A>.</>],
       ]} />
       <Body>You don’t write any server-side push code, store subscriptions, or manage push keys: PixlPush does that. Your code calls <code>identify</code>, <code>track</code> and <code>requestPushPermission</code>; campaigns and journeys are built in the dashboard.</Body>
@@ -197,8 +197,8 @@ export function Installation({ base }: WebGuideProps) {
       <DataTable headers={["Option", "Type", "Default", "Description"]} rows={configOptions} minWidth={760} />
     </Section>
     <Section id="endpoint" title="Where data is sent">
-      <Body>There is no URL option. A production key sends to PixlPush’s cloud. A key created on a local development server carries that server’s address, so your site talks to it with no extra setting.</Body>
-      <Callout tone="warning" title="Do not ship a development key">A development key points at your computer (for example <code>http://192.168.x.x:4000</code>). Live visitors cannot reach it; use a production key on your live site.</Callout>
+      <Body>There is no URL option. The SDK always sends to the PixlPush API, whatever <code>environment</code> you set; the key decides which project the data belongs to.</Body>
+      <Callout tone="tip" title="One key per environment">Use a development key locally and a production key on your live site, both created in the PixlPush dashboard. Only the key changes.</Callout>
     </Section>
   </>;
 }
@@ -369,12 +369,12 @@ export function LocalDevelopment() {
   return <>
     <Section id="setup" title="Run it locally">
       <CodeBlock code={code.localSetup} language="Shell" />
-      <Body><code>localhost</code> counts as a secure context, so push works there over plain http. A key created on a local PixlPush server carries that server’s address, so the SDK talks to it with no extra setting.</Body>
+      <Body><code>localhost</code> counts as a secure context, so push works there over plain http. The SDK sends to the PixlPush API as usual; use your development key so test data stays out of production.</Body>
     </Section>
     <Section id="phone" title="Test on a phone or another device">
       <Body>Off <code>localhost</code>, browsers require HTTPS for service workers and push. Expose your dev server over HTTPS:</Body>
       <CodeBlock code={code.tunnel} language="Shell" />
-      <Body>The device must also reach the PixlPush API in your key. A development key that points at <code>192.168.x.x</code> works on the same Wi-Fi; otherwise use a production key in a test project.</Body>
+      <Body>The device needs internet access to reach the PixlPush API; nothing else changes.</Body>
     </Section>
     <Section id="devtools" title="Inspect it in DevTools">
       <DataTable code={false} headers={["Where", "What to look for"]} rows={[

@@ -129,8 +129,8 @@ export function Installation({ base }: FlutterGuideProps) {
       <DataTable headers={["Option", "Type", "Default", "Description"]} rows={configOptions} minWidth={760} />
     </Section>
     <Section id="endpoint" title="Where data is sent">
-      <Body>Normal Flutter application code does not provide an API URL. The full SDK key carries the public endpoint that issued it, so the published package does not embed a Supabase or other infrastructure URL. Development keys can carry a reachable LAN or tunnel endpoint.</Body>
-      <Callout tone="warning" title="Local testing requires a reachable host">A phone cannot reach the development computer through <code>localhost</code> or <code>127.0.0.1</code>. Generate a development key with the computer’s LAN IP or a reachable HTTPS tunnel, and use that key in the app.</Callout>
+      <Body>Flutter application code never provides an API URL. The package always sends to the PixlPush API, whatever <code>environment</code> you set, and appends <code>/sdk/v1</code> itself. The SDK key decides which project the data belongs to.</Body>
+      <Callout tone="tip" title="Development and production">Use a separate SDK key per environment, both created in the PixlPush dashboard. Only the key changes between builds.</Callout>
     </Section>
   </>;
 }
@@ -357,7 +357,7 @@ const troubleshooting: Record<string, [string, string, string][]> = {
     ["SDK_KEY_MISSING", "The build did not receive the key.", "Check --dart-define or the build-time config source."],
     ["SDK_KEY_INVALID", "The key is revoked, deleted or malformed.", "Create a new key in Project settings → SDK keys."],
     ["SDK_KEY_PROJECT_MISMATCH", "projectId belongs to another project.", "Use the matching project ID or omit projectId."],
-    ["Local device cannot connect", "The development key points to localhost or an unreachable LAN host.", "Use the computer LAN IP or a reachable HTTPS tunnel."],
+    ["Device cannot connect", "The device has no internet access, or a proxy/firewall blocks the PixlPush API.", "Check the network; queued events are kept and retried automatically."],
   ],
   events: [
     ["Events do not appear", "Offline, analytics consent is false, or the key is invalid.", "Inspect getStatus(), subscribe to errors and call flush()."],
