@@ -1,7 +1,8 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { emailApi, firebaseApi, projectKeys, sdkKeyApi } from '@/lib/projects/api';
+import { emailApi, firebaseApi, onboardingApi, projectKeys, sdkKeyApi } from '@/lib/projects/api';
+import type { ProjectPlatform } from '@/types/project';
 import { isPermanentAuthError } from '@/lib/auth/client';
 import type { ApiError } from '@/types/auth';
 
@@ -32,6 +33,8 @@ export function useFirebaseSettings(projectId: string | undefined) {
     upload: useAreaMutation(projectId, 'firebase', firebaseApi.upload),
     verify: useAreaMutation(projectId, 'firebase', (id, _: void) => firebaseApi.verify(id)),
     disconnect: useAreaMutation(projectId, 'firebase', (id, _: void) => firebaseApi.disconnect(id)),
+    /** Website / mobile choice; stored on the Project through the onboarding API. */
+    platforms: useAreaMutation(projectId, 'firebase', (id, platforms: ProjectPlatform[]) => onboardingApi.update(id, { platforms })),
   };
 }
 

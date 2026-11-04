@@ -1,4 +1,4 @@
-import { ArrowForwardRounded, CodeRounded, EventNoteRounded, LibraryBooksRounded, PhoneAndroidRounded } from "@mui/icons-material";
+import { ArrowForwardRounded, CodeRounded, EventNoteRounded, LanguageRounded, LibraryBooksRounded, PhoneAndroidRounded } from "@mui/icons-material";
 import { Box, Card, CardContent, Chip, Stack, Typography } from "@mui/material";
 import DashboardFrame from "@/components/dashboard/DashboardFrame";
 import { LinkButton } from "@/components/docs/links";
@@ -8,8 +8,15 @@ export const metadata = { title: 'Developer Documentation — PixlPush' };
 // The entry point for developers: do the SDK integration first, then the segment guides that use its events.
 const steps = [
   {
-    step: "Step 1",
-    title: "SDK integration",
+    step: "Step 1 · Website",
+    title: "Web SDK integration",
+    description: "Install @pixlpush/web in React, Next.js, Vue, Angular or any site, serve the service worker, and add Web Push with no Firebase.",
+    href: "/dashboard/integrations/web/quickstart",
+    icon: LanguageRounded,
+  },
+  {
+    step: "Step 1 · React Native",
+    title: "React Native SDK integration",
     description: "Install the React Native SDK, create an SDK key, connect Firebase for push, and send your first verified event.",
     href: "/dashboard/integrations/react-native/quickstart",
     icon: CodeRounded,
@@ -44,7 +51,7 @@ export default function DeveloperDocsPage() {
     <Stack gap={2.5} sx={{ maxWidth: 920 }}>
       <Card className="saas-card"><CardContent sx={{ p: { xs: 2.5, md: 4 } }}>
         <Typography variant="h3">Build the connection between your product and PixlPush.</Typography>
-        <Typography color="text.secondary" fontSize="var(--fs-13)" sx={{ mt: 1, maxWidth: 720 }}>Start with the SDK integration. The segment guides build on the events it sends, so open them once your app appears in Users.</Typography>
+        <Typography color="text.secondary" fontSize="var(--fs-13)" sx={{ mt: 1, maxWidth: 720 }}>Start with the SDK for your platform: Website, React Native or Flutter. The segment guides build on the events it sends, so open them once your app appears in Users.</Typography>
       </CardContent></Card>
       <Stack gap={1.5}>{steps.map(({ step, title, description, href, icon: Icon, needsSdk }) => <Card className="saas-card" key={title}><CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
         <Stack direction={{ xs: "column", sm: "row" }} alignItems={{ sm: "center" }} gap={2}>

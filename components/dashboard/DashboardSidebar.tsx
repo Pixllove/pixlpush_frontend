@@ -14,7 +14,7 @@ import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useActiveProject, planLabel } from '@/hooks/projects/use-active-project';
 import { firebaseApi, onboardingApi } from '@/lib/projects/api';
-import { onboardingPercentage } from '@/lib/onboarding';
+import { onboardingPercentage, pushReadyOf } from '@/lib/onboarding';
 import { useNotificationUnreadCount } from '@/hooks/notifications/use-notifications';
 
 const groups = [
@@ -86,7 +86,7 @@ export default function DashboardSidebar({ active, setActive, mobileOpen, collap
   const onboardingPercent = !activeProject
     ? '0%'
     : onboarding.data && !onboarding.isPending && !firebase.isPending
-      ? `${onboardingPercentage({ ...onboarding.data, completed: Array.from(new Set([1, ...onboarding.data.completed])) }, firebase.data?.status === 'connected')}%`
+      ? `${onboardingPercentage({ ...onboarding.data, completed: Array.from(new Set([1, ...onboarding.data.completed])) }, pushReadyOf(firebase.data))}%`
       : '…';
   const switchProject = (value: string) => { setMenu(null); onChangeProject(value); };
 

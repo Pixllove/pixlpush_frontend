@@ -12,7 +12,7 @@ import ProjectDetailsPanel from './ProjectDetailsPanel';
 import SdkKeysPanel from './SdkKeysPanel';
 import SettingsStatus from './SettingsStatus';
 
-const tabs = ['Project & company details', 'Firebase / FCM', 'Domain', 'SDK keys', 'Data & privacy', 'Danger zone'];
+const tabs = ['Project & company details', 'Push setup', 'Domain', 'SDK keys', 'Data & privacy', 'Danger zone'];
 
 function ProjectAndCompanyDetailsPanel() {
   return <Stack gap={2.5}>
@@ -29,7 +29,7 @@ function PrivacyPanel() { return <Stack gap={2.5}><Box><Typography variant="h3">
 
 const panels: Record<string, (props: { onNavigate?: (tab: string) => void }) => JSX.Element> = {
   'Project & company details': ProjectAndCompanyDetailsPanel,
-  'Firebase / FCM': FirebasePanel,
+  'Push setup': FirebasePanel,
   Domain: EmailPanel,
   'SDK keys': SdkKeysPanel,
   'Data & privacy': PrivacyPanel,
@@ -40,11 +40,11 @@ export default function ProjectSettingsCenter({ initialTab = 'Project & company 
   const pathname = usePathname();
   const [tab, setTab] = useState(initialTab);
   const routes: Record<string, string> = {
-    'Firebase / FCM': '/dashboard/settings/firebase',
+    'Push setup': '/dashboard/settings/firebase',
     Domain: '/dashboard/settings/domain',
     'SDK keys': '/dashboard/settings/sdk-keys',
   };
-  const routeTab = pathname.endsWith('/firebase') ? 'Firebase / FCM' : pathname.endsWith('/domain') ? 'Domain' : pathname.endsWith('/sdk-keys') ? 'SDK keys' : null;
+  const routeTab = pathname.endsWith('/firebase') ? 'Push setup' : pathname.endsWith('/domain') ? 'Domain' : pathname.endsWith('/sdk-keys') ? 'SDK keys' : null;
   useEffect(() => {
     if (routeTab) setTab(routeTab);
   }, [routeTab]);

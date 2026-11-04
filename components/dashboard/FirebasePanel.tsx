@@ -1,8 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckCircleRounded, CloudUploadRounded, ErrorOutlineRounded, LockRounded, RadioButtonUncheckedRounded, WarningAmberRounded } from '@mui/icons-material';
-import { Alert, Box, Button, Card, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Typography } from '@mui/material';
+import { useQueryClient } from '@tanstack/react-query';
+import type { ProjectPlatform } from '@/types/project';
+import { CheckCircleRounded, CloudUploadRounded, LanguageRounded, PhoneIphoneRounded, ErrorOutlineRounded, LockRounded, RadioButtonUncheckedRounded, WarningAmberRounded } from '@mui/icons-material';
+import { Alert, Box, Button, ButtonBase, Card, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Typography } from '@mui/material';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
 import { useFirebaseSettings } from '@/hooks/projects/use-project-settings';
 import SettingsStatus from './SettingsStatus';
@@ -13,8 +15,32 @@ const CONFIG_ROLES = ['owner', 'admin', 'developer'];
 /** Firebase / FCM connection of the active Project. Every Project has its own. */
 export default function FirebasePanel() {
   const { active } = useActiveProject();
-  const { query, upload, verify, disconnect } = useFirebaseSettings(active?.id);
+  const { query, upload, verify, disconnect, platforms: savePlatforms } = useFirebaseSettings(active?.id);
   const config = query.data;
+  const queryClient = useQueryClient();
+  const platforms = config?.platforms ?? ['mobile'];
+  const hasWeb = platforms.includes('web');
+  const hasMobile = platforms.includes('mobile');
+  // Choices are a draft until "Save settings"; the sections below follow the saved value.
+  const [draft, setDraft] = useState<ProjectPlatform[] | null>(null);
+  const [saved, setSaved] = useState(false);
+  const selection = draft ?? platforms;
+  const dirty = draft !== null && [...draft].sort().join() !== [...platforms].sort().join();
+  const togglePlatform = (id: ProjectPlatform) => {
+    setSaved(false);
+    setDraft([id]); // one platform per Project
+  };
+  const savePlatformChoice = async () => {
+    if (!draft?.length) return;
+    setError(undefined);
+    try {
+      await savePlatforms.mutateAsync(draft);
+      // Onboarding progress and the setup banner depend on this choice too.
+      await queryClient.invalidateQueries({ queryKey: ['projects', active?.id] });
+      setDraft(null);
+      setSaved(true);
+    } catch (cause) { setError((cause as ApiError).message); }
+  };
 
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<{ name: string; text: string; projectId?: string; adminKey?: boolean }>();
@@ -69,20 +95,71 @@ export default function FirebasePanel() {
     ['Service account JSON', configured ? 'Uploaded' : 'Required', configured],
     ['Firebase Cloud Messaging API', connected ? 'Enabled' : config?.status === 'error' ? 'Check failed' : 'Waiting', connected],
     ['Firebase project ID', config?.firebaseProjectId ?? '—', configured],
-    ['Token sync', config?.activeTokens ? `${config.activeTokens} active device tokens` : 'Waiting for the SDK', Boolean(config?.activeTokens)],
+    ['Token sync', config?.activeTokens ? `${config.activeTokens} active app devices` : 'Waiting for the mobile SDK', Boolean(config?.activeTokens)],
   ];
 
   return (
     <Stack gap={2.5}>
       <Box>
-        <Typography variant="h3">Firebase / FCM</Typography>
-        <Typography color="text.secondary" fontSize="var(--fs-12)">Connect the Firebase project used by {appName} for push delivery and device token management.</Typography>
+        <Typography variant="h3">Push setup</Typography>
+        <Typography color="text.secondary" fontSize="var(--fs-12)">Each project is either a website (Web Push, no Firebase) or a mobile app (React Native or Flutter, via Firebase).</Typography>
       </Box>
 
       {query.isError && <Alert severity="error">{query.error.message}</Alert>}
       {error && !open && <Alert severity="error">{error}</Alert>}
 
+      <Card className="saas-card">
+        <Typography fontWeight={600}>What does {appName} use?</Typography>
+        <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: .5 }}>Choose one. Only the setup you need is shown below.</Typography>
+        <Stack direction={{ xs: 'column', sm: 'row' }} gap={1.5} sx={{ mt: 2 }}>
+          {([['web', 'Website', 'React, Next.js, Vue, Angular, any site. No Firebase needed.', LanguageRounded], ['mobile', 'Mobile app', 'React Native or Flutter. Needs your Firebase project.', PhoneIphoneRounded]] as const).map(([id, title, detail, Icon]) => {
+            const selected = selection.includes(id);
+            return (
+              <ButtonBase key={id} disabled={!canEdit || savePlatforms.isPending || !config} onClick={() => togglePlatform(id)} role="radio" aria-checked={selected}
+                sx={{ flex: 1, justifyContent: 'flex-start', textAlign: 'left', gap: 1.5, p: 1.75, borderRadius: 2, border: '1px solid', borderColor: selected ? 'primary.main' : 'divider', bgcolor: selected ? 'rgba(99,57,214,.06)' : 'transparent' }}>
+                <Icon color={selected ? 'primary' : 'disabled'} />
+                <Box sx={{ flex: 1 }}>
+                  <Typography fontWeight={600} fontSize="var(--fs-13)">{title}</Typography>
+                  <Typography color="text.secondary" fontSize="var(--fs-12)">{detail}</Typography>
+                </Box>
+                {selected ? <CheckCircleRounded color="primary" /> : <RadioButtonUncheckedRounded sx={{ color: '#b6aabf' }} />}
+              </ButtonBase>
+            );
+          })}
+        </Stack>
+        {saved && !dirty && <Alert severity="success" sx={{ mt: 2 }} onClose={() => setSaved(false)}>Settings saved. The setup below now matches your choice.</Alert>}
+        {dirty && (
+          <Stack direction="row" gap={1} justifyContent="flex-end" alignItems="center" sx={{ mt: 2 }}>
+            <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mr: 'auto' }}>You have unsaved changes.</Typography>
+            <Button disabled={savePlatforms.isPending} onClick={() => setDraft(null)}>Cancel</Button>
+            <Button variant="contained" disabled={!draft?.length || savePlatforms.isPending} onClick={savePlatformChoice}>{savePlatforms.isPending ? 'Saving…' : 'Save settings'}</Button>
+          </Stack>
+        )}
+      </Card>
+
+      {hasWeb && <Card className="settings-hero-card">
+        <Stack direction={{ xs: 'column', sm: 'row' }} gap={2} alignItems={{ sm: 'center' }}>
+          <Box className="settings-large-icon"><LanguageRounded /></Box>
+          <Box sx={{ flex: 1 }}>
+            <Stack direction="row" alignItems="center" gap={1}>
+              <Typography fontWeight={600}>Website push (Web Push)</Typography>
+              {config && <SettingsStatus tone={config.webPush?.activeBrowsers ? 'success' : 'neutral'}>{config.webPush?.activeBrowsers ? 'Active' : config.webPush?.enabled ? 'Ready' : 'Waiting for the web SDK'}</SettingsStatus>}
+            </Stack>
+            <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: .6 }}>
+              {config?.webPush?.activeBrowsers
+                ? `${config.webPush.activeBrowsers} subscribed browser${config.webPush.activeBrowsers === 1 ? '' : 's'}. Push campaigns and journeys reach them automatically.`
+                : 'Nothing to configure here. Install @pixlpush/web with your SDK key, serve pixlpush-sw.js from your site, and call PixlPush.requestPushPermission() from a button.'}
+            </Typography>
+          </Box>
+          <Button href="/dashboard/integrations/web/quickstart" variant="outlined" size="small" sx={{ whiteSpace: 'nowrap', alignSelf: { xs: 'flex-start', sm: 'center' } }}>Web SDK guide</Button>
+        </Stack>
+      </Card>}
+
+      {hasMobile && <>
+      <Typography fontWeight={600} sx={{ mt: 1 }}>Mobile apps (Firebase / FCM)</Typography>
+
       <Card className="settings-hero-card">
+
         <Stack direction={{ xs: 'column', sm: 'row' }} gap={2} alignItems={{ sm: 'center' }}>
           <Box className="settings-large-icon"><CloudUploadRounded /></Box>
           <Box sx={{ flex: 1 }}>
@@ -94,7 +171,7 @@ export default function FirebasePanel() {
               {query.isPending ? 'Loading…'
                 : config?.status === 'error' ? config.lastError
                 : configured ? `Firebase project ${config!.firebaseProjectId} · ${config!.clientEmail}${config!.validatedAt ? ` · Last checked ${new Date(config!.validatedAt).toLocaleString()}` : ''}`
-                : 'Upload a service-account JSON to enable production push sending.'}
+                : 'Only needed for mobile apps. Upload a service-account JSON to send push to Android and iOS.'}
             </Typography>
           </Box>
           <Stack direction="row" gap={1}>
@@ -130,6 +207,8 @@ export default function FirebasePanel() {
           </Stack>
         </Card>
       )}
+
+      </>}
 
       <Dialog open={open} onClose={close} maxWidth="sm" fullWidth>
         <DialogTitle>{configured ? 'Replace Firebase credentials' : 'Connect Firebase / FCM'}</DialogTitle>

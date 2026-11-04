@@ -31,7 +31,7 @@ import CreateProjectDialog from './CreateProjectDialog';
 import { BillingAlarm, BillingLockGate } from './BillingAccessNotice';
 import { useCurrentUser } from '@/hooks/auth/use-current-user';
 import { firebaseApi, onboardingApi } from '@/lib/projects/api';
-import { onboardingPercentage } from '@/lib/onboarding';
+import { onboardingPercentage, pushReadyOf } from '@/lib/onboarding';
 import { supportApi } from '@/lib/support/api';
 
 export default function DashboardFrame({
@@ -124,7 +124,7 @@ export default function DashboardFrame({
   const onboardingPercent = activeProject && onboarding.data && !onboarding.isPending && !firebase.isPending
     ? onboardingPercentage(
       { ...onboarding.data, completed: Array.from(new Set([1, ...onboarding.data.completed])) },
-      firebase.data?.status === 'connected',
+      pushReadyOf(firebase.data),
     )
     : null;
   const showOnboardingWarning = activeProject?.status !== 'suspended' && activeProject?.billing?.state !== 'locked' && active !== 'Onboarding Guide' && onboardingPercent !== null && onboardingPercent < 100;

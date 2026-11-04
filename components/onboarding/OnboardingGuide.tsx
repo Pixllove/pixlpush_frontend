@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowForwardRounded, CheckCircleRounded, OpenInNewRounded, ReplayRounded } from '@mui/icons-material';
 import { Button, Chip, LinearProgress, Paper, Stack, Typography } from '@mui/material';
-import { initialOnboardingState, onboardingCompletedCount, onboardingPercentage, type OnboardingState } from '@/lib/onboarding';
+import { initialOnboardingState, onboardingCompletedCount, onboardingPercentage, pushReadyOf, type OnboardingState } from '@/lib/onboarding';
 import { firebaseApi, onboardingApi } from '@/lib/projects/api';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
 
@@ -13,7 +13,7 @@ const items = [
   ['Your product', 'Add a website or app-store link for setup context.', 'Product link'],
   ['Channels', 'Select push, email, or in-app messaging for your team.', 'Channel preferences'],
   ['Domain connection', 'Prepare a sending domain and review the DNS steps.', 'Email deliverability'],
-  ['Firebase / FCM', 'Connect Firebase credentials for push delivery.', 'Push delivery'],
+  ['Push setup', 'Websites need no setup. Mobile apps connect Firebase credentials.', 'Push delivery'],
   ['SDK integration', 'Install the SDK and send your first product signal.', 'Product events'],
 ];
 
@@ -49,7 +49,7 @@ export default function OnboardingGuide() {
     ? { ...state, completed: Array.from(new Set([1, ...state.completed])) }
     : state;
   const activeSteps = items.map((step, index) => ({ step, number: index + 1 }));
-  const firebaseConnected = firebase.data?.status === 'connected';
+  const firebaseConnected = pushReadyOf(firebase.data);
   const complete = hasProject ? onboardingCompletedCount(displayState, firebaseConnected) : 0;
   const percentage = hasProject ? onboardingPercentage(displayState, firebaseConnected) : 0;
 
@@ -70,10 +70,10 @@ export default function OnboardingGuide() {
         return <article className={`guide-step${done ? ' completed' : ''}`} key={title}>
           <div className="guide-step-icon">{done ? <CheckCircleRounded/> : <span>{number}</span>}</div>
           <div className="guide-step-copy"><div><Typography fontWeight={700}>{title}</Typography><Chip size="small" label={tag}/></div><Typography color="text.secondary" variant="body2">{detail}</Typography>{number === 1 && displayState.projectName && <small>Current value: {displayState.projectName}</small>}{number === 2 && <small>{[displayState.websiteUrl, displayState.androidAppUrl, displayState.iosAppUrl].filter(Boolean).join(' · ') || 'No links added yet'}</small>}{number === 4 && displayState.domain && <small>Domain: {displayState.domain}</small>}</div>
-          <div className="guide-step-status">{number === 5 && firebaseConnected ? <Chip size="small" color="success" label="Connected"/> : done ? <Chip size="small" color="success" label="Complete"/> : <Chip size="small" variant="outlined" label="To do"/>}</div>
+          <div className="guide-step-status">{number === 5 && firebaseConnected ? <Chip size="small" color="success" label="Ready"/> : done ? <Chip size="small" color="success" label="Complete"/> : <Chip size="small" variant="outlined" label="To do"/>}</div>
         </article>;
       })}</div>
-      <div className="guide-note"><ReplayRounded fontSize="small"/><span>Domain and SDK steps are guidance. Firebase credentials are validated securely when you connect them from the onboarding flow.</span><Button size="small" href="/dashboard/integrations/react-native/quickstart" endIcon={<OpenInNewRounded/>}>SDK guide</Button></div>
+      <div className="guide-note"><ReplayRounded fontSize="small"/><span>Domain and SDK steps are guidance. Firebase credentials are validated securely when you connect them from the onboarding flow.</span><Button size="small" href={displayState.platforms?.includes('web') ? '/dashboard/integrations/web/quickstart' : '/dashboard/integrations/react-native/quickstart'} endIcon={<OpenInNewRounded/>}>SDK guide</Button></div>
     </Paper>
   </div>;
 }

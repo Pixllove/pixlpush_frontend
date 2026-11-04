@@ -12,7 +12,8 @@ import {
   Alert, Box, Button, Checkbox, Chip, Container, Dialog, DialogActions, DialogContent, DialogTitle,
   FormControlLabel, IconButton, LinearProgress, Paper, Stack, TextField, Typography,
 } from '@mui/material';
-import { initialOnboardingState, type OnboardingState } from '@/lib/onboarding';
+import { initialOnboardingState, isPushReady, type OnboardingState } from '@/lib/onboarding';
+import type { ProjectPlatform } from '@/types/project';
 import { authApi, authKeys } from '@/lib/auth/api';
 import { firebaseApi, onboardingApi, projectApi, projectKeys } from '@/lib/projects/api';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
@@ -23,8 +24,12 @@ const steps = [
   ['Your product', 'Add your website or app link'],
   ['Channels', 'Choose how you’ll reach customers'],
   ['Domain', 'Prepare your sending domain'],
-  ['Push setup', 'Connect Firebase Cloud Messaging'],
+  ['Push setup', 'Web: automatic · Mobile: Firebase'],
   ['SDK install', 'Bring product signals into PixlPush'],
+];
+const platformOptions: Array<{ id: ProjectPlatform; title: string; detail: string; icon: typeof LanguageRounded }> = [
+  { id: 'web', title: 'Website', detail: 'React, Next.js, Vue, Angular or any site. Push works without Firebase.', icon: LanguageRounded },
+  { id: 'mobile', title: 'Mobile app', detail: 'React Native or Flutter. Push needs your Firebase project.', icon: PhoneIphoneRounded },
 ];
 const channelOptions = [
   { id: 'push', title: 'Push notifications', detail: 'Reach opted-in users on mobile and web.', icon: NotificationsActiveRounded },
@@ -87,6 +92,7 @@ export default function OnboardingWizard() {
   }, [projectId, progressQuery.data, progressQuery.isFetching, progressQuery.isSuccess, selectedProject?.name]);
 
   const progressPayload = (value: OnboardingState): Partial<Omit<OnboardingState, 'projectName'>> => ({
+    platforms: value.platforms,
     websiteUrl: value.websiteUrl,
     androidAppUrl: value.androidAppUrl,
     iosAppUrl: value.iosAppUrl,
@@ -119,7 +125,11 @@ export default function OnboardingWizard() {
 
   const currentStep = Math.min(6, Math.max(1, state.currentStep));
   const firebaseConnected = firebaseQuery.data?.status === 'connected';
-  const completedCount = [...new Set([1, ...state.completed])].filter((step) => step !== 5 || firebaseConnected).length;
+  const hasWeb = state.platforms.includes('web');
+  const hasMobile = state.platforms.includes('mobile');
+  // Push step: mobile needs Firebase, a website-only Project needs nothing.
+  const pushReady = isPushReady(state.platforms, firebaseQuery.data?.status);
+  const completedCount = [...new Set([1, ...state.completed])].filter((step) => step !== 5 || pushReady).length;
   const goToStep = (step: number) => {
     localUserChange.current = true;
     setStepDirection(step >= currentStep ? 'forward' : 'backward');
@@ -195,6 +205,13 @@ export default function OnboardingWizard() {
       return;
     }
     router.push('/dashboard/onboarding');
+  };
+  const togglePlatform = (id: ProjectPlatform) => {
+    localUserChange.current = true;
+    setState((previous) => {
+      // One platform per Project: picking one replaces the other.
+      return { ...previous, platforms: [id], skipped: false };
+    });
   };
   const toggleChannel = (id: string) => {
     localUserChange.current = true;
@@ -285,15 +302,17 @@ export default function OnboardingWizard() {
     }
   };
 
-  const canContinue = currentStep === 1 ? Boolean(state.projectName.trim()) && !projectsPending && !projectsQuery.isPending : currentStep === 3 ? state.channels.length > 0 : currentStep === 5 ? firebaseConnected : true;
+  const canContinue = currentStep === 1 ? Boolean(state.projectName.trim()) && !projectsPending && !projectsQuery.isPending : currentStep === 3 ? state.channels.length > 0 : currentStep === 2 ? state.platforms.length > 0 : currentStep === 5 ? pushReady : true;
   const firebaseProjectChange = Boolean(firebaseQuery.data?.firebaseProjectId && firebaseFile?.projectId && firebaseQuery.data.firebaseProjectId !== firebaseFile.projectId);
-  const heading = ['What should we call your project?', 'Where can customers find your product?', 'Which channels do you want to use?', 'Let’s get your domain ready.', 'Set up push with Firebase.', 'Add the PixlPush SDK to your app.'][currentStep - 1];
+  const heading = ['What should we call your project?', 'Where can customers find your product?', 'Which channels do you want to use?', 'Let’s get your domain ready.', hasMobile ? 'Set up push for your app.' : 'Website push is ready.', 'Add the PixlPush SDK to your app.'][currentStep - 1];
   const prompt = [
     'I’m Max, your onboarding guide. Let’s start with a name for the product or workspace you’re setting up.',
-    'Great start. Share a public website or app-store link so we can keep this setup focused on your product. No business analysis is needed.',
+    'Great start. Tell me what you’re building (a website or a mobile app) and share its links. This decides which setup steps you’ll see.',
     'Choose every channel you plan to use. We’ll tailor the remaining setup to your selections.',
     'A sending domain helps your email reach the inbox and look like it came from your brand. Add the domain you plan to use; this demo won’t change DNS.',
-    'Push notifications need Firebase Cloud Messaging credentials. Upload the service-account JSON and I’ll validate it securely for this Project.',
+    hasMobile
+      ? `Mobile apps send push through Firebase Cloud Messaging. Upload the service-account JSON and I’ll validate it securely.`
+      : 'Good news: website push needs no Firebase and no keys. PixlPush sets it up automatically when the web SDK is installed.',
     'Install the SDK when you’re ready to send product events and register devices. Here’s a starter prompt you can share with your coding assistant.',
   ][currentStep - 1];
 
@@ -314,7 +333,7 @@ export default function OnboardingWizard() {
           <div className="onboarding-stepper">
             {steps.map(([title], index) => {
               const number = index + 1;
-              const done = number < currentStep && (number === 5 ? firebaseConnected : state.completed.includes(number));
+              const done = number < currentStep && (number === 5 ? pushReady : state.completed.includes(number));
               const locked = number > currentStep;
               return <button key={title} className={`onboarding-step${done ? ' is-done' : ''}${currentStep === number ? ' is-current' : ''}`} onClick={() => !locked && goToStep(number)} disabled={locked}>
                 <span className="onboarding-step-number">{done ? <CheckRounded fontSize="small" /> : number}</span><span>{title}</span>
@@ -331,6 +350,8 @@ export default function OnboardingWizard() {
               <div className="onboarding-question"><Typography className="onboarding-eyebrow">STEP {String(currentStep).padStart(2, '0')} · {steps[currentStep - 1][0].toUpperCase()}</Typography><Typography variant="h4" className="onboarding-question-title">{heading}</Typography>
                 {currentStep === 1 && <TextField autoFocus fullWidth label="Project name" placeholder="e.g. Northstar Mobile" value={state.projectName} onChange={(e) => patch({ projectName: e.target.value })} helperText="You can change this any time." />}
                 {currentStep === 2 && <div className="onboarding-product-links">
+                  <div className="onboarding-product-section-heading"><span className="onboarding-product-section-icon"><AutoAwesomeRounded /></span><span><strong>What are you building?</strong><small>Choose one. You can change this later in Project settings.</small></span></div>
+                  <div className="onboarding-channel-grid">{platformOptions.map(({ id, title, detail, icon: Icon }) => <button key={id} type="button" role="radio" aria-checked={state.platforms.includes(id)} className={`onboarding-channel${state.platforms.includes(id) ? ' selected' : ''}`} onClick={() => togglePlatform(id)}><span className="onboarding-channel-icon"><Icon /></span><span><strong>{title}</strong><small>{detail}</small></span>{state.platforms.includes(id) && <CheckRounded className="onboarding-channel-check"/>}</button>)}</div>
                   <div className="onboarding-product-section-heading"><span className="onboarding-product-section-icon"><LanguageRounded /></span><span><strong>Website</strong><small>Start with your public product website</small></span></div>
                   <TextField fullWidth label="Website link" placeholder="https://yourproduct.com" value={state.websiteUrl} onChange={(e) => updateWebsiteUrl(e.target.value)} />
                   <Button className="onboarding-scan-button" variant="outlined" disabled={!state.websiteUrl.trim() || appLinkScanState === 'checking'} onClick={checkForAppLinks} startIcon={appLinkScanState === 'checking' ? <AutoAwesomeRounded className="onboarding-scan-icon" /> : <SearchRounded />}>
@@ -346,8 +367,9 @@ export default function OnboardingWizard() {
                 </div>}
                 {currentStep === 3 && <div className="onboarding-channel-grid">{channelOptions.map(({ id, title, detail, icon: Icon }) => <button key={id} className={`onboarding-channel${state.channels.includes(id) ? ' selected' : ''}`} onClick={() => toggleChannel(id)}><span className="onboarding-channel-icon"><Icon /></span><span><strong>{title}</strong><small>{detail}</small></span>{state.channels.includes(id) && <CheckRounded className="onboarding-channel-check"/>}</button>)}</div>}
                 {currentStep === 4 && <Stack gap={2}><TextField fullWidth label="Sending domain" placeholder="mail.yourproduct.com" value={state.domain} onChange={(e) => patch({ domain: e.target.value })}/><Paper elevation={0} className="onboarding-guidance"><strong>What you’ll do later</strong><span>Verify ownership · Add DNS records · Confirm authentication</span><small>This is a guided preview only. No DNS records are created or verified here.</small></Paper></Stack>}
-                {currentStep === 5 && <Stack gap={2}><Paper elevation={0} className="onboarding-guidance"><strong>Firebase Cloud Messaging</strong><span>Upload the Firebase service-account JSON used by this Project. PixlPush validates it with Google before encrypting and storing it.</span><small>Never paste credentials into chat or your app. The file is sent only to the authenticated backend.</small></Paper><Button variant="contained" onClick={openFirebaseWithMax} startIcon={<AutoAwesomeRounded />}>{firebaseConnected ? 'Review Firebase with Max' : 'Connect Firebase with Max'}</Button>{firebaseConnected && <Alert severity="success">Firebase is connected for this Project.</Alert>}</Stack>}
-                {currentStep === 6 && <Stack gap={2}><Paper elevation={0} className="onboarding-code"><code>Set up the PixlPush SDK in my {state.projectName || 'app'}. Guide me through installation, initialize it safely, register push permissions if enabled, and track a first test event. Do not expose secrets.</code><IconButton aria-label="Copy setup prompt" onClick={() => { navigator.clipboard?.writeText(`Set up the PixlPush SDK in my ${state.projectName || 'app'}. Guide me through installation, initialize it safely, register push permissions if enabled, and track a first test event. Do not expose secrets.`); setCopied(true); }}><ContentCopyRounded/></IconButton></Paper><Button href="/dashboard/integrations/react-native/quickstart" variant="outlined">View SDK integration guide</Button></Stack>}
+                {currentStep === 5 && hasWeb && <Alert severity="success" icon={<LanguageRounded />} sx={{ mb: hasMobile ? 2 : 0 }}><strong>Website push: nothing to set up.</strong> Install the web SDK in step 6 and add an “Enable notifications” button. Visitors who allow it can get push campaigns and journeys.</Alert>}
+                {currentStep === 5 && hasMobile && <Stack gap={2}><Paper elevation={0} className="onboarding-guidance"><strong>Firebase Cloud Messaging (mobile apps)</strong><span>Upload the Firebase service-account JSON used by this Project. PixlPush validates it with Google before encrypting and storing it.</span><small>Never paste credentials into chat or your app. The file is sent only to the authenticated backend.</small></Paper><Button variant="contained" onClick={openFirebaseWithMax} startIcon={<AutoAwesomeRounded />}>{firebaseConnected ? 'Review Firebase with Max' : 'Connect Firebase with Max'}</Button>{firebaseConnected && <Alert severity="success">Firebase is connected for this Project.</Alert>}</Stack>}
+                {currentStep === 6 && <Stack gap={2}><Paper elevation={0} className="onboarding-code"><code>Set up the PixlPush SDK in my {state.projectName || 'app'}. Guide me through installation, initialize it safely, register push permissions if enabled, and track a first test event. Do not expose secrets.</code><IconButton aria-label="Copy setup prompt" onClick={() => { navigator.clipboard?.writeText(`Set up the PixlPush SDK in my ${state.projectName || 'app'}. Guide me through installation, initialize it safely, register push permissions if enabled, and track a first test event. Do not expose secrets.`); setCopied(true); }}><ContentCopyRounded/></IconButton></Paper><Button href={hasMobile ? '/dashboard/integrations/react-native/quickstart' : '/dashboard/integrations/web/quickstart'} variant="outlined">{hasMobile ? 'View SDK integration guide' : 'View web SDK guide'}</Button></Stack>}
               </div>
             </div>
             <div className="onboarding-chat-footer">{saveError && <Alert severity="error" sx={{ mb: 1.5 }}>{saveError}</Alert>}<Typography variant="caption">Your progress is saved to this project. You can return from the Onboarding Guide on any device.</Typography><div className="onboarding-footer-actions">{currentStep > 1 && <Button variant="contained" className="onboarding-back-button" onClick={previous} startIcon={<ArrowBackRounded />}>Back</Button>}<Button variant="contained" disabled={!canContinue} onClick={next} endIcon={<ArrowForwardRounded />}>{currentStep === 6 ? 'Finish setup' : 'Continue'}{copied && currentStep === 6 ? ' · Prompt copied' : ''}</Button></div></div>

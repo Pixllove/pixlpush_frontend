@@ -79,7 +79,7 @@ export default function DocsLayout({ base, variant, children }: { base: string; 
       <Typography component={NextLink} href={base === "/docs" ? "/docs" : guideHref(base, platformId)} sx={{ display: { xs: "none", sm: "block" }, color: tokens.text, fontWeight: 600, fontSize: "var(--fs-14)", textDecoration: "none", whiteSpace: "nowrap" }}>Developer docs</Typography>
       <Stack direction="row" alignItems="stretch" gap={1.5}>
       <Box sx={{ display: { xs: "none", md: "flex" } }}><PlatformSelect base={base} current={platformId} /></Box>
-      {platformId === "react-native" && pathname !== guideHref(base, "react-native", "ai-setup") && <Button component={NextLink} href={guideHref(base, "react-native", "ai-setup")} startIcon={<AutoAwesomeRounded />} variant="contained" className="docs-ai-shine"
+      {(platformId === "react-native" || platformId === "web") && pathname !== guideHref(base, platformId, "ai-setup") && <Button component={NextLink} href={guideHref(base, platformId, "ai-setup")} startIcon={<AutoAwesomeRounded />} variant="contained" className="docs-ai-shine"
         sx={{ position: "relative", overflow: "hidden", minHeight: 0, py: 0, px: { xs: 1.25, sm: 1.75 }, whiteSpace: "nowrap", background: "linear-gradient(135deg,#6d28d9,#9333ea 55%,#db2777)", "&:hover": { background: "linear-gradient(135deg,#5b21b6,#7e22ce 55%,#be185d)" } }}>
         <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>AI setup prompt</Box><Box component="span" sx={{ display: { sm: "none" } }}>AI</Box>
       </Button>}

@@ -20,7 +20,8 @@ async function latest(url, pick) {
 const next = {
   reactNative: (await latest('https://registry.npmjs.org/@pixlpush/react-native/latest', (j) => j.version)) ?? current.reactNative,
   flutter: (await latest('https://pub.dev/api/packages/pixlpush', (j) => j.latest?.version)) ?? current.flutter,
+  web: (await latest('https://registry.npmjs.org/@pixlpush/web/latest', (j) => j.version)) ?? current.web,
 };
 
 if (JSON.stringify(next) !== JSON.stringify(current)) writeFileSync(file, `${JSON.stringify(next, null, 2)}\n`);
-console.log(`SDK versions: react-native ${next.reactNative}, flutter ${next.flutter}`);
+console.log(`SDK versions: react-native ${next.reactNative}, flutter ${next.flutter}, web ${next.web}`);

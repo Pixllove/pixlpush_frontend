@@ -425,8 +425,12 @@ export interface AudienceGroupSchema {
 }
 
 /** PATCH /projects/:projectId. Omitted keys are left unchanged. */
+/** Where a Project sends push: websites (Web Push, no setup) and/or mobile apps (Firebase). */
+export type ProjectPlatform = 'web' | 'mobile';
+
 export interface UpdateProjectInput {
   name?: string;
+  platforms?: ProjectPlatform[];
   logoUrl?: string | null;
   description?: string | null;
   environment?: ProjectEnvironment;
@@ -435,12 +439,17 @@ export interface UpdateProjectInput {
 /** GET /projects/:id/firebase. Credentials themselves are never returned. */
 export interface FirebaseSettings {
   status: "not_configured" | "connected" | "error";
+  platforms?: ProjectPlatform[];
+  /** Every chosen platform can send (mobile: Firebase connected; web: always). */
+  pushReady?: boolean;
   firebaseProjectId: string | null;
   clientEmail: string | null;
   lastError?: string | null;
   validatedAt?: string | null;
   /** Active device push tokens registered by the SDK for this Project. */
   activeTokens?: number;
+  /** Websites: set up automatically by the web SDK, no Firebase needed. */
+  webPush?: { enabled: boolean; enabledAt: string | null; activeBrowsers: number };
 }
 
 export interface SdkKey {

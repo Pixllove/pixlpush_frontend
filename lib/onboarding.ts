@@ -1,5 +1,8 @@
+import type { FirebaseSettings, ProjectPlatform } from '@/types/project';
+
 export type OnboardingState = {
   projectName: string;
+  platforms: ProjectPlatform[];
   websiteUrl: string;
   androidAppUrl: string;
   iosAppUrl: string;
@@ -12,12 +15,20 @@ export type OnboardingState = {
 };
 
 export const initialOnboardingState: OnboardingState = {
-  projectName: '', websiteUrl: '', androidAppUrl: '', iosAppUrl: '', channels: [], domain: '', firebaseChecklist: [], currentStep: 1, completed: [], skipped: false,
+  projectName: '', platforms: ['mobile'], websiteUrl: '', androidAppUrl: '', iosAppUrl: '', channels: [], domain: '', firebaseChecklist: [], currentStep: 1, completed: [], skipped: false,
 };
 
 const ONBOARDING_STEP_COUNT = 6;
 
-/** Counts resolved setup steps. Firebase is required for every Project. */
+/** Same rule as the backend: mobile needs a connected Firebase, web needs no setup. */
+export const isPushReady = (platforms: ProjectPlatform[] | undefined, firebaseStatus: string | undefined) =>
+  !(platforms ?? ['mobile']).includes('mobile') || firebaseStatus === 'connected';
+
+/** The backend's answer, falling back to the old rule for an older API. */
+export const pushReadyOf = (firebase: FirebaseSettings | undefined) =>
+  firebase?.pushReady ?? firebase?.status === 'connected';
+
+/** Counts resolved setup steps. Step 5 (push) depends on the Project's platforms. */
 export function onboardingCompletedCount(
   state: Pick<OnboardingState, 'channels' | 'completed'>,
   firebaseConnected = false,

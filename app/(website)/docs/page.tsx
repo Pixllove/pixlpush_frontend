@@ -6,6 +6,7 @@ import BoltRounded from "@mui/icons-material/BoltRounded";
 import BuildCircleOutlined from "@mui/icons-material/BuildCircleOutlined";
 import MenuBookRounded from "@mui/icons-material/MenuBookRounded";
 import KeyRounded from "@mui/icons-material/KeyRounded";
+import LanguageRounded from "@mui/icons-material/LanguageRounded";
 import NotificationsActiveOutlined from "@mui/icons-material/NotificationsActiveOutlined";
 import PhoneAndroidRounded from "@mui/icons-material/PhoneAndroidRounded";
 import ShieldOutlined from "@mui/icons-material/ShieldOutlined";
@@ -18,7 +19,7 @@ import { guideHref, platforms } from "@/components/docs/registry";
 
 export const metadata: Metadata = {
   title: "Developer docs | PixlPush",
-  description: "Integrate PixlPush in React Native, Expo and Flutter: identify users, track events and attribute push notification opens.",
+  description: "Integrate PixlPush in websites, React Native, Expo and Flutter: identify users, track events and attribute push notification opens.",
 };
 
 const hero = `import PixlPush from "@pixlpush/react-native";
@@ -47,6 +48,7 @@ const cards = [
   { href: rn("firebase"), icon: <NotificationsActiveOutlined />, title: "Firebase & push setup", description: "Every file and key push needs, step by step." },
   { href: rn("sdk-keys"), icon: <KeyRounded />, title: "SDK keys", description: "Create, rotate, revoke, delete." },
   { href: rn("reference"), icon: <ApiRounded />, title: "API reference", description: "Every method and error code." },
+  { href: guideHref("/docs", "web", "quickstart"), icon: <LanguageRounded />, title: "Web SDK", description: "Websites in any framework, with Web Push and no Firebase." },
   { href: guideHref("/docs", "flutter", "quickstart"), icon: <PhoneAndroidRounded />, title: "Flutter SDK", description: "Flutter setup, Firebase push and automatic open attribution." },
   { href: rn("security"), icon: <ShieldOutlined />, title: "Security", description: "What is public and what never ships." },
   { href: rn("troubleshooting"), icon: <BuildCircleOutlined />, title: "Troubleshooting", description: "Symptoms, causes and fixes." },
@@ -60,9 +62,10 @@ export default function DocsHome() {
       <Box>
         <Typography component="p" sx={{ color: tokens.accent, fontSize: "var(--fs-12)", fontWeight: 600, letterSpacing: "var(--ls-overline)", textTransform: "uppercase" }}>PixlPush developer docs</Typography>
         <Typography component="h1" sx={{ mt: 1.5, color: tokens.text, fontSize: { xs: "var(--fs-32)", md: "var(--fs-48)" }, fontWeight: 600, lineHeight: 1.08, letterSpacing: "-0.035em" }}>Integrate PixlPush in your app.</Typography>
-        <Typography sx={{ mt: 2, maxWidth: 480, color: tokens.textSecondary, fontSize: { xs: "var(--fs-16)", md: "var(--fs-18)" }, lineHeight: 1.65 }}>Identify users, track product events, keep data flowing offline, and attribute every push notification — with the React Native, Expo and Flutter SDKs.</Typography>
+        <Typography sx={{ mt: 2, maxWidth: 480, color: tokens.textSecondary, fontSize: { xs: "var(--fs-16)", md: "var(--fs-18)" }, lineHeight: 1.65 }}>Identify users, track product events, keep data flowing offline, and attribute every push notification — with the Web, React Native, Expo and Flutter SDKs.</Typography>
         <Stack direction={{ xs: "column", sm: "row" }} gap={1.5} sx={{ mt: 4, "& .MuiButton-root": { whiteSpace: "nowrap" } }}>
-          <LinkButton href={rn("quickstart")} variant="contained" size="large">Start the quickstart</LinkButton>
+          <LinkButton href={rn("quickstart")} variant="contained" size="large">Mobile app quickstart</LinkButton>
+          <LinkButton href={guideHref("/docs", "web", "quickstart")} variant="outlined" size="large">Website quickstart</LinkButton>
         </Stack>
       </Box>
       <Box sx={{ minWidth: 0 }}><CodeBlock code={hero} filename="App.tsx" /></Box>
@@ -93,7 +96,7 @@ export default function DocsHome() {
       <Stack component="ul" sx={{ m: 0, mt: 3, p: 0, listStyle: "none", border: `1px solid ${tokens.border}`, borderRadius: 2 }}>
         {platforms.map((platform, index) => <Stack component="li" key={platform.id} direction="row" alignItems="center" gap={2} sx={{ px: 2, minHeight: 56, borderTop: index ? `1px solid ${tokens.border}` : 0 }}>
           {platform.status === "available"
-            ? <LinkBox href={rn()} sx={{ flex: 1, py: 1.5, color: tokens.text, fontWeight: 600, fontSize: "var(--fs-14)", textDecoration: "none", "&:hover": { color: tokens.accent } }}>{platform.label} <Box component="span" sx={{ color: tokens.textSecondary, fontWeight: 400 }}>— {platform.description}</Box></LinkBox>
+            ? <LinkBox href={guideHref("/docs", platform.id)} sx={{ flex: 1, py: 1.5, color: tokens.text, fontWeight: 600, fontSize: "var(--fs-14)", textDecoration: "none", "&:hover": { color: tokens.accent } }}>{platform.label} <Box component="span" sx={{ color: tokens.textSecondary, fontWeight: 400 }}>— {platform.description}</Box></LinkBox>
             : <Typography sx={{ flex: 1, color: tokens.textSecondary, fontSize: "var(--fs-14)" }}>{platform.label}</Typography>}
           <Box component="span" sx={{ px: 1, py: .25, borderRadius: 999, fontSize: "var(--fs-12)", fontWeight: 500, bgcolor: platform.status === "available" ? tokens.successSoft : tokens.subtle, color: platform.status === "available" ? tokens.success : tokens.textSecondary, whiteSpace: "nowrap" }}>{platform.status === "available" ? `v${platform.version}` : "Coming soon"}</Box>
         </Stack>)}
