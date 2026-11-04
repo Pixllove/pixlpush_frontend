@@ -1008,9 +1008,15 @@ export default function EmailWorkspace() {
       setItems((current) =>
         current.filter((entry) => entry.id !== deleteTarget.id),
       );
+      if (active?.id === deleteTarget.id) {
+        setActive(null);
+        setView("list");
+      }
       setDeleteTarget(null);
-      setToast({ message: "Email deleted successfully.", severity: "success" });
+      setToast({ message: deleteTarget.kind === "templates" ? "Template deleted successfully." : "Email deleted successfully.", severity: "success" });
       queryClient.invalidateQueries({ queryKey: ["email"] });
+      queryClient.invalidateQueries({ queryKey: ["projects", activeProject.id, "journey-email-templates"] });
+      queryClient.invalidateQueries({ queryKey: ["projects", activeProject.id, "journey-email-template-details"] });
     } catch (cause) {
       setToast({
         message:
@@ -1273,7 +1279,9 @@ export default function EmailWorkspace() {
         loading={actionLoading}
         onConfirm={confirmRemove}
         title="Are you sure you want to delete this email?"
-        description="This email and its saved content will be permanently removed."
+        description={deleteTarget?.kind === "templates"
+          ? "This template will be hidden from your workspace. Existing journeys and sends keep their content, and platform admins retain its details."
+          : "This email and its saved content will be permanently removed."}
       />
       <Toast
         message={toast?.message ?? null}

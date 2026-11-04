@@ -40,11 +40,11 @@ import SearchField from "./SearchField";
 import PremiumWorkspaceTabs from "./PremiumWorkspaceTabs";
 import { formatUserDateTime } from "@/lib/timezone";
 
-type JourneyStatus = "Running" | "Draft" | "Paused" | "Scheduled";
+type JourneyStatus = "Running" | "Draft" | "Paused" | "Scheduled" | "Stopped";
 type JourneyRow = {
   id: string;
   name: string;
-  status: JourneyStatus | "Archived";
+  status: JourneyStatus;
   type: string;
   started: string;
   completed: string;
@@ -59,7 +59,7 @@ const statusLabel: Record<JourneyDisplayStatus, JourneyRow["status"]> = {
   scheduled: "Scheduled",
   draft: "Draft",
   paused: "Paused",
-  archived: "Archived",
+  stopped: "Stopped",
 };
 const when = (value: string | null) => formatUserDateTime(value);
 const toRow = (journey: JourneyListItem): JourneyRow => ({
@@ -218,15 +218,11 @@ export default function JourneyWorkspace() {
     row.status === "Running" ||
     row.status === "Scheduled" ||
     row.status === "Paused";
-  /** The backend deletes drafts and stopped journeys only, so one that ran is stopped (archived) first. */
+  /** A running or paused journey is stopped before it can be hidden. */
   const remove = (row: JourneyRow) =>
     act(
       `delete-${row.id}`,
-      async () => {
-        if (row.status !== "Draft" && row.status !== "Archived")
-          await journeysApi.action(projectId!, row.id, "archive");
-        await journeysApi.remove(projectId!, row.id);
-      },
+      async () => journeysApi.remove(projectId!, row.id),
       "Journey deleted",
     );
   const columns: DataTableColumn<JourneyRow>[] = [
@@ -471,7 +467,7 @@ export default function JourneyWorkspace() {
         }}
         ariaLabel="Journey status views"
         options={(
-          ["All", "Running", "Draft", "Paused", "Scheduled"] as const
+          ["All", "Running", "Draft", "Paused", "Scheduled", "Stopped"] as const
         ).map((item) => ({
           value: item,
           label: item,
@@ -559,9 +555,9 @@ export default function JourneyWorkspace() {
         description={
           toDelete &&
           toDelete.status !== "Draft" &&
-          toDelete.status !== "Archived"
-            ? "This journey is stopped for everyone in it and then deleted. This cannot be undone."
-            : "This cannot be undone."
+          toDelete.status !== "Stopped"
+            ? "This journey will be stopped and hidden from your workspace. Platform admins will retain its details and history."
+            : "This journey will be hidden from your workspace. Platform admins will retain its details and history."
         }
       />
       <Toast

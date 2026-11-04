@@ -76,6 +76,7 @@ import {
 type Option = {
   id: string;
   name: string;
+  deletedAt?: string | null;
   title?: string;
   body?: string;
   subject?: string;
@@ -209,6 +210,20 @@ export default function JourneyBuilder() {
         .filter((id): id is string => Boolean(id)),
     ),
   );
+  const pushTemplateIds = Array.from(
+    new Set(
+      [
+        ...blocks,
+        ...Object.values(branches).flatMap((branch) => [
+          ...branch.yes,
+          ...branch.no,
+        ]),
+      ]
+        .filter((block) => block.type === "notification")
+        .map((block) => settings[block.id]?.template)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  );
   const emailTemplateDetails = useQuery({
     queryKey: [
       "projects",
@@ -218,7 +233,7 @@ export default function JourneyBuilder() {
     ],
     queryFn: async () => {
       const details = await Promise.all(
-        emailTemplateIds.map((id) => emailApi.templates.get(projectId!, id)),
+        emailTemplateIds.map((id) => emailApi.templates.get(projectId!, id, true)),
       );
       return Object.fromEntries(
         details.map((template) => [template.id, template]),
@@ -227,17 +242,40 @@ export default function JourneyBuilder() {
     enabled: Boolean(projectId && emailTemplateIds.length),
     staleTime: 60_000,
   });
+  const pushTemplateDetails = useQuery({
+    queryKey: ["projects", projectId, "journey-push-template-details", pushTemplateIds],
+    queryFn: async () => {
+      const details = await Promise.all(
+        pushTemplateIds.map((id) => pushApi.templates.get(projectId!, id, true)),
+      );
+      return Object.fromEntries(details.map((template) => [template.id, template]));
+    },
+    enabled: Boolean(projectId && pushTemplateIds.length),
+    staleTime: 60_000,
+  });
   const listedEmailTemplates = emailTemplates.data?.items ?? [];
-  const detailedEmailTemplates = listedEmailTemplates.map((template) =>
-    emailTemplateDetails.data?.[template.id]
-      ? { ...template, ...emailTemplateDetails.data[template.id] }
-      : template,
-  );
+  const listedPushTemplates = pushTemplates.data?.items ?? [];
+  const detailedEmailTemplates = [
+    ...listedEmailTemplates.map((template) =>
+      emailTemplateDetails.data?.[template.id]
+        ? { ...template, ...emailTemplateDetails.data[template.id] }
+        : template,
+    ),
+    ...Object.values(emailTemplateDetails.data ?? {}).filter(
+      (template) => !listedEmailTemplates.some((listed) => listed.id === template.id),
+    ),
+  ];
+  const detailedPushTemplates = [
+    ...listedPushTemplates,
+    ...Object.values(pushTemplateDetails.data ?? {}).filter(
+      (template) => !listedPushTemplates.some((listed) => listed.id === template.id),
+    ),
+  ];
   const choices: Choices = {
     segments: segments.data ?? [],
     groups: groups.data ?? [],
     emailTemplates: detailedEmailTemplates,
-    pushTemplates: pushTemplates.data?.items ?? [],
+    pushTemplates: detailedPushTemplates,
   };
   const builderLoading = Boolean(
     journeyId &&
@@ -248,7 +286,8 @@ export default function JourneyBuilder() {
       groups.isLoading ||
       emailTemplates.isLoading ||
       pushTemplates.isLoading ||
-      (emailTemplateIds.length > 0 && emailTemplateDetails.isLoading)),
+      (emailTemplateIds.length > 0 && emailTemplateDetails.isLoading) ||
+      (pushTemplateIds.length > 0 && pushTemplateDetails.isLoading)),
   );
   const notify = (message: string) => {
     setToast(message);
@@ -335,14 +374,14 @@ export default function JourneyBuilder() {
       setStatus("Running");
       notify("Journey resumed");
     });
-  /** Stop = archive (ends it for good). Delete removes it; a journey that ever ran is archived first, as the backend requires. */
+  /** Stop a live journey; delete hides drafts or already stopped journeys. */
   const stopOrDelete = () =>
     run(async () => {
       setStopOpen(false);
       if (journeyId) {
-        if (status !== "Draft")
+        if (status === "Running" || status === "Paused")
           await journeysApi.action(projectId!, journeyId, "archive");
-        if (status !== "Running")
+        else
           await journeysApi.remove(projectId!, journeyId);
       }
       router.push("/dashboard/journeys");
@@ -514,7 +553,7 @@ export default function JourneyBuilder() {
             <Button
               startIcon={<SaveRounded />}
               variant="contained"
-              disabled={busy}
+              disabled={busy || status === "Stopped"}
               onClick={saveDraft}
             >
               Save draft
@@ -551,15 +590,26 @@ export default function JourneyBuilder() {
               </>
             )}{" "}
             {status === "Paused" && (
-              <Button
-                startIcon={<PlayArrowRounded />}
-                color="success"
-                variant="contained"
-                disabled={busy}
-                onClick={resume}
-              >
-                Resume
-              </Button>
+              <>
+                <Button
+                  startIcon={<PlayArrowRounded />}
+                  color="success"
+                  variant="contained"
+                  disabled={busy}
+                  onClick={resume}
+                >
+                  Resume
+                </Button>
+                <Button
+                  startIcon={<StopCircleRounded />}
+                  color="error"
+                  variant="contained"
+                  disabled={busy}
+                  onClick={() => setStopOpen(true)}
+                >
+                  Stop journey
+                </Button>
+              </>
             )}
             <Button
               startIcon={<DeleteOutlineRounded />}
@@ -652,12 +702,13 @@ export default function JourneyBuilder() {
         fullWidth
       >
         <DialogTitle>
-          {status === "Running" ? "Stop this journey?" : "Delete this journey?"}
+          {status === "Running" || status === "Paused" ? "Stop this journey?" : "Delete this journey?"}
         </DialogTitle>
         <DialogContent>
           <Typography color="text.secondary">
-            This action cannot be undone. Your journey data will be preserved,
-            but you will need to create a new journey to run it again.
+            {status === "Running" || status === "Paused"
+              ? "This stops the journey for everyone. Its details and history remain available to platform admins."
+              : "This journey will be hidden from your workspace. Platform admins will retain its details and history."}
           </Typography>
         </DialogContent>
         <DialogActions>
@@ -668,7 +719,7 @@ export default function JourneyBuilder() {
             disabled={busy}
             onClick={stopOrDelete}
           >
-            {status === "Running" ? "Stop journey" : "Delete journey"}
+            {status === "Running" || status === "Paused" ? "Stop journey" : "Delete journey"}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1544,7 +1595,7 @@ function EmailSettings({
       >
         {templates.map((item) => (
           <MenuItem key={item.id} value={item.id}>
-            {item.name}
+            {item.deletedAt ? `${item.name} (deleted; existing journey)` : item.name}
           </MenuItem>
         ))}
       </PanelSelect>
@@ -1569,7 +1620,7 @@ function NotificationSettings({
       >
         {templates.map((item) => (
           <MenuItem key={item.id} value={item.id}>
-            {item.name}
+            {item.deletedAt ? `${item.name} (deleted; existing journey)` : item.name}
           </MenuItem>
         ))}
       </PanelSelect>

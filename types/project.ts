@@ -605,7 +605,7 @@ export interface SavedCard extends BillingPaymentMethod {
 }
 
 /** Journey Automations: mirrors the backend's /journeys contract (see backend.md). */
-export type JourneyDisplayStatus = "running" | "scheduled" | "draft" | "paused" | "archived";
+export type JourneyDisplayStatus = "running" | "scheduled" | "draft" | "paused" | "stopped";
 
 /** One step as the API stores it. `meta` is the builder's own settings, returned unchanged. */
 export interface JourneyStep {

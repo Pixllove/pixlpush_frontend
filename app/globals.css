@@ -5453,6 +5453,10 @@ a {
   color: #8b6470;
   background: #f3e9ed;
 }
+.journey-status.stopped {
+  color: #6b6378;
+  background: #eeebf2;
+}
 .journey-builder-canvas {
   min-height: calc(100vh - 78px);
   padding: 30px 20px 80px;
@@ -12185,7 +12189,8 @@ html[data-email-editor] body::before {
   color: #c2410c !important;
   background: #ffedd5 !important;
 }
-.journey-status-chip.archived {
+.journey-status-chip.archived,
+.journey-status-chip.stopped {
   color: #6b6378 !important;
   background: #eeebf2 !important;
 }
@@ -15476,7 +15481,8 @@ html:has(.dashboard-app)::-webkit-scrollbar {
 }
 .paused-chip,
 .neutral-chip,
-.journey-status-chip.archived {
+.journey-status-chip.archived,
+.journey-status-chip.stopped {
   color: var(--pp-text-2) !important;
   background: var(--pp-subtle) !important;
 }

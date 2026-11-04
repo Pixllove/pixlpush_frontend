@@ -200,7 +200,8 @@ export interface EmailTemplate {
   /** Drag & drop builder state; the editor reopens from this, not from the HTML. */
   design?: Record<string, unknown> | null;
   category?: string;
-  status?: string;
+  status?: "active" | "deleted";
+  deletedAt?: string | null;
   createdAt: string;
   updatedAt: string;
   sends?: number;
@@ -353,9 +354,9 @@ export const emailApi = {
         `/email-templates?${query.toString()}`,
       );
     },
-    get: (projectId: string, templateId: string) =>
+    get: (projectId: string, templateId: string, includeDeleted = false) =>
       authRequest<EmailTemplate>(
-        at(projectId, `/email-templates/${encodeURIComponent(templateId)}`),
+        at(projectId, `/email-templates/${encodeURIComponent(templateId)}${includeDeleted ? "?includeDeleted=true" : ""}`),
         undefined,
         BASE,
       ),
@@ -525,7 +526,7 @@ export const journeysApi = {
   /** A running journey accepts name changes only (409 JOURNEY_ACTIVE for trigger, audience or steps). */
   update: (projectId: string, journeyId: string, input: Partial<JourneyInput>) =>
     authRequest<Journey>(at(projectId, journeyPath(journeyId)), input, BASE, "PATCH"),
-  /** Draft or archived only. */
+  /** Soft-deletes any journey; active journeys are stopped before hiding. */
   remove: (projectId: string, journeyId: string) =>
     authRequest<void>(at(projectId, journeyPath(journeyId)), {}, BASE, "DELETE"),
   /** activate (draft → live), pause, resume, archive (stops for good), duplicate (new draft copy). */
@@ -1038,7 +1039,7 @@ export interface PushTemplate {
   translations?: Record<string, PushTranslation> | null;
   category: "template" | "push_notification";
   campaignOnly?: boolean;
-  status: "active";
+  status: "active" | "deleted";
   deletedAt?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -1144,9 +1145,9 @@ export const pushApi = {
         `/push-templates?${query.toString()}`,
       );
     },
-    get: (projectId: string, templateId: string) =>
+    get: (projectId: string, templateId: string, includeDeleted = false) =>
       authRequest<PushTemplate>(
-        at(projectId, `/push-templates/${encodeURIComponent(templateId)}`),
+        at(projectId, `/push-templates/${encodeURIComponent(templateId)}${includeDeleted ? "?includeDeleted=true" : ""}`),
         undefined,
         BASE,
       ),

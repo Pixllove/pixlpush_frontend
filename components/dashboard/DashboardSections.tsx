@@ -2236,6 +2236,10 @@ function PushSection() {
         severity: "success",
       });
       queryClient.invalidateQueries({ queryKey: ["push"] });
+      if (active?.id) {
+        queryClient.invalidateQueries({ queryKey: ["projects", active.id, "journey-push-templates"] });
+        queryClient.invalidateQueries({ queryKey: ["projects", active.id, "journey-push-template-details"] });
+      }
     },
     onError: (cause: Error) =>
       setToast({
@@ -2645,6 +2649,10 @@ function PushSection() {
           if (deleteTarget)
             actionMutation.mutate({ kind: "remove", id: deleteTarget.id });
         }}
+        title={`Delete "${deleteTarget?.name ?? "item"}"?`}
+        description={tab === "templates"
+          ? "This template will be hidden from your workspace. Existing journeys and sends keep their content, and platform admins retain its details."
+          : "This item will be deleted from your workspace."}
       />
       <Toast
         message={toast?.message ?? null}

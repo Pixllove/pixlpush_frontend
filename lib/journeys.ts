@@ -15,7 +15,7 @@ export type EntranceConfig = { lifecycle: string; audience: string; allUsers: bo
 export type Branches = Record<string, { yes: Block[]; no: Block[] }>;
 /** What the settings panel of each block holds, keyed by block id. */
 export type BlockSettings = Record<string, Record<string, string>>;
-export type BuilderStatus = "Draft" | "Running" | "Paused";
+export type BuilderStatus = "Draft" | "Running" | "Paused" | "Stopped";
 
 export interface BuilderState {
   name: string;
@@ -193,7 +193,14 @@ export function fromJourney(journey: Journey): BuilderState & { status: BuilderS
   const audience = journey.audience ?? {};
   return {
     name: journey.name,
-    status: journey.status === "active" ? "Running" : journey.status === "draft" ? "Draft" : "Paused",
+    status:
+      journey.status === "active"
+        ? "Running"
+        : journey.status === "draft"
+          ? "Draft"
+          : journey.status === "archived"
+            ? "Stopped"
+            : "Paused",
     entranceConfig: { allUsers: Boolean(audience.allUsers), lifecycle: audience.lifecycleSegmentIds?.[0] ?? "", audience: audience.audienceGroupIds?.[0] ?? "" },
     blocks,
     branches,
@@ -206,6 +213,7 @@ const ERRORS: Record<string, string> = {
   INSUFFICIENT_ROLE: "You do not have permission to change journeys in this project.",
   JOURNEY_ACTIVE: "Pause the journey before changing its trigger, audience or steps.",
   JOURNEY_ARCHIVED: "This journey was stopped and can no longer be edited.",
+  JOURNEY_STOPPED: "This journey was stopped and can no longer be edited.",
   JOURNEY_NOT_DELETABLE: "Stop the journey before deleting it.",
   JOURNEY_CHANGED: "The journey changed meanwhile. Reload and try again.",
   NETWORK_ERROR: "Cannot reach the server. Check your connection.",
