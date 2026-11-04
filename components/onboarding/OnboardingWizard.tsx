@@ -13,6 +13,7 @@ import {
   FormControlLabel, IconButton, LinearProgress, Paper, Stack, TextField, Typography,
 } from '@mui/material';
 import { initialOnboardingState, isPushReady, type OnboardingState } from '@/lib/onboarding';
+import { toggleProjectPlatform } from '@/lib/project-platforms';
 import type { ProjectPlatform } from '@/types/project';
 import { authApi, authKeys } from '@/lib/auth/api';
 import { firebaseApi, onboardingApi, projectApi, projectKeys } from '@/lib/projects/api';
@@ -209,8 +210,8 @@ export default function OnboardingWizard() {
   const togglePlatform = (id: ProjectPlatform) => {
     localUserChange.current = true;
     setState((previous) => {
-      // One platform per Project: picking one replaces the other.
-      return { ...previous, platforms: [id], skipped: false };
+      const platforms = toggleProjectPlatform(previous.platforms, id);
+      return platforms === previous.platforms ? previous : { ...previous, platforms, skipped: false };
     });
   };
   const toggleChannel = (id: string) => {
@@ -350,8 +351,8 @@ export default function OnboardingWizard() {
               <div className="onboarding-question"><Typography className="onboarding-eyebrow">STEP {String(currentStep).padStart(2, '0')} · {steps[currentStep - 1][0].toUpperCase()}</Typography><Typography variant="h4" className="onboarding-question-title">{heading}</Typography>
                 {currentStep === 1 && <TextField autoFocus fullWidth label="Project name" placeholder="e.g. Northstar Mobile" value={state.projectName} onChange={(e) => patch({ projectName: e.target.value })} helperText="You can change this any time." />}
                 {currentStep === 2 && <div className="onboarding-product-links">
-                  <div className="onboarding-product-section-heading"><span className="onboarding-product-section-icon"><AutoAwesomeRounded /></span><span><strong>What are you building?</strong><small>Choose one. You can change this later in Project settings.</small></span></div>
-                  <div className="onboarding-channel-grid">{platformOptions.map(({ id, title, detail, icon: Icon }) => <button key={id} type="button" role="radio" aria-checked={state.platforms.includes(id)} className={`onboarding-channel${state.platforms.includes(id) ? ' selected' : ''}`} onClick={() => togglePlatform(id)}><span className="onboarding-channel-icon"><Icon /></span><span><strong>{title}</strong><small>{detail}</small></span>{state.platforms.includes(id) && <CheckRounded className="onboarding-channel-check"/>}</button>)}</div>
+                  <div className="onboarding-product-section-heading"><span className="onboarding-product-section-icon"><AutoAwesomeRounded /></span><span><strong>What are you building?</strong><small>Select Website, Mobile, or both. You can change this later in Project settings.</small></span></div>
+                  <div className="onboarding-channel-grid">{platformOptions.map(({ id, title, detail, icon: Icon }) => <button key={id} type="button" role="checkbox" aria-checked={state.platforms.includes(id)} className={`onboarding-channel${state.platforms.includes(id) ? ' selected' : ''}`} onClick={() => togglePlatform(id)}><span className="onboarding-channel-icon"><Icon /></span><span><strong>{title}</strong><small>{detail}</small></span>{state.platforms.includes(id) && <CheckRounded className="onboarding-channel-check"/>}</button>)}</div>
                   <div className="onboarding-product-section-heading"><span className="onboarding-product-section-icon"><LanguageRounded /></span><span><strong>Website</strong><small>Start with your public product website</small></span></div>
                   <TextField fullWidth label="Website link" placeholder="https://yourproduct.com" value={state.websiteUrl} onChange={(e) => updateWebsiteUrl(e.target.value)} />
                   <Button className="onboarding-scan-button" variant="outlined" disabled={!state.websiteUrl.trim() || appLinkScanState === 'checking'} onClick={checkForAppLinks} startIcon={appLinkScanState === 'checking' ? <AutoAwesomeRounded className="onboarding-scan-icon" /> : <SearchRounded />}>

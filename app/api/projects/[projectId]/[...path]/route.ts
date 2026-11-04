@@ -15,6 +15,7 @@ const ALLOWED = [
   "members",
   "users",
   "events",
+  "event-catalog",
   "lifecycle-segments",
   // The commit carries `emailConsentConfirmed` in its JSON body.
   "user-imports",

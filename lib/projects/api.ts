@@ -41,6 +41,7 @@ import type {
   LifecycleSegmentSchema,
   Project,
   ProjectDetail,
+  ProjectEventCatalogEntry,
   ProjectMember,
   SdkKey,
   UpdateProjectInput,
@@ -774,6 +775,22 @@ export const usersApi = {
 };
 
 export const eventsApi = {
+  listCatalog: (
+    projectId: string,
+    platform: "web" | "mobile",
+    params: { search?: string; limit?: number } = {},
+  ) => {
+    const query = new URLSearchParams({
+      platform,
+      limit: String(params.limit ?? 200),
+    });
+    if (params.search) query.set("search", params.search);
+    return authRequest<{ events: ProjectEventCatalogEntry[] }>(
+      at(projectId, `/event-catalog?${query.toString()}`),
+      undefined,
+      BASE,
+    );
+  },
   listForUser: (
     projectId: string,
     userId: string,

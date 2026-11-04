@@ -5174,19 +5174,15 @@ a {
   justify-content: center;
 }
 .journey-add-popover {
-  position: absolute;
-  z-index: 8;
-  top: 50%;
-  left: 42px;
-  width: 360px;
-  max-height: calc(100vh - 180px);
+  width: min(360px, calc(100vw - 32px));
+  max-height: min(680px, calc(100dvh - 32px));
   overflow-y: auto;
+  box-sizing: border-box;
   padding: 18px;
   border: 1px solid #e2e8f1;
   border-radius: 8px;
   background: #fff;
   box-shadow: 0 22px 42px rgba(39, 56, 79, 0.2);
-  transform: translateY(-20px);
 }
 .journey-add-popover > .MuiStack:first-child .MuiTypography-root {
   font-size: 16px;
@@ -5236,6 +5232,12 @@ a {
 }
 .journey-add-popover-option.notification .journey-add-popover-icon {
   background: #2d66e8;
+}
+.journey-add-popover-option.web_notification .journey-add-popover-icon {
+  background: #2d66e8;
+}
+.journey-add-popover-option.event .journey-add-popover-icon {
+  background: #20a967;
 }
 .journey-add-popover-option.wait .journey-add-popover-icon {
   background: #8551ec;
@@ -5676,10 +5678,8 @@ a {
     width: min(92vw, 340px);
   }
   .journey-add-popover {
-    top: 48px;
-    left: 50%;
     width: min(360px, calc(100vw - 32px));
-    transform: translateX(-50%);
+    max-height: calc(100dvh - 24px);
   }
   .journey-create-art {
     min-height: 250px;

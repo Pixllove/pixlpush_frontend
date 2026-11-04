@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ProjectPlatform } from '@/types/project';
+import { toggleProjectPlatform } from '@/lib/project-platforms';
 import { CheckCircleRounded, CloudUploadRounded, LanguageRounded, PhoneIphoneRounded, ErrorOutlineRounded, LockRounded, RadioButtonUncheckedRounded, WarningAmberRounded } from '@mui/icons-material';
 import { Alert, Box, Button, ButtonBase, Card, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Typography } from '@mui/material';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
@@ -18,17 +19,18 @@ export default function FirebasePanel() {
   const { query, upload, verify, disconnect, platforms: savePlatforms } = useFirebaseSettings(active?.id);
   const config = query.data;
   const queryClient = useQueryClient();
-  const platforms = config?.platforms ?? ['mobile'];
-  const hasWeb = platforms.includes('web');
-  const hasMobile = platforms.includes('mobile');
-  // Choices are a draft until "Save settings"; the sections below follow the saved value.
+  const platforms: ProjectPlatform[] = config?.platforms ?? ['mobile'];
+  // Choices stay a draft until saved, but the setup sections follow the draft
+  // so selecting Mobile immediately reveals Firebase configuration.
   const [draft, setDraft] = useState<ProjectPlatform[] | null>(null);
   const [saved, setSaved] = useState(false);
   const selection = draft ?? platforms;
+  const hasWeb = selection.includes('web');
+  const hasMobile = selection.includes('mobile');
   const dirty = draft !== null && [...draft].sort().join() !== [...platforms].sort().join();
   const togglePlatform = (id: ProjectPlatform) => {
     setSaved(false);
-    setDraft([id]); // one platform per Project
+    setDraft((current) => toggleProjectPlatform(current ?? platforms, id));
   };
   const savePlatformChoice = async () => {
     if (!draft?.length) return;
@@ -102,7 +104,7 @@ export default function FirebasePanel() {
     <Stack gap={2.5}>
       <Box>
         <Typography variant="h3">Push setup</Typography>
-        <Typography color="text.secondary" fontSize="var(--fs-12)">Each project is either a website (Web Push, no Firebase) or a mobile app (React Native or Flutter, via Firebase).</Typography>
+        <Typography color="text.secondary" fontSize="var(--fs-12)">Choose Website, Mobile, or both. Website push uses Web Push; mobile push uses Firebase Cloud Messaging.</Typography>
       </Box>
 
       {query.isError && <Alert severity="error">{query.error.message}</Alert>}
@@ -110,12 +112,12 @@ export default function FirebasePanel() {
 
       <Card className="saas-card">
         <Typography fontWeight={600}>What does {appName} use?</Typography>
-        <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: .5 }}>Choose one. Only the setup you need is shown below.</Typography>
+        <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: .5 }}>Select every platform used by this project. The matching setup appears below.</Typography>
         <Stack direction={{ xs: 'column', sm: 'row' }} gap={1.5} sx={{ mt: 2 }}>
           {([['web', 'Website', 'React, Next.js, Vue, Angular, any site. No Firebase needed.', LanguageRounded], ['mobile', 'Mobile app', 'React Native or Flutter. Needs your Firebase project.', PhoneIphoneRounded]] as const).map(([id, title, detail, Icon]) => {
             const selected = selection.includes(id);
             return (
-              <ButtonBase key={id} disabled={!canEdit || savePlatforms.isPending || !config} onClick={() => togglePlatform(id)} role="radio" aria-checked={selected}
+              <ButtonBase key={id} disabled={!canEdit || savePlatforms.isPending || !config || (selected && selection.length === 1)} onClick={() => togglePlatform(id)} role="checkbox" aria-checked={selected}
                 sx={{ flex: 1, justifyContent: 'flex-start', textAlign: 'left', gap: 1.5, p: 1.75, borderRadius: 2, border: '1px solid', borderColor: selected ? 'primary.main' : 'divider', bgcolor: selected ? 'rgba(99,57,214,.06)' : 'transparent' }}>
                 <Icon color={selected ? 'primary' : 'disabled'} />
                 <Box sx={{ flex: 1 }}>

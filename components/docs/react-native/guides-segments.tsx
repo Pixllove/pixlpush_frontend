@@ -9,7 +9,7 @@ const howSegmentsWork = <Callout tone="note" title="How lifecycle segments decid
 
 const createSteps = (event: string, name: string) => [
   <>Open <LinkBox href="/dashboard/users" sx={{ color: "inherit" }}><b>Users</b></LinkBox> → <b>Lifecycle segments</b> tab → <b>Create segment</b>.</>,
-  <><b>Select events</b>: search for <code>{event}</code>. Events your app already sent are under <b>Tracked events</b>; names it hasn’t sent yet are under <b>Suggested events</b> (the segment then starts empty and fills as events arrive).</>,
+  <>Choose the <b>Mobile App</b> SDK, then select <code>{event}</code>. The list contains events already received from that SDK. If this event is not listed yet, add the tracking call shown in this guide and send it once before creating the segment.</>,
   <><b>Add segment details</b>: enter <b>Segment name</b> “{name}” and a short description.</>,
   <>Click <b>Create segment</b>.</>,
 ];
@@ -19,6 +19,9 @@ export function EngagementSegment({ base }: GuideProps) {
     <Section id="goal" title="What you’ll build">
       <Body>A lifecycle segment of people who have used your app, built from events the SDK already records — no extra tracking code. You then use it as the audience of a return-engagement journey.</Body>
       {howSegmentsWork}
+      <Callout tone="note" title="Event name ideas">
+        For product actions, common names include <code>onboarding_started</code>, <code>onboarding_completed</code>, <code>paywall_viewed</code>, <code>checkout_started</code>, <code>purchase_completed</code>, and <code>subscription_canceled</code>. Track only the actions that fit your app. They appear in the segment picker after this SDK sends them.
+      </Callout>
     </Section>
 
     <Step id="events" number={1} title="Check the events">
@@ -87,8 +90,8 @@ export function onPurchaseConfirmed(purchase: { transactionId: string; plan: str
     </Step>
 
     <Step id="segments" number={2} title="Create the segments in order">
-      <Body><b>First</b>, the buyers. Select both events — a user matches if they performed either.</Body>
-      <List ordered items={createSteps("purchase_completed", "Paid Customer").map((item, i) => i === 1 ? <><b>Select events</b>: add <code>purchase_completed</code> and <code>subscription_started</code>.</> : item)} />
+      <Body><b>First</b>, the buyers. Select <code>purchase_completed</code>; add <code>subscription_started</code> too only if your app sends that event. A user matches if they performed either.</Body>
+      <List ordered items={createSteps("purchase_completed", "Paid Customer")} />
       <Body><b>Then</b>, the drop-off segment:</Body>
       <List ordered items={createSteps("paywall_viewed", "Paywall drop-off")} />
       <DataTable code={false} headers={["User did", "Ends up in"]} rows={[

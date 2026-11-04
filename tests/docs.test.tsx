@@ -32,7 +32,7 @@ describe('platform registry', () => {
   it('builds base-aware URLs so a new platform needs no routing changes', () => {
     expect(guideHref('/docs', 'react-native')).toBe('/docs/react-native');
     expect(guideHref('/dashboard/integrations', 'react-native', 'push', 'tokens')).toBe('/dashboard/integrations/react-native/push#tokens');
-    expect(availablePlatforms.map((p) => p.id)).toEqual(['react-native', 'flutter']);
+    expect(availablePlatforms.map((p) => p.id)).toEqual(['react-native', 'flutter', 'web']);
   });
 
   it('registers every Flutter guide renderer and section', () => {
@@ -98,7 +98,7 @@ describe('backend URL flow', () => {
     expect(configOptions.map(([name]) => name)).not.toContain('apiBaseUrl');
     const Install = reactNativeGuides.installation;
     render(<Install base="/docs" />);
-    expect(screen.getByText(/The SDK key decides where data goes/)).toBeInTheDocument();
+    expect(screen.getByText(/decides which project the data belongs/)).toBeInTheDocument();
     for (const pre of document.querySelectorAll('pre')) expect(pre.textContent).not.toContain('apiBaseUrl');
   });
 });

@@ -83,6 +83,7 @@ import { projectContext } from "@/lib/projects";
 import {
   audienceGroupsApi,
   emailApi,
+  eventsApi,
   lifecycleSegmentsApi,
   pushApi,
   userStatsApi,
@@ -690,6 +691,7 @@ export function UsersSection() {
   );
   const [createGroupOpen, setCreateGroupOpen] = useState(false);
   const [createSegmentOpen, setCreateSegmentOpen] = useState(false);
+  const [segmentSdk, setSegmentSdk] = useState<"web" | "mobile">();
   const [importUsersOpen, setImportUsersOpen] = useState(false);
   const queryClient = useQueryClient();
   const [userSearch, setUserSearch] = useState("");
@@ -725,10 +727,10 @@ export function UsersSection() {
     queryFn: () => lifecycleSegmentsApi.list(active!.id),
     enabled: Boolean(active?.id),
   });
-  const segmentSchemaQuery = useQuery({
-    queryKey: ["projects", "lifecycle-segments", active?.id, "schema"],
-    queryFn: () => lifecycleSegmentsApi.schema(active!.id),
-    enabled: Boolean(active?.id && createSegmentOpen),
+  const segmentEventsQuery = useQuery({
+    queryKey: ["projects", "events", "catalog", active?.id, segmentSdk],
+    queryFn: () => eventsApi.listCatalog(active!.id, segmentSdk!),
+    enabled: Boolean(active?.id && createSegmentOpen && segmentSdk),
   });
   const groupsQuery = useQuery({
     queryKey: ["projects", "audience-groups", active?.id],
@@ -784,6 +786,7 @@ export function UsersSection() {
         queryKey: ["projects", "lifecycle-segments", active?.id],
       });
       setCreateSegmentOpen(false);
+      setSegmentSdk(undefined);
       router.push(`/dashboard/users/segments/${segment.id}?tab=segments`);
     },
   });
@@ -1568,14 +1571,20 @@ export function UsersSection() {
       <LifecycleSegmentCreateDialog
         open={createSegmentOpen}
         onClose={() => {
-          if (!createSegment.isPending) setCreateSegmentOpen(false);
+          if (!createSegment.isPending) {
+            setCreateSegmentOpen(false);
+            setSegmentSdk(undefined);
+          }
         }}
+        selectedSdk={segmentSdk}
+        onSdkSelect={setSegmentSdk}
         onCreate={(input) => createSegment.mutate(input)}
-        schema={segmentSchemaQuery.data}
+        events={segmentEventsQuery.data?.events}
+        eventsLoading={segmentEventsQuery.isPending || segmentEventsQuery.isFetching}
         loading={createSegment.isPending}
         error={
-          segmentSchemaQuery.isError
-            ? "Could not load tracked events for this project."
+          segmentEventsQuery.isError
+            ? `Could not load ${segmentSdk === "web" ? "Web Push" : "Mobile App"} SDK events.`
             : createSegment.isError
               ? ((createSegment.error as { message?: string })?.message ??
                 "Could not create the lifecycle segment.")

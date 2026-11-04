@@ -6,7 +6,7 @@ import type { Journey, JourneyInput, JourneyStep } from "@/types/project";
  * one flat, ordered list of steps with forward jumps. This module converts between the two; nothing here
  * touches React or the network.
  */
-export type BlockType = "entrance" | "email" | "notification" | "wait" | "condition" | "specific_time" | "repeat_journey" | "exit";
+export type BlockType = "entrance" | "email" | "notification" | "web_notification" | "wait" | "condition" | "event" | "specific_time" | "repeat_journey" | "exit";
 /** The counters a card shows, as GET /journeys/:id reports them (the Entrance card uses `entered` / `unreachable`). */
 export type BlockStats = { waiting?: number; completed?: number; exitedEarly?: number; sent?: number; opened?: number; clicked?: number; paused?: number; deleted?: number; entered?: number; unreachable?: number };
 export type Block = { id: string; type: BlockType; title: string; description: string; sourceType?: BlockType; stats?: BlockStats };
@@ -30,28 +30,86 @@ export const ENTRANCE: Block = { id: "entrance", type: "entrance", title: "Entra
 export const EXIT: Block = { id: "exit", type: "exit", title: "Exit", description: "Exit rules: Subscriber has completed this journey · Re-entry rules: Enter once" };
 
 /** The condition a rule sentence of the settings panel stands for. `negative` flips the Yes/No branches. */
-const ENGAGEMENT: Record<string, { action: "email_opened" | "email_clicked" | "push_opened"; negative: boolean }> = {
+const ENGAGEMENT: Record<string, { action: "email_opened" | "email_clicked" | "push_opened"; negative: boolean; channel?: "mobile" | "web" }> = {
   "Email was opened": { action: "email_opened", negative: false },
   "Email was not opened": { action: "email_opened", negative: true },
   "Link in email was clicked": { action: "email_clicked", negative: false },
   "Link in email was not clicked": { action: "email_clicked", negative: true },
-  // the backend records a push tap as "opened"
-  "Push notification was clicked": { action: "push_opened", negative: false },
-  "Push notification was not clicked": { action: "push_opened", negative: true },
+  // Both native and browser SDKs report taps through the same job-open route.
+  "Mobile push notification was clicked": { action: "push_opened", channel: "mobile", negative: false },
+  "Mobile push notification was not clicked": { action: "push_opened", channel: "mobile", negative: true },
+  "Web push notification was clicked": { action: "push_opened", channel: "web", negative: false },
+  "Web push notification was not clicked": { action: "push_opened", channel: "web", negative: true },
+  // Read older journeys without changing their saved rule text.
+  "Push notification was clicked": { action: "push_opened", channel: "mobile", negative: false },
+  "Push notification was not clicked": { action: "push_opened", channel: "mobile", negative: true },
 };
 const hasEmail = { field: "email", operator: "exists" };
-const hasPush = { field: "pushEnabled", operator: "equals", value: true };
+const hasFcm = { field: "fcmToken", operator: "available" };
+const noFcm = { field: "fcmToken", operator: "not_available" };
+const hasWebPush = { field: "webPush", operator: "available" };
+const noWebPush = { field: "webPush", operator: "not_available" };
 const REACHABILITY: Record<string, Record<string, unknown>> = {
-  "Email and FCM token available": { operator: "AND", conditions: [hasEmail, hasPush] },
+  "Email + FCM token available": { operator: "AND", conditions: [hasEmail, hasFcm] },
+  "Email + Web Push available": { operator: "AND", conditions: [hasEmail, hasWebPush] },
   "Email available": hasEmail,
   "Email not available": { field: "email", operator: "not_exists" },
-  "FCM token available": hasPush,
-  "FCM token not available": { field: "pushEnabled", operator: "equals", value: false },
+  "FCM token available": hasFcm,
+  "FCM token not available": noFcm,
+  "Web Push available": hasWebPush,
+  "Web Push not available": noWebPush,
+};
+const REACHABILITY_ALIASES: Record<string, string> = {
+  "Email and FCM token available": "Email + FCM token available",
 };
 export const conditionOptions = (sourceType?: BlockType) =>
-  sourceType === "notification" ? ["Push notification was clicked", "Push notification was not clicked"]
+  sourceType === "notification" ? ["Mobile push notification was clicked", "Mobile push notification was not clicked"]
+    : sourceType === "web_notification" ? ["Web push notification was clicked", "Web push notification was not clicked"]
     : sourceType === "email" ? ["Email was opened", "Email was not opened", "Link in email was clicked", "Link in email was not clicked"]
-    : Object.keys(REACHABILITY);
+    : [
+      "Email + FCM token available",
+      "Email + Web Push available",
+      "Email available",
+      "Email not available",
+      "FCM token available",
+      "FCM token not available",
+      "Web Push available",
+      "Web Push not available",
+    ];
+
+/** Convert pre-channel-specific push labels to the matching message block's label. */
+export function normalizeConditionRule(rule: string, sourceType?: BlockType) {
+  if (rule === "Push notification was clicked" || rule === "Push notification was not clicked") {
+    const action = rule.endsWith("not clicked") ? "not clicked" : "clicked";
+    return `${sourceType === "web_notification" ? "Web" : "Mobile"} push notification was ${action}`;
+  }
+  return REACHABILITY_ALIASES[rule] ?? rule;
+}
+
+/** Merge tracked events while retaining the SDK source(s) that have sent each name. */
+export function mergeJourneyEventOptions(
+  webEvents: Array<{ name: string }>,
+  mobileEvents: Array<{ name: string }>,
+) {
+  const sources = new Map<string, Set<"Web SDK" | "Mobile SDK">>();
+  for (const event of webEvents) {
+    const found = sources.get(event.name) ?? new Set();
+    found.add("Web SDK");
+    sources.set(event.name, found);
+  }
+  for (const event of mobileEvents) {
+    const found = sources.get(event.name) ?? new Set();
+    found.add("Mobile SDK");
+    sources.set(event.name, found);
+  }
+  return [...sources.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([name, eventSources]) => ({
+      id: name,
+      name,
+      sources: (["Web SDK", "Mobile SDK"] as const).filter((source) => eventSources.has(source)),
+    }));
+}
 
 /** The exit rule each "Exit when" row of the settings panel switches on. Two rows may share one backend rule. */
 const EXIT_RULES: Record<string, string> = {
@@ -82,9 +140,12 @@ export function toJourneyInput(state: BuilderState): JourneyInput {
   const emit = (block: Block, previous: Block | undefined, branch?: { of: string; side: "yes" | "no" }): JourneyStep => {
     const own = settings[block.id] ?? {};
     const meta = { block: block.type, title: block.title, settings: own, ...(branch ? { branchOf: branch.of, branch: branch.side } : {}) };
-    if (block.type === "email" || block.type === "notification") {
+    if (block.type === "email" || block.type === "notification" || block.type === "web_notification") {
       if (!own.template) throw new JourneyIncomplete(`Select a template for "${block.title}".`);
-      if (block.type === "notification") return { type: "push", key: block.id, templateId: own.template, meta };
+      if (block.type !== "email") {
+        const channel = block.type === "web_notification" ? "web" : own.deliveryChannel === "all" ? undefined : "mobile";
+        return { type: "push", key: block.id, templateId: own.template, ...(channel ? { channel } : {}), meta };
+      }
       // Subject and sender name replace the template's only when the user typed them.
       return { type: "email", key: block.id, templateId: own.template, ...(own.subject?.trim() ? { subject: own.subject.trim() } : {}), ...(own.fromName?.trim() ? { fromName: own.fromName.trim() } : {}), meta };
     }
@@ -103,15 +164,28 @@ export function toJourneyInput(state: BuilderState): JourneyInput {
     }
     if (block.type === "exit") return { type: "exit", key: block.id, meta };
 
+    if (block.type === "event") {
+      const event = own.event?.trim();
+      if (!event) throw new JourneyIncomplete(`Choose an event for "${block.title}".`);
+      return {
+        type: "condition",
+        key: block.id,
+        condition: { kind: "event", eventName: event },
+        meta,
+      };
+    }
+
     // condition
     const options = conditionOptions(previous?.type);
-    const rules = (conditionValues[block.id]?.length ? conditionValues[block.id] : [options[0]]).filter((rule) => options.includes(rule));
+    const rules = (conditionValues[block.id]?.length ? conditionValues[block.id] : [options[0]])
+      .map((rule) => normalizeConditionRule(rule, previous?.type))
+      .filter((rule) => options.includes(rule));
     const chosen = rules.length ? rules : [options[0]];
     const operator = own.match === "all" ? "AND" : "OR";
-    const afterMessage = previous && (previous.type === "email" || previous.type === "notification");
+    const afterMessage = previous && (previous.type === "email" || previous.type === "notification" || previous.type === "web_notification");
     // After a message: did the user open / click it (or not). Otherwise: can the user be reached.
     const checks = afterMessage
-      ? chosen.map((rule) => ({ kind: "engagement", stepKey: previous!.id, action: ENGAGEMENT[rule].action, waitHours: 0, ...(ENGAGEMENT[rule].negative ? { negate: true } : {}) }))
+      ? chosen.map((rule) => ({ kind: "engagement", stepKey: previous!.id, action: ENGAGEMENT[rule].action, ...(ENGAGEMENT[rule].channel ? { channel: ENGAGEMENT[rule].channel } : {}), waitHours: 0, ...(ENGAGEMENT[rule].negative ? { negate: true } : {}) }))
       : [{ kind: "audience", rules: { operator, conditions: chosen.map((rule) => REACHABILITY[rule] ?? hasEmail) } }];
     return { type: "condition", key: block.id, condition: checks.length === 1 ? checks[0] : { kind: "group", operator, conditions: checks }, meta: { ...meta, rules: chosen } };
   };
@@ -122,7 +196,7 @@ export function toJourneyInput(state: BuilderState): JourneyInput {
     const drawnAbove = state.blocks[state.blocks.indexOf(block) - 1];
     const step = emit(block, drawnAbove);
     steps.push(step);
-    if (block.type !== "condition") return;
+    if (block.type !== "condition" && block.type !== "event") return;
 
     const after = root[index + 1]?.id ?? null; // where both branches meet again
     const yes = runnable(state.branches[block.id]?.yes ?? []);
@@ -172,7 +246,8 @@ export function fromJourney(journey: Journey): BuilderState & { status: BuilderS
   for (const step of journey.steps) {
     const meta = (step.meta ?? {}) as { block?: BlockType; title?: string; settings?: Record<string, string>; branchOf?: string; branch?: "yes" | "no"; rules?: string[] };
     const [type, title, description] = TITLES[step.type];
-    const block: Block = { id: step.key, type: meta.block ?? (step.type === "delay" && (step.time || step.until) ? "specific_time" : type), title: meta.title ?? title, description, stats: step.stats };
+    const blockType = meta.block ?? (step.type === "push" && step.channel === "web" ? "web_notification" : step.type === "delay" && (step.time || step.until) ? "specific_time" : type);
+    const block: Block = { id: step.key, type: blockType, title: meta.title ?? title, description: blockType === "event" ? "Branch subscribers based on a tracked event." : description, stats: step.stats };
     settings[block.id] = {
       ...(step.templateId ? { template: step.templateId } : {}),
       ...(step.type === "delay" && step.amount ? { amount: String(step.amount), unit: step.unit ?? "days" } : {}),
@@ -181,8 +256,11 @@ export function fromJourney(journey: Journey): BuilderState & { status: BuilderS
       ...(step.subject ? { subject: step.subject } : {}),
       ...(step.fromName ? { fromName: step.fromName } : {}),
       ...meta.settings,
+      ...(step.type === "push" && !step.channel
+        ? { deliveryChannel: blockType === "web_notification" ? "web" : "all" }
+        : {}),
     };
-    if (meta.rules?.length) conditionValues[block.id] = meta.rules;
+    if (meta.rules?.length) conditionValues[block.id] = meta.rules.map((rule) => REACHABILITY_ALIASES[rule] ?? rule);
     if (meta.branchOf && meta.branch) {
       branches[meta.branchOf] ??= { yes: [], no: [] };
       branches[meta.branchOf][meta.branch].push(block);

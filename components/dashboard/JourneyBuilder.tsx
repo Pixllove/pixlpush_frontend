@@ -10,6 +10,7 @@ import {
   CloseRounded,
   DeleteOutlineRounded,
   EmailRounded,
+  EventRounded,
   GroupRounded,
   MoreVertRounded,
   NotificationsActiveRounded,
@@ -38,6 +39,7 @@ import {
   IconButton,
   InputAdornment,
   MenuItem,
+  Popper,
   Radio,
   Select,
   Stack,
@@ -48,6 +50,7 @@ import {
 import {
   audienceGroupsApi,
   emailApi,
+  eventsApi,
   journeysApi,
   lifecycleSegmentsApi,
   pushApi,
@@ -61,6 +64,8 @@ import {
   ENTRANCE,
   EXIT,
   conditionOptions,
+  mergeJourneyEventOptions,
+  normalizeConditionRule,
   fromJourney,
   journeyError,
   toJourneyInput,
@@ -82,6 +87,7 @@ type Option = {
   subject?: string;
   text?: string | null;
   html?: string | null;
+  sources?: string[];
 };
 /** The real choices of this Project for the settings panel's dropdowns. */
 type Choices = {
@@ -89,6 +95,7 @@ type Choices = {
   groups: Option[];
   emailTemplates: Option[];
   pushTemplates: Option[];
+  events: Option[];
 };
 type SettingProps = {
   values: Record<string, string>;
@@ -110,6 +117,12 @@ const blockOptions: Array<[BlockType, string, string, typeof EmailRounded]> = [
     "Send a push notification to subscribers.",
     NotificationsActiveRounded,
   ],
+  [
+    "web_notification",
+    "Web push notification",
+    "Send a web push notification to subscribers.",
+    NotificationsActiveRounded,
+  ],
   ["wait", "Wait", "Pause before the next step.", TimerRounded],
   [
     "condition",
@@ -117,6 +130,7 @@ const blockOptions: Array<[BlockType, string, string, typeof EmailRounded]> = [
     "Split subscribers into Yes and No paths.",
     SettingsRounded,
   ],
+  ["event", "Events", "Branch subscribers based on a tracked event.", EventRounded],
   [
     "specific_time",
     "Specific time",
@@ -167,6 +181,17 @@ export default function JourneyBuilder() {
       pushApi.templates.list(projectId!, { category: "template", limit: 100 }),
     ...listOptions,
   });
+  const journeyEvents = useQuery({
+    queryKey: ["projects", projectId, "journey-event-catalog"],
+    queryFn: async () => {
+      const [web, mobile] = await Promise.all([
+        eventsApi.listCatalog(projectId!, "web"),
+        eventsApi.listCatalog(projectId!, "mobile"),
+      ]);
+      return mergeJourneyEventOptions(web.events, mobile.events);
+    },
+    ...listOptions,
+  });
   const loaded = useQuery({
     queryKey: ["projects", projectId, "journeys", journeyId],
     queryFn: () => journeysApi.get(projectId!, journeyId!),
@@ -193,6 +218,29 @@ export default function JourneyBuilder() {
     setMetricPanel(open);
   };
   const [addTarget, setAddTarget] = useState<AddTarget | null>(null);
+  const [addAnchor, setAddAnchor] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    if (!addTarget) return;
+    const closeIfOutside = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest(".journey-add-popover, .journey-plus-wrap")) return;
+      setAddTarget(null);
+      setAddAnchor(null);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setAddTarget(null);
+        setAddAnchor(null);
+      }
+    };
+    document.addEventListener("pointerdown", closeIfOutside);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeIfOutside);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [addTarget]);
   const [stopOpen, setStopOpen] = useState(false);
   const [toast, setToast] = useState("");
   const [branches, setBranches] = useState<Branches>({});
@@ -219,7 +267,7 @@ export default function JourneyBuilder() {
           ...branch.no,
         ]),
       ]
-        .filter((block) => block.type === "notification")
+        .filter((block) => block.type === "notification" || block.type === "web_notification")
         .map((block) => settings[block.id]?.template)
         .filter((id): id is string => Boolean(id)),
     ),
@@ -276,6 +324,7 @@ export default function JourneyBuilder() {
     groups: groups.data ?? [],
     emailTemplates: detailedEmailTemplates,
     pushTemplates: detailedPushTemplates,
+    events: journeyEvents.data ?? [],
   };
   const builderLoading = Boolean(
     journeyId &&
@@ -405,7 +454,7 @@ export default function JourneyBuilder() {
       type,
       title,
       description,
-      sourceType: type === "condition" ? sourceType : undefined,
+      sourceType: type === "condition" || type === "event" ? sourceType : undefined,
     };
     if (addTarget?.scope === "branch")
       setBranches((items) => ({
@@ -427,9 +476,10 @@ export default function JourneyBuilder() {
         ...items.slice(index),
       ]);
     }
-    if (type === "condition")
+    if (type === "condition" || type === "event")
       setBranches((items) => ({ ...items, [block.id]: { yes: [], no: [] } }));
     setAddTarget(null);
+    setAddAnchor(null);
     setSelected(block);
   };
   const removeBlock = (id: string) => {
@@ -455,12 +505,19 @@ export default function JourneyBuilder() {
         ),
       },
     }));
-  const openAdd = (target: AddTarget) =>
-    setAddTarget((current) =>
-      current && JSON.stringify(current) === JSON.stringify(target)
-        ? null
-        : target,
-    );
+  const openAdd = (target: AddTarget, anchor: HTMLElement) => {
+    if (addTarget && JSON.stringify(addTarget) === JSON.stringify(target)) {
+      setAddTarget(null);
+      setAddAnchor(null);
+      return;
+    }
+    setAddTarget(target);
+    setAddAnchor(anchor);
+  };
+  const closeAdd = () => {
+    setAddTarget(null);
+    setAddAnchor(null);
+  };
   const isTarget = (target: AddTarget) =>
     Boolean(addTarget && JSON.stringify(addTarget) === JSON.stringify(target));
   const entranceDescription = entranceConfig.allUsers
@@ -471,7 +528,11 @@ export default function JourneyBuilder() {
         ? `Audience group: ${nameOf(choices.groups, entranceConfig.audience)}`
         : "Select a lifecycle segment, audience group, or all users";
   const conditionDescription = (block: Block) =>
-    conditionValues[block.id]?.[0] || block.description;
+    block.type === "event"
+      ? settings[block.id]?.event
+        ? `Tracked event: ${settings[block.id].event}`
+        : block.description
+      : conditionValues[block.id]?.[0] || block.description;
   const readableEmailBody = (template: Option) =>
     String(template.text || template.html || "")
       .replace(/<br\s*\/?>/gi, "\n")
@@ -496,7 +557,7 @@ export default function JourneyBuilder() {
       };
     }
     const template = (
-      block.type === "notification"
+      block.type === "notification" || block.type === "web_notification"
         ? choices.pushTemplates
         : block.type === "email"
           ? choices.emailTemplates
@@ -506,7 +567,7 @@ export default function JourneyBuilder() {
     return {
       ...block,
       description:
-        block.type === "notification"
+        block.type === "notification" || block.type === "web_notification"
           ? `Title: ${template.title ?? template.name}\nBody: ${template.body ?? ""}`
           : `Template name: ${template.name}\nSubject: ${settings[block.id]?.subject || template.subject || template.name}\nBody:\n${readableEmailBody(template) || "No email body added yet."}`,
     };
@@ -645,7 +706,7 @@ export default function JourneyBuilder() {
                   block={
                     block.type === "entrance"
                       ? { ...block, description: entranceDescription }
-                      : block.type === "condition"
+                      : block.type === "condition" || block.type === "event"
                         ? { ...block, description: conditionDescription(block) }
                         : describe(block)
                   }
@@ -654,15 +715,17 @@ export default function JourneyBuilder() {
                   onSelect={setSelected}
                   onRemove={removeBlock}
                 />
-                {block.type === "condition" ? (
+                {block.type === "condition" || block.type === "event" ? (
                   <ConditionBranches
                     describe={describe}
                     conditionId={block.id}
                     branches={branches[block.id] || { yes: [], no: [] }}
+                    anchorEl={addAnchor}
                     selectedId={selected?.id}
                     onSelect={setSelected}
                     onRemove={removeBranchBlock}
                     onOpenAdd={openAdd}
+                    onCloseAdd={closeAdd}
                     isTarget={isTarget}
                     addBlock={addBlock}
                   />
@@ -670,6 +733,8 @@ export default function JourneyBuilder() {
                   <PlusConnector
                     target={{ scope: "root", index: index + 1 }}
                     onOpen={openAdd}
+                    anchorEl={addAnchor}
+                    onClose={closeAdd}
                     isTarget={isTarget}
                     addBlock={addBlock}
                   />
@@ -738,23 +803,27 @@ export default function JourneyBuilder() {
 function PlusConnector({
   target,
   onOpen,
+  anchorEl,
+  onClose,
   isTarget,
   addBlock,
 }: {
   target: AddTarget;
-  onOpen: (target: AddTarget) => void;
+  onOpen: (target: AddTarget, anchor: HTMLElement) => void;
+  anchorEl: HTMLElement | null;
+  onClose: () => void;
   isTarget: (target: AddTarget) => boolean;
   addBlock: (type: BlockType, title: string, description: string) => void;
 }) {
   return (
     <Box className="journey-plus-wrap">
       <Box className="journey-plus-line">
-        <Button onClick={() => onOpen(target)} aria-label="Add journey step">
+        <Button onClick={(event) => onOpen(target, event.currentTarget)} aria-label="Add journey step">
           <AddRounded />
         </Button>
       </Box>
-      {isTarget(target) && (
-        <AddStepPopover onChoose={addBlock} onClose={() => onOpen(target)} />
+      {isTarget(target) && anchorEl && (
+        <AddStepPopover anchorEl={anchorEl} onChoose={addBlock} onClose={onClose} />
       )}
     </Box>
   );
@@ -763,20 +832,24 @@ function ConditionBranches({
   describe,
   conditionId,
   branches,
+  anchorEl,
   selectedId,
   onSelect,
   onRemove,
   onOpenAdd,
+  onCloseAdd,
   isTarget,
   addBlock,
 }: {
   describe: (block: Block) => Block;
   conditionId: string;
   branches: { yes: Block[]; no: Block[] };
+  anchorEl: HTMLElement | null;
   selectedId?: string;
   onSelect: (block: Block) => void;
   onRemove: (conditionId: string, branch: "yes" | "no", id: string) => void;
-  onOpenAdd: (target: AddTarget) => void;
+  onOpenAdd: (target: AddTarget, anchor: HTMLElement) => void;
+  onCloseAdd: () => void;
   isTarget: (target: AddTarget) => boolean;
   addBlock: (type: BlockType, title: string, description: string) => void;
 }) {
@@ -813,6 +886,8 @@ function ConditionBranches({
                 <PlusConnector
                   target={{ scope: "branch", conditionId, branch }}
                   onOpen={onOpenAdd}
+                  anchorEl={anchorEl}
+                  onClose={onCloseAdd}
                   isTarget={isTarget}
                   addBlock={addBlock}
                 />
@@ -822,6 +897,8 @@ function ConditionBranches({
               <PlusConnector
                 target={{ scope: "branch", conditionId, branch }}
                 onOpen={onOpenAdd}
+                anchorEl={anchorEl}
+                onClose={onCloseAdd}
                 isTarget={isTarget}
                 addBlock={addBlock}
               />
@@ -864,8 +941,10 @@ function JourneyBlock({
       ? CloseRounded
       : block.type === "email"
         ? EmailRounded
-        : block.type === "notification"
+          : block.type === "notification" || block.type === "web_notification"
           ? NotificationsActiveRounded
+            : block.type === "event"
+              ? EventRounded
           : block.type === "wait"
             ? TimerRounded
             : block.type === "specific_time"
@@ -958,7 +1037,7 @@ const CHIP: Record<string, { color: string; background: string }> = {
 };
 /** One sentence under the title, so nobody has to guess what the number counts. */
 function metricHelp(metric: JourneyUsersMetric, type: BlockType) {
-  const push = type === "notification";
+  const push = type === "notification" || type === "web_notification";
   const what = push ? "notification" : "email";
   return {
     entered: "Everyone who has started this journey.",
@@ -1175,9 +1254,9 @@ function BlockMetrics({
   const count: Record<string, number | string> = {
     Sent: stats.sent ?? 0,
     Opens: stats.opened ?? 0,
-    Clicks: (type === "notification" ? stats.opened : stats.clicked) ?? 0,
+    Clicks: (type === "notification" || type === "web_notification" ? stats.opened : stats.clicked) ?? 0,
     "Open rate": rate(stats.opened),
-    "Click rate": rate(type === "notification" ? stats.opened : stats.clicked),
+    "Click rate": rate(type === "notification" || type === "web_notification" ? stats.opened : stats.clicked),
     Waiting: stats.waiting ?? 0,
     "Users waiting": stats.waiting ?? 0,
     Completed: stats.completed ?? 0,
@@ -1197,6 +1276,11 @@ function BlockMetrics({
       ["Click rate", "purple"],
     ],
     notification: [
+      ["Sent", "purple"],
+      ["Clicks", "purple"],
+      ["Click rate", "purple"],
+    ],
+    web_notification: [
       ["Sent", "purple"],
       ["Clicks", "purple"],
       ["Click rate", "purple"],
@@ -1223,14 +1307,20 @@ function BlockMetrics({
       ["Deleted", "green"],
       ["Exited early", "green"],
     ],
+    web_notification: [
+      ["Paused", "green"],
+      ["Deleted", "green"],
+      ["Exited early", "green"],
+    ],
     repeat_journey: [["Users waiting", "green"]],
     exit: [
       ["Completed", "green"],
       ["Exited early", "green"],
     ],
     condition: [],
+    event: [],
   };
-  if (type === "condition")
+  if (type === "condition" || type === "event")
     return (
       <Stack
         direction="row"
@@ -1304,54 +1394,64 @@ function BlockMetrics({
   );
 }
 function AddStepPopover({
+  anchorEl,
   options,
   onChoose,
   onClose,
 }: {
+  anchorEl: HTMLElement;
   options?: typeof blockOptions;
   onChoose: (type: BlockType, title: string, description: string) => void;
   onClose: () => void;
 }) {
   const groups = [
-    ["SEND A MESSAGE", (options || blockOptions).slice(0, 2)],
-    ["ACTIONS", (options || blockOptions).slice(2)],
+    ["SEND A MESSAGE", (options || blockOptions).slice(0, 3)],
+    ["ACTIONS", (options || blockOptions).slice(3)],
   ] as const;
   return (
-    <Box
-      className="journey-add-popover"
-      onClick={(event) => event.stopPropagation()}
+    <Popper
+      open
+      anchorEl={anchorEl}
+      placement="right-start"
+      modifiers={[
+        { name: "flip", options: { padding: 16, fallbackPlacements: ["left-start", "bottom-start", "top-start"] } },
+        { name: "preventOverflow", options: { padding: 16, altAxis: true, tether: true } },
+      ]}
+      sx={{ zIndex: 1400 }}
     >
-      <Stack direction="row" justifyContent="space-between" alignItems="center">
-        <Typography fontWeight={600}>Add a step</Typography>
-        <IconButton size="small" onClick={onClose}>
-          <CloseRounded fontSize="small" />
-        </IconButton>
-      </Stack>
-      {groups.map(([label, items]) => (
-        <Box key={label} sx={{ mt: 1.5 }}>
-          <Typography className="journey-add-group-label">{label}</Typography>
-          <Stack gap={0.4}>
-            {items.map(([type, title, description, Icon]) => (
-              <Button
-                key={type}
-                className={`journey-add-popover-option ${type}`}
-                onClick={() => onChoose(type, title, description)}
-              >
-                <Box className="journey-add-popover-icon">
-                  <Icon />
-                </Box>
-                <Box sx={{ textAlign: "left" }}>
-                  <Typography fontWeight={600}>{title}</Typography>
-                  <Typography color="text.secondary" fontSize="var(--fs-12)">
-                    {description}
-                  </Typography>
-                </Box>
-              </Button>
-            ))}
-          </Stack>
-        </Box>
-      ))}
-    </Box>
+      <Box className="journey-add-popover" role="dialog" aria-label="Add a step">
+        <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Typography fontWeight={600}>Add a step</Typography>
+          <IconButton size="small" onClick={onClose}>
+            <CloseRounded fontSize="small" />
+          </IconButton>
+        </Stack>
+        {groups.map(([label, items]) => (
+          <Box key={label} sx={{ mt: 1.5 }}>
+            <Typography className="journey-add-group-label">{label}</Typography>
+            <Stack gap={0.4}>
+              {items.map(([type, title, description, Icon]) => (
+                <Button
+                  key={`${type}-${title}`}
+                  className={`journey-add-popover-option ${type}`}
+                  onClick={() => onChoose(type, title, description)}
+                >
+                  <Box className="journey-add-popover-icon">
+                    <Icon />
+                  </Box>
+                  <Box sx={{ textAlign: "left" }}>
+                    <Typography fontWeight={600}>{title}</Typography>
+                    <Typography color="text.secondary" fontSize="var(--fs-12)">
+                      {description}
+                    </Typography>
+                  </Box>
+                </Button>
+              ))}
+            </Stack>
+          </Box>
+        ))}
+      </Box>
+    </Popper>
   );
 }
 function SettingsPanel({
@@ -1413,12 +1513,14 @@ function SettingsPanel({
             set={set}
             templates={choices.emailTemplates}
           />
-        ) : block.type === "notification" ? (
+        ) : block.type === "notification" || block.type === "web_notification" ? (
           <NotificationSettings
             values={values}
             set={set}
             templates={choices.pushTemplates}
           />
+        ) : block.type === "event" ? (
+          <EventSettings values={values} set={set} events={choices.events} />
         ) : block.type === "wait" ? (
           <WaitSettings values={values} set={set} />
         ) : block.type === "specific_time" ? (
@@ -1627,6 +1729,33 @@ function NotificationSettings({
     </Stack>
   );
 }
+function EventSettings({ values, set, events }: SettingProps & { events: Option[] }) {
+  return (
+    <Stack gap={1.4}>
+      <PanelSelect
+        label="Event"
+        placeholder={events.length ? "Select a tracked event" : "No tracked events yet"}
+        value={values.event ?? ""}
+        onChange={pick(set, "event")}
+      >
+        {values.event && !events.some((event) => event.name === values.event) && (
+          <MenuItem value={values.event}>{values.event} (not recently tracked)</MenuItem>
+        )}
+        {events.map((event) => (
+          <MenuItem key={event.id} value={event.name}>
+            <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, width: "100%" }}>
+              <Typography component="span">{event.name}</Typography>
+              <Typography component="span" color="text.secondary" fontSize="var(--fs-11)">{event.sources?.join(" · ")}</Typography>
+            </Box>
+          </MenuItem>
+        ))}
+      </PanelSelect>
+      <Typography color="text.secondary" fontSize="var(--fs-12)">
+        Subscribers who performed this event after entering the journey continue on the Yes path.
+      </Typography>
+    </Stack>
+  );
+}
 const unitItems = [
   <MenuItem key="minutes" value="minutes">
     minute(s)
@@ -1720,7 +1849,7 @@ function ConditionSettings({
   setMatchMode: (mode: "any" | "all") => void;
 }) {
   const options = conditionOptions(sourceType);
-  const rules = values.length ? values : [options[0]];
+  const rules = values.length ? values.map((rule) => normalizeConditionRule(rule, sourceType)) : [options[0]];
   const choice = (mode: "any" | "all", title: string, description: string) => (
     <Box
       className={`journey-rule-choice ${matchMode === mode ? "active" : ""}`}

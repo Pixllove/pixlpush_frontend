@@ -4,14 +4,15 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import JourneyBuilder from '@/components/dashboard/JourneyBuilder';
 import JourneyWorkspace from '@/components/dashboard/JourneyWorkspace';
-import { audienceGroupsApi, emailApi, journeysApi, lifecycleSegmentsApi, pushApi } from '@/lib/projects/api';
-import { ENTRANCE, EXIT, fromJourney, toJourneyInput, type BuilderState } from '@/lib/journeys';
+import { audienceGroupsApi, emailApi, eventsApi, journeysApi, lifecycleSegmentsApi, pushApi } from '@/lib/projects/api';
+import { conditionOptions, ENTRANCE, EXIT, fromJourney, mergeJourneyEventOptions, toJourneyInput, type BuilderState } from '@/lib/journeys';
 import type { Journey, JourneyListItem } from '@/types/project';
 
 vi.mock('@/lib/projects/api', () => ({
   journeysApi: { list: vi.fn(), get: vi.fn(), create: vi.fn(), update: vi.fn(), remove: vi.fn(), action: vi.fn() },
   lifecycleSegmentsApi: { list: vi.fn() },
   audienceGroupsApi: { list: vi.fn() },
+  eventsApi: { listCatalog: vi.fn() },
   emailApi: { templates: { list: vi.fn() } },
   pushApi: { templates: { list: vi.fn() } },
 }));
@@ -38,6 +39,7 @@ beforeEach(() => {
   search = '';
   vi.mocked(lifecycleSegmentsApi.list).mockResolvedValue([{ id: 'seg1', name: 'New users' }] as never);
   vi.mocked(audienceGroupsApi.list).mockResolvedValue([{ id: 'grp1', name: 'At-risk customers' }] as never);
+  vi.mocked(eventsApi.listCatalog).mockImplementation(async (_projectId, platform) => ({ events: [{ name: platform === 'web' ? 'page_viewed' : 'app_opened', firstSeenAt: null, lastSeenAt: null, eventCount: 1, active: true, assignedSegment: null }] }) as never);
   vi.mocked(emailApi.templates.list).mockResolvedValue({ items: [{ id: 'tplMail', name: 'Welcome email', subject: 'Welcome aboard' }] } as never);
   vi.mocked(pushApi.templates.list).mockResolvedValue({ items: [{ id: 'tplPush', name: 'Welcome push', title: 'Hi there', body: 'Come back today' }] } as never);
 });
@@ -49,7 +51,7 @@ describe('builder ↔ API mapping', () => {
     expect(input.steps.map((step) => [step.key, step.type])).toEqual([['push1', 'push'], ['cond1', 'condition'], ['mail1', 'email'], ['wait1', 'delay'], ['rep1', 'repeat'], ['exit', 'exit']]);
     const condition = input.steps[1]!;
     // "was not clicked" is the same check turned round, so Yes stays Yes
-    expect(condition.condition).toEqual({ kind: 'engagement', stepKey: 'push1', action: 'push_opened', waitHours: 0, negate: true });
+    expect(condition.condition).toEqual({ kind: 'engagement', stepKey: 'push1', action: 'push_opened', channel: 'mobile', waitHours: 0, negate: true });
     expect([condition.onTrue, condition.onFalse]).toEqual(['mail1', 'wait1']);
     expect(input.steps[2]).toMatchObject({ templateId: 'tplMail', next: 'wait1', meta: { branchOf: 'cond1', branch: 'yes' } });
     expect(input.steps[3]).toMatchObject({ amount: 2, unit: 'hours' });
@@ -80,7 +82,29 @@ describe('builder ↔ API mapping', () => {
     s.branches = {};
     s.conditionValues = { cond1: ['Email available', 'FCM token not available'] };
     s.settings.cond1 = { match: 'all' };
-    expect(toJourneyInput(s).steps[0]!.condition).toEqual({ kind: 'audience', rules: { operator: 'AND', conditions: [{ field: 'email', operator: 'exists' }, { field: 'pushEnabled', operator: 'equals', value: false }] } });
+    expect(toJourneyInput(s).steps[0]!.condition).toEqual({ kind: 'audience', rules: { operator: 'AND', conditions: [{ field: 'email', operator: 'exists' }, { field: 'fcmToken', operator: 'not_available' }] } });
+  });
+
+  it('offers channel-specific clicked and not-clicked checks for both push blocks', () => {
+    expect(conditionOptions('notification')).toEqual(['Mobile push notification was clicked', 'Mobile push notification was not clicked']);
+    expect(conditionOptions('web_notification')).toEqual(['Web push notification was clicked', 'Web push notification was not clicked']);
+    const s = state();
+    s.blocks = [ENTRANCE, block('webPush', 'web_notification'), block('cond', 'condition'), EXIT];
+    s.branches = {};
+    s.settings = { webPush: { template: 'tplPush' } };
+    s.conditionValues = { cond: ['Web push notification was not clicked'] };
+    expect(toJourneyInput(s).steps[1]!.condition).toEqual({ kind: 'engagement', stepKey: 'webPush', action: 'push_opened', channel: 'web', waitHours: 0, negate: true });
+  });
+
+  it('merges all SDK event names and shows the SDK sources for each event', () => {
+    expect(mergeJourneyEventOptions(
+      [{ name: 'purchase_completed' }, { name: 'web_viewed' }],
+      [{ name: 'purchase_completed' }, { name: 'app_opened' }],
+    )).toEqual([
+      { id: 'app_opened', name: 'app_opened', sources: ['Mobile SDK'] },
+      { id: 'purchase_completed', name: 'purchase_completed', sources: ['Web SDK', 'Mobile SDK'] },
+      { id: 'web_viewed', name: 'web_viewed', sources: ['Web SDK'] },
+    ]);
   });
 
   it('refuses to save an incomplete journey with a sentence for the user', () => {
@@ -99,7 +123,7 @@ describe('builder ↔ API mapping', () => {
     expect(back.settings.rep1).toMatchObject({ count: '5', interval: '1', unit: 'days' });
     expect(back.branches.cond1!.yes.map((b) => b.id)).toEqual(['mail1']);
     expect(back.settings.push1).toMatchObject({ template: 'tplPush' });
-    expect(back.conditionValues.cond1).toEqual(['Push notification was not clicked']);
+    expect(back.conditionValues.cond1).toEqual(['Mobile push notification was not clicked']);
     expect(back.blocks[1]!.stats).toEqual({ sent: 4 });
   });
 });
@@ -142,7 +166,8 @@ describe('journey list', () => {
     const dialog = await screen.findByRole('dialog');
     await userEvent.click(within(dialog).getAllByRole('button').at(-1)!);
     await waitFor(() => expect(api.remove).toHaveBeenCalledWith('p1', 'j1'));
-    expect(api.action).toHaveBeenCalledWith('p1', 'j1', 'archive');
+    // The delete endpoint archives live journeys and cancels queued work atomically.
+    expect(api.action).not.toHaveBeenCalledWith('p1', 'j1', 'archive');
   });
 });
 
@@ -166,7 +191,7 @@ describe('journey builder', () => {
     expect(await screen.findByText('Lifecycle segment: New users')).toBeInTheDocument();
     // cards say what is sent and carry the backend's counts
     expect(await screen.findByText(/Title: Hi there\s+Body: Come back today/)).toBeInTheDocument();
-    expect(screen.getByText('Subject: Welcome aboard')).toBeInTheDocument();
+    expect(screen.getByText(/Subject: Welcome aboard/)).toBeInTheDocument();
     const counter = (card: string, label: string) => within(screen.getByText(card).closest('.journey-flow-block') as HTMLElement).getByText(label).querySelector('b')!.textContent;
     expect([counter('Entrance Trigger', 'Users entered'), counter('Entrance Trigger', 'Unreachable users')]).toEqual(['52', '6']);
     expect([counter('wait', 'Waiting'), counter('wait', 'Completed'), counter('wait', 'Exited early')]).toEqual(['7', '21', '4']);

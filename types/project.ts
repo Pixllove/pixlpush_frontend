@@ -353,13 +353,6 @@ export interface LifecycleSegmentSchemaEvent {
   assignedSegment: { id: string; name: string } | null;
 }
 
-export interface LifecycleSegmentRecommendedEvent {
-  name: string;
-  suggestedSegment?: string;
-  tracked: boolean;
-  assignedSegment: { id: string; name: string } | null;
-}
-
 export interface LifecycleSegmentSchema {
   logicalOperators: Array<"AND" | "OR">;
   condition: {
@@ -370,7 +363,15 @@ export interface LifecycleSegmentSchema {
   limits: { maxConditions: number };
   allowCustomEvent: boolean;
   events: LifecycleSegmentSchemaEvent[];
-  recommendedEvents?: LifecycleSegmentRecommendedEvent[];
+}
+
+export interface ProjectEventCatalogEntry {
+  name: string;
+  firstSeenAt: string | null;
+  lastSeenAt: string | null;
+  eventCount: number;
+  active: boolean;
+  assignedSegment: { id: string; name: string } | null;
 }
 
 export interface AudienceGroup {
@@ -612,6 +613,7 @@ export interface JourneyStep {
   id?: string;
   key: string;
   type: "push" | "email" | "delay" | "condition" | "repeat" | "exit";
+  channel?: "mobile" | "web";
   templateId?: string;
   /** Email steps: replace the template's subject / sender name. */
   subject?: string;

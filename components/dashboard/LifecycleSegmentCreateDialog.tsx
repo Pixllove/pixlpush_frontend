@@ -5,6 +5,8 @@ import {
   ArrowForwardRounded,
   CheckRounded,
   CloseRounded,
+  LanguageRounded,
+  PhoneIphoneRounded,
 } from "@mui/icons-material";
 import {
   Box,
@@ -27,20 +29,18 @@ import {
 import SearchOffRounded from "@mui/icons-material/SearchOffRounded";
 import EmptyState from "./EmptyState";
 import { useEffect, useMemo, useState } from "react";
-import type { LifecycleSegmentSchema } from "@/types/project";
+import type { ProjectEventCatalogEntry } from "@/types/project";
 import SearchField from "./SearchField";
 
-type EventOption = {
-  name: string;
-  group: string;
-  assigned?: string | null;
-  suggestedSegment?: string;
-};
+type EventOption = ProjectEventCatalogEntry;
 export default function LifecycleSegmentCreateDialog({
   open,
   onClose,
   onCreate,
-  schema,
+  events,
+  eventsLoading,
+  selectedSdk,
+  onSdkSelect,
   loading,
   error,
 }: {
@@ -51,7 +51,10 @@ export default function LifecycleSegmentCreateDialog({
     description: string;
     events: string[];
   }) => void;
-  schema?: LifecycleSegmentSchema;
+  events?: ProjectEventCatalogEntry[];
+  eventsLoading?: boolean;
+  selectedSdk?: "web" | "mobile";
+  onSdkSelect: (sdk: "web" | "mobile") => void;
   loading?: boolean;
   error?: string;
 }) {
@@ -73,22 +76,7 @@ export default function LifecycleSegmentCreateDialog({
     }
   }, [open]);
 
-  const eventOptions = useMemo<EventOption[]>(() => {
-    const tracked = (schema?.events ?? []).map((item) => ({
-      name: item.name,
-      group: "Tracked events",
-      assigned: item.assignedSegment?.name ?? null,
-    }));
-    const trackedNames = new Set(tracked.map((item) => item.name));
-    const suggested = (schema?.recommendedEvents ?? []).filter((item) => !trackedNames.has(item.name)).map((item) => ({
-      name: item.name,
-      group: "Suggested events",
-      assigned: item.assignedSegment?.name ?? null,
-      suggestedSegment: item.suggestedSegment,
-    }));
-    // Both lists come from the API: this project's SDK events, then recommendations.
-    return [...tracked, ...suggested];
-  }, [schema]);
+  const eventOptions = useMemo<EventOption[]>(() => events ?? [], [events]);
   const visibleEvents = eventOptions.filter((option) =>
     option.name.toLowerCase().includes(search.trim().toLowerCase()),
   );
@@ -98,9 +86,9 @@ export default function LifecycleSegmentCreateDialog({
     (page - 1) * pageSize,
     page * pageSize,
   );
-  const schemaLoading = open && !schema && !error;
+  const eventListLoading = open && eventsLoading && !error;
   const toggleEvent = (option: EventOption) => {
-    if (option.assigned || loading) return;
+    if (option.assignedSegment || loading) return;
     setSelectedEvents((current) =>
       current.includes(option.name)
         ? current.filter((item) => item !== option.name)
@@ -129,8 +117,10 @@ export default function LifecycleSegmentCreateDialog({
         </Typography>
         <Typography color="text.secondary" fontSize="var(--fs-13)" sx={{ mt: 0.7 }}>
           {step === 0
-            ? "Choose the product events that define this lifecycle segment."
-            : "Name your segment and review the events that will qualify users."}
+            ? "Choose the SDK you want to build this lifecycle segment from."
+            : step === 1
+              ? "Choose events received from the selected SDK."
+              : "Name your segment and review the events that will qualify users."}
         </Typography>
         <IconButton
           onClick={close}
@@ -145,6 +135,46 @@ export default function LifecycleSegmentCreateDialog({
         {step === 0 ? (
           <Stack gap={2.5}>
             <Stack direction="row" gap={1} alignItems="center">
+              <Box sx={{ width: 30, height: 30, borderRadius: "50%", display: "grid", placeItems: "center", color: "#fff", bgcolor: "primary.main", fontWeight: 600 }}>1</Box>
+              <Box>
+                <Typography fontWeight={600}>Select SDK</Typography>
+                <Typography color="text.secondary" fontSize="var(--fs-12)">
+                  Select where the events you need are coming from.
+                </Typography>
+              </Box>
+            </Stack>
+            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 1.5 }}>
+              {([
+                ["web", "Web Push", "Website SDK events", LanguageRounded],
+                ["mobile", "Mobile App", "React Native or Flutter SDK events", PhoneIphoneRounded],
+              ] as const).map(([sdk, title, subtitle, Icon]) => {
+                const selected = selectedSdk === sdk;
+                return (
+                  <ListItemButton
+                    key={sdk}
+                    selected={selected}
+                    onClick={() => {
+                      onSdkSelect(sdk);
+                      setSelectedEvents([]);
+                      setSearch("");
+                      setPage(1);
+                    }}
+                    sx={{ minHeight: 104, border: "1px solid", borderColor: selected ? "primary.main" : "#e3dcef", borderRadius: 2, bgcolor: selected ? "#f1eaff" : "#fcfbff" }}
+                  >
+                    <Icon color={selected ? "primary" : "action"} sx={{ mr: 1.5 }} />
+                    <Box>
+                      <Typography fontWeight={600}>{title}</Typography>
+                      <Typography color="text.secondary" fontSize="var(--fs-12)">{subtitle}</Typography>
+                    </Box>
+                    {selected && <CheckRounded color="primary" sx={{ ml: "auto" }} />}
+                  </ListItemButton>
+                );
+              })}
+            </Box>
+          </Stack>
+        ) : step === 1 ? (
+          <Stack gap={2.5}>
+            <Stack direction="row" gap={1} alignItems="center">
               <Box
                 sx={{
                   width: 30,
@@ -157,7 +187,7 @@ export default function LifecycleSegmentCreateDialog({
                   fontWeight: 600,
                 }}
               >
-                1
+                2
               </Box>
               <Box>
                 <Typography fontWeight={600}>Select events</Typography>
@@ -166,6 +196,11 @@ export default function LifecycleSegmentCreateDialog({
                 </Typography>
               </Box>
             </Stack>
+            {error && (
+              <Typography color="error" fontSize="var(--fs-12)">
+                {error}
+              </Typography>
+            )}
             <SearchField value={search} onChange={(value) => { setSearch(value); setPage(1); }} placeholder="Search events" />
             <Box
               sx={{
@@ -175,7 +210,7 @@ export default function LifecycleSegmentCreateDialog({
                 bgcolor: "#fcfbff",
               }}
             >
-              {schemaLoading ? (
+              {eventListLoading ? (
                 <Box
                   sx={{
                     display: "grid",
@@ -208,7 +243,7 @@ export default function LifecycleSegmentCreateDialog({
                       <ListItemButton
                         key={option.name}
                         onClick={() => toggleEvent(option)}
-                        disabled={Boolean(option.assigned) || loading}
+                        disabled={Boolean(option.assignedSegment) || loading}
                         sx={{
                           minHeight: 78,
                           py: 1.1,
@@ -223,7 +258,7 @@ export default function LifecycleSegmentCreateDialog({
                       >
                         <Checkbox
                           checked={checked}
-                          disabled={Boolean(option.assigned) || loading}
+                          disabled={Boolean(option.assignedSegment) || loading}
                           onChange={() => toggleEvent(option)}
                           onClick={(event) => event.stopPropagation()}
                           sx={{ mr: 1 }}
@@ -237,12 +272,9 @@ export default function LifecycleSegmentCreateDialog({
                             fontSize="var(--fs-12)"
                             noWrap
                           >
-                            {option.assigned
-                              ? `Already assigned to ${option.assigned}`
-                              : option.group}
-                            {option.suggestedSegment
-                              ? ` · suggested for ${option.suggestedSegment}`
-                              : ""}
+                            {option.assignedSegment
+                              ? `Already assigned to ${option.assignedSegment.name}`
+                              : "Tracked events"}
                           </Typography>
                         </Box>
                         {checked && (
@@ -253,7 +285,12 @@ export default function LifecycleSegmentCreateDialog({
                   })}
                 </Box>
               ) : (
-                <EmptyState size="compact" icon={<SearchOffRounded />} title="No matching events found" description="Check the spelling or try a different search." />
+                <EmptyState
+                  size="compact"
+                  icon={<SearchOffRounded />}
+                  title={search ? "No matching events found" : "No events received yet"}
+                  description={search ? "Check the spelling or try a different search." : "Events sent by this SDK will appear here."}
+                />
               )}
             </Box>
             <Stack
@@ -294,7 +331,7 @@ export default function LifecycleSegmentCreateDialog({
                   fontWeight: 600,
                 }}
               >
-                2
+                3
               </Box>
               <Box>
                 <Typography fontWeight={600}>Add segment details</Typography>
@@ -366,7 +403,7 @@ export default function LifecycleSegmentCreateDialog({
         <Button
           startIcon={step === 0 ? undefined : <ArrowBackRounded />}
           variant={step === 0 ? "text" : "outlined"}
-          onClick={() => (step === 0 ? close() : setStep(0))}
+          onClick={() => (step === 0 ? close() : setStep(step - 1))}
           disabled={loading}
         >
           {step === 0 ? "Cancel" : "Back"}
@@ -376,6 +413,15 @@ export default function LifecycleSegmentCreateDialog({
             variant="contained"
             endIcon={<ArrowForwardRounded />}
             onClick={() => setStep(1)}
+            disabled={!selectedSdk || loading}
+          >
+            Next
+          </Button>
+        ) : step === 1 ? (
+          <Button
+            variant="contained"
+            endIcon={<ArrowForwardRounded />}
+            onClick={() => setStep(2)}
             disabled={selectedEvents.length === 0 || loading}
           >
             Next
