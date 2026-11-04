@@ -100,6 +100,7 @@ export function BillingSection() {
   const searchParams = useSearchParams();
   // Stripe sends the browser back with ?checkout=…; the pricing page sends ?plan=…&interval=….
   const checkout = searchParams.get("checkout");
+  const enterpriseCheckoutState = searchParams.get("enterprise");
   const creditCheckout = searchParams.get("credits");
   const wantedPlan = paidPlans.find((plan) => plan === searchParams.get("plan"));
 
@@ -130,7 +131,7 @@ export function BillingSection() {
     // subscription is re-read for a while after a checkout, and while a payment is still settling.
     refetchInterval: (query) => {
       const subscription = query.state.data?.subscription ?? null;
-      const waiting = isSettling(subscription) || (checkout === "success" && (subscription?.plan ?? "free") === "free");
+      const waiting = isSettling(subscription) || ((checkout === "success" || enterpriseCheckoutState === "success") && (subscription?.plan ?? "free") === "free");
       if (!waiting || polls.current >= MAX_POLLS) return false;
       polls.current += 1;
       return 3000;
@@ -177,6 +178,9 @@ export function BillingSection() {
     if (creditCheckout === "success") setNotice("Checkout completed. Credits will appear once Stripe confirms the payment; delayed payment methods may take longer.");
     else if (creditCheckout === "cancelled") setNotice("AI Credit checkout was cancelled. No purchase was completed.");
   }, [creditCheckout]);
+  useEffect(() => {
+    if (enterpriseCheckoutState === "success") setNotice("Payment received. Stripe is confirming your Enterprise subscription; your plan will update shortly.");
+  }, [enterpriseCheckoutState]);
   useEffect(() => { setProfile(subscriptionQuery.data?.billingContact ?? { email: "" }); }, [subscriptionQuery.data]);
   // The overview is drawn once, when everything it lays out has arrived. Showing it early made the plan block,
   // the usage grid and the plan options push each other around as each request landed.
