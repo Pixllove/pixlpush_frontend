@@ -241,7 +241,13 @@ export interface EndUser {
   lastActiveAt: string | null;
   createdAt: string;
   lifecycleSegment: { id: string; name: string } | null;
+  /** Deleted (deleteUser), logged out on every device (reset), or active. */
+  status?: EndUserStatus;
+  loggedOutAt?: string | null;
+  accountDeletedAt?: string | null;
 }
+
+export type EndUserStatus = "active" | "logged_out" | "deleted" | "anonymous";
 
 /** Per-user delivery performance from GET /users/:id. Rates are percentages. */
 export interface UserEngagement {
@@ -281,7 +287,7 @@ export interface UserProfile extends EndUser {
   deletedAt?: string | null;
   device?: Record<string, unknown> | null;
   push?: Record<string, unknown> | null;
-  installations?: Array<{ installationId: string; platform: string | null; osVersion?: string | null; appVersion?: string | null; lastActiveAt?: string | null }>;
+  installations?: Array<{ installationId: string; platform: string | null; osVersion?: string | null; appVersion?: string | null; deviceModel?: string | null; pushPermission?: string | null; lastActiveAt?: string | null }>;
   pushSubscriptions?: Array<{ id: string; provider: string; active: boolean; permission: string | null; lastSeenAt?: string | null }>;
   reachable?: boolean;
   audienceGroups?: Array<{ id: string; name: string }>;
@@ -567,8 +573,16 @@ export interface ImportPreview {
 
 /** GET /users/stats: header counts for the Users page. */
 export interface UserStats {
+  /** People (an app user id or an email), not deleted. */
   total: number;
+  /** Browsers and installs nobody is logged in on. */
+  anonymous?: number;
+  /** Accounts deleted through the SDK. */
+  deleted?: number;
+  /** People or anonymous visitors with an email or an active push subscription. */
   reachable: number;
+  /** The anonymous part of reachable: browsers that allowed push with nobody logged in. */
+  reachableAnonymous?: number;
   eventsToday: number;
   eventsYesterday: number;
 }

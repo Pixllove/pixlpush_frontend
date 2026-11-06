@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import ApiRounded from "@mui/icons-material/ApiRounded";
+import DataObjectRounded from "@mui/icons-material/DataObjectRounded";
+import WebRounded from "@mui/icons-material/WebRounded";
 import AutoAwesomeRounded from "@mui/icons-material/AutoAwesomeRounded";
 import ArrowForwardRounded from "@mui/icons-material/ArrowForwardRounded";
 import BoltRounded from "@mui/icons-material/BoltRounded";
@@ -19,7 +21,7 @@ import { guideHref, platforms } from "@/components/docs/registry";
 
 export const metadata: Metadata = {
   title: "Developer docs | PixlPush",
-  description: "Integrate PixlPush in websites, React Native, Expo and Flutter: identify users, track events and attribute push notification opens.",
+  description: "Integrate PixlPush in websites, WordPress, PHP, React Native, Expo and Flutter: identify users, track events and attribute push notification opens.",
 };
 
 const hero = `import PixlPush from "@pixlpush/react-native";
@@ -50,6 +52,8 @@ const cards = [
   { href: rn("reference"), icon: <ApiRounded />, title: "API reference", description: "Every method and error code." },
   { href: guideHref("/docs", "web", "quickstart"), icon: <LanguageRounded />, title: "Web SDK", description: "Websites in any framework, with Web Push and no Firebase." },
   { href: guideHref("/docs", "flutter", "quickstart"), icon: <PhoneAndroidRounded />, title: "Flutter SDK", description: "Flutter setup, Firebase push and automatic open attribution." },
+  { href: guideHref("/docs", "wordpress", "quickstart"), icon: <WebRounded />, title: "WordPress plugin", description: "Web Push, users and WooCommerce purchases, with no code." },
+  { href: guideHref("/docs", "php", "quickstart"), icon: <DataObjectRounded />, title: "PHP SDK", description: "Users and events from Laravel, Symfony or plain PHP." },
   { href: rn("security"), icon: <ShieldOutlined />, title: "Security", description: "What is public and what never ships." },
   { href: rn("troubleshooting"), icon: <BuildCircleOutlined />, title: "Troubleshooting", description: "Symptoms, causes and fixes." },
 ];
@@ -62,7 +66,7 @@ export default function DocsHome() {
       <Box>
         <Typography component="p" sx={{ color: tokens.accent, fontSize: "var(--fs-12)", fontWeight: 600, letterSpacing: "var(--ls-overline)", textTransform: "uppercase" }}>PixlPush developer docs</Typography>
         <Typography component="h1" sx={{ mt: 1.5, color: tokens.text, fontSize: { xs: "var(--fs-32)", md: "var(--fs-48)" }, fontWeight: 600, lineHeight: 1.08, letterSpacing: "-0.035em" }}>Integrate PixlPush in your app.</Typography>
-        <Typography sx={{ mt: 2, maxWidth: 480, color: tokens.textSecondary, fontSize: { xs: "var(--fs-16)", md: "var(--fs-18)" }, lineHeight: 1.65 }}>Identify users, track product events, keep data flowing offline, and attribute every push notification — with the Web, React Native, Expo and Flutter SDKs.</Typography>
+        <Typography sx={{ mt: 2, maxWidth: 480, color: tokens.textSecondary, fontSize: { xs: "var(--fs-16)", md: "var(--fs-18)" }, lineHeight: 1.65 }}>Identify users, track product events, keep data flowing offline, and attribute every push notification — with the Web, WordPress, PHP, React Native, Expo and Flutter SDKs.</Typography>
         <Stack direction={{ xs: "column", sm: "row" }} gap={1.5} sx={{ mt: 4, "& .MuiButton-root": { whiteSpace: "nowrap" } }}>
           <LinkButton href={rn("quickstart")} variant="contained" size="large">Mobile app quickstart</LinkButton>
           <LinkButton href={guideHref("/docs", "web", "quickstart")} variant="outlined" size="large">Website quickstart</LinkButton>

@@ -5,11 +5,13 @@ import DocsPage from "./DocsPage";
 import { reactNativeGuides } from "./react-native/guides-operate";
 import { flutterGuides } from "./flutter/guides";
 import { webGuides } from "./web/guides";
+import { phpGuides } from "./php/guides";
+import { wordpressGuides } from "./wordpress/guides";
 import type { GuideProps } from "./react-native/guides-setup";
 import { getGuide, getPlatform } from "./registry";
 
 // A new platform registers its renderers here, keyed by the slugs in registry.ts.
-const renderers: Record<string, Record<string, ComponentType<GuideProps>>> = { "react-native": reactNativeGuides, flutter: flutterGuides, web: webGuides };
+const renderers: Record<string, Record<string, ComponentType<GuideProps>>> = { "react-native": reactNativeGuides, flutter: flutterGuides, web: webGuides, php: phpGuides, wordpress: wordpressGuides };
 
 export function guideParams(platformId: string) {
   return (getPlatform(platformId)?.guides ?? []).map((guide) => ({ guide: guide.slug ? [guide.slug] : [] }));

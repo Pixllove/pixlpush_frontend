@@ -123,7 +123,7 @@ export function Installation({ base }: FlutterGuideProps) {
     </Section>
     <Section id="status" title="Check getStatus()">
       <CodeBlock code={code.status} language="Dart" />
-      <Body><code>deviceId</code> is a random per-install ID, not a hardware identifier. <code>pixlpushId</code> remains stable across normal launches and logins; <code>reset()</code> creates a new anonymous install identity.</Body>
+      <Body><code>deviceId</code> is a per-install cuid, not a hardware identifier (installs from older SDKs keep their UUID). <code>pixlpushId</code> remains stable across normal launches and logins; <code>reset()</code> creates a new anonymous install identity.</Body>
     </Section>
     <Section id="options" title="Configuration options">
       <DataTable headers={["Option", "Type", "Default", "Description"]} rows={configOptions} minWidth={760} />
@@ -231,6 +231,15 @@ export function Identity({ base }: FlutterGuideProps) {
       <CodeBlock code="await PixlPush.instance.reset();" language="Dart" filename="lib/auth/logout.dart" />
       <Callout tone="warning" title="Await reset before the next login">Reset deactivates the previous push association and creates a new anonymous install identity. Await it before identifying a different account on the same device.</Callout>
     </Section>
+    <Section id="delete" title="Account deletion">
+      <CodeBlock code="await PixlPush.instance.deleteUser();" language="Dart" filename="lib/auth/delete_account.dart" />
+      <Body>Call it after your server deleted the account. PixlPush keeps the history but unlinks every device and stops push and email; the profile shows Deleted (still listed); logging in again with the same id restores the profile and its history. This install then starts over anonymous, as after <code>reset()</code>. Use a stable <code>externalUserId</code> that is never reused, such as a cuid.</Body>
+      <DataTable headers={["Your app", "Call", "Profile"]} rows={[
+        ["Sign up / log in", "identify()", "Active · “Logged in” (once per sign-in on a device)"],
+        ["Log out", "reset()", "Logged out (when no device is still signed in) · “Logged out”"],
+        ["Delete account", "deleteUser()", "Deleted · “Account deleted”"],
+      ]} />
+    </Section>
   </>;
 }
 
@@ -274,6 +283,10 @@ export function Push({ base }: FlutterGuideProps) {
     <Section id="permission" title="Permission and token sync">
       <CodeTabs label="Permission timing" group="flutter-permission" options={{ "Request during startup": { code: code.push, language: "Dart" }, "Request from your UI": { code: code.permission, language: "Dart" } }} />
       <Body>Use <code>requestPermission: false</code> when your onboarding or settings screen owns the prompt. Call <code>requestPermission()</code> there; the adapter updates permission and token state.</Body>
+    </Section>
+    <Section id="permission-changes" title="Permission changes in Settings">
+      <Body>The adapter re-reads the permission every time the app returns to the foreground (<code>syncPermission()</code>, no prompt) and sends only a change, so turning notifications on or off in iOS or Android Settings reaches PixlPush. PixlPush stops sending to a device that is no longer allowed, and the user’s activity shows “Notifications allowed”, “Notifications blocked” or “Notifications permission reset”, with the browser or device.</Body>
+      <CodeBlock language="Dart" code={'final off = PixlPush.instance.addListener(PixlPushEventType.pushPermissionChanged, (permission) {\n  // "granted" | "provisional" | "denied" | "not_determined", only on a change\n});'} />
     </Section>
     <Section id="states" title="Foreground, background and terminated">
       <DataTable code={false} headers={["State", "What the adapter does"]} rows={[

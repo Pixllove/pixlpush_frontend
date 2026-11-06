@@ -178,7 +178,8 @@ export const methods: Record<"setup" | "identity" | "events" | "push", FlutterMe
   identity: [
     ["identify(EndUserIdentity identity)", "Future<void>", "Links the current install to a stable application user ID."],
     ["updateUser(UserUpdate update)", "Future<void>", "Updates fields and properties for the current user."],
-    ["reset()", "Future<void>", "Unlinks the current install and creates a new anonymous installation user."],
+    ["reset()", "Future<void>", "Logout: unlinks the current install and creates a new anonymous installation user. The profile shows Logged out."],
+    ["deleteUser()", "Future<void>", "The user deleted their account: devices unlinked, push and email stop, shown as Deleted (history kept; logging in again restores them). Then starts over anonymous."],
   ],
   events: [
     ["track(String name, ...)", "Future<String>", "Queues one validated product event and returns its ID."],

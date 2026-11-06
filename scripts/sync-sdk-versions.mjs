@@ -21,7 +21,9 @@ const next = {
   reactNative: (await latest('https://registry.npmjs.org/@pixlpush/react-native/latest', (j) => j.version)) ?? current.reactNative,
   flutter: (await latest('https://pub.dev/api/packages/pixlpush', (j) => j.latest?.version)) ?? current.flutter,
   web: (await latest('https://registry.npmjs.org/@pixlpush/web/latest', (j) => j.version)) ?? current.web,
+  php: (await latest('https://repo.packagist.org/p2/pixlpush/pixlpush-php.json', (j) => j.packages?.['pixlpush/pixlpush-php']?.[0]?.version?.replace(/^v/, ''))) ?? current.php,
+  wordpress: (await latest('https://api.wordpress.org/plugins/info/1.2/?action=plugin_information&request[slug]=pixlpush', (j) => j.version)) ?? current.wordpress,
 };
 
 if (JSON.stringify(next) !== JSON.stringify(current)) writeFileSync(file, `${JSON.stringify(next, null, 2)}\n`);
-console.log(`SDK versions: react-native ${next.reactNative}, flutter ${next.flutter}, web ${next.web}`);
+console.log(`SDK versions: react-native ${next.reactNative}, flutter ${next.flutter}, web ${next.web}, php ${next.php}, wordpress ${next.wordpress}`);
