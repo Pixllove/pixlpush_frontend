@@ -468,7 +468,7 @@ export const methods: Record<"setup" | "identity" | "events" | "push" | "listene
     { name: "setConsent", signature: "setConsent(consent: { analytics?, email?, push? })", returns: "Promise<void>", description: "Persists consent and merges with earlier choices. Email and push choices are sent to PixlPush with an identity update." },
   ],
   push: [
-    { name: "syncPushToken", signature: "syncPushToken()", returns: "Promise<void>", description: "Reads Firebase permission: authorized/provisional sends the FCM token; denied sends permission \"denied\". No-op without @react-native-firebase/messaging.", notes: "Called automatically on configure and on every return to the foreground." },
+    { name: "syncPushToken", signature: "syncPushToken()", returns: "Promise<void>", description: "Reads Firebase permission: authorized/provisional sends the FCM token; denied or never asked sends that permission, only when it changed. No-op without @react-native-firebase/messaging.", notes: "Called automatically on configure and on every return to the foreground, so a change made in Settings reaches PixlPush (activity: Notifications allowed / blocked) and stops push to a blocked device." },
     { name: "updatePushToken", signature: 'updatePushToken(token: string, provider: "fcm" | "apns" | "web_push" = "fcm", permission?: string)', returns: "Promise<void>", description: "Registers or rotates a token for this installation. The mobile push integration uses native FCM tokens." },
     { name: "updatePushPermission", signature: "updatePushPermission(permission: string)", returns: "Promise<void>", description: "Records the OS permission, e.g. \"granted\", \"denied\", \"provisional\"." },
     { name: "handleNotification", signature: "handleNotification(raw: unknown)", returns: "NormalizedPushPayload", description: "For foreground messages: normalizes the payload and emits notification_received. Does not record an open." },
@@ -480,7 +480,7 @@ export const methods: Record<"setup" | "identity" | "events" | "push" | "listene
     { name: "addNotificationActionListener", signature: "addNotificationActionListener(listener)", returns: "() => void", description: "An action button: receives { actionId, notification }." },
     { name: "addNotificationReceivedListener", signature: "addNotificationReceivedListener(listener)", returns: "() => void", description: "Foreground messages passed to handleNotification." },
     { name: "addPushTokenListener", signature: "addPushTokenListener(listener)", returns: "() => void", description: "Each token sent through updatePushToken." },
-    { name: "addPushPermissionListener", signature: "addPushPermissionListener(listener)", returns: "() => void", description: "Each permission sent through updatePushPermission." },
+    { name: "addPushPermissionListener", signature: "addPushPermissionListener(listener)", returns: "() => void", description: "Fires when the notification permission changes (Settings, the prompt), with 'granted', 'provisional', 'denied' or 'not_determined'. Not on every foreground: only a real change." },
     { name: "addListener / removeListener", signature: 'addListener(event, listener) · removeListener(event, listener)', returns: "() => void · void", description: "Typed access to notification_received, notification_opened, notification_action, push_token_changed, push_permission_changed and error." },
   ],
 };

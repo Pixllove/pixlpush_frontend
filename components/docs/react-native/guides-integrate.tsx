@@ -76,7 +76,7 @@ export function Events({ base }: GuideProps) {
     </Section>
     <Section id="options" title="TrackOptions & idempotency">
       <DataTable headers={["Option", "Default", "Use"]} rows={[
-        ["eventId", "random UUID", "Stable ID for a business action, so a retried action can be de-duplicated."],
+        ["eventId", "a new cuid", "Stable ID for a business action, so a retried action can be de-duplicated."],
         ["timestamp", "now", "When it happened (Date or ISO string)."],
         ["sessionId", "current session", "Override only if you manage sessions yourself."],
         ["source", "—", "Where in the app it happened, e.g. checkout_screen."],

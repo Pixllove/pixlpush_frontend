@@ -363,6 +363,7 @@ export const methods: Record<"setup" | "identity" | "events" | "push", WebMethod
     ["getPushPermission()", "\"granted\" | \"denied\" | \"default\" | \"unsupported\"", "The current permission. Never prompts."],
     ["requestPushPermission()", "Promise<PushPermission>", "Asks for permission and subscribes. Call it from a click."],
     ["unsubscribePush()", "Promise<boolean>", "Removes this browser's subscription."],
+    ["onPushPermissionChange(listener)", "() => void", "Fires when the visitor allows, blocks or resets notifications (prompt, address bar or browser settings), with 'granted', 'denied' or 'default'. PixlPush updates the user by itself."],
     ["openNotification(notification)", "Promise<boolean>", "For your own in-page toast or inbox: records the open, closes the system notification and fires onNotificationOpened."],
     ["onNotificationReceived(listener)", "() => void", "A notification arrived while a tab is open."],
     ["onNotificationOpened(listener)", "() => void", "The user clicked a notification (system, or in-page through openNotification)."],
@@ -427,7 +428,7 @@ Use only these. Do not invent methods or options.
 - init(config) · getStatus() · flush() · onError(fn)
 - identify({ externalUserId, email?, name?, emailConsent?, userHash?, properties? }) · updateUser(fields) · reset() · deleteUser()
 - track(name, properties?) · setConsent({ analytics?, email?, push? })
-- isPushSupported() · getPushPermission() · requestPushPermission() · unsubscribePush()
+- isPushSupported() · getPushPermission() · requestPushPermission() · unsubscribePush() · onPushPermissionChange(fn)
 - onNotificationReceived(fn) · onNotificationOpened(fn) · openNotification(notification)
 - Config options: sdkKey, projectId, environment, debug, notificationIcon, serviceWorkerPath, serviceWorkerScope, trackPageViews, autoPush.
 </api_whitelist>

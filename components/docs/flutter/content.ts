@@ -188,7 +188,8 @@ export const methods: Record<"setup" | "identity" | "events" | "push", FlutterMe
   ],
   push: [
     ["updatePushToken(String token, ...)", "Future<void>", "Registers an FCM or APNs token obtained by the application."],
-    ["updatePushPermission(String permission)", "Future<void>", "Stores the current OS push permission state."],
+    ["updatePushPermission(String permission)", "Future<void>", "Stores the OS push permission; sent and emitted (pushPermissionChanged) only when it changed."],
+    ["push.syncPermission()", "Future<void>", "Firebase adapter: re-reads the permission without prompting and sends the token when allowed. Runs on every return to the foreground."],
     ["handleNotificationResponse(Object? raw)", "Future<NormalizedPushPayload>", "Normalizes a notification response, records its pp_job_id and emits the open/action event."],
   ],
 };

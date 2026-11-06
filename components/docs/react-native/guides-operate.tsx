@@ -57,13 +57,17 @@ export function Production({ base }: GuideProps) {
         <CodeBlock code={code.verify} />
         <Expect><code>failed: 0, remaining: 0</code>; the user and event appear in PixlPush → Users.</Expect>
       </Step>
-      <Step level="h3" id="v-token" number={4} title="Confirm token sync">
+      <Step level="h3" id="v-lifecycle" number={4} title="Log out, delete and come back">
+        <CodeBlock code={"await PixlPush.reset();       // profile: Logged out\nawait PixlPush.identify({ externalUserId: \"qa-user-001\" }); // Active again, history kept\nawait PixlPush.deleteUser();  // profile: Deleted, still listed\nawait PixlPush.identify({ externalUserId: \"qa-user-001\" }); // Account restored"} />
+        <Expect>PixlPush → Users shows each status in turn, and the user’s activity lists Logged in, Logged out, Account deleted and Account restored. A new anonymous user after logout is under the filter Anonymous visitors, not in the main list.</Expect>
+      </Step>
+      <Step level="h3" id="v-token" number={5} title="Confirm token sync">
         <Expect>After granting permission, PixlPush → Project settings → Firebase / FCM shows at least one active device token.</Expect>
       </Step>
-      <Step level="h3" id="v-push" number={5} title="Send a test notification and tap it">
+      <Step level="h3" id="v-push" number={6} title="Send a test notification and tap it">
         <Expect>The notification arrives in background and quit states; the tap opens your deep link and the open is counted for that message.</Expect>
       </Step>
-      <Step level="h3" id="v-logout" number={6} title="Log out">
+      <Step level="h3" id="v-logout" number={7} title="Log out">
         <Expect>After <code>reset()</code>, a push to qa-user-001 is skipped for this device (no active subscription).</Expect>
       </Step>
     </Section>

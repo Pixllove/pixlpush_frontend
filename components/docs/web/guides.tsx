@@ -439,11 +439,11 @@ export function Security() {
 export function Production({ base }: WebGuideProps) {
   return <>
     <Section id="verify" title="Verify step by step">
-      <List ordered items={["Open your site with debug: true and check the console has no PixlPush errors.", "PixlPush → Users shows the visitor with page_viewed and page_left.", "Log in: the same user now has your externalUserId and email.", "Allow notifications and send a test push; click it."]} />
+      <List ordered items={["Open your site with debug: true and check the console has no PixlPush errors.", "PixlPush → Users → filter Anonymous visitors shows the visitor with page_viewed and page_left (time on page).", "Log in: the user is listed under your externalUserId and email, status Active, activity “Logged in”.", "Allow notifications and send a test push; click it. Block notifications in the address bar and come back to the tab: the activity shows “Notifications blocked”.", "Log out: status Logged out. Delete the account (deleteUser): status Deleted; log in again: “Account restored”."]} />
       <Expect>The template or journey shows one delivery and one click.</Expect>
     </Section>
     <Section id="checklist" title="Production checklist">
-      <Checklist items={["Production SDK key in production environment variables.", "/pixlpush-sw.js returns the script (not a 404, not your app’s HTML).", "HTTPS everywhere.", "CSP allows the PixlPush API host.", "Your own notification toast calls openNotification on click.", <>Identity verification on, if the project requires it (see <A href={web(base, "identity", "verification")}>Identity</A>).</>]} />
+      <Checklist items={["Production SDK key in production environment variables.", "/pixlpush-sw.js returns the script (not a 404, not your app’s HTML).", "HTTPS everywhere.", "CSP allows the PixlPush API host.", "Your own notification toast calls openNotification on click.", "Account deletion calls deleteUser() after your server deleted the account.", <>Identity verification on, if the project requires it (see <A href={web(base, "identity", "verification")}>Identity</A>).</>]} />
     </Section>
     <Section id="upgrade" title="Upgrading the SDK">
       <CodeBlock code={`npm install ${PACKAGE}@latest\n${code.copyWorker}`} language="Shell" />
