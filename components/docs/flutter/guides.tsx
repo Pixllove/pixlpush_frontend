@@ -69,9 +69,11 @@ export function Quickstart({ base }: FlutterGuideProps) {
     </Step>
     <Step id="install" number={2} title="Install the package">
       <Body>PixlPush is published as one Flutter plugin package for Android and iOS. Add it from pub.dev; there is no separate Android or iOS PixlPush dependency.</Body>
-      <CodeBlock code="flutter pub add pixlpush" language="Shell" />
-      <Body>Or add it to pubspec.yaml yourself and run <code>flutter pub get</code>:</Body>
-      <CodeBlock code={code.install} language="YAML" filename="pubspec.yaml" />
+      <Body>Choose the package-manager setup that matches your workflow:</Body>
+      <CodeTabs options={{
+        "flutter pub add": { code: "flutter pub add pixlpush", language: "Shell" },
+        "pubspec.yaml": { code: code.install, language: "YAML", filename: "pubspec.yaml" },
+      }} label="Package manager" group="flutter-package-manager" />
     </Step>
     <Step id="key" number={3} title="Create an SDK key">
       <Body>Open <b>Project settings → SDK keys</b>, create a key named for the environment and copy the full value immediately. The key is a public client credential that authenticates ingestion; it is not a dashboard token.</Body>

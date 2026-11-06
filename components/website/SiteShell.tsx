@@ -343,6 +343,9 @@ export function SiteHeader() {
       className="site-header-seam"
       elevation={0}
       onMouseLeave={() => setMega(null)}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") setMega(null);
+      }}
       sx={{
         isolation: "isolate",
         bgcolor: "#211331",
@@ -393,6 +396,14 @@ export function SiteHeader() {
                 <Link
                   href={value === "product" ? "/product" : value === "resources" ? "/resources" : "/use-cases"}
                   underline="none"
+                  aria-haspopup="menu"
+                  aria-expanded={mega === value}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      setMega(value as "product" | "resources" | "usecases");
+                    }
+                  }}
                   sx={{
                     display: "inline-flex",
                     alignItems: "center",
