@@ -178,7 +178,8 @@ export const methods: Record<"setup" | "identity" | "events" | "push", FlutterMe
   identity: [
     ["identify(EndUserIdentity identity)", "Future<void>", "Links the current install to a stable application user ID."],
     ["updateUser(UserUpdate update)", "Future<void>", "Updates fields and properties for the current user."],
-    ["reset()", "Future<void>", "Unlinks the current install and creates a new anonymous installation user."],
+    ["reset()", "Future<void>", "Logout: unlinks the current install and creates a new anonymous installation user. The profile shows Logged out."],
+    ["deleteUser()", "Future<void>", "The user deleted their account: devices unlinked, push and email stop, shown as Deleted (history kept; logging in again restores them). Then starts over anonymous."],
   ],
   events: [
     ["track(String name, ...)", "Future<String>", "Queues one validated product event and returns its ID."],
@@ -187,7 +188,8 @@ export const methods: Record<"setup" | "identity" | "events" | "push", FlutterMe
   ],
   push: [
     ["updatePushToken(String token, ...)", "Future<void>", "Registers an FCM or APNs token obtained by the application."],
-    ["updatePushPermission(String permission)", "Future<void>", "Stores the current OS push permission state."],
+    ["updatePushPermission(String permission)", "Future<void>", "Stores the OS push permission; sent and emitted (pushPermissionChanged) only when it changed."],
+    ["push.syncPermission()", "Future<void>", "Firebase adapter: re-reads the permission without prompting and sends the token when allowed. Runs on every return to the foreground."],
     ["handleNotificationResponse(Object? raw)", "Future<NormalizedPushPayload>", "Normalizes a notification response, records its pp_job_id and emits the open/action event."],
   ],
 };

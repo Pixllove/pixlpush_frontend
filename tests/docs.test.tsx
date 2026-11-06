@@ -8,6 +8,8 @@ import { searchDocs } from '@/components/docs/DocsSearchDialog';
 import { configOptions, documentedMethodNames, errorCodes, internalOptions } from '@/components/docs/react-native/content';
 import { reactNativeGuides } from '@/components/docs/react-native/guides-operate';
 import { flutterGuides } from '@/components/docs/flutter/guides';
+import { phpGuides } from '@/components/docs/php/guides';
+import { wordpressGuides } from '@/components/docs/wordpress/guides';
 import { availablePlatforms, buildSearchIndex, getPlatform, guideHref, platforms } from '@/components/docs/registry';
 
 const push = vi.fn();
@@ -32,7 +34,7 @@ describe('platform registry', () => {
   it('builds base-aware URLs so a new platform needs no routing changes', () => {
     expect(guideHref('/docs', 'react-native')).toBe('/docs/react-native');
     expect(guideHref('/dashboard/integrations', 'react-native', 'push', 'tokens')).toBe('/dashboard/integrations/react-native/push#tokens');
-    expect(availablePlatforms.map((p) => p.id)).toEqual(['react-native', 'flutter', 'web']);
+    expect(availablePlatforms.map((p) => p.id)).toEqual(['react-native', 'flutter', 'web', 'wordpress', 'php']);
   });
 
   it('registers every Flutter guide renderer and section', () => {
@@ -43,6 +45,19 @@ describe('platform registry', () => {
       expect(new Set(guide.sections.map((s) => s.id)).size).toBe(guide.sections.length);
     }
   });
+});
+
+describe('PHP and WordPress guides render every registered section', () => {
+  for (const [platformId, renderers] of [['php', phpGuides], ['wordpress', wordpressGuides]] as const) {
+    for (const guide of getPlatform(platformId)!.guides!) {
+      it(`${platformId}/${guide.slug || 'overview'}`, () => {
+        const Guide = renderers[guide.slug];
+        expect(Guide, guide.slug).toBeDefined();
+        const { container } = render(<Guide base="/docs" />);
+        for (const section of guide.sections) expect(container.querySelector(`#${CSS.escape(section.id)}`), section.id).not.toBeNull();
+      });
+    }
+  }
 });
 
 describe('every guide renders its deep-linkable sections in heading order', () => {

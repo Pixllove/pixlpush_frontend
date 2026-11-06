@@ -90,7 +90,7 @@ NEXT_PUBLIC_PIXLPUSH_SDK_KEY=pp_sk_your_development_key`,
 console.log(status.configured, status.pixlpushId, status.sessionId, status.queueSize);`,
 
   identify: `await PixlPush.identify({
-  externalUserId: user.id,
+  externalUserId: user.id, // your stable user id, e.g. a cuid "cmw4tzovh05ivbpm0nt3r26vp"; never an email
   email: user.email,
   name: user.name,
   emailConsent: true, // reachable by email campaigns
@@ -100,6 +100,9 @@ console.log(status.configured, status.pixlpushId, status.sessionId, status.queue
 
   reset: `// On logout: the next visitor on this browser starts as a new anonymous user.
 await PixlPush.reset();`,
+
+  deleteUser: `// After your server deleted the account:
+await PixlPush.deleteUser();`,
 
   userHash: `// Server (Node). Never send the identity secret to the browser.
 import { createHmac } from "node:crypto";
@@ -327,8 +330,7 @@ export const configOptions: [string, string, string, string][] = [
   ["serviceWorkerPath", "string", "\"/pixlpush-sw.js\"", "Where your site serves the worker."],
   ["serviceWorkerScope", "string", "\"/pixlpush/\"", "The worker's own scope, so your site's worker is untouched."],
   ["notificationIcon", "string", "none", "Icon URL shown on notifications."],
-  ["trackPageViews", "boolean", "true", "Automatic page_viewed on load and client-side navigation."],
-  ["trackSessions", "boolean", "true", "Automatic app_opened once per session."],
+  ["trackPageViews", "boolean", "true", "Automatic page_viewed on load and client-side navigation, and page_left (with visible time on page) when the page is left."],
   ["autoPush", "boolean", "true", "Re-syncs an already granted subscription on load. Never prompts."],
   ["debug", "boolean", "false", "Console logging (same as enableLogging)."],
   ["appName / appVersion", "string", "none", "Sent with the device context."],
@@ -349,7 +351,8 @@ export const methods: Record<"setup" | "identity" | "events" | "push", WebMethod
   identity: [
     ["identify(user)", "Promise<boolean>", "Links this browser to your user: externalUserId, email, name, emailConsent, properties, userHash."],
     ["updateUser(fields)", "Promise<boolean>", "Updates profile fields and custom properties of the current user."],
-    ["reset()", "Promise<boolean>", "Logout. The browser becomes a new anonymous user; its push subscription moves with it."],
+    ["reset()", "Promise<boolean>", "Logout. The browser becomes a new anonymous user; its push subscription moves with it. The profile shows Logged out."],
+    ["deleteUser()", "Promise<boolean>", "The user deleted their account: devices unlinked, push and email stop, history kept. The profile shows Deleted; logging in again restores it."],
   ],
   events: [
     ["track(name, properties?, options?)", "Promise<string | null>", "Queues one event and resolves its id, or null when it was invalid."],
@@ -360,6 +363,7 @@ export const methods: Record<"setup" | "identity" | "events" | "push", WebMethod
     ["getPushPermission()", "\"granted\" | \"denied\" | \"default\" | \"unsupported\"", "The current permission. Never prompts."],
     ["requestPushPermission()", "Promise<PushPermission>", "Asks for permission and subscribes. Call it from a click."],
     ["unsubscribePush()", "Promise<boolean>", "Removes this browser's subscription."],
+    ["onPushPermissionChange(listener)", "() => void", "Fires when the visitor allows, blocks or resets notifications (prompt, address bar or browser settings), with 'granted', 'denied' or 'default'. PixlPush updates the user by itself."],
     ["openNotification(notification)", "Promise<boolean>", "For your own in-page toast or inbox: records the open, closes the system notification and fires onNotificationOpened."],
     ["onNotificationReceived(listener)", "() => void", "A notification arrived while a tab is open."],
     ["onNotificationOpened(listener)", "() => void", "The user clicked a notification (system, or in-page through openNotification)."],
@@ -414,18 +418,19 @@ When you are done, the site initializes PixlPush once on the client, identifies 
 - One npm package: ${PACKAGE}. Entry points: "${PACKAGE}/react" (PixlPushProvider, usePixlPush), "${PACKAGE}/vue" (PixlPushPlugin, usePixlPush), "${PACKAGE}/angular" (providePixlPush, PIXLPUSH), "${PACKAGE}" (PixlPush singleton for anything else).
 - It never throws and never rejects; on the server (SSR) every call is a no-op. Failures go to PixlPush.onError.
 - The only required option is sdkKey (a public pp_sk_… key; safe in browser code). The SDK always sends to the PixlPush API: there is NO apiBaseUrl/url option.
-- page_viewed (every navigation) and app_opened (once per session) are tracked automatically. Do not track them yourself.
+- page_viewed (every navigation) and page_left (with duration_ms, the visible time on the page) are tracked automatically. Do not track them yourself, and do not track logged_in / logged_out: identify() and reset() already show as "Logged in" / "Logged out" on the user's profile.
+- Every id the SDK makes is a cuid. externalUserId is the app's own stable user id (never an email).
 - Push needs a service worker file served from the site root at /pixlpush-sw.js. The SDK registers it under its own scope (/pixlpush/), so an existing service worker (PWA, caching) is untouched.
 </sdk_facts>
 
 <api_whitelist>
 Use only these. Do not invent methods or options.
 - init(config) · getStatus() · flush() · onError(fn)
-- identify({ externalUserId, email?, name?, emailConsent?, userHash?, properties? }) · updateUser(fields) · reset()
+- identify({ externalUserId, email?, name?, emailConsent?, userHash?, properties? }) · updateUser(fields) · reset() · deleteUser()
 - track(name, properties?) · setConsent({ analytics?, email?, push? })
-- isPushSupported() · getPushPermission() · requestPushPermission() · unsubscribePush()
+- isPushSupported() · getPushPermission() · requestPushPermission() · unsubscribePush() · onPushPermissionChange(fn)
 - onNotificationReceived(fn) · onNotificationOpened(fn) · openNotification(notification)
-- Config options: sdkKey, projectId, environment, debug, notificationIcon, serviceWorkerPath, serviceWorkerScope, trackPageViews, trackSessions, autoPush.
+- Config options: sdkKey, projectId, environment, debug, notificationIcon, serviceWorkerPath, serviceWorkerScope, trackPageViews, autoPush.
 </api_whitelist>
 
 <rules>
@@ -512,7 +517,8 @@ ${fence("ts", code.debugConfig)}
 - The SDK initializes exactly once, on the client only; the production build and SSR pages work with no "window is not defined" errors.
 - /pixlpush-sw.js is served from the site root (not 404, not the app's HTML) and is refreshed by postinstall (or angular.json assets).
 - identify() runs after sign-in with the internal user id; reset() runs on sign-out.
-- The main conversion events are tracked through one typed helper; no page_viewed/app_opened duplicates.
+- The main conversion events are tracked through one typed helper; no page_viewed/page_left duplicates.
+- Account deletion calls deleteUser() after the server deleted the account.
 - requestPushPermission() is only reachable from a click; the button handles granted, denied, default and unsupported.
 - In-app notification clicks call openNotification(n).
 - No secrets in client code, no sensitive properties, no unrelated changes. Type check, lint and build pass.

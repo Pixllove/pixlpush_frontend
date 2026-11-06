@@ -38,7 +38,7 @@ export function Overview({ base }: WebGuideProps) {
       <Body><code>{PACKAGE}</code> connects your website’s visitors and what they do to PixlPush. One package works in React, Next.js, Vue, Nuxt, Angular, Svelte, Remix, Astro and plain HTML. It never throws, does nothing during server rendering, and queues work while offline.</Body>
       <DataTable code={false} headers={["Capability", "What happens automatically"]} rows={[
         ["Identity", "Every browser starts as an anonymous user; identify() links it to your user after login."],
-        ["Events", "app_opened once per session and page_viewed on every navigation; your own events with track()."],
+        ["Events", "page_viewed on every navigation and page_left with the time on page; your own events with track()."],
         ["Email reach", "identify() with email and emailConsent makes the user reachable by email campaigns."],
         ["Web Push", "PixlPush creates the project’s push keys. After the visitor allows notifications, campaigns and journeys reach the browser."],
         ["Attribution", "Clicking a notification records the open for its campaign or journey, even with no tab open."],
@@ -76,7 +76,7 @@ export function Overview({ base }: WebGuideProps) {
       <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2 }}>
         <LinkCard href={web(base, "quickstart")} icon={<BoltRounded />} title="Quickstart" description="Install, initialize and verify your first event and push." />
         <LinkCard href={web(base, "push")} icon={<NotificationsActiveOutlined />} title="Web Push" description="Permission, notifications, clicks and attribution." />
-        <LinkCard href={web(base, "identity")} icon={<FingerprintRounded />} title="Identity" description="Login, logout and identity verification." />
+        <LinkCard href={web(base, "identity")} icon={<FingerprintRounded />} title="Identity" description="Login, logout, account deletion and identity verification." />
         <LinkCard href={web(base, "recipes")} icon={<CodeRounded />} title="Full-stack recipes" description="Next.js end to end, auth sync, typed events, in-app notifications." />
         <LinkCard href={web(base, "local-development")} icon={<BugReportOutlined />} title="Local development" description="Test on localhost and phones, debug in DevTools." />
         <LinkCard href={web(base, "reference")} icon={<ApiRounded />} title="API reference" description="Every method, option and error code." />
@@ -247,6 +247,18 @@ export function Identity() {
       <CodeBlock code={code.reset} />
       <Body>The browser’s push subscription moves to the new anonymous user, so a shared computer never receives the previous person’s notifications.</Body>
     </Section>
+    <Section id="delete" title="Account deletion">
+      <CodeBlock code={code.deleteUser} />
+      <Body>PixlPush keeps the user’s history but unlinks every device and stops their push and email. The user stays in the Users list as Deleted. Logging in again with the same id restores the profile and its history; an identify queued before the deletion (another tab still open) can’t undo it. The request proves itself with the <code>userHash</code> from <code>identify()</code>, or, without identity verification, with this browser being signed in as the user. From a server, use a server SDK (PHP: <code>deleteUser()</code>).</Body>
+    </Section>
+    <Section id="profile" title="What the profile shows">
+      <DataTable headers={["Your app", "Call", "Status", "Activity"]} rows={[
+        ["Sign up / log in", "identify()", "Active", "Logged in (once per sign-in on a device; repeat calls log nothing)"],
+        ["Log out", "reset()", "Logged out (when no device is still signed in)", "Logged out"],
+        ["Delete account", "deleteUser()", "Deleted (still listed; a later login restores it)", "Account deleted"],
+      ]} />
+      <Body>Don’t track <code>logged_in</code> or <code>logged_out</code> events yourself: the profile already has them. Use a stable <code>externalUserId</code> that is never reused, such as a cuid (<code>cmw4tzovh05ivbpm0nt3r26vp</code>); every id the SDK makes itself is one.</Body>
+    </Section>
     <Section id="verification" title="Identity verification">
       <Body>When the project requires it, pass <code>userHash</code>: HMAC-SHA256 of <code>externalUserId</code> with the project’s identity secret, computed on your server.</Body>
       <CodeBlock code={code.userHash} />
@@ -266,10 +278,10 @@ export function Events() {
     </Section>
     <Section id="automatic" title="Tracked automatically">
       <DataTable headers={["Event", "When", "Properties"]} rows={[
-        ["app_opened", "Once per session (30 minutes of inactivity starts a new one).", "from_background"],
-        ["page_viewed", "On load and every client-side navigation (pushState, popstate).", "path, url, title, referrer"],
+        ["page_viewed", "On load, every client-side navigation (pushState, popstate) and a back/forward-cache restore.", "path, url, title, referrer"],
+        ["page_left", "When the page is left: the next route, a full navigation or closing the tab.", "path, url, title, duration_ms (visible time only)"],
       ]} />
-      <Body>Turn them off with <code>trackSessions: false</code> or <code>trackPageViews: false</code>.</Body>
+      <Body>A visit reads page_viewed → page_left → page_viewed…, like PostHog’s pageview/pageleave and GA4’s engagement time. Every event carries a <code>sessionId</code> (a new session after 30 minutes of inactivity), so there is no separate session event. A <code>page_left</code> the browser could not send before the tab closed goes out on the next visit with its original time. Set the page title before navigating so <code>page_viewed</code> records it. Turn both off with <code>trackPageViews: false</code>.</Body>
     </Section>
     <Section id="consent" title="Consent">
       <CodeBlock code={code.consent} />
@@ -296,6 +308,10 @@ export function Push({ base }: WebGuideProps) {
       <CodeBlock code={code.permission} filename="EnableNotifications.tsx" />
       <Body>Browsers only show the prompt after a click. Once granted, the subscription is re-synced on every visit and follows identify/reset. The SDK never prompts on its own.</Body>
       <CodeBlock code={code.pushState} />
+    </Section>
+    <Section id="permission-changes" title="Permission changes">
+      <Body>Visitors can allow, block or reset notifications later from the address bar or browser settings. The SDK notices by itself, never prompts, and sends only a real change: through the browser’s permission change event (Chrome, Edge, Firefox), when the visitor comes back to the tab (every browser, Safari included), and on every page load. PixlPush stops sending to a device that is no longer allowed, and the user’s activity shows “Notifications allowed”, “Notifications blocked” or “Notifications permission reset”, with the browser or device.</Body>
+      <CodeBlock code={'const off = PixlPush.onPushPermissionChange((permission) => {\n  // "granted" | "denied" | "default": update your own toggle\n});'} />
     </Section>
     <Section id="listeners" title="Notification listeners">
       <CodeBlock code={code.listeners} />
@@ -423,11 +439,11 @@ export function Security() {
 export function Production({ base }: WebGuideProps) {
   return <>
     <Section id="verify" title="Verify step by step">
-      <List ordered items={["Open your site with debug: true and check the console has no PixlPush errors.", "PixlPush → Users shows the visitor with page_viewed and app_opened.", "Log in: the same user now has your externalUserId and email.", "Allow notifications and send a test push; click it."]} />
+      <List ordered items={["Open your site with debug: true and check the console has no PixlPush errors.", "PixlPush → Users → filter Anonymous visitors shows the visitor with page_viewed and page_left (time on page).", "Log in: the user is listed under your externalUserId and email, status Active, activity “Logged in”.", "Allow notifications and send a test push; click it. Block notifications in the address bar and come back to the tab: the activity shows “Notifications blocked”.", "Log out: status Logged out. Delete the account (deleteUser): status Deleted; log in again: “Account restored”."]} />
       <Expect>The template or journey shows one delivery and one click.</Expect>
     </Section>
     <Section id="checklist" title="Production checklist">
-      <Checklist items={["Production SDK key in production environment variables.", "/pixlpush-sw.js returns the script (not a 404, not your app’s HTML).", "HTTPS everywhere.", "CSP allows the PixlPush API host.", "Your own notification toast calls openNotification on click.", <>Identity verification on, if the project requires it (see <A href={web(base, "identity", "verification")}>Identity</A>).</>]} />
+      <Checklist items={["Production SDK key in production environment variables.", "/pixlpush-sw.js returns the script (not a 404, not your app’s HTML).", "HTTPS everywhere.", "CSP allows the PixlPush API host.", "Your own notification toast calls openNotification on click.", "Account deletion calls deleteUser() after your server deleted the account.", <>Identity verification on, if the project requires it (see <A href={web(base, "identity", "verification")}>Identity</A>).</>]} />
     </Section>
     <Section id="upgrade" title="Upgrading the SDK">
       <CodeBlock code={`npm install ${PACKAGE}@latest\n${code.copyWorker}`} language="Shell" />

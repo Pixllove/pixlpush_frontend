@@ -1,4 +1,4 @@
-import { ArrowForwardRounded, CodeRounded, EventNoteRounded, LanguageRounded, LibraryBooksRounded, PhoneAndroidRounded } from "@mui/icons-material";
+import { ArrowForwardRounded, CodeRounded, DataObjectRounded, EventNoteRounded, LanguageRounded, LibraryBooksRounded, PhoneAndroidRounded, WebRounded } from "@mui/icons-material";
 import { Box, Card, CardContent, Chip, Stack, Typography } from "@mui/material";
 import DashboardFrame from "@/components/dashboard/DashboardFrame";
 import { LinkButton } from "@/components/docs/links";
@@ -13,6 +13,20 @@ const steps = [
     description: "Install @pixlpush/web in React, Next.js, Vue, Angular or any site, serve the service worker, and add Web Push with no Firebase.",
     href: "/dashboard/integrations/web/quickstart",
     icon: LanguageRounded,
+  },
+  {
+    step: "Step 1 · WordPress",
+    title: "WordPress plugin",
+    description: "Install the PixlPush plugin, paste your SDK key and add a subscribe button. Logged-in users, page views and WooCommerce purchases are tracked for you.",
+    href: "/dashboard/integrations/wordpress/quickstart",
+    icon: WebRounded,
+  },
+  {
+    step: "Step 1 · PHP",
+    title: "PHP SDK integration",
+    description: "Install pixlpush/pixlpush-php with Composer and send users and events from Laravel, Symfony or plain PHP.",
+    href: "/dashboard/integrations/php/quickstart",
+    icon: DataObjectRounded,
   },
   {
     step: "Step 1 · React Native",

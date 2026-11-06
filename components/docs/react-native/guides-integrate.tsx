@@ -9,7 +9,7 @@ export function Identity({ base }: GuideProps) {
   return <>
     <Section id="model" title="Users, installations, IDs">
       <DataTable headers={["ID", "What it identifies", "Lifetime"]} rows={[
-        ["deviceId", "This install. A random UUID created on first launch — not a hardware ID.", "Until the app is uninstalled or its storage cleared."],
+        ["deviceId", "This install. A cuid created on first launch — not a hardware ID (installs from older SDKs keep their UUID).", "Until the app is uninstalled or its storage cleared."],
         ["anonymousId", "The PixlPush user of this install while nobody is logged in.", "Until identify() or reset()."],
         ["pixlpushId", "The permanent PixlPush user ID (pixlpush_…).", "Kept across launches and logins; replaced by reset(), or by the existing user’s ID when a login matches someone already known."],
         ["externalUserId", "Your user’s ID, set by identify().", "Until reset()."],
@@ -19,7 +19,7 @@ export function Identity({ base }: GuideProps) {
     <Section id="identify" title="Identify after login">
       <CodeBlock code={code.identify} filename="src/auth/pixlpush-session.ts" highlight={[4, 13, 18]} />
       <List items={[
-        "Use your stable internal user ID (1–255 characters). Not an email or phone number: those change.",
+        "Use your stable internal user ID (1–255 characters), never reused: a cuid such as cmw4tzovh05ivbpm0nt3r26vp is ideal. Not an email or phone number: those change.",
         "Call it after every successful login or signup, and on app start when a session is restored. Repeating it is safe.",
         "Profile fields you omit are left as they are on the server.",
       ]} />
@@ -44,8 +44,17 @@ export function Identity({ base }: GuideProps) {
         "Creates a new anonymous user and pixlpushId, and queues its identity.",
         "Flushes.",
       ]} />
-      <Callout tone="note" title="History is retained">The former user, their events and their other devices stay in PixlPush. Deleting a user’s data is a separate, server-side responsibility.</Callout>
+      <Callout tone="note" title="History is retained">The former user, their events and their other devices stay in PixlPush. The profile shows “Logged out”.</Callout>
       <Body>The token is re-registered for the new anonymous user the next time <code>syncPushToken()</code> runs (automatically on the next foreground).</Body>
+    </Section>
+    <Section id="delete" title="Account deletion">
+      <CodeBlock code={"// After your server deleted the account:\nawait PixlPush.deleteUser();"} />
+      <Body>PixlPush keeps the history but unlinks every device and stops push and email; the profile shows Deleted. Logging in again with the same id restores the profile and its history; an identify queued before the deletion is ignored. The request proves itself with the <code>userHash</code> from <code>identify()</code>, or with this install being signed in as the user. This install then starts over as a new anonymous user, as after <code>reset()</code>.</Body>
+      <DataTable code={false} headers={["Your app", "Call", "Profile"]} rows={[
+        ["Sign up / log in", "identify()", "Active · “Logged in” (once per sign-in on a device)"],
+        ["Log out", "reset()", "Logged out (when no device is still signed in) · “Logged out”"],
+        ["Delete account", "deleteUser()", "Deleted · “Account deleted”"],
+      ]} />
     </Section>
   </>;
 }
@@ -67,7 +76,7 @@ export function Events({ base }: GuideProps) {
     </Section>
     <Section id="options" title="TrackOptions & idempotency">
       <DataTable headers={["Option", "Default", "Use"]} rows={[
-        ["eventId", "random UUID", "Stable ID for a business action, so a retried action can be de-duplicated."],
+        ["eventId", "a new cuid", "Stable ID for a business action, so a retried action can be de-duplicated."],
         ["timestamp", "now", "When it happened (Date or ISO string)."],
         ["sessionId", "current session", "Override only if you manage sessions yourself."],
         ["source", "—", "Where in the app it happened, e.g. checkout_screen."],
@@ -136,6 +145,10 @@ export function Push({ base }: GuideProps) {
         "Android 13+ needs the POST_NOTIFICATIONS runtime permission; earlier versions grant it at install.",
         "iOS provisional permission is reported as \"provisional\" and still receives quiet notifications.",
       ]} />
+    </Section>
+    <Section id="permission-changes" title="Permission changes in Settings">
+      <Body>When the user turns notifications on or off in iOS or Android Settings, the SDK notices the next time the app comes to the foreground (it runs <code>syncPushToken()</code> on start and on every foreground) and sends only a change. PixlPush stops sending to a device that is no longer allowed, and the user’s activity shows “Notifications allowed”, “Notifications blocked” or “Notifications permission reset”, with the browser or device.</Body>
+      <CodeBlock code={'const off = PixlPush.addPushPermissionListener((permission) => {\n  // "granted" | "provisional" | "denied" | "not_determined", only on a change\n});'} />
     </Section>
     <Section id="tokens" title="Token sync">
       <DataTable headers={["Trigger", "What happens"]} rows={[

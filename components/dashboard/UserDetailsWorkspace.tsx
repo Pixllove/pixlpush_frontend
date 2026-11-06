@@ -44,8 +44,15 @@ import { useActiveProject } from "@/hooks/projects/use-active-project";
 import { eventsApi, usersApi } from "@/lib/projects/api";
 import type { UserActivity, UserProfile } from "@/types/project";
 import { formatUserDateTime } from "@/lib/timezone";
+import UserStatusChip from "./UserStatusChip";
 
 const formatDate = (value?: string | null) => formatUserDateTime(value);
+/** granted → "Allowed", as browsers and phones word it. */
+const permissionLabel = (value?: string | null) =>
+  !value ? value
+  : ["granted", "provisional", "authorized", "ephemeral"].includes(value) ? (value === "provisional" ? "Allowed (provisional)" : "Allowed")
+  : value === "denied" ? "Blocked"
+  : "Not asked yet";
 const display = (value: unknown) =>
   value === null || value === undefined || value === ""
     ? "—"
@@ -132,11 +139,7 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
           <Typography component="h1" className="user-detail-email-title">
             {user?.email || user?.externalUserId || userId}
           </Typography>
-          <Chip
-            label={user?.deletedAt ? "Deleted" : "Active"}
-            size="small"
-            className={user?.deletedAt ? "paused-chip" : "active-chip"}
-          />
+          <UserStatusChip status={user?.status} />
         </Stack>
         <Typography color="text.secondary" fontSize="var(--fs-12)">
           {user?.name || "No name provided"}
@@ -203,11 +206,6 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
                 value={formatDate(user?.lastActiveAt)}
               />
               <DetailItem
-                icon={CheckCircleRounded}
-                label="Account status"
-                value={display(user?.accountStatus)}
-              />
-              <DetailItem
                 icon={RouteRounded}
                 label="Signup source"
                 value={display(user?.signupSource ?? user?.properties?.signupSource)}
@@ -227,12 +225,13 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
               <DetailItem
                 icon={NotificationsActiveRounded}
                 label="Push permission"
-                value={display(activePush?.permission ?? user?.pushSubscriptions?.[0]?.permission)}
+                // The device's own reading (allowed / blocked / reset), kept current by the SDK.
+                value={display(permissionLabel(device?.pushPermission ?? activePush?.permission ?? user?.pushSubscriptions?.[0]?.permission))}
               />
               <DetailItem
                 icon={PhoneAndroidRounded}
                 label="Platform"
-                value={display(device ? [device.platform, device.osVersion].filter(Boolean).join(" ") : null)}
+                value={display(device ? [device.platform, device.deviceModel, device.osVersion].filter(Boolean).join(" · ") : null)}
               />
               <DetailItem
                 icon={NotificationsActiveRounded}
@@ -259,12 +258,27 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
             </UserDetailSection>
             <UserDetailSection title="Account Status">
               <DetailItem
-                icon={CalendarTodayRounded}
-                label="Deleted"
-                value={
-                  user?.deletedAt ? formatDate(user.deletedAt) : "Not deleted"
-                }
+                icon={CheckCircleRounded}
+                label="Status"
+                value={user?.status === "deleted" ? "Deleted" : user?.status === "logged_out" ? "Logged out" : "Active"}
               />
+              <DetailItem
+                icon={CalendarTodayRounded}
+                label="Last logout"
+                value={user?.loggedOutAt ? formatDate(user.loggedOutAt) : "Never"}
+              />
+              <DetailItem
+                icon={CalendarTodayRounded}
+                label="Account deleted"
+                value={user?.accountDeletedAt ? formatDate(user.accountDeletedAt) : "Not deleted"}
+              />
+              {user?.accountStatus ? (
+                <DetailItem
+                  icon={CheckCircleRounded}
+                  label="Status in your app"
+                  value={display(user.accountStatus)}
+                />
+              ) : null}
             </UserDetailSection>
           </Card>
           <Card className="group-section-card user-engagement-card">
