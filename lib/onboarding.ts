@@ -7,6 +7,7 @@ export type OnboardingState = {
   androidAppUrl: string;
   iosAppUrl: string;
   channels: string[];
+  senderEmail: string;
   domain: string;
   firebaseChecklist: number[];
   currentStep: number;
@@ -15,7 +16,7 @@ export type OnboardingState = {
 };
 
 export const initialOnboardingState: OnboardingState = {
-  projectName: '', platforms: ['mobile'], websiteUrl: '', androidAppUrl: '', iosAppUrl: '', channels: [], domain: '', firebaseChecklist: [], currentStep: 1, completed: [], skipped: false,
+  projectName: '', platforms: ['mobile'], websiteUrl: '', androidAppUrl: '', iosAppUrl: '', channels: [], senderEmail: '', domain: '', firebaseChecklist: [], currentStep: 1, completed: [], skipped: false,
 };
 
 const ONBOARDING_STEP_COUNT = 6;

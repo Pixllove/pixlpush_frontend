@@ -19,6 +19,12 @@ import { authApi, authKeys } from '@/lib/auth/api';
 import { firebaseApi, onboardingApi, projectApi, projectKeys } from '@/lib/projects/api';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
 import type { ApiError } from '@/types/auth';
+import { createSendingDomain, listSendingDomains } from '@/lib/sending-domains/api';
+import { domainErrorMessage } from '@/lib/sending-domains/errors';
+import type { SendingDomain } from '@/types/sending-domain';
+import { domainFromEmail } from '@/components/dashboard/sending-domains/AddDomainDialog';
+import DomainAnalysisDialog from '@/components/dashboard/sending-domains/DomainAnalysisDialog';
+import DnsSetupDialog from '@/components/dashboard/sending-domains/DnsSetupDialog';
 
 const steps = [
   ['Project basics', 'Give your workspace a name'],
@@ -66,6 +72,12 @@ export default function OnboardingWizard() {
   const [stepDirection, setStepDirection] = useState<'forward' | 'backward'>('forward');
   const [appLinkScanState, setAppLinkScanState] = useState<'idle' | 'checking' | 'found' | 'not-found' | 'error'>('idle');
   const [appLinkScanError, setAppLinkScanError] = useState('');
+  const [domainVerificationBusy, setDomainVerificationBusy] = useState(false);
+  const [domainVerificationError, setDomainVerificationError] = useState('');
+  const [verificationProjectId, setVerificationProjectId] = useState<string | null>(null);
+  const [domainDialog, setDomainDialog] = useState<
+    { kind: 'none' } | { kind: 'analyze'; domain: SendingDomain } | { kind: 'dns'; domainId: string }
+  >({ kind: 'none' });
   const hydratedProject = useRef<string | null>(null);
   const localUserChange = useRef(false);
   const savedProgress = useRef('');
@@ -108,6 +120,7 @@ export default function OnboardingWizard() {
     androidAppUrl: value.androidAppUrl,
     iosAppUrl: value.iosAppUrl,
     channels: value.channels,
+    senderEmail: value.senderEmail,
     domain: value.domain,
     firebaseChecklist: value.firebaseChecklist,
     currentStep: value.currentStep,
@@ -204,6 +217,32 @@ export default function OnboardingWizard() {
     } catch (cause) {
       setAppLinkScanError((cause as ApiError).message || 'We couldn’t open that website.');
       setAppLinkScanState('error');
+    }
+  };
+  const closeDomainDialog = () => {
+    setDomainDialog({ kind: 'none' });
+    setVerificationProjectId(null);
+  };
+  const openDomainVerification = async () => {
+    const senderEmail = state.senderEmail.trim().toLowerCase();
+    const domain = domainFromEmail(senderEmail);
+    if (!domain) {
+      setDomainVerificationError('Enter a valid sender email, for example info@yourproduct.com.');
+      return;
+    }
+    setDomainVerificationBusy(true);
+    setDomainVerificationError('');
+    try {
+      const verificationId = projectId ?? await ensureProject();
+      if (!verificationId) return;
+      setVerificationProjectId(verificationId);
+      const existing = (await listSendingDomains(verificationId)).find((item) => item.domain === domain);
+      const sendingDomain = existing ?? await createSendingDomain(verificationId, { senderEmail });
+      setDomainDialog({ kind: 'analyze', domain: sendingDomain });
+    } catch (cause) {
+      setDomainVerificationError(domainErrorMessage(cause));
+    } finally {
+      setDomainVerificationBusy(false);
     }
   };
   const updateWebsiteUrl = (value: string) => {
@@ -336,7 +375,7 @@ export default function OnboardingWizard() {
     'I’m Max, your onboarding guide. Let’s start with a name for the product or workspace you’re setting up.',
     'Select the types of products you already have and add their links. We’ll tailor the next setup steps to your product portfolio.',
     'Choose every channel you plan to use. We’ll tailor the remaining setup to your selections.',
-    'A sending domain helps your email reach the inbox and look like it came from your brand. Add the domain you plan to use; this demo won’t change DNS.',
+    'Enter the email address you want to use for sending emails (e.g., info@yourbrand.com). This is the address your recipients will see when they receive your emails.',
     hasMobile
       ? `Mobile apps send push through Firebase Cloud Messaging. Upload the service-account JSON and I’ll validate it securely.`
       : 'Good news: website push needs no Firebase and no keys. PixlPush sets it up automatically when the web SDK is installed.',
@@ -405,7 +444,17 @@ export default function OnboardingWizard() {
                   {state.platforms.length > 0 && <Typography variant="body2" color="text.secondary">We’ll use these links to personalize your setup and guide you through the relevant next steps.</Typography>}
                 </div>}
                 {currentStep === 3 && <div className="onboarding-channel-grid">{channelOptions.filter((option) => !option.platform || state.platforms.includes(option.platform)).map(({ id, title, detail, icon: Icon }) => <button key={id} className={`onboarding-channel${state.channels.includes(id) ? ' selected' : ''}`} onClick={() => toggleChannel(id)}><span className="onboarding-channel-icon"><Icon /></span><span><strong>{title}</strong><small>{detail}</small></span>{state.channels.includes(id) && <CheckRounded className="onboarding-channel-check"/>}</button>)}</div>}
-                {currentStep === 4 && <Stack gap={2}><TextField fullWidth label="Sending domain" placeholder="mail.yourproduct.com" value={state.domain} onChange={(e) => patch({ domain: e.target.value })}/><Paper elevation={0} className="onboarding-guidance"><strong>What you’ll do later</strong><span>Verify ownership · Add DNS records · Confirm authentication</span><small>This is a guided preview only. No DNS records are created or verified here.</small></Paper></Stack>}
+                {currentStep === 4 && <Stack gap={2} className="onboarding-domain-step">
+                  <Typography className="onboarding-domain-question">Which email address would you like to send from?</Typography>
+                  <div className="onboarding-domain-field-row">
+                    <TextField fullWidth label="Sender email" placeholder="info@yourproduct.com" value={state.senderEmail} onChange={(e) => { const senderEmail = e.target.value; patch({ senderEmail, domain: domainFromEmail(senderEmail) ?? '' }); setDomainVerificationError(''); }} sx={{ '& .MuiOutlinedInput-root': { height: 56 } }} />
+                    <Button variant="outlined" className="onboarding-domain-verify-button" sx={{ height: 56, minHeight: 56, maxHeight: 56, py: 0 }} onClick={() => void openDomainVerification()} disabled={domainVerificationBusy}>
+                      {domainVerificationBusy ? 'Opening verification…' : 'Verify ownership'}
+                    </Button>
+                  </div>
+                  {domainVerificationError && <Alert severity="error">{domainVerificationError}</Alert>}
+                  <Paper elevation={0} className="onboarding-guidance"><strong>What happens next?</strong><span>We’ll guide you through a few simple steps to verify your domain and get it ready for sending emails.</span><small>You can verify it later. We’ll save this sender address for now.</small></Paper>
+                </Stack>}
                 {currentStep === 5 && hasWeb && <Alert severity="success" icon={<LanguageRounded />} sx={{ mb: hasMobile ? 2 : 0 }}><strong>Website push: nothing to set up.</strong> Install the web SDK in step 6 and add an “Enable notifications” button. Visitors who allow it can get push campaigns and journeys.</Alert>}
                 {currentStep === 5 && hasMobile && <Stack gap={2}><Paper elevation={0} className="onboarding-guidance"><strong>Firebase Cloud Messaging (mobile apps)</strong><span>Upload the Firebase service-account JSON used by this Project. PixlPush validates it with Google before encrypting and storing it.</span><small>Never paste credentials into chat or your app. The file is sent only to the authenticated backend.</small></Paper><Button variant="contained" onClick={openFirebaseWithMax} startIcon={<AutoAwesomeRounded />}>{firebaseConnected ? 'Review Firebase with Max' : 'Connect Firebase with Max'}</Button>{firebaseConnected && <Alert severity="success">Firebase is connected for this Project.</Alert>}</Stack>}
                 {currentStep === 6 && <Stack gap={2}><Paper elevation={0} className="onboarding-code"><code>Set up the PixlPush SDK in my {state.projectName || 'app'}. Guide me through installation, initialize it safely, register push permissions if enabled, and track a first test event. Do not expose secrets.</code><IconButton aria-label="Copy setup prompt" onClick={() => { navigator.clipboard?.writeText(`Set up the PixlPush SDK in my ${state.projectName || 'app'}. Guide me through installation, initialize it safely, register push permissions if enabled, and track a first test event. Do not expose secrets.`); setCopied(true); }}><ContentCopyRounded/></IconButton></Paper><Button href={hasMobile ? '/dashboard/integrations/react-native/quickstart' : '/dashboard/integrations/web/quickstart'} variant="outlined">{hasMobile ? 'View SDK integration guide' : 'View web SDK guide'}</Button></Stack>}
@@ -445,6 +494,19 @@ export default function OnboardingWizard() {
             </Button>
           </DialogActions>
         </Dialog>
+        {domainDialog.kind === 'analyze' && verificationProjectId && <DomainAnalysisDialog
+          projectId={verificationProjectId}
+          domain={domainDialog.domain}
+          onClose={closeDomainDialog}
+          onChanged={() => { void queryClient.invalidateQueries({ queryKey: ['projects', 'sending-domains', verificationProjectId] }); }}
+          onManual={(domain) => setDomainDialog({ kind: 'dns', domainId: domain.id })}
+        />}
+        {domainDialog.kind === 'dns' && verificationProjectId && <DnsSetupDialog
+          projectId={verificationProjectId}
+          domainId={domainDialog.domainId}
+          onClose={closeDomainDialog}
+          onChanged={() => { void queryClient.invalidateQueries({ queryKey: ['projects', 'sending-domains', verificationProjectId] }); }}
+        />}
       </Container>
     </Box>
   );
