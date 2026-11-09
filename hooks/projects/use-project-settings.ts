@@ -53,6 +53,7 @@ export function useSdkKeys(projectId: string | undefined) {
     query: useArea(projectId, 'sdk-keys', sdkKeyApi.list),
     create: useAreaMutation(projectId, 'sdk-keys', sdkKeyApi.create),
     revoke: useAreaMutation(projectId, 'sdk-keys', sdkKeyApi.revoke),
+    remove: useAreaMutation(projectId, 'sdk-keys', sdkKeyApi.remove),
   };
 }
 

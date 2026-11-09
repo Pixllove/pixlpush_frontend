@@ -202,6 +202,16 @@ export const sdkKeyApi = {
       {},
       BASE,
     ),
+  /** Full key of an active key; every reveal is written to the audit log. */
+  reveal: (projectId: string, keyId: string) =>
+    authRequest<{ id: string; name: string; key: string }>(
+      at(projectId, `/sdk-keys/${encodeURIComponent(keyId)}/reveal`),
+      {},
+      BASE,
+    ),
+  /** Only revoked keys can be deleted. */
+  remove: (projectId: string, keyId: string) =>
+    authRequest<void>(at(projectId, `/sdk-keys/${encodeURIComponent(keyId)}`), {}, BASE, "DELETE"),
 };
 
 export interface EmailTemplate {
