@@ -17522,6 +17522,7 @@ body {
 .onboarding-product-section-heading small { color:#8a7e94; font-size:11px; line-height:1.4; }
 .onboarding-product-section-icon { width:31px; height:31px; display:grid; place-items:center; flex:none; color:#6d30bd; border:1px solid #e2d4f0; border-radius:10px; background:#f7f1fc; }
 .onboarding-product-section-icon svg { font-size:17px; }
+.onboarding-product-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; max-width:580px; }
 .onboarding-scan-button.MuiButton-root { justify-self:start; min-height:39px; padding:8px 15px; color:#5f27ae; border:1px solid #cdb4e9; border-radius:10px; background:#fbf8fe; text-transform:none; box-shadow:none; }
 .onboarding-scan-button.MuiButton-root:hover { color:#4e1e99; border-color:#9d6ed4; background:#f5edfc; box-shadow:0 5px 13px #6b31b31a; }
 .onboarding-scan-button.Mui-disabled { color:#a69aad; border-color:#e5dfea; background:#f7f5f8; }
@@ -17614,6 +17615,7 @@ body {
   .onboarding-chat.MuiPaper-root { border-radius:18px; }
   .onboarding-chat-body { padding:20px 16px; min-height:390px; }
   .onboarding-question { margin:24px 0 0; }
+  .onboarding-product-options { grid-template-columns:1fr; max-width:none; }
   .onboarding-app-link-grid { grid-template-columns:1fr; }
   .onboarding-channel-grid { grid-template-columns:1fr; }
   .onboarding-channel { min-height:unset; flex-direction:row; align-items:center; }
