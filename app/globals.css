@@ -9945,7 +9945,7 @@ a {
   font-weight: 600 !important;
 }
 .condition-add-or {
-  margin-top: 12px;
+  margin-top: 22px !important;
 }
 .condition-or-divider {
   display: flex;
