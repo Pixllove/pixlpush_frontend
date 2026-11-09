@@ -29,7 +29,9 @@ const uiOperator: Record<string, string> = Object.fromEntries(Object.entries(bac
 function toBackendCondition(rule: Rule, schema?: AudienceGroupSchema) {
   const field = schema?.fields.find(item => item.key === rule.filter || item.label === rule.filter);
   const condition = field?.conditions.find(item => item.key === rule.operator || item.label === rule.operator);
-  return { field: field?.key ?? backendField[rule.filter] ?? rule.filter, operator: condition?.key ?? backendOperator[rule.operator] ?? rule.operator, ...(rule.value.trim() ? { value: rule.value.trim() } : {}) };
+  const value = rule.value.trim();
+  const parsedValue = condition?.value.multiple ? value.split(',').map(item => item.trim()).filter(Boolean) : value;
+  return { field: field?.key ?? backendField[rule.filter] ?? rule.filter, operator: condition?.key ?? backendOperator[rule.operator] ?? rule.operator, ...(value ? { value: parsedValue } : {}) };
 }
 function toBackendRules(blocks: Block[], schema?: AudienceGroupSchema) {
   const blockRules = (block: Block) => block.rules.filter(rule => rule.filter && rule.operator).map(rule => toBackendCondition(rule, schema));
@@ -130,6 +132,12 @@ const allCountries = Array.from({ length: 26 * 26 }, (_, i) => String.fromCharCo
   .filter(option => option.label.toLowerCase() !== option.key)
   .sort((a, b) => a.label.localeCompare(b.label));
 
+/** ISO 639-1 language codes used for the App Language audience condition. */
+const languageNames = new Intl.DisplayNames(['en'], { type: 'language' });
+const allLanguages = `aa ab ae af ak am an ar as av ay az ba be bg bh bi bm bn bo br bs ca ce ch co cr cs cu cv cy da de dv dz ee el en eo es et eu fa ff fi fj fo fr fy ga gd gl gn gu gv ha he hi ho hr ht hu hy hz ia id ie ig ii ik io is it iu ja jv ka kg ki kj kk kl km kn ko kr ks ku kv kw ky la lb lg li ln lo lt lu lv mg mh mi mk ml mn mr ms mt my na nb nd ne ng nl nn no nr nv ny oc oj om or os pa pi pl ps pt qu rm rn ro ru rw sa sc sd se sg si sk sl sm sn so sq sr ss st su sv sw ta te tg th ti tk tl tn to tr ts tt tw ty ug uk ur uz ve vi vo wa wo xh yi yo za zh zu`.split(' ')
+  .map(code => ({ key: code, label: languageNames.of(code) ?? 'Other language' }))
+  .sort((a, b) => a.label.localeCompare(b.label));
+
 function ConditionRow({ rule, schema, onChange, onRemove }: { rule: Rule; schema?: AudienceGroupSchema; onChange: (field: keyof Rule, value: string) => void; onRemove: () => void }) {
   const field = schema?.fields.find(item => item.key === rule.filter || item.label === rule.filter);
   const condition = field?.conditions.find(item => item.key === rule.operator || item.label === rule.operator);
@@ -137,8 +145,11 @@ function ConditionRow({ rule, schema, onChange, onRemove }: { rule: Rule; schema
   const fallbackOperators = operators[fallbackField] ?? ['Is'];
   const valueConfig = condition?.value;
   const isCountry = rule.filter === 'country' || rule.filter === 'Country';
-  const options = valueConfig?.options?.length ? valueConfig.options : isCountry ? allCountries : undefined;
+  const isLanguage = rule.filter === 'language' || rule.filter === 'preferredLanguage' || rule.filter === 'App Language';
+  const options = isLanguage ? allLanguages : valueConfig?.options?.length ? valueConfig.options : isCountry ? allCountries : undefined;
   const noValue = valueConfig?.type === 'none';
+  const multiple = Boolean(valueConfig?.multiple && options?.length);
+  const selectedValues = multiple ? rule.value.split(',').map(value => value.trim()).filter(Boolean) : rule.value;
   return <Stack direction={{ xs: 'column', md: 'row' }} gap={1} className="condition-row-card">
     <Select size="small" displayEmpty value={rule.filter} onChange={event => onChange('filter', event.target.value)}>
       <MenuItem value="">Choose a filter</MenuItem>
@@ -148,7 +159,13 @@ function ConditionRow({ rule, schema, onChange, onRemove }: { rule: Rule; schema
       <MenuItem value="">Choose an operator</MenuItem>
       {schema ? (field?.conditions ?? []).map(item => <MenuItem key={item.key} value={item.key}>{item.label}</MenuItem>) : fallbackOperators.map(item => <MenuItem key={item} value={backendOperator[item] ?? item}>{item}</MenuItem>)}
     </Select>}
-    {rule.operator && !noValue && (options?.length ? <Select size="small" displayEmpty value={rule.value} onChange={event => onChange('value', event.target.value)}>
+    {rule.operator && !noValue && (options?.length ? <Select size="small" displayEmpty multiple={multiple} value={selectedValues} onChange={event => {
+      const next = Array.isArray(event.target.value) ? event.target.value : [event.target.value];
+      onChange('value', next.join(','));
+    }} renderValue={selected => {
+      const values = Array.isArray(selected) ? selected : [selected];
+      return values.map(value => options.find(option => option.key === value)?.label ?? value).join(', ');
+    }}>
       <MenuItem value="">Choose a value</MenuItem>
       {options.map(option => <MenuItem key={option.key} value={option.key}>{option.label}</MenuItem>)}
     </Select> : <TextField size="small" type={valueConfig?.type === 'integer' ? 'number' : valueConfig?.type === 'date' ? 'date' : 'text'} placeholder="Enter a value" value={rule.value} onChange={event => onChange('value', event.target.value)} />)}
