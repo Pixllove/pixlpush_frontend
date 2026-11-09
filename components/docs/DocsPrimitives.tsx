@@ -1,4 +1,6 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { createContext, useContext, type ReactNode } from "react";
 import CheckCircleRounded from "@mui/icons-material/CheckCircleRounded";
 import InfoOutlined from "@mui/icons-material/InfoOutlined";
 import LightbulbOutlined from "@mui/icons-material/LightbulbOutlined";
@@ -35,17 +37,35 @@ export const lightScrollbar = {
 // Heading anchors land below the sticky header and docs bar (DocsLayout sets the variable).
 export const scrollOffset = "var(--docs-offset, 140px)";
 
+const docsIdPrefix = createContext("");
+
+/**
+ * Full-documentation pages render several independent guides together. Their
+ * guide-local anchors must be scoped so identical section names do not create
+ * duplicate DOM ids or send the browser to the wrong guide.
+ */
+export function DocsIdScope({ prefix, children }: { prefix: string; children: ReactNode }) {
+  return <docsIdPrefix.Provider value={prefix}>{children}</docsIdPrefix.Provider>;
+}
+
+function useScopedId(id: string) {
+  const prefix = useContext(docsIdPrefix);
+  return prefix ? `${prefix}${id}` : id;
+}
+
 export function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
-  return <Box component="section" id={id} aria-labelledby={`${id}-title`} sx={{ position: "relative", scrollMarginTop: scrollOffset, py: { xs: 4, md: 5 }, borderBottom: `1px solid ${tokens.border}`, "&:first-of-type": { pt: 0 }, "&:last-of-type": { borderBottom: 0 }, ...inlineSx }}>
-    <Typography id={`${id}-title`} component="h2" sx={{ mb: 2, color: tokens.text, fontSize: { xs: "var(--fs-24)", md: "var(--fs-28)" }, fontWeight: 600, lineHeight: 1.25, letterSpacing: "var(--ls-display)" }}>
-      <Box component="a" href={`#${id}`} sx={{ color: "inherit", textDecoration: "none", "&:hover::after, &:focus-visible::after": { content: '"#"', ml: 1, color: tokens.textMuted } }}>{title}</Box>
+  const anchorId = useScopedId(id);
+  return <Box component="section" id={anchorId} aria-labelledby={`${anchorId}-title`} sx={{ position: "relative", scrollMarginTop: scrollOffset, py: { xs: 4, md: 5 }, borderBottom: `1px solid ${tokens.border}`, "&:first-of-type": { pt: 0 }, "&:last-of-type": { borderBottom: 0 }, ...inlineSx }}>
+    <Typography id={`${anchorId}-title`} component="h2" sx={{ mb: 2, color: tokens.text, fontSize: { xs: "var(--fs-24)", md: "var(--fs-28)" }, fontWeight: 600, lineHeight: 1.25, letterSpacing: "var(--ls-display)" }}>
+      <Box component="a" href={`#${anchorId}`} sx={{ color: "inherit", textDecoration: "none", "&:hover::after, &:focus-visible::after": { content: '"#"', ml: 1, color: tokens.textMuted } }}>{title}</Box>
     </Typography>
     <Stack gap={2}>{children}</Stack>
   </Box>;
 }
 
 export function SubHeading({ id, children }: { id?: string; children: ReactNode }) {
-  return <Typography id={id} component="h3" sx={{ mt: 1.5, scrollMarginTop: scrollOffset, color: tokens.text, fontSize: "var(--fs-18)", fontWeight: 600 }}>{children}</Typography>;
+  const anchorId = useScopedId(id ?? "");
+  return <Typography id={id ? anchorId : undefined} component="h3" sx={{ mt: 1.5, scrollMarginTop: scrollOffset, color: tokens.text, fontSize: "var(--fs-18)", fontWeight: 600 }}>{children}</Typography>;
 }
 
 export function Body({ children }: { children: ReactNode }) {
@@ -93,9 +113,10 @@ export function Checklist({ items }: { items: ReactNode[] }) {
 
 /** A numbered step on a vertical rail. */
 export function Step({ id, number, title, level = "h2", children }: { id: string; number: number; title: string; level?: "h2" | "h3"; children: ReactNode }) {
-  return <Box component="section" className="docs-step" id={id} aria-labelledby={`${id}-title`} sx={{ scrollMarginTop: scrollOffset, position: "relative", pl: { xs: 5.5, md: 7 }, pb: 5, "section:not(.docs-step) + &": { mt: { xs: 4, md: 5 } }, "&:last-of-type": { pb: 0 }, "&:not(:last-of-type)::before": { content: '""', position: "absolute", left: { xs: 15, md: 17 }, top: 44, bottom: 4, width: "1px", bgcolor: tokens.border }, ...inlineSx }}>
+  const anchorId = useScopedId(id);
+  return <Box component="section" className="docs-step" id={anchorId} aria-labelledby={`${anchorId}-title`} sx={{ scrollMarginTop: scrollOffset, position: "relative", pl: { xs: 5.5, md: 7 }, pb: 5, "section:not(.docs-step) + &": { mt: { xs: 4, md: 5 } }, "&:last-of-type": { pb: 0 }, "&:not(:last-of-type)::before": { content: '""', position: "absolute", left: { xs: 15, md: 17 }, top: 44, bottom: 4, width: "1px", bgcolor: tokens.border }, ...inlineSx }}>
     <Box aria-hidden="true" sx={{ position: "absolute", left: 0, top: 0, width: { xs: 32, md: 36 }, height: { xs: 32, md: 36 }, borderRadius: "50%", display: "grid", placeItems: "center", bgcolor: tokens.accentSoft, color: tokens.accent, border: `1px solid ${tokens.accentLine}`, fontFamily: "var(--pp-mono)", fontSize: "var(--fs-13)", fontWeight: 600 }}>{number}</Box>
-    <Typography id={`${id}-title`} component={level} sx={{ pt: { xs: .5, md: .6 }, mb: 1.5, color: tokens.text, fontSize: level === "h3" ? "var(--fs-18)" : { xs: "var(--fs-20)", md: "var(--fs-24)" }, fontWeight: 600, letterSpacing: "var(--ls-display)" }}><Box component="span" sx={srOnly}>Step {number}: </Box>{title}</Typography>
+    <Typography id={`${anchorId}-title`} component={level} sx={{ pt: { xs: .5, md: .6 }, mb: 1.5, color: tokens.text, fontSize: level === "h3" ? "var(--fs-18)" : { xs: "var(--fs-20)", md: "var(--fs-24)" }, fontWeight: 600, letterSpacing: "var(--ls-display)" }}><Box component="span" sx={srOnly}>Step {number}: </Box>{title}</Typography>
     <Stack gap={2}>{children}</Stack>
   </Box>;
 }

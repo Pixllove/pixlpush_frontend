@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Box, Typography } from "@mui/material";
 import { tokens } from "@/lib/theme";
 import TableOfContents from "@/components/docs/TableOfContents";
-import { hiddenScrollbar } from "@/components/docs/DocsPrimitives";
+import { DocsIdScope, hiddenScrollbar } from "@/components/docs/DocsPrimitives";
 import { getPlatform } from "@/components/docs/registry";
 import { webGuides } from "@/components/docs/web/guides";
 
@@ -23,7 +23,7 @@ export default function FullWebDocs() {
           <Typography component="p" sx={{ color: tokens.accent, fontSize: "var(--fs-12)", fontWeight: 600, letterSpacing: "var(--ls-overline)", textTransform: "uppercase" }}>{guide.group}</Typography>
           <Typography id={`${id(guide.slug)}-title`} component="h2" sx={{ mt: 1, color: tokens.text, fontSize: { xs: "var(--fs-28)", md: "var(--fs-32)" }, fontWeight: 600, letterSpacing: "-0.03em" }}>{guide.title}</Typography>
           <Typography sx={{ mt: 1, mb: 4, color: tokens.textSecondary }}>{guide.description}</Typography>
-          <Guide base="/docs" />
+          <DocsIdScope prefix={`${id(guide.slug)}-`}><Guide base="/docs" /></DocsIdScope>
         </Box>;
       })}
     </Box>
