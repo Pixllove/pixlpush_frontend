@@ -63,7 +63,7 @@ export default function DashboardFrame({
   const [appealSending, setAppealSending] = useState(false);
   const [appealError, setAppealError] = useState('');
   const [appealReference, setAppealReference] = useState('');
-  const { projects, active: activeProject, isEmpty, selectProject } = useActiveProject();
+  const { projects, active: activeProject, isEmpty, isPending: projectsPending, selectProject } = useActiveProject();
   const { data: currentUser, isPending: userPending } = useCurrentUser();
   useEffect(() => {
     setAppealFormOpen(false);
@@ -93,10 +93,15 @@ export default function DashboardFrame({
   });
 
   const router = useRouter();
+  const shouldRedirectToOnboarding = active === 'Home'
+    && requiresProject
+    && isEmpty
+    && !userPending
+    && !currentUser?.onboardingSkipped;
   useEffect(() => {
-    if (active !== 'Home' || !isEmpty || userPending || currentUser?.onboardingSkipped) return;
+    if (!shouldRedirectToOnboarding) return;
     router.replace('/onboarding');
-  }, [active, currentUser?.onboardingSkipped, isEmpty, router, userPending]);
+  }, [router, shouldRedirectToOnboarding]);
   const changeProject = (value: string) => {
     value === "create"
       ? setCreateOpen(true)
@@ -121,6 +126,25 @@ export default function DashboardFrame({
 
   // Only once the list has loaded and is truly empty; while loading the page renders as usual.
   const needsProject = requiresProject && isEmpty;
+  const onboardingGate = active === 'Home'
+    && requiresProject
+    && (userPending || projectsPending || shouldRedirectToOnboarding);
+  if (onboardingGate) {
+    return (
+      <Box
+        role="status"
+        aria-label="Opening onboarding"
+        sx={{
+          minHeight: '100vh',
+          display: 'grid',
+          placeItems: 'center',
+          bgcolor: '#f8f6fc',
+        }}
+      >
+        <CircularProgress size={28} aria-label="Loading" />
+      </Box>
+    );
+  }
   const onboardingPercent = activeProject && onboarding.data && !onboarding.isPending && !firebase.isPending
     ? onboardingPercentage(
       { ...onboarding.data, completed: Array.from(new Set([1, ...onboarding.data.completed])) },

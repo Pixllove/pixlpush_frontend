@@ -6,6 +6,7 @@ import { Typography } from '@mui/material';
 import LockRounded from '@mui/icons-material/LockRounded';
 import AuthShell from '@/components/website/AuthShell';
 import { useGoogleLogin } from '@/hooks/auth/use-login';
+import { authApi } from '@/lib/auth/api';
 import { postLoginPath, safeRedirect } from '@/lib/auth/redirect';
 import { googleErrorMessage } from './GoogleButton';
 
@@ -50,8 +51,19 @@ export default function GoogleCallback() {
           router.replace(`/login/mfa${redirect ? `?redirect=${encodeURIComponent(redirect)}` : ''}`);
           return;
         }
-        // Verified addresses go to the app, unverified ones to the verify screen.
-        const destination = postLoginPath(account, searchParams.get('redirect'));
+        // A first-time Google account has no Project yet. Resolve that state
+        // before opening the dashboard so the user never sees the normal Home
+        // workspace for a moment before being sent to onboarding.
+        let destination = postLoginPath(account, searchParams.get('redirect'));
+        try {
+          const currentUser = await authApi.me();
+          if (!currentUser.onboardingSkipped && currentUser.projects.length === 0) {
+            destination = '/onboarding';
+          }
+        } catch {
+          // DashboardFrame has the same onboarding guard for direct dashboard
+          // visits, so a temporary /me failure must not break Google sign-in.
+        }
         router.replace(destination);
         router.refresh();
       } catch (error) {
