@@ -332,7 +332,12 @@ export default function OnboardingWizard() {
             <Box><Typography className="onboarding-eyebrow">YOUR PIXLPUSH SETUP</Typography><Typography variant="h6" fontWeight={700}>A strong foundation, one step at a time</Typography></Box>
           <Typography variant="body2" color="text.secondary">{completedCount} of 6 complete</Typography>
           </Stack>
-          <LinearProgress variant="determinate" value={(completedCount / 6) * 100} className="onboarding-progress" />
+          {/* The bar tracks the step currently on screen, while the label separately reports saved completion. */}
+          <LinearProgress
+            variant="determinate"
+            value={((currentStep - 1) / (steps.length - 1)) * 100}
+            className="onboarding-progress"
+          />
           <div className="onboarding-stepper">
             {steps.map(([title], index) => {
               const number = index + 1;
