@@ -2,6 +2,7 @@ import CodeBlock from "../CodeBlock";
 import CodeTabs from "../CodeTabs";
 import { Body, Callout, Checklist, DataTable, List, Section, SubHeading } from "../DocsPrimitives";
 import { LinkBox } from "../links";
+import { SuggestedEvents } from "../SuggestedEvents";
 import { code } from "./content";
 import { rn, type GuideProps } from "./guides-setup";
 
@@ -74,6 +75,7 @@ export function Events({ base }: GuideProps) {
       <Callout tone="danger" title="Minimize what you send">The key filter is a safety net, not a policy. Don’t send passwords, tokens, card data, credentials, health data, or free text that may contain personal data.</Callout>
       <Body>Don’t track <code>app_opened</code>, <code>app_backgrounded</code> or notification opens yourself: the SDK records the first two, and opens are attributed through a separate request.</Body>
     </Section>
+    <SuggestedEvents automatic="app_opened and app_backgrounded are sent by the SDK." />
     <Section id="options" title="TrackOptions & idempotency">
       <DataTable headers={["Option", "Default", "Use"]} rows={[
         ["eventId", "a new cuid", "Stable ID for a business action, so a retried action can be de-duplicated."],

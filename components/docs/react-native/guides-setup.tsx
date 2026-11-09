@@ -112,6 +112,25 @@ export function AiSetup({ base }: GuideProps) {
       <Body>Copy this into Claude Code, Cursor, GitHub Copilot, Codex, Windsurf, Gemini CLI, Cline or any coding agent, from the root of your app. It uses the same code as the <A href={rn(base, "quickstart")}>Quickstart</A>.</Body>
       <CodeBlock code={aiPrompt} language="Markdown" download="pixlpush-setup-prompt.md" filename="pixlpush-setup-prompt.md" lineNumbers={false} maxHeight={520} wrap />
     </Section>
+    <Section id="outcome" title="After it finishes: what to check in your diff">
+      <Body>Before you merge, compare the agent’s changes with this list. Every change it makes should be one of these. Anything else, like changed prices, copy or purchase logic, was not asked for: reject it.</Body>
+      <DataTable code={false} headers={["Where", "What you’ll see", "Why"]} rows={[
+        ["package.json + lockfile", "@pixlpush/react-native, AsyncStorage and the Firebase messaging packages.", "The SDK and push."],
+        [".env (Expo) or src/config/pixlpush.ts (bare)", "The SDK key as a placeholder, and the project ID.", "You paste the key yourself."],
+        ["src/lib/pixlpush.ts (new)", "startPixlPush(), called once from App.tsx or the expo-router root layout.", "Starts the SDK once per launch."],
+        ["Auth code", "identify() after sign-in, await reset() on sign-out.", "Ties events to your users."],
+        ["Your existing screens: sign-up, paywall, checkout, subscription", "One added PixlPush.track(…) line where the action completes. Nothing else in the file changes.", "This is why a paywall file shows up in the diff. It feeds journeys and segments."],
+        ["app.config.* (Expo) or android/ + ios/ files (bare)", "Firebase plugin, Gradle and Podfile lines, AppDelegate setup.", "Native push setup."],
+        ["A listeners file + a permission button or onboarding step", "Notification tap and foreground handlers; permission asked from a tap, never at launch.", "Push opens, deep links, permission."],
+        ["src/dev/verify-pixlpush.ts (new, dev only)", "A script that sends integration_verified.", "Proves the setup works."],
+      ]} />
+      <Checklist items={[
+        "Every added track() call only records what happened. No price, entitlement, navigation or UI changed around it.",
+        "No Firebase service-account JSON, .p8 key or dashboard token in the repo.",
+        "The agent’s final report lists files changed, events tracked (name, file, properties), commands to run and manual steps.",
+        "The verify script prints failed: 0, remaining: 0, and qa-user-001 appears in PixlPush → Users.",
+      ]} />
+    </Section>
     <Section id="how" title="How to use it">
       <DataTable code={false} headers={["Agent", "Where to paste it"]} rows={[
         ["Claude Code", "Run claude in the project root and paste it, or save it as CLAUDE.md."],
