@@ -1589,9 +1589,17 @@ export default function HomeCommandCenter() {
     } catch { /* clipboard blocked by the browser: nothing was copied, so nothing is confirmed */ }
   };
 
-  const startNewChat = () => {
-    if (thinking) return;
+  const resetHomeView = (resetAgent = false) => {
+    // Home is a landing view, so returning to it must also stop an in-flight
+    // response and clear the transient conversation state. The saved thread is
+    // left intact and remains available from Recent conversations.
+    activeRequestRef.current?.abort();
+    activeRequestRef.current = null;
+    openingRequestRef.current += 1;
+    cancelThinking();
+    shouldStickToLatestRef.current = true;
     closeHistoryIfOverlay();
+    setHistoryOpen(false);
     setConversationSearch("");
     setMessages([]);
     setConversationId(undefined);
@@ -1604,11 +1612,33 @@ export default function HomeCommandCenter() {
     setFlowConfirming(false);
     setBusinessContext(emptyBusinessContext);
     setBusinessContextComplete(false);
+    businessContextHydratedRef.current = false;
     setAnalysisPhase(null);
     setAnalysisType(null);
     setAnalysisResource(null);
     setAnalysisPeriod(null);
+    setOpeningFlow(false);
+    setAgentAnchor(null);
+    setContextAnchor(null);
+    setContextOpen(false);
+    setContextError(null);
+    setCopied(null);
+    if (resetAgent) setSelectedAgent("Max");
   };
+
+  const startNewChat = () => {
+    if (thinking) return;
+    resetHomeView();
+  };
+
+  useEffect(() => {
+    const resetHomeChat = () => resetHomeView(true);
+    window.addEventListener('pixlpush:reset-home-chat', resetHomeChat);
+    return () => window.removeEventListener('pixlpush:reset-home-chat', resetHomeChat);
+    // The reset function intentionally uses stable React setters and refs. It
+    // must remain subscribed while this Home surface stays mounted.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const beginAnalysisFlow = (prompt?: string, approved = false) => {
     if (!approved && selectedAgent !== "Ben") {

@@ -158,7 +158,12 @@ export default function DashboardSidebar({ active, setActive, mobileOpen, collap
                       selected={selected}
                       aria-current={selected ? 'page' : undefined}
                       aria-label={collapsed ? label : undefined}
-                      onClick={() => { setClicked(label); setActive(label); onCloseSupport(); }}
+                      onClick={() => {
+                        setClicked(label);
+                        setActive(label);
+                        onCloseSupport();
+                        if (label === 'Home') window.dispatchEvent(new Event('pixlpush:reset-home-chat'));
+                      }}
                     >
                       <ListItemIcon className="dashboard-nav-icon"><Icon /></ListItemIcon>
                       <ListItemText className="dashboard-nav-label" primary={label} />

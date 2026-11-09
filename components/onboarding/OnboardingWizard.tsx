@@ -321,7 +321,9 @@ export default function OnboardingWizard() {
     <Box className="onboarding-shell">
       <Container maxWidth="lg" className="onboarding-container">
         <header className="onboarding-topbar">
-          <a className="onboarding-brand" href="/" aria-label="PixlPush home"><span className="onboarding-mark">P</span><span>Pixl<span>Push</span></span></a>
+          <a className="onboarding-brand" href="/" aria-label="PixlPush home">
+            <Image className="onboarding-brand-logo" src="/assets/logo-dark-text.png" alt="PixlPush" width={174} height={43} priority />
+          </a>
           <Button onClick={skip} variant="outlined" className="onboarding-skip">Skip setup <ArrowForwardRounded fontSize="small" /></Button>
         </header>
 

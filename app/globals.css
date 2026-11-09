@@ -17480,9 +17480,8 @@ body {
 }
 .onboarding-container { padding-top: 24px; padding-bottom: 64px; }
 .onboarding-topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:50px; }
-.onboarding-brand { display:flex; align-items:center; gap:10px; color:#27143a; text-decoration:none; font-size:21px; font-weight:800; letter-spacing:-.7px; }
-.onboarding-brand > span:last-child > span { color:#f1813f; }
-.onboarding-mark { display:grid; place-items:center; width:34px; height:34px; color:white; border-radius:12px 12px 12px 4px; background:linear-gradient(145deg,#a026f2,#5c19c4 62%,#ff8f42); box-shadow:0 8px 22px #7e2bce40; }
+.onboarding-brand { display:flex; align-items:center; text-decoration:none; }
+.onboarding-brand-logo { display:block; width:174px; height:auto; object-fit:contain; }
 .onboarding-skip.MuiButton-root { border-radius:999px; padding:9px 17px; border-color:#e4d9ec; color:#4b3a59; background:#ffffffa8; text-transform:none; gap:8px; }
 .onboarding-progress-area { width:min(100%,1120px); margin:0 auto 28px; }
 .onboarding-eyebrow,.guide-eyebrow { color:#7440ba; font-size:10px; font-weight:800; letter-spacing:1.55px; }
