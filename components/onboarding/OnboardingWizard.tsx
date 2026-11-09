@@ -1,16 +1,17 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type DragEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
 import {
   ArrowBackRounded, ArrowForwardRounded, AutoAwesomeRounded, CheckCircleRounded, CheckRounded, CloudUploadRounded, ContentCopyRounded,
-  LanguageRounded, LockRounded, MailOutlineRounded, NotificationsActiveRounded, PhoneIphoneRounded, SearchRounded, WarningAmberRounded,
+  CloseRounded, LanguageRounded, LockRounded, MailOutlineRounded, NotificationsActiveRounded, OpenInNewRounded, PhoneIphoneRounded,
+  SearchRounded, WarningAmberRounded,
 } from '@mui/icons-material';
 import {
-  Alert, Box, Button, Checkbox, Chip, Container, Dialog, DialogActions, DialogContent, DialogTitle,
-  FormControlLabel, IconButton, LinearProgress, Paper, Stack, TextField, Typography,
+  Alert, Box, Button, Chip, Container, Dialog, DialogActions, DialogContent, DialogTitle,
+  IconButton, LinearProgress, Paper, Stack, TextField, Typography,
 } from '@mui/material';
 import { initialOnboardingState, isPushReady, type OnboardingState } from '@/lib/onboarding';
 import { toggleProjectPlatform } from '@/lib/project-platforms';
@@ -68,6 +69,7 @@ export default function OnboardingWizard() {
   const [firebaseConfirm, setFirebaseConfirm] = useState('');
   const [firebaseError, setFirebaseError] = useState('');
   const [firebaseUploading, setFirebaseUploading] = useState(false);
+  const [firebaseDropActive, setFirebaseDropActive] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [stepDirection, setStepDirection] = useState<'forward' | 'backward'>('forward');
   const [appLinkScanState, setAppLinkScanState] = useState<'idle' | 'checking' | 'found' | 'not-found' | 'error'>('idle');
@@ -340,6 +342,13 @@ export default function OnboardingWizard() {
     setFirebaseFile({ name: picked.name, text, projectId: projectIdFromFile, adminKey });
   };
 
+  const handleFirebaseDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setFirebaseDropActive(false);
+    const droppedFile = event.dataTransfer.files?.[0];
+    if (droppedFile) void pickFirebaseFile(droppedFile);
+  };
+
   const uploadFirebase = async () => {
     if (!projectId || !firebaseFile?.projectId) return;
     setFirebaseError('');
@@ -455,7 +464,6 @@ export default function OnboardingWizard() {
                   {domainVerificationError && <Alert severity="error">{domainVerificationError}</Alert>}
                   <Paper elevation={0} className="onboarding-guidance"><strong>What happens next?</strong><span>We’ll guide you through a few simple steps to verify your domain and get it ready for sending emails.</span><small>You can verify it later. We’ll save this sender address for now.</small></Paper>
                 </Stack>}
-                {currentStep === 5 && hasWeb && <Alert severity="success" icon={<LanguageRounded />} sx={{ mb: hasMobile ? 2 : 0 }}><strong>Website push: nothing to set up.</strong> Install the web SDK in step 6 and add an “Enable notifications” button. Visitors who allow it can get push campaigns and journeys.</Alert>}
                 {currentStep === 5 && hasMobile && <Stack gap={2}><Paper elevation={0} className="onboarding-guidance"><strong>Firebase Cloud Messaging (mobile apps)</strong><span>Upload the Firebase service-account JSON used by this Project. PixlPush validates it with Google before encrypting and storing it.</span><small>Never paste credentials into chat or your app. The file is sent only to the authenticated backend.</small></Paper><Button variant="contained" onClick={openFirebaseWithMax} startIcon={<AutoAwesomeRounded />}>{firebaseConnected ? 'Review Firebase with Max' : 'Connect Firebase with Max'}</Button>{firebaseConnected && <Alert severity="success">Firebase is connected for this Project.</Alert>}</Stack>}
                 {currentStep === 6 && <Stack gap={2}><Paper elevation={0} className="onboarding-code"><code>Set up the PixlPush SDK in my {state.projectName || 'app'}. Guide me through installation, initialize it safely, register push permissions if enabled, and track a first test event. Do not expose secrets.</code><IconButton aria-label="Copy setup prompt" onClick={() => { navigator.clipboard?.writeText(`Set up the PixlPush SDK in my ${state.projectName || 'app'}. Guide me through installation, initialize it safely, register push permissions if enabled, and track a first test event. Do not expose secrets.`); setCopied(true); }}><ContentCopyRounded/></IconButton></Paper><Button href={hasMobile ? '/dashboard/integrations/react-native/quickstart' : '/dashboard/integrations/web/quickstart'} variant="outlined">{hasMobile ? 'View SDK integration guide' : 'View web SDK guide'}</Button></Stack>}
               </div>
@@ -464,33 +472,56 @@ export default function OnboardingWizard() {
           </Paper>
           <aside className="onboarding-side-note"><div className="onboarding-orbit"><span><Image className="onboarding-orbit-logo" src="/assets/favicon.webp" alt="PixlPush" width={52} height={52} /></span><i/><b/></div><Typography variant="h6">A little setup now.<br/>A clearer picture later.</Typography><Typography color="text.secondary">Max will keep your place so you can pause and pick up whenever you’re ready.</Typography></aside>
         </div>
-        <Dialog open={firebaseDialogOpen} onClose={() => setFirebaseDialogOpen(false)} fullWidth maxWidth="sm" aria-labelledby="firebase-max-title">
-          <DialogTitle id="firebase-max-title" sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}><span className="max-avatar"><Image src="/assets/agent-avatar-max-v4.webp" alt="Max" width={52} height={52} /></span><span>Set up Firebase with Max<Typography component="small" display="block" color="text.secondary" fontSize={11} fontWeight={400}>PUSH NOTIFICATIONS · SECURE CONNECTION</Typography></span></DialogTitle>
-          <DialogContent dividers>
-            <Stack gap={1.5}>
-              <div className="max-message"><AutoAwesomeRounded fontSize="small"/><p>Upload the Firebase service-account JSON. PixlPush validates it with Google before encrypting and saving it to this Project.</p></div>
-              <Paper elevation={0} className="firebase-max-checklist">
-                {[
-                  [1, 'Select the Firebase project for this app'],
-                  [2, 'Enable Firebase Cloud Messaging'],
-                  [3, 'Upload and validate the service-account JSON'],
-                ].map(([step, label]) => <FormControlLabel key={step} control={<Checkbox checked={state.firebaseChecklist.includes(Number(step))} onChange={() => toggleFirebaseCheck(Number(step))}/>} label={label} />)}
-              </Paper>
-              <Button component="label" variant="outlined" startIcon={<CloudUploadRounded />}>
-                {firebaseFile ? firebaseFile.name : 'Choose service-account JSON'}
-                <input type="file" accept="application/json,.json" hidden onChange={(event) => pickFirebaseFile(event.target.files?.[0])} />
-              </Button>
-              {firebaseFile?.projectId && <Typography fontSize="var(--fs-12)" color="text.secondary">Firebase project in this file: <b>{firebaseFile.projectId}</b></Typography>}
+        <Dialog className="firebase-max-dialog" open={firebaseDialogOpen} onClose={() => setFirebaseDialogOpen(false)} fullWidth maxWidth="lg" aria-labelledby="firebase-max-title">
+          <DialogTitle id="firebase-max-title" className="firebase-max-dialog-title">
+            <div className="firebase-max-title-main">
+              <span className="max-avatar"><Image src="/assets/agent-avatar-max-v4.webp" alt="Max" width={52} height={52} /></span>
+              <span><strong>Connect Firebase with Max</strong><small>PUSH NOTIFICATIONS · SECURE CONNECTION</small></span>
+            </div>
+            <IconButton aria-label="Close Firebase setup" onClick={() => setFirebaseDialogOpen(false)}><CloseRounded /></IconButton>
+          </DialogTitle>
+          <DialogContent dividers className="firebase-max-dialog-content">
+            <Typography className="firebase-guide-heading">How to find your Firebase Service Account JSON</Typography>
+            <div className="firebase-guide-layout">
+              <div className="firebase-guide-steps">
+                <div className="firebase-guide-step"><span>1</span><div><strong>Open Firebase Console</strong><p>Go to <a href="https://console.firebase.google.com" target="_blank" rel="noreferrer">console.firebase.google.com</a> and select your Firebase project.</p></div></div>
+                <div className="firebase-guide-step"><span>2</span><div><strong>Open Project Settings</strong><p>Click the gear icon next to Project Overview and select <b>Project settings</b>.</p></div></div>
+                <div className="firebase-guide-step"><span>3</span><div><strong>Go to Service Accounts</strong><p>Select the <b>Service accounts</b> tab at the top.</p></div></div>
+                <div className="firebase-guide-step"><span>4</span><div><strong>Download your JSON file</strong><p>If you already have a Firebase Service Account JSON file, you can use it. Otherwise, click <b>Generate new private key</b> to download one.</p><div className="firebase-guide-note"><b>Don’t worry:</b> Generating a new private key won’t invalidate your existing keys or interrupt your current Firebase integrations. Everything will continue working as before.</div></div></div>
+                <div className="firebase-guide-step"><span>5</span><div><strong>Upload the file to PixlPush</strong><p>Return here and upload your Service Account JSON file to securely connect your project.</p></div></div>
+              </div>
+              <div className="firebase-guide-gallery" aria-label="Firebase setup screenshots">
+                <figure><span className="firebase-guide-image-number">1</span><Image src="/assets/firebase-guide-console-v2.png" alt="Firebase Console project selector" width={2172} height={724} /></figure>
+                <figure><span className="firebase-guide-image-number">2</span><Image src="/assets/firebase-guide-settings-v2.png" alt="Firebase Project settings and Service accounts" width={2043} height={770} /></figure>
+                <figure><span className="firebase-guide-image-number">3</span><Image src="/assets/firebase-guide-service-account-v2.png" alt="Firebase Generate new private key button" width={2172} height={724} /></figure>
+              </div>
+            </div>
+
+            <div className="firebase-upload-panel">
+              <div className="firebase-upload-panel-head"><div><strong>Choose your Firebase Service Account JSON</strong><span>Your file will be validated before connecting.</span></div><Chip size="small" label="Secure upload" /></div>
+              <div
+                className={`firebase-dropzone${firebaseDropActive ? ' is-active' : ''}${firebaseFile ? ' has-file' : ''}`}
+                onDragOver={(event) => { event.preventDefault(); setFirebaseDropActive(true); }}
+                onDragLeave={() => setFirebaseDropActive(false)}
+                onDrop={handleFirebaseDrop}
+              >
+                <CloudUploadRounded />
+                <strong>{firebaseFile ? firebaseFile.name : 'Drag and drop your JSON file here'}</strong>
+                <span>{firebaseFile ? 'Ready to validate this service-account key.' : 'or choose a file from your device'}</span>
+                <Button component="label" variant="outlined">Browse file<input type="file" accept="application/json,.json" hidden onChange={(event) => pickFirebaseFile(event.target.files?.[0])} /></Button>
+              </div>
+              {firebaseFile?.projectId && <Typography className="firebase-file-meta">Firebase project in this file: <b>{firebaseFile.projectId}</b></Typography>}
               {firebaseFile?.adminKey && <Alert severity="warning">This is Firebase’s default Admin key. It works, but a key limited to push sending is safer.</Alert>}
               {firebaseProjectChange && <TextField label={`Type "${firebaseFile?.projectId}" to confirm`} value={firebaseConfirm} onChange={(event) => setFirebaseConfirm(event.target.value)} autoComplete="off" fullWidth />}
               {firebaseError && <Alert severity="error">{firebaseError}</Alert>}
-              <Alert severity="info" icon={<LockRounded />}>Credentials are encrypted and stored only in the PixlPush backend. They are never saved in browser storage.</Alert>
-            </Stack>
+              <Alert severity="info" icon={<LockRounded />}>Your private key is sensitive. Credentials are encrypted and stored only in the PixlPush backend. They are never saved in browser storage.</Alert>
+            </div>
+
           </DialogContent>
-          <DialogActions sx={{ justifyContent: 'space-between', p: 2 }}>
-            <Button href="https://console.firebase.google.com" target="_blank" rel="noreferrer">Open Firebase Console</Button>
+          <DialogActions className="firebase-max-dialog-actions">
+            <Button href="https://console.firebase.google.com" target="_blank" rel="noreferrer" startIcon={<OpenInNewRounded />}>Open Firebase Console</Button>
             <Button variant="contained" disabled={!firebaseFile?.projectId || firebaseUploading || (firebaseProjectChange && firebaseConfirm.trim() !== firebaseFile.projectId)} onClick={uploadFirebase}>
-              {firebaseUploading ? 'Validating…' : 'Validate and connect'}
+              {firebaseUploading ? 'Validating…' : 'Validate & connect'}
             </Button>
           </DialogActions>
         </Dialog>
