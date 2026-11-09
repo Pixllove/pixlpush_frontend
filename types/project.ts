@@ -483,9 +483,11 @@ export interface SdkKey {
   lastUsedAt: string | null;
   createdAt: string;
   revokedAt: string | null;
+  /** False for an older key until an app next uses it; revealing it then explains that. */
+  revealable: boolean;
 }
 
-/** POST /sdk-keys returns the raw key exactly once. */
+/** POST /sdk-keys returns the raw key; active keys can be revealed again later. */
 export interface CreatedSdkKey extends SdkKey {
   key: string;
 }

@@ -12,6 +12,7 @@ import type {
   NotificationPreference,
 } from '@/types/notifications';
 import type { ApiError } from '@/types/auth';
+import { listenLive, type RealtimeAccess } from '@/lib/realtime';
 
 export const notificationKeys = {
   all: ['notifications'] as const,
@@ -55,6 +56,7 @@ export function useNotificationRealtime(enabled = true) {
       void queryClient.invalidateQueries({ queryKey: notificationKeys.all, refetchType: 'active' });
     };
 
+    // SSE fallback for servers without Supabase Realtime (local development).
     const connect = () => {
       if (disposed) return;
       source = new EventSource('/api/notifications/stream');
@@ -75,11 +77,28 @@ export function useNotificationRealtime(enabled = true) {
       };
     };
 
-    connect();
+    // Production: this account's private Supabase Realtime channel. The 60s
+    // refetch above keeps the bell correct while either channel is down.
+    const stopLive = listenLive({
+      access: async () => {
+        const response = await fetch('/api/notifications/realtime', { credentials: 'same-origin', cache: 'no-store' });
+        if (!response.ok) throw new Error(`realtime ${response.status}`);
+        return ((await response.json()) as { data: RealtimeAccess }).data;
+      },
+      events: ['notification.created', 'notification.updated'],
+      onEvent: refresh,
+      sse: () => {
+        connect();
+        return () => {
+          disposed = true;
+          if (reconnectTimer) window.clearTimeout(reconnectTimer);
+          source?.close();
+        };
+      },
+    });
     return () => {
       disposed = true;
-      if (reconnectTimer) window.clearTimeout(reconnectTimer);
-      source?.close();
+      stopLive();
     };
   }, [enabled, queryClient]);
 }

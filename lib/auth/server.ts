@@ -402,15 +402,17 @@ async function callBackendStream(
   }
 }
 
-export async function callBackendStreamWithRefresh(
+/**
+ * Opens an authenticated stream WITHOUT renewing the session. A stream's
+ * response may never complete (the platform cuts long requests), so a token
+ * rotated here would never reach the browser: it keeps the used token, and the
+ * backend later ends the session as a replay. That logged users out overnight.
+ * On 401 the browser's regular API calls renew the session (they finish), and
+ * the stream reconnects with the new cookie.
+ */
+export async function callBackendStreamAuthenticated(
   path: string,
 ): Promise<UpstreamStreamResult> {
-  const first = await callBackendStream(path, { auth: true });
-  if (first.status !== 401) return first;
-
-  void first.response?.body?.cancel().catch(() => undefined);
-  const refreshed = await refreshSession();
-  if (!refreshed?.ok) return first;
   return callBackendStream(path, { auth: true });
 }
 
@@ -419,7 +421,7 @@ export async function callBackendSupportStream(
   path: string,
   options: { authenticated: boolean; guestToken?: string },
 ): Promise<UpstreamStreamResult> {
-  if (options.authenticated) return callBackendStreamWithRefresh(path);
+  if (options.authenticated) return callBackendStreamAuthenticated(path);
   const headers = options.guestToken
     ? { "x-pixlpush-support-token": options.guestToken }
     : undefined;
