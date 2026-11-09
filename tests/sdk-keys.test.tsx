@@ -80,4 +80,17 @@ describe('SDK keys', () => {
     expect(await screen.findByText('pp_sk_NEWKEY_VALUE')).toBeInTheDocument();
     expect(api.reveal).not.toHaveBeenCalled();
   });
+  it('creates a key in the side panel and shows it there', async () => {
+    keys = [key({})];
+    api.create.mockResolvedValue({ ...key({ id: 'k9', name: 'Staging web' }), key: 'pp_sk_STAGING_VALUE' });
+    renderIt();
+    await userEvent.click(await screen.findByRole('button', { name: 'New SDK key' }));
+    const panel = await screen.findByRole('dialog', { name: 'New SDK key' });
+    await userEvent.type(within(panel).getByLabelText(/Key name/), 'Staging web');
+    await userEvent.click(within(panel).getByRole('button', { name: 'Create key' }));
+    await waitFor(() => expect(api.create).toHaveBeenCalledWith('p1', 'Staging web'));
+    const created = await screen.findByRole('dialog', { name: 'SDK key created' });
+    expect(within(created).getByText('pp_sk_STAGING_VALUE')).toBeInTheDocument();
+    expect(within(created).getByText('demo')).toBeInTheDocument();
+  });
 });

@@ -44,6 +44,7 @@ import { useSdkKeys } from '@/hooks/projects/use-project-settings';
 import { sdkKeyApi } from '@/lib/projects/api';
 import SettingsStatus from './SettingsStatus';
 import IdentityVerificationCard from './IdentityVerificationCard';
+import SidePanel from './SidePanel';
 import type { ApiError } from '@/types/auth';
 import type { CreatedSdkKey, SdkKey } from '@/types/project';
 
@@ -288,10 +289,14 @@ export default function SdkKeysPanel() {
         <MenuItem onClick={fromMenu(setRevoking)} sx={{ color: 'error.main' }}><ListItemIcon sx={{ color: 'inherit' }}><DeleteOutlineRounded fontSize="small" /></ListItemIcon>Revoke key</MenuItem>
       </Menu>
 
-      <CreateDialog
-        open={creating}
+      <CreateKeyPanel
+        open={creating || Boolean(fresh)}
+        fresh={fresh}
         pending={create.isPending}
-        onClose={() => setCreating(false)}
+        slug={active?.slug}
+        copied={Boolean(fresh && copiedId === fresh.id)}
+        onCopy={() => fresh && copy(fresh.id, fresh.key)}
+        onClose={() => { setCreating(false); setFresh(undefined); }}
         onCreate={async (name) => {
           const created = await create.mutateAsync(name);
           remember(created.id, created.key);
@@ -334,50 +339,70 @@ export default function SdkKeysPanel() {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={Boolean(fresh)} onClose={() => setFresh(undefined)} maxWidth="sm" fullWidth>
-        <DialogTitle>Your new SDK key</DialogTitle>
-        <DialogContent>
-          <Typography fontSize="var(--fs-13)" color="text.secondary">Add “{fresh?.name}” to your app. You can reveal and copy it again from this page any time. Once your updated app is released, revoke the key it replaces.</Typography>
-          <Box className="key-field">
-            <KeyRounded />
-            <Typography sx={{ wordBreak: 'break-all' }}>{fresh?.key}</Typography>
-            <Button size="small" startIcon={copiedId === fresh?.id ? <CheckRounded /> : <ContentCopyRounded />} onClick={() => fresh && copy(fresh.id, fresh.key)}>
-              {copiedId === fresh?.id ? 'Copied' : 'Copy'}
-            </Button>
-          </Box>
-          <Typography fontSize="var(--fs-12)" sx={{ mt: 1.5 }}>Project ID for the SDK: <b>{active?.slug}</b></Typography>
-        </DialogContent>
-        <DialogActions><Button variant="contained" onClick={() => setFresh(undefined)}>Done</Button></DialogActions>
-      </Dialog>
-
       <Snackbar open={Boolean(toast)} autoHideDuration={2500} onClose={() => setToast(undefined)} message={toast} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }} />
     </Stack>
   );
 }
 
-function CreateDialog({ open, pending, onClose, onCreate }: { open: boolean; pending: boolean; onClose: () => void; onCreate: (name: string) => Promise<void> }) {
+/** New SDK key in the shared side panel: name it, then copy the key it shows. */
+function CreateKeyPanel({ open, fresh, pending, slug, copied, onCopy, onClose, onCreate }: {
+  open: boolean;
+  fresh?: CreatedSdkKey;
+  pending: boolean;
+  slug?: string;
+  copied: boolean;
+  onCopy: () => void;
+  onClose: () => void;
+  onCreate: (name: string) => Promise<void>;
+}) {
   const [name, setName] = useState('');
   const [error, setError] = useState<string>();
   const close = () => { if (pending) return; setName(''); setError(undefined); onClose(); };
-  const submit = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const submit = async (event?: React.FormEvent) => {
+    event?.preventDefault();
+    if (!name.trim() || pending) return;
     setError(undefined);
     try { await onCreate(name.trim()); setName(''); } catch (cause) { setError(message(cause)); }
   };
+
+  if (fresh) {
+    return (
+      <SidePanel open={open} onClose={close} eyebrow="SDK key created" title={fresh.name} footer={<Button variant="contained" onClick={close}>Done</Button>}>
+        <Typography fontSize="var(--fs-13)" color="text.secondary">
+          Add this key to your app. You can reveal and copy it again from the SDK keys page any time. If it replaces an older key, revoke the old one once your updated app is released.
+        </Typography>
+        <Box className="key-field" sx={{ mt: '0 !important' }}>
+          <KeyRounded />
+          <Typography sx={{ wordBreak: 'break-all' }}>{fresh.key}</Typography>
+          <Button size="small" startIcon={copied ? <CheckRounded /> : <ContentCopyRounded />} onClick={onCopy}>{copied ? 'Copied' : 'Copy'}</Button>
+        </Box>
+        <Box>
+          <Typography fontSize="var(--fs-12)" color="text.secondary">Project ID for the SDK</Typography>
+          <Typography fontSize="var(--fs-13)" fontWeight={600} sx={mono}>{slug}</Typography>
+        </Box>
+      </SidePanel>
+    );
+  }
+
   return (
-    <Dialog open={open} onClose={close} maxWidth="xs" fullWidth PaperProps={{ component: 'form', onSubmit: submit }}>
-      <DialogTitle>New SDK key</DialogTitle>
-      <DialogContent>
-        <Stack gap={1.5} sx={{ pt: 0.5 }}>
-          <TextField label="Key name" placeholder="Production iOS" value={name} onChange={(e) => setName(e.target.value)} inputProps={{ maxLength: 80 }} autoFocus fullWidth helperText="Name it after the app or environment that will use it." />
-          {error && <Alert severity="error">{error}</Alert>}
-        </Stack>
-      </DialogContent>
-      <DialogActions>
+    <SidePanel
+      open={open}
+      onClose={close}
+      eyebrow="New SDK key"
+      title="Create an SDK key"
+      footer={<>
         <Button onClick={close} disabled={pending}>Cancel</Button>
-        <Button type="submit" variant="contained" disabled={!name.trim() || pending}>{pending ? 'Creating…' : 'Create key'}</Button>
-      </DialogActions>
-    </Dialog>
+        <Button variant="contained" startIcon={<KeyRounded />} disabled={!name.trim() || pending} onClick={() => submit()}>{pending ? 'Creating…' : 'Create key'}</Button>
+      </>}
+    >
+      <Typography fontSize="var(--fs-13)" color="text.secondary">
+        Use one key per app or environment (for example Production iOS, Staging web), so you can revoke one without touching the others.
+      </Typography>
+      <Box component="form" onSubmit={submit}>
+        <TextField label="Key name" placeholder="Production iOS" value={name} onChange={(e) => setName(e.target.value)} inputProps={{ maxLength: 80 }} autoFocus fullWidth helperText="Only you and your team see this name." />
+      </Box>
+      {error && <Alert severity="error">{error}</Alert>}
+    </SidePanel>
   );
 }
 

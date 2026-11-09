@@ -2,13 +2,12 @@
 
 import { useState } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { ArrowDownwardRounded, ChevronRightRounded, CloseRounded } from '@mui/icons-material';
+import { ArrowDownwardRounded, ChevronRightRounded } from '@mui/icons-material';
 import {
   Alert,
   Box,
   Button,
   Chip,
-  Drawer,
   IconButton,
   MenuItem,
   Skeleton,
@@ -32,6 +31,7 @@ import type { ApiError } from '@/types/auth';
 import type { AuditCategory, AuditLogEntry, AuditLogQuery } from '@/types/project';
 import SearchField from '../SearchField';
 import AuditDatePicker from './AuditDatePicker';
+import SidePanel from '../SidePanel';
 import { describeViewerTimezone, formatUserLocalDateTime } from '@/lib/timezone';
 
 export const CATEGORY_LABEL: Record<AuditCategory, string> = {
@@ -257,16 +257,9 @@ function DetailsDrawer({ entry, onClose }: { entry: AuditLogEntry | null; onClos
   const extra = Object.entries(meta).filter(([k]) => !['before', 'after', 'changedFields', 'method', 'route'].includes(k));
 
   return (
-    <Drawer anchor="right" open={Boolean(entry)} onClose={onClose} PaperProps={{ sx: { width: { xs: '100%', sm: 440 } } }}>
+    <SidePanel open={Boolean(entry)} onClose={onClose} eyebrow="Activity details" title={entry?.description} closeLabel="Close details">
       {entry && (
-        <Stack sx={{ p: 3 }} gap={2} role="dialog" aria-label="Activity details">
-          <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap={1}>
-            <Box>
-              <Typography fontSize="var(--fs-12)" fontWeight={500} letterSpacing={1} color="text.secondary">ACTIVITY DETAILS</Typography>
-              <Typography fontSize="var(--fs-16)" fontWeight={600} sx={{ mt: 0.5 }}>{entry.description}</Typography>
-            </Box>
-            <IconButton aria-label="Close details" onClick={onClose}><CloseRounded /></IconButton>
-          </Stack>
+        <>
           <Box>
             <DetailRow k="When" v={<Tooltip title={describeViewerTimezone(entry.createdAt)}><span>{fullDate(entry.createdAt)}</span></Tooltip>} />
             <DetailRow k="User" v={<>{actorName(entry)}{entry.actor?.name && <Typography fontSize="var(--fs-12)" color="text.secondary">{entry.actor.email}</Typography>}</>} />
@@ -318,8 +311,8 @@ function DetailsDrawer({ entry, onClose }: { entry: AuditLogEntry | null; onClos
               {extra.map(([k, v]) => <DetailRow key={k} k={label(k)} v={pretty(v)} />)}
             </Box>
           )}
-        </Stack>
+        </>
       )}
-    </Drawer>
+    </SidePanel>
   );
 }
