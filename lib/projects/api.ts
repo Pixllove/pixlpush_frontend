@@ -33,6 +33,7 @@ import type {
   CreatedSdkKey,
   EmailSettings,
   FirebaseSettings,
+  HubspotSettings,
   ImportMappingInput,
   ImportPreview,
   ImportSuggestions,
@@ -107,6 +108,18 @@ export const projectApi = {
   /** Owner only, and only while the recovery window is open. */
   restore: (projectId: string) =>
     authRequest<Project>(`/${encodeURIComponent(projectId)}/restore`, {}, BASE),
+};
+
+/** HubSpot contact sync for one Project. Syncs run in the backend worker. */
+export const hubspotApi = {
+  get: (projectId: string) => authRequest<HubspotSettings>(at(projectId, "/hubspot"), undefined, BASE),
+  /** Checked live with HubSpot before the token is stored. */
+  connect: (projectId: string, accessToken: string) =>
+    authRequest<HubspotSettings>(at(projectId, "/hubspot"), { accessToken }, BASE, "PUT"),
+  setSyncEnabled: (projectId: string, syncEnabled: boolean) =>
+    authRequest<HubspotSettings>(at(projectId, "/hubspot"), { syncEnabled }, BASE, "PATCH"),
+  syncNow: (projectId: string) => authRequest<HubspotSettings>(at(projectId, "/hubspot/sync"), {}, BASE),
+  disconnect: (projectId: string) => authRequest<HubspotSettings>(at(projectId, "/hubspot"), {}, BASE, "DELETE"),
 };
 
 /** Firebase / FCM for one Project. Each Project has its own connection. */
@@ -1344,6 +1357,6 @@ export const projectKeys = {
   list: () => [...projectKeys.all, "list"] as const,
   detail: (id: string) => [...projectKeys.all, "detail", id] as const,
   /** Per-Project settings areas, e.g. setting(id, 'firebase'). */
-  setting: (id: string, area: "firebase" | "sdk-keys" | "email") =>
+  setting: (id: string, area: "firebase" | "sdk-keys" | "email" | "hubspot") =>
     [...projectKeys.all, area, id] as const,
 };
