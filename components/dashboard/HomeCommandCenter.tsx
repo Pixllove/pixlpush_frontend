@@ -5,10 +5,11 @@ import { Alert, Box, Button, ButtonBase, Dialog, DialogContent, DialogTitle, Ico
 import Image from "next/image";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { useCurrentUser } from "@/hooks/auth/use-current-user";
 import { useActiveProject } from "@/hooks/projects/use-active-project";
 import { accountGreetingName } from "@/lib/auth/display-name";
-import { aiApi, type AiAssistantId, type AiBusinessContext, type AiBusinessContextUpdate, type AiConversationMessage, type AiConversationPreview, type AiCreatedResource, type AiFlowId, type AiFlowDraftResponse, type AiHandoff, type AiProjectContext, type AiResourceType } from "@/lib/projects/ai";
+import { aiApi, type AiAssistantId, type AiBusinessContext, type AiBusinessContextUpdate, type AiConversationMessage, type AiConversationPreview, type AiCreatedResource, type AiFlowId, type AiFlowDraftResponse, type AiHandoff, type AiSuggestedPrompt, type AiProjectContext, type AiResourceType } from "@/lib/projects/ai";
 import { audienceGroupsApi, emailApi, firebaseApi, journeysApi, lifecycleSegmentsApi, pushApi, sdkKeyApi } from "@/lib/projects/api";
 import type { AudienceGroup, LifecycleSegment } from "@/types/project";
 import DeleteConfirmDialog from "@/components/dashboard/DeleteConfirmDialog";
@@ -40,12 +41,19 @@ const journeyChoiceExplanations: Record<string, string> = {
 
 const analysisPeriods = ["Last 7 days", "Last 30 days", "Last 90 days", "All time"];
 
-const prompts = [
-  ["What should I work on today?", AutoAwesomeRounded],
-  ["Find users at risk of churning", TrendingDownRounded],
-  ["Create a reactivation journey", InsightsRounded],
-  ["Improve my onboarding", AutoGraphRounded],
-] as const;
+/** Shown until the backend's progress-aware suggestions load (stage 1 defaults). */
+const fallbackPrompts: AiSuggestedPrompt[] = [
+  { label: "What are my next steps?", action: "chat" },
+  { label: "Help me complete my onboarding", action: "link", href: "/onboarding" },
+  { label: "How can I import my users?", action: "link", href: "/dashboard/users?import=1" },
+  { label: "Get a business analysis for my product", action: "chat" },
+];
+
+function promptIcon(prompt: AiSuggestedPrompt) {
+  if (prompt.action === "link") return ArrowForwardRounded;
+  if (prompt.action === "chat") return /churn|at risk/i.test(prompt.label) ? TrendingDownRounded : /perform|analysis/i.test(prompt.label) ? InsightsRounded : AutoAwesomeRounded;
+  return prompt.flow === "journey" ? RouteRounded : prompt.flow === "segment" ? PeopleAltOutlined : CampaignRounded;
+}
 
 /** Shown until the backend agent catalog loads. */
 const fallbackAgents: ReadonlyArray<readonly [string, string, string, string]> = [
@@ -1070,6 +1078,7 @@ export default function HomeCommandCenter() {
   const { active } = useActiveProject();
   const projectId = active?.id;
   const queryClient = useQueryClient();
+  const router = useRouter();
   const firstName = accountGreetingName(account);
   const [agentAnchor, setAgentAnchor] = useState<null | HTMLElement>(null);
   const [contextAnchor, setContextAnchor] = useState<null | HTMLElement>(null);
@@ -1713,6 +1722,13 @@ export default function HomeCommandCenter() {
     setDeleteTarget(conversation);
   };
 
+  /** Suggested prompts act: links open the page, flows start the guided creation, the rest ask Max. */
+  const runPrompt = (prompt: AiSuggestedPrompt) => {
+    if (prompt.action === "link") router.push(prompt.href);
+    else if (prompt.action === "flow") startFlow(prompt.flow, prompt.prompt);
+    else sendMessage(prompt.label);
+  };
+
   const startFlow = (flowId: string, prompt?: string, approved = false) => {
     const flow = guidedFlows.find((item) => item.id === flowId);
     if (!flow || !projectId || thinking) return;
@@ -2075,7 +2091,10 @@ export default function HomeCommandCenter() {
       <Typography className="home-disclaimer">AI can make mistakes. Check important growth decisions.</Typography>
 
       <Stack direction="row" justifyContent="center" gap={1} flexWrap="wrap" className="home-prompt-row">
-        {prompts.map(([label, Icon]) => <Button key={label} className="home-prompt" startIcon={<Icon />} onClick={() => sendMessage(label)}>{label}</Button>)}
+        {(aiContext?.suggestions?.prompts ?? fallbackPrompts).map((prompt) => {
+          const Icon = promptIcon(prompt);
+          return <Button key={prompt.label} className="home-prompt" startIcon={<Icon />} onClick={() => runPrompt(prompt)}>{prompt.label}</Button>;
+        })}
       </Stack>
 
       {!historyOpen && <Button className="home-recent-link" startIcon={<HistoryRounded />} onClick={toggleRecentHistory}>Recent conversations</Button>}

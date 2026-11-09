@@ -694,7 +694,8 @@ export function UsersSection() {
   const [createGroupOpen, setCreateGroupOpen] = useState(false);
   const [createSegmentOpen, setCreateSegmentOpen] = useState(false);
   const [segmentSdk, setSegmentSdk] = useState<"web" | "mobile">();
-  const [importUsersOpen, setImportUsersOpen] = useState(false);
+  // ?import=1 (from Max's "import my users" prompt) opens the import dialog directly.
+  const [importUsersOpen, setImportUsersOpen] = useState(searchParams.get("import") === "1");
   const queryClient = useQueryClient();
   const [userSearch, setUserSearch] = useState("");
   const [userCursors, setUserCursors] = useState<string[]>([]);

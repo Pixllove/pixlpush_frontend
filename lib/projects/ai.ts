@@ -110,8 +110,16 @@ export interface AiProjectSnapshot {
   campaigns: { email: number; push: number; total: number };
   journeys: { total: number };
   activitySummary: { total: number; last30Days: number };
+  /** Setup state the Home prompts and Max use; absent on an older API. */
+  setup?: { onboardingComplete: boolean; platforms: Array<"web" | "mobile">; firebaseConnected: boolean; pushReady: boolean; emailReady: boolean; sdkConnected: boolean };
   generatedAt: string;
 }
+
+/** A Home suggestion: ask Max, start a guided flow, or open the page where the user acts. */
+export type AiSuggestedPrompt =
+  | { label: string; action: "chat" }
+  | { label: string; action: "flow"; flow: "campaigns" | "journey" | "segment"; prompt: string }
+  | { label: string; action: "link"; href: string };
 
 export interface AiBusinessContext {
   businessDescription: string | null;
@@ -153,6 +161,8 @@ export interface AiProjectContext {
   latestInsight: AiInsight;
   handoffHistory: Array<{ assistant: AiAssistantId; action: string; status: string }>;
   catalog?: AiCatalog;
+  /** Four prompts for the customer's current stage (1 onboarding → 4 improve & grow). */
+  suggestions?: { stage: 1 | 2 | 3 | 4; prompts: AiSuggestedPrompt[] };
 }
 
 export interface AiConversationListResponse {
