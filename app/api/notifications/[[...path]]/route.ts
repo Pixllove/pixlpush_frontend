@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { callBackendStreamWithRefresh, callBackendWithRefresh } from '@/lib/auth/server';
+import { callBackendStreamAuthenticated, callBackendWithRefresh } from '@/lib/auth/server';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -8,7 +8,7 @@ type Params = { params: { path?: string[] } };
 
 function isAllowedPath(path: string[], method: string): boolean {
   if (path.length === 0) return method === 'GET';
-  if (path.length === 1 && path[0] === 'stream') return method === 'GET';
+  if (path.length === 1 && ['stream', 'realtime'].includes(path[0])) return method === 'GET';
   if (path.length === 1 && ['unread-count', 'read-all', 'preferences'].includes(path[0])) {
     if (path[0] === 'read-all') return method === 'POST';
     if (path[0] === 'preferences') return method === 'GET' || method === 'PATCH';
@@ -24,7 +24,7 @@ async function proxy(request: Request, { params }: Params) {
   }
 
   if (path.length === 1 && path[0] === 'stream') {
-    const result = await callBackendStreamWithRefresh('/notifications/stream');
+    const result = await callBackendStreamAuthenticated('/notifications/stream');
     if (!result.response) {
       return NextResponse.json(
         { error: { code: result.status === 401 ? 'UNAUTHORIZED' : 'BACKEND_UNAVAILABLE', message: 'Unable to open notification stream.' } },
