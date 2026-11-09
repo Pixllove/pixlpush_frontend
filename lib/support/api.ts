@@ -1,3 +1,4 @@
+import { listenLive, type RealtimeAccess } from '@/lib/realtime';
 
 export type SupportTopic = 'campaigns' | 'integrations' | 'billing' | 'account_access' | 'technical' | 'general';
 export type SupportStatus = 'open' | 'in_progress' | 'waiting_on_customer' | 'resolved' | 'closed';
@@ -84,23 +85,34 @@ export const supportApi = {
   get: (ticketId: string) => supportRequest<SupportTicket>(`tickets/${encodeURIComponent(ticketId)}`),
   send: (ticketId: string, message: string, idempotencyKey = crypto.randomUUID()) => supportRequest<SupportTicket>(`tickets/${encodeURIComponent(ticketId)}/messages`, { method: 'POST', body: JSON.stringify({ message, idempotencyKey }) }),
   /**
-   * Live ticket updates. Polls only while the stream is down, so a healthy
-   * connection costs no extra requests; catches up once after a reconnect.
+   * Live ticket updates: this ticket's private Supabase Realtime channel in
+   * production, the SSE stream elsewhere. Polls only while disconnected and
+   * catches up once after a reconnect.
    */
   stream: (ticketId: string, onMessage: () => void, onTyping?: () => void, fallbackMs = 20_000) => {
-    const stream = new EventSource(`/api/support/tickets/${encodeURIComponent(ticketId)}/stream`);
     let poll: number | undefined;
-    let dropped = false;
-    if (onTyping) stream.addEventListener('support.typing', onTyping);
-    stream.addEventListener('support.message.created', onMessage);
-    stream.addEventListener('ticket.updated', onMessage);
-    stream.addEventListener('ready', () => {
-      window.clearInterval(poll); poll = undefined;
-      if (dropped) { dropped = false; onMessage(); }
+    const startPoll = () => { poll ??= window.setInterval(onMessage, fallbackMs); };
+    const stopPoll = () => { window.clearInterval(poll); poll = undefined; };
+    let connectedBefore = false;
+    const reconnected = () => { stopPoll(); if (connectedBefore) onMessage(); connectedBefore = true; };
+
+    const stop = listenLive({
+      access: () => supportRequest<RealtimeAccess>(`tickets/${encodeURIComponent(ticketId)}/realtime`),
+      events: ['support.message.created', 'ticket.updated', 'support.typing'],
+      onEvent: (event) => (event === 'support.typing' ? onTyping?.() : onMessage()),
+      onState: (live) => (live ? reconnected() : startPoll()),
+      sse: () => {
+        const stream = new EventSource(`/api/support/tickets/${encodeURIComponent(ticketId)}/stream`);
+        if (onTyping) stream.addEventListener('support.typing', onTyping);
+        stream.addEventListener('support.message.created', onMessage);
+        stream.addEventListener('ticket.updated', onMessage);
+        stream.addEventListener('ready', reconnected);
+        // EventSource retries by itself; poll in the meantime so nothing is missed.
+        stream.onerror = startPoll;
+        return () => stream.close();
+      },
     });
-    // EventSource retries by itself; poll in the meantime so nothing is missed.
-    stream.onerror = () => { dropped = true; poll ??= window.setInterval(onMessage, fallbackMs); };
-    return () => { stream.close(); window.clearInterval(poll); };
+    return () => { stop(); stopPoll(); };
   },
   /** Read receipt: lets the backend skip the reply email. Best effort. */
   seen: (ticketId: string) => supportRequest<{ seen: true }>(`tickets/${encodeURIComponent(ticketId)}/seen`, { method: 'POST', body: '{}' }).catch(() => undefined),
