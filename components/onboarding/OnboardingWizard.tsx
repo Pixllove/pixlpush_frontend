@@ -22,21 +22,29 @@ import type { ApiError } from '@/types/auth';
 
 const steps = [
   ['Project basics', 'Give your workspace a name'],
-  ['Your product', 'Add your website or app link'],
+  ['Your products', 'Add your website or app links'],
   ['Channels', 'Choose how you’ll reach customers'],
   ['Domain', 'Prepare your sending domain'],
   ['Push setup', 'Web: automatic · Mobile: Firebase'],
   ['SDK install', 'Bring product signals into PixlPush'],
 ];
 const platformOptions: Array<{ id: ProjectPlatform; title: string; detail: string; icon: typeof LanguageRounded }> = [
-  { id: 'web', title: 'Website', detail: 'React, Next.js, Vue, Angular or any site. Push works without Firebase.', icon: LanguageRounded },
-  { id: 'mobile', title: 'Mobile app', detail: 'React Native or Flutter. Push needs your Firebase project.', icon: PhoneIphoneRounded },
+  { id: 'web', title: 'Website', detail: 'For websites and web-based products.', icon: LanguageRounded },
+  { id: 'mobile', title: 'Mobile App', detail: 'For apps available on iOS or Android.', icon: PhoneIphoneRounded },
 ];
-const channelOptions = [
-  { id: 'push', title: 'Push notifications', detail: 'Reach opted-in users on mobile and web.', icon: NotificationsActiveRounded },
+const channelOptions: Array<{ id: string; title: string; detail: string; icon: typeof LanguageRounded; platform?: ProjectPlatform }> = [
+  { id: 'web-push', title: 'Web push', detail: 'Reach opted-in visitors in their browser.', icon: NotificationsActiveRounded, platform: 'web' },
+  { id: 'mobile-push', title: 'Mobile push', detail: 'Reach opted-in users on iOS and Android.', icon: NotificationsActiveRounded, platform: 'mobile' },
   { id: 'email', title: 'Email', detail: 'Send lifecycle and product updates.', icon: MailOutlineRounded },
   { id: 'in-app', title: 'In-app messages', detail: 'Show timely messages inside your product.', icon: PhoneIphoneRounded },
 ];
+
+/** Progress saved before push was split into web and mobile stores 'push': expand it to the selected product types. */
+function splitLegacyPush(channels: string[], platforms: ProjectPlatform[]) {
+  if (!channels.includes('push')) return channels;
+  const push = channelOptions.filter((option) => option.platform && platforms.includes(option.platform)).map((option) => option.id);
+  return [...new Set(channels.flatMap((channel) => (channel === 'push' ? push : [channel])))];
+}
 
 export default function OnboardingWizard() {
   const router = useRouter();
@@ -56,7 +64,8 @@ export default function OnboardingWizard() {
   const [firebaseUploading, setFirebaseUploading] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [stepDirection, setStepDirection] = useState<'forward' | 'backward'>('forward');
-  const [appLinkScanState, setAppLinkScanState] = useState<'idle' | 'checking' | 'found' | 'not-found'>('idle');
+  const [appLinkScanState, setAppLinkScanState] = useState<'idle' | 'checking' | 'found' | 'not-found' | 'error'>('idle');
+  const [appLinkScanError, setAppLinkScanError] = useState('');
   const hydratedProject = useRef<string | null>(null);
   const localUserChange = useRef(false);
   const savedProgress = useRef('');
@@ -85,6 +94,7 @@ export default function OnboardingWizard() {
       setState((previous) => ({
         ...previous,
         ...progressQuery.data,
+        channels: splitLegacyPush(progressQuery.data.channels, progressQuery.data.platforms),
         projectName: progressQuery.data.projectName || selectedProject?.name || previous.projectName,
       }));
     } else if (selectedProject?.name) {
@@ -178,13 +188,23 @@ export default function OnboardingWizard() {
     setStepDirection('backward');
     setState({ ...state, currentStep: currentStep - 1, skipped: false });
   };
-  const checkForAppLinks = () => {
-    if (!state.websiteUrl.trim()) return;
+  const checkForAppLinks = async () => {
+    const raw = state.websiteUrl.trim();
+    if (!raw || !projectId) return;
     setAppLinkScanState('checking');
-    window.setTimeout(() => {
-      const hasAppLinks = Boolean(state.androidAppUrl.trim() || state.iosAppUrl.trim());
-      setAppLinkScanState(hasAppLinks ? 'found' : 'not-found');
-    }, 650);
+    try {
+      const links = await onboardingApi.appLinks(projectId, /^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
+      // Fill only empty fields: never overwrite a link the user typed.
+      setState((previous) => ({
+        ...previous,
+        androidAppUrl: previous.androidAppUrl.trim() || links.androidAppUrl || '',
+        iosAppUrl: previous.iosAppUrl.trim() || links.iosAppUrl || '',
+      }));
+      setAppLinkScanState(links.androidAppUrl || links.iosAppUrl ? 'found' : 'not-found');
+    } catch (cause) {
+      setAppLinkScanError((cause as ApiError).message || 'We couldn’t open that website.');
+      setAppLinkScanState('error');
+    }
   };
   const updateWebsiteUrl = (value: string) => {
     setAppLinkScanState('idle');
@@ -211,7 +231,13 @@ export default function OnboardingWizard() {
     localUserChange.current = true;
     setState((previous) => {
       const platforms = toggleProjectPlatform(previous.platforms, id);
-      return platforms === previous.platforms ? previous : { ...previous, platforms, skipped: false };
+      if (platforms === previous.platforms) return previous;
+      // Drop the push channel of a product type that was just removed.
+      const channels = previous.channels.filter((channel) => {
+        const platform = channelOptions.find((option) => option.id === channel)?.platform;
+        return !platform || platforms.includes(platform);
+      });
+      return { ...previous, platforms, channels, skipped: false };
     });
   };
   const toggleChannel = (id: string) => {
@@ -222,7 +248,7 @@ export default function OnboardingWizard() {
         ...previous,
         channels: adding ? [...previous.channels, id] : previous.channels.filter((x) => x !== id),
         skipped: false,
-        ...(id === 'push' && adding ? { completed: previous.completed.filter((step) => step !== 5), firebaseChecklist: [] } : {}),
+        ...(id === 'mobile-push' && adding ? { completed: previous.completed.filter((step) => step !== 5), firebaseChecklist: [] } : {}),
       };
     });
   };
@@ -305,10 +331,10 @@ export default function OnboardingWizard() {
 
   const canContinue = currentStep === 1 ? Boolean(state.projectName.trim()) && !projectsPending && !projectsQuery.isPending : currentStep === 3 ? state.channels.length > 0 : currentStep === 2 ? state.platforms.length > 0 : currentStep === 5 ? pushReady : true;
   const firebaseProjectChange = Boolean(firebaseQuery.data?.firebaseProjectId && firebaseFile?.projectId && firebaseQuery.data.firebaseProjectId !== firebaseFile.projectId);
-  const heading = ['What should we call your project?', 'Where can customers find your product?', 'Which channels do you want to use?', 'Let’s get your domain ready.', hasMobile ? 'Set up push for your app.' : 'Website push is ready.', 'Add the PixlPush SDK to your app.'][currentStep - 1];
+  const heading = ['What should we call your project?', 'Tell us about your products', 'Which channels do you want to use?', 'Let’s get your domain ready.', hasMobile ? 'Set up push for your app.' : 'Website push is ready.', 'Add the PixlPush SDK to your app.'][currentStep - 1];
   const prompt = [
     'I’m Max, your onboarding guide. Let’s start with a name for the product or workspace you’re setting up.',
-    'Great start. Tell me what you’re building (a website or a mobile app) and share its links. This decides which setup steps you’ll see.',
+    'Select the types of products you already have and add their links. We’ll tailor the next setup steps to your product portfolio.',
     'Choose every channel you plan to use. We’ll tailor the remaining setup to your selections.',
     'A sending domain helps your email reach the inbox and look like it came from your brand. Add the domain you plan to use; this demo won’t change DNS.',
     hasMobile
@@ -358,22 +384,27 @@ export default function OnboardingWizard() {
               <div className="onboarding-question"><Typography className="onboarding-eyebrow">STEP {String(currentStep).padStart(2, '0')} · {steps[currentStep - 1][0].toUpperCase()}</Typography><Typography variant="h4" className="onboarding-question-title">{heading}</Typography>
                 {currentStep === 1 && <TextField autoFocus fullWidth label="Project name" placeholder="e.g. Northstar Mobile" value={state.projectName} onChange={(e) => patch({ projectName: e.target.value })} helperText="You can change this any time." />}
                 {currentStep === 2 && <div className="onboarding-product-links">
-                  <div className="onboarding-product-section-heading"><span className="onboarding-product-section-icon"><AutoAwesomeRounded /></span><span><strong>What are you building?</strong><small>Select Website, Mobile, or both. You can change this later in Project settings.</small></span></div>
+                  <div className="onboarding-product-section-heading"><span className="onboarding-product-section-icon"><AutoAwesomeRounded /></span><span><strong>What types of products do you have?</strong><small>Select Website, Mobile App, or both. You can update this anytime in Project Settings.</small></span></div>
                   <div className="onboarding-channel-grid">{platformOptions.map(({ id, title, detail, icon: Icon }) => <button key={id} type="button" role="checkbox" aria-checked={state.platforms.includes(id)} className={`onboarding-channel${state.platforms.includes(id) ? ' selected' : ''}`} onClick={() => togglePlatform(id)}><span className="onboarding-channel-icon"><Icon /></span><span><strong>{title}</strong><small>{detail}</small></span>{state.platforms.includes(id) && <CheckRounded className="onboarding-channel-check"/>}</button>)}</div>
-                  <div className="onboarding-product-section-heading"><span className="onboarding-product-section-icon"><LanguageRounded /></span><span><strong>Website</strong><small>Start with your public product website</small></span></div>
-                  <TextField fullWidth label="Website link" placeholder="https://yourproduct.com" value={state.websiteUrl} onChange={(e) => updateWebsiteUrl(e.target.value)} />
-                  <Button className="onboarding-scan-button" variant="outlined" disabled={!state.websiteUrl.trim() || appLinkScanState === 'checking'} onClick={checkForAppLinks} startIcon={appLinkScanState === 'checking' ? <AutoAwesomeRounded className="onboarding-scan-icon" /> : <SearchRounded />}>
+                  {hasWeb && <>
+                  <div className="onboarding-product-section-heading"><span className="onboarding-product-section-icon"><LanguageRounded /></span><span><strong>Website</strong><small>Add the link to your existing website.</small></span></div>
+                  <TextField fullWidth label="Website URL" placeholder="https://yourproduct.com" value={state.websiteUrl} onChange={(e) => updateWebsiteUrl(e.target.value)} />
+                  </>}
+                  {/* The scan reads the website for store links, so it needs both a website and a mobile app. */}
+                  {hasWeb && hasMobile && <Button className="onboarding-scan-button" variant="outlined" disabled={!state.websiteUrl.trim() || appLinkScanState === 'checking'} onClick={() => void checkForAppLinks()} startIcon={appLinkScanState === 'checking' ? <AutoAwesomeRounded className="onboarding-scan-icon" /> : <SearchRounded />}>
                     {appLinkScanState === 'checking' ? 'Checking for app links…' : 'Check for app links'}
-                  </Button>
-                  {appLinkScanState !== 'idle' && <div className={`onboarding-link-scan ${appLinkScanState}`} role="status">
+                  </Button>}
+                  {hasWeb && hasMobile && appLinkScanState !== 'idle' && <div className={`onboarding-link-scan ${appLinkScanState}`} role="status">
                     {appLinkScanState === 'found' ? <CheckCircleRounded /> : <WarningAmberRounded />}
-                    <span><strong>{appLinkScanState === 'checking' ? 'Looking for app-store links' : appLinkScanState === 'found' ? 'App link found' : 'No app links found'}</strong><small>{appLinkScanState === 'checking' ? 'Reviewing the website details in this preview.' : appLinkScanState === 'found' ? 'We found an app link in the details below.' : 'No app-store links were found yet. You can add them manually below.'}</small></span>
+                    <span><strong>{appLinkScanState === 'checking' ? 'Looking for app-store links' : appLinkScanState === 'found' ? 'App links found' : appLinkScanState === 'error' ? 'Couldn’t check this website' : 'No app links found'}</strong><small>{appLinkScanState === 'checking' ? 'Reading your website for Google Play and App Store links.' : appLinkScanState === 'found' ? 'We added the links we found below. Check them before you continue.' : appLinkScanState === 'error' ? `${appLinkScanError} You can add the links manually below.` : 'Your website doesn’t link to Google Play or the App Store. Add the links manually below.'}</small></span>
                   </div>}
-                  <div className="onboarding-product-section-heading app-links-heading"><span className="onboarding-product-section-icon"><AutoAwesomeRounded /></span><span><strong>App links</strong><small>Add or confirm your mobile app store links</small></span></div>
-                  <div className="onboarding-app-link-grid"><TextField fullWidth label="Android app link" placeholder="Google Play Store URL" value={state.androidAppUrl} onChange={(e) => patch({ androidAppUrl: e.target.value })}/><TextField fullWidth label="iOS app link" placeholder="Apple App Store URL" value={state.iosAppUrl} onChange={(e) => patch({ iosAppUrl: e.target.value })}/></div>
-                  <Alert severity="info" icon={<LanguageRounded />}>We’ll use these links only as setup context—no business analysis.</Alert>
+                  {hasMobile && <>
+                  <div className={`onboarding-product-section-heading${hasWeb ? ' app-links-heading' : ''}`}><span className="onboarding-product-section-icon"><PhoneIphoneRounded /></span><span><strong>Mobile App</strong><small>Add your existing app store links.</small></span></div>
+                  <div className="onboarding-app-link-grid"><TextField fullWidth label="Android App URL" placeholder="Google Play Store URL" value={state.androidAppUrl} onChange={(e) => patch({ androidAppUrl: e.target.value })}/><TextField fullWidth label="iOS App URL" placeholder="Apple App Store URL" value={state.iosAppUrl} onChange={(e) => patch({ iosAppUrl: e.target.value })}/></div>
+                  </>}
+                  {state.platforms.length > 0 && <Typography variant="body2" color="text.secondary">We’ll use these links to personalize your setup and guide you through the relevant next steps.</Typography>}
                 </div>}
-                {currentStep === 3 && <div className="onboarding-channel-grid">{channelOptions.map(({ id, title, detail, icon: Icon }) => <button key={id} className={`onboarding-channel${state.channels.includes(id) ? ' selected' : ''}`} onClick={() => toggleChannel(id)}><span className="onboarding-channel-icon"><Icon /></span><span><strong>{title}</strong><small>{detail}</small></span>{state.channels.includes(id) && <CheckRounded className="onboarding-channel-check"/>}</button>)}</div>}
+                {currentStep === 3 && <div className="onboarding-channel-grid">{channelOptions.filter((option) => !option.platform || state.platforms.includes(option.platform)).map(({ id, title, detail, icon: Icon }) => <button key={id} className={`onboarding-channel${state.channels.includes(id) ? ' selected' : ''}`} onClick={() => toggleChannel(id)}><span className="onboarding-channel-icon"><Icon /></span><span><strong>{title}</strong><small>{detail}</small></span>{state.channels.includes(id) && <CheckRounded className="onboarding-channel-check"/>}</button>)}</div>}
                 {currentStep === 4 && <Stack gap={2}><TextField fullWidth label="Sending domain" placeholder="mail.yourproduct.com" value={state.domain} onChange={(e) => patch({ domain: e.target.value })}/><Paper elevation={0} className="onboarding-guidance"><strong>What you’ll do later</strong><span>Verify ownership · Add DNS records · Confirm authentication</span><small>This is a guided preview only. No DNS records are created or verified here.</small></Paper></Stack>}
                 {currentStep === 5 && hasWeb && <Alert severity="success" icon={<LanguageRounded />} sx={{ mb: hasMobile ? 2 : 0 }}><strong>Website push: nothing to set up.</strong> Install the web SDK in step 6 and add an “Enable notifications” button. Visitors who allow it can get push campaigns and journeys.</Alert>}
                 {currentStep === 5 && hasMobile && <Stack gap={2}><Paper elevation={0} className="onboarding-guidance"><strong>Firebase Cloud Messaging (mobile apps)</strong><span>Upload the Firebase service-account JSON used by this Project. PixlPush validates it with Google before encrypting and storing it.</span><small>Never paste credentials into chat or your app. The file is sent only to the authenticated backend.</small></Paper><Button variant="contained" onClick={openFirebaseWithMax} startIcon={<AutoAwesomeRounded />}>{firebaseConnected ? 'Review Firebase with Max' : 'Connect Firebase with Max'}</Button>{firebaseConnected && <Alert severity="success">Firebase is connected for this Project.</Alert>}</Stack>}

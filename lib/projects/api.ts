@@ -141,6 +141,9 @@ export const onboardingApi = {
     authRequest<OnboardingState>(at(projectId, "/onboarding"), undefined, BASE),
   update: (projectId: string, input: Partial<Omit<OnboardingState, "projectName">>) =>
     authRequest<OnboardingState>(at(projectId, "/onboarding"), input, BASE, "PATCH"),
+  /** Reads the website on the server and returns the store links it links to (null when absent). */
+  appLinks: (projectId: string, websiteUrl: string) =>
+    authRequest<{ androidAppUrl: string | null; iosAppUrl: string | null }>(at(projectId, "/onboarding/app-links"), { websiteUrl }, BASE),
 };
 
 export type RoadmapStage = 'under_consideration' | 'future' | 'planned' | 'in_progress' | 'done' | 'unlikely_to_build';

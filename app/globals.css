@@ -17534,7 +17534,7 @@ body {
 .onboarding-link-scan small { font-size:11px; line-height:1.45; }
 .onboarding-link-scan.checking { color:#5d3a91; border-color:#dac8ed; background:#faf6fe; }
 .onboarding-link-scan.found { color:#18734f; border-color:#bce4d1; background:#effaf4; }
-.onboarding-link-scan.not-found { color:#9b3e35; border-color:#f0c7c1; background:#fff5f3; }
+.onboarding-link-scan.not-found, .onboarding-link-scan.error { color:#9b3e35; border-color:#f0c7c1; background:#fff5f3; }
 .app-links-heading { margin-top:7px; padding-top:17px; border-top:1px solid #f0e8f4; }
 .onboarding-app-link-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
 .onboarding-channel-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
