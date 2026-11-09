@@ -44,6 +44,8 @@ import {
   Typography,
 } from "@mui/material";
 import UploadFileOutlined from "@mui/icons-material/UploadFileOutlined";
+import SyncRounded from "@mui/icons-material/SyncRounded";
+import Link from "next/link";
 import EmptyState from "./EmptyState";
 import { useActiveProject } from "@/hooks/projects/use-active-project";
 import { userImportApi } from "@/lib/projects/api";
@@ -92,16 +94,25 @@ const fields: { value: Field; label: string }[] = [
   { value: "properties.phone", label: "Phone number" },
 ];
 const sources: {
-  id: "csv";
+  id: "csv" | "hubspot";
   label: string;
   description: string;
   icon: typeof FileUploadRounded;
+  /** Set for sources configured on their own settings page. */
+  href?: string;
 }[] = [
   {
     id: "csv",
     label: "CSV file",
     description: "Upload a list of users and map the columns.",
     icon: FileUploadRounded,
+  },
+  {
+    id: "hubspot",
+    label: "HubSpot",
+    description: "Connect HubSpot and keep your contacts in sync automatically.",
+    icon: SyncRounded,
+    href: "/dashboard/settings/hubspot",
   },
 ];
 
@@ -527,8 +538,12 @@ export default function UserImportDialog({
               </Typography>
             </Box>
             <Box className="import-source-grid">
-              {sources.map(({ id, label, description, icon: Icon }) => (
-                <Box key={id} className="import-source-card active">
+              {sources.map(({ id, label, description, icon: Icon, href }) => (
+                <Box
+                  key={id}
+                  className={`import-source-card${href ? "" : " active"}`}
+                  {...(href ? { component: Link, href, sx: { color: "inherit", textDecoration: "none" } } : {})}
+                >
                   <Box className="import-source-icon">
                     <Icon />
                   </Box>

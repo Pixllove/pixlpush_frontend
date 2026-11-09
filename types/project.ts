@@ -444,6 +444,22 @@ export interface UpdateProjectInput {
 }
 
 /** GET /projects/:id/firebase. Credentials themselves are never returned. */
+/** HubSpot contacts -> PixlPush users. The token is never returned. */
+export type HubspotSettings =
+  | { connected: false }
+  | {
+      connected: true;
+      status: 'connected' | 'error';
+      portalId: string;
+      syncEnabled: boolean;
+      /** A pass is queued or running. */
+      syncing: boolean;
+      lastSyncedAt: string | null;
+      lastError: string | null;
+      counts: { created: number; updated: number; skipped: number };
+      connectedAt: string;
+    };
+
 export interface FirebaseSettings {
   status: "not_configured" | "connected" | "error";
   platforms?: ProjectPlatform[];

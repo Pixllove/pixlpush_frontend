@@ -1,12 +1,12 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { emailApi, firebaseApi, onboardingApi, projectKeys, sdkKeyApi } from '@/lib/projects/api';
+import { emailApi, firebaseApi, hubspotApi, onboardingApi, projectKeys, sdkKeyApi } from '@/lib/projects/api';
 import type { ProjectPlatform } from '@/types/project';
 import { isPermanentAuthError } from '@/lib/auth/client';
 import type { ApiError } from '@/types/auth';
 
-type Area = 'firebase' | 'sdk-keys' | 'email';
+type Area = 'firebase' | 'sdk-keys' | 'email' | 'hubspot';
 
 /** Reads one settings area of a Project; disabled until the id is known. */
 function useArea<T>(projectId: string | undefined, area: Area, fetch: (id: string) => Promise<T>) {
@@ -35,6 +35,16 @@ export function useFirebaseSettings(projectId: string | undefined) {
     disconnect: useAreaMutation(projectId, 'firebase', (id, _: void) => firebaseApi.disconnect(id)),
     /** Website / mobile choice; stored on the Project through the onboarding API. */
     platforms: useAreaMutation(projectId, 'firebase', (id, platforms: ProjectPlatform[]) => onboardingApi.update(id, { platforms })),
+  };
+}
+
+export function useHubspotSettings(projectId: string | undefined) {
+  return {
+    query: useArea(projectId, 'hubspot', hubspotApi.get),
+    connect: useAreaMutation(projectId, 'hubspot', hubspotApi.connect),
+    setSyncEnabled: useAreaMutation(projectId, 'hubspot', hubspotApi.setSyncEnabled),
+    syncNow: useAreaMutation(projectId, 'hubspot', (id, _: void) => hubspotApi.syncNow(id)),
+    disconnect: useAreaMutation(projectId, 'hubspot', (id, _: void) => hubspotApi.disconnect(id)),
   };
 }
 
