@@ -2,6 +2,7 @@
 // from npm on every build (scripts/sync-sdk-versions.mjs).
 
 import versions from "../sdk-versions.json";
+import { suggestedEventsText } from "../SuggestedEvents";
 
 export const SDK_VERSION = versions.web;
 export const PACKAGE = "@pixlpush/web";
@@ -493,7 +494,9 @@ Angular / other: call identify after a successful sign-in and await reset() on s
 Identity verification: only if the project already has a server and I confirm PixlPush identity verification is on, compute userHash on the server and pass it down (Next.js example; never expose PIXLPUSH_IDENTITY_SECRET to the client):
 ${fence("tsx", code.nextLayout)}
 
-Step 6 — Events: find the site's 3–8 most important actions (sign-up, plan selected, checkout started, purchase completed, key feature used) and track them through one typed helper. snake_case names, flat properties (string, number, boolean, null), no sensitive values:
+Step 6 — Events: find the site's 3–8 most important actions and track them through one typed helper. snake_case names, flat properties (string, number, boolean, null), no sensitive values. Add each track() call next to the existing code that completes the action (sign-up, pricing/paywall, checkout); do not change what that code does. Prefer these names when the action exists, so PixlPush journeys can start and end on them; skip the ones this site doesn't have:
+${suggestedEventsText}
+
 ${fence("ts", code.typedTrack)}
 If a cookie/consent banner exists, forward its answers:
 ${fence("ts", code.consent)}

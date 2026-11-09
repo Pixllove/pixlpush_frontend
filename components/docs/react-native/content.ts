@@ -3,6 +3,7 @@
 // Every option, default, method and error code here exists in that source; keep it that way.
 
 import versions from "../sdk-versions.json";
+import { suggestedEventsText } from "../SuggestedEvents";
 
 export const SDK_VERSION = versions.reactNative;
 export const REVIEWED_AGAINST = `@pixlpush/react-native ${SDK_VERSION}`;
@@ -536,7 +537,8 @@ ${fence("tsx", code.entry)}
 Step 4 — Identity: hook into the existing auth flow.
 ${fence("ts", code.identify)}
 
-Step 5 — Events: track this app's core actions (snake_case names, non-sensitive properties).
+Step 5 — Events: track this app's core actions (snake_case names, non-sensitive properties). Add each track() call next to the existing code that completes the action (sign-up, paywall, checkout, subscription screens); do not change what those screens do. Prefer these names when the action exists, so PixlPush journeys can start and end on them; skip the ones this app doesn't have and don't invent screens for them:
+${suggestedEventsText}
 ${fence("ts", code.track)}
 If a consent prompt exists, forward its answers:
 ${fence("ts", code.consent)}
@@ -592,7 +594,8 @@ Do not attempt these. List them for me at the end and point me to the "Firebase 
 End with exactly these sections:
 1. Summary — two sentences.
 2. Files changed — one line per file with what changed.
-3. Commands to run — anything I still need to run (install, prebuild, pod install).
-4. Manual steps — the checklist above, in order.
-5. Open questions — assumptions you made, if any.
+3. Events tracked — name, file, properties.
+4. Commands to run — anything I still need to run (install, prebuild, pod install).
+5. Manual steps — the checklist above, in order.
+6. Open questions — assumptions you made, if any.
 </final_report>`;

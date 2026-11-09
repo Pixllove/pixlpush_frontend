@@ -9,6 +9,7 @@ import NotificationsActiveOutlined from "@mui/icons-material/NotificationsActive
 import CodeBlock from "../CodeBlock";
 import CodeTabs from "../CodeTabs";
 import { Body, Callout, Checklist, DataTable, Expect, LinkCard, List, Section, Step } from "../DocsPrimitives";
+import { SuggestedEvents } from "../SuggestedEvents";
 import { LinkBox } from "../links";
 import { guideHref } from "../registry";
 import { aiPrompt, code, configOptions, errorCodes, installCommands, methods, PACKAGE, SDK_VERSION, troubleshooting } from "./content";
@@ -135,6 +136,27 @@ export function AiSetup({ base }: WebGuideProps) {
       <Body>Copy this into Claude Code, Codex, Cursor, GitHub Copilot, Gemini CLI, Windsurf, Cline or any coding agent, from the root of your website’s repository. It detects your framework, uses the same code as these guides, and lists only real SDK methods, so the agent doesn’t invent APIs.</Body>
       <CodeBlock code={aiPrompt} language="Markdown" download="pixlpush-web-setup-prompt.md" filename="pixlpush-web-setup-prompt.md" lineNumbers={false} maxHeight={520} wrap />
     </Section>
+    <Section id="outcome" title="After it finishes: what to check in your diff">
+      <Body>Before you merge, compare the agent’s changes with this list. Every change it makes should be one of these. Anything else, like changed prices, copy or logic, was not asked for: reject it.</Body>
+      <DataTable code={false} headers={["Where", "What you’ll see", "Why"]} rows={[
+        ["package.json + lockfile", <><code key="p">{PACKAGE}</code> added, and a postinstall script that copies <code key="s">pixlpush-sw.js</code>.</>, "Installs the SDK and keeps the service worker in sync."],
+        ["public/pixlpush-sw.js (static/ on SvelteKit, angular.json on Angular)", "One new file.", "Needed for browser push."],
+        [".env / .env.example", <><code key="k">NEXT_PUBLIC_PIXLPUSH_SDK_KEY</code> (or your framework’s prefix) with a placeholder value.</>, "You paste the key yourself."],
+        ["Root layout / app entry", "The PixlPush provider, plugin or init call, client-only.", "Starts the SDK once."],
+        ["Auth code", "identify() after sign-in and reset() on sign-out, usually in one small new component.", "Ties events to your users."],
+        ["One new tracking helper (e.g. lib/pixlpush-events.ts)", "A typed list of your events.", "One place to review every event."],
+        ["Your existing screens: sign-up, pricing / paywall, checkout", "One added track(…) line where the action completes. Nothing else in the file changes.", "This is why a paywall or checkout file shows up in the diff. It feeds journeys and segments."],
+        ["Settings or account page", "A “Turn on notifications” button.", "Push permission is only asked from a click."],
+        ["Your toast component (only if you have one)", "openNotification(n) on click.", "Counts in-app notification clicks."],
+        ["CSP config (only if you have one)", "The PixlPush API host in connect-src, 'self' in worker-src.", "Lets the SDK reach the API."],
+      ]} />
+      <Checklist items={[
+        "Every added track() call only records what happened. No condition, price, redirect or UI changed around it.",
+        "No secret in client code. Only the public pp_sk_ key, through the public env prefix.",
+        "The agent’s final report lists files changed, events tracked (name, where, properties) and open questions.",
+        "Type check, lint and build pass.",
+      ]} />
+    </Section>
     <Section id="how" title="How to use it">
       <DataTable code={false} headers={["Agent", "Where to paste it"]} rows={[
         ["Claude Code", "Run claude in the project root and paste it, or save it as CLAUDE.md."],
@@ -145,17 +167,6 @@ export function AiSetup({ base }: WebGuideProps) {
         ["Windsurf / Cline / others", "Paste it into the agent chat with file editing enabled."],
       ]} />
       <List ordered items={["Open your website’s repository in the agent (agent or edit mode, not plain chat).", "Paste the prompt. The agent first reports what it found (framework, auth, toasts, CSP) and its plan.", "Answer any question it asks, review the diff, then paste your development SDK key.", <>Run the site, click the notifications button, and follow <A href={web(base, "production")}>Verify &amp; ship</A>.</>]} />
-    </Section>
-    <Section id="what-it-does" title="What the agent will do">
-      <DataTable code={false} headers={["Step", "Result"]} rows={[
-        ["Inspect", "Framework, package manager, auth flow, toast library and CSP, with a plan before any edit."],
-        ["Install", "The package, plus a postinstall copy of pixlpush-sw.js (angular.json assets for Angular)."],
-        ["Initialize", "The provider, plugin or init call for your framework, client-only, with debug in development."],
-        ["Identity", "identify on sign-in and reset on sign-out, driven from your auth state."],
-        ["Events", "Your 3–8 key actions through one typed track helper."],
-        ["Push", "A notifications button that handles every permission state, and openNotification on in-app toasts."],
-        ["Verify", "Type check, lint and build, then a report with files changed, events tracked and open questions."],
-      ]} />
     </Section>
     <Section id="manual" title="What you do by hand">
       <List items={["Create the SDK key in PixlPush and paste it into your env file.", "Choose the Website platform in Project settings (no Firebase needed).", "If you use identity verification, put the secret in your server’s environment yourself.", "Click Allow on the permission prompt and send a test push."]} />
@@ -276,6 +287,7 @@ export function Events() {
       <List items={["Names: snake_case, up to 120 characters, no emails or URLs.", "Up to 100 properties; values are strings (up to 2000 characters), numbers, booleans, dates or null. No nested objects.", "Keys that look like secrets (password, token, card_number…) are rejected."]} />
       <Body>An invalid event is dropped, <code>track()</code> resolves <code>null</code>, and the reason goes to <code>onError</code>. Your site never breaks.</Body>
     </Section>
+    <SuggestedEvents automatic="page_viewed and page_left are sent by the SDK." />
     <Section id="automatic" title="Tracked automatically">
       <DataTable headers={["Event", "When", "Properties"]} rows={[
         ["page_viewed", "On load, every client-side navigation (pushState, popstate) and a back/forward-cache restore.", "path, url, title, referrer"],

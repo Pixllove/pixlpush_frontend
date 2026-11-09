@@ -95,13 +95,53 @@ function relativeTime(value: string): string {
   return new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' }).format(Math.round(seconds / unit[1]), unit[0]);
 }
 
-function internalHref(notification: AccountNotification): string | null {
-  const payload = notification.payload ?? {};
+function payloadString(notification: AccountNotification, key: string): string | null {
+  const value = notification.payload?.[key];
+  return typeof value === 'string' && value ? value : null;
+}
+
+/** The Project a notification belongs to, so a click can switch to it before opening the page. */
+export function notificationProjectId(notification: AccountNotification): string | null {
+  return notification.projectId ?? payloadString(notification, 'projectId');
+}
+
+/**
+ * Where a click takes the user. Notifications carry ids, not links (except broadcasts that set
+ * an explicit href), so each type maps to the page where the user acts on it. null = nothing to
+ * open; the click only marks it read.
+ */
+export function notificationHref(notification: AccountNotification): string | null {
   for (const key of ['href', 'link', 'url']) {
-    const value = payload[key];
-    if (typeof value === 'string' && value.startsWith('/')) return value;
+    const value = payloadString(notification, key);
+    if (value?.startsWith('/') && !value.startsWith('//')) return value;
   }
-  return null;
+  const entityId = payloadString(notification, 'entityId');
+  const entityType = payloadString(notification, 'entityType');
+  switch (notification.type) {
+    case 'project_created':
+      return notification.payload?.isFirstProject === true ? '/dashboard/settings/sdk-keys' : '/dashboard';
+    case 'account_created':
+      return notification.payload?.invited === true ? '/dashboard' : '/dashboard/onboarding';
+    case 'project_role_changed':
+      return '/dashboard/team';
+    case 'billing_grace_ending':
+    case 'billing_access_locked':
+      return '/dashboard/billing?tab=methods';
+    case 'project_suspended':
+    case 'project_reactivated':
+    case 'account_unblocked':
+      return '/dashboard';
+    case 'admin_journey_paused':
+    case 'admin_journey_resumed':
+      return entityId ? `/dashboard/journeys/builder?id=${encodeURIComponent(entityId)}` : '/dashboard/journeys';
+    case 'admin_campaign_stopped': {
+      const channel = entityType?.startsWith('email') ? 'email' : 'push';
+      return entityId ? `/dashboard/${channel}?highlight=${encodeURIComponent(entityId)}` : `/dashboard/${channel}`;
+    }
+    default:
+      // project_access_removed, invitation_received (accepted from the email), account_blocked.
+      return null;
+  }
 }
 
 function supportChatTicketId(notification: AccountNotification): string | null {
@@ -114,10 +154,14 @@ function NotificationRow({
   item,
   compact,
   onNavigate,
+  activeProjectId,
+  selectProject,
 }: {
   item: NotificationRecipient;
   compact: boolean;
   onNavigate?: () => void;
+  activeProjectId?: string;
+  selectProject: (projectId: string) => Promise<void>;
 }) {
   const router = useRouter();
   const read = useMarkNotificationRead();
@@ -127,10 +171,10 @@ function NotificationRow({
     ? { color: '#15803d', background: '#e8f5ec', Icon: CheckCircleOutlineRounded }
     : categoryStyles[notification.category];
   const Icon = style.Icon;
-  const href = internalHref(notification);
+  const href = notificationHref(notification);
   const isUnread = !item.readAt;
 
-  const open = () => {
+  const open = async () => {
     if (isUnread) read.mutate(notification.id);
     const supportTicketId = supportChatTicketId(notification);
     if (supportTicketId) {
@@ -138,22 +182,19 @@ function NotificationRow({
       onNavigate?.();
       return;
     }
-    if (compact) {
-      router.push(href || '/dashboard/notifications');
-      onNavigate?.();
-      return;
-    }
-    if (href) {
-      router.push(href);
-      onNavigate?.();
-    }
+    if (!href) return;
+    // Open the page in the notification's Project, not whichever one is active.
+    const projectId = notificationProjectId(notification);
+    if (projectId && projectId !== activeProjectId) await selectProject(projectId);
+    router.push(href);
+    onNavigate?.();
   };
 
   return (
     <Box className="notification-row-shell" sx={{ position: 'relative', '&:hover .notification-dismiss': { opacity: 1 } }}>
       <ListItemButton
         className="notification-row"
-        onClick={open}
+        onClick={() => void open()}
         sx={{
           px: compact ? 1.5 : 2,
           py: compact ? 1.4 : 1.7,
@@ -236,7 +277,7 @@ export default function NotificationInbox({
   enabled?: boolean;
   onNavigate?: () => void;
 }) {
-  const { projects } = useActiveProject();
+  const { projects, active, selectProject } = useActiveProject();
   const markAll = useMarkAllNotificationsRead();
   const [projectId, setProjectId] = useState('');
   const [category, setCategory] = useState<NotificationCategory | ''>('');
@@ -320,7 +361,7 @@ export default function NotificationInbox({
         </Box>
       ) : (
         <>
-          <List className="notification-results" disablePadding sx={{ p: compact ? 1 : 0 }}>{items.map((item) => <NotificationRow key={item.id} item={item} compact={compact} onNavigate={onNavigate} />)}</List>
+          <List className="notification-results" disablePadding sx={{ p: compact ? 1 : 0 }}>{items.map((item) => <NotificationRow key={item.id} item={item} compact={compact} onNavigate={onNavigate} activeProjectId={active?.id} selectProject={selectProject} />)}</List>
           {notifications.hasNextPage && <Button fullWidth size="small" onClick={() => void notifications.fetchNextPage()} disabled={notifications.isFetchingNextPage} sx={{ mt: .5 }}>{notifications.isFetchingNextPage ? 'Loading…' : 'Load more notifications'}</Button>}
         </>
       )}
