@@ -1,8 +1,11 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { LockRounded } from '@mui/icons-material';
-import { Alert, Box, Button, Card, FormControlLabel, Link, Stack, Switch, TextField, Typography } from '@mui/material';
+import NextLink from 'next/link';
+import { ArrowBackRounded, CallMadeRounded, CallReceivedRounded, LockRounded } from '@mui/icons-material';
+import { Alert, Box, Button, Card, Chip, FormControlLabel, Grid, Link, Stack, Switch, Tab, Tabs, TextField, Typography } from '@mui/material';
+import { HubspotLogo } from '@/components/integrations/registry';
+import HubspotServiceKeyGuide from './HubspotServiceKeyGuide';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
 import { useHubspotSettings } from '@/hooks/projects/use-project-settings';
 import { hubspotApi } from '@/lib/projects/api';
@@ -12,7 +15,7 @@ import type { ApiError } from '@/types/auth';
 
 const CONFIG_ROLES = ['owner', 'admin', 'developer'];
 
-/** HubSpot <-> PixlPush users for the active Project. */
+/** HubSpot integration page: connect (sign-in or Service Key) and two-way sync status for the active Project. */
 export default function HubspotPanel() {
   const { active } = useActiveProject();
   const { query, connect, setSyncEnabled, syncNow, disconnect, oauthCallback } = useHubspotSettings(active?.id);
@@ -86,86 +89,169 @@ export default function HubspotPanel() {
     setDisconnectOpen(false);
   });
 
-  const oauthForm = (
+  const connectCard = (
     <Card className="saas-card">
-      <Typography fontWeight={700} fontSize="var(--fs-14)">{hubspot?.connected ? 'Reconnect HubSpot' : 'Connect HubSpot'}</Typography>
-      <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: 0.75, mb: 1.5 }}>
-        Sign in to HubSpot and approve access. PixlPush reads your contacts and adds your PixlPush users that HubSpot doesn&apos;t have yet. It never changes or deletes existing contacts. No key to copy.
-      </Typography>
-      <Stack direction="row" gap={1} flexWrap="wrap" alignItems="center">
-        <Button variant="contained" disabled={!canEdit || redirecting || oauthCallback.isPending} onClick={connectWithHubspot}>
-          {oauthCallback.isPending ? 'Connecting…' : redirecting ? 'Opening HubSpot…' : 'Connect with HubSpot'}
-        </Button>
-        <Button variant="outlined" onClick={() => setUseKey((on) => !on)}>{useKey ? 'Hide Service Key option' : 'Use a Service Key instead'}</Button>
-        {replacing && <Button onClick={() => setReplacing(false)}>Cancel</Button>}
+      <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1}>
+        <Typography fontWeight={700} fontSize="var(--fs-14)">{hubspot?.connected ? 'Reconnect HubSpot' : 'Connect HubSpot'}</Typography>
+        {replacing && <Button onClick={() => { setReplacing(false); setToken(''); }}>Cancel</Button>}
       </Stack>
+      {oauthAvailable && (
+        <Tabs value={useKey ? 'key' : 'oauth'} onChange={(_, v) => setUseKey(v === 'key')} sx={{ mt: 1, mb: 2, borderBottom: '1px solid #eeeaf3' }}>
+          <Tab value="oauth" label="Sign in with HubSpot" />
+          <Tab value="key" label="Service Key (manual)" />
+        </Tabs>
+      )}
+      {oauthAvailable && !useKey ? (
+        <Stack gap={1.5} alignItems="flex-start">
+          <Typography color="text.secondary" fontSize="var(--fs-12)">
+            Recommended. Sign in to HubSpot, pick your HubSpot account and approve access. Nothing to copy or paste. Syncing starts within a minute.
+          </Typography>
+          <Button variant="contained" disabled={!canEdit || redirecting || oauthCallback.isPending} onClick={connectWithHubspot}>
+            {oauthCallback.isPending ? 'Connecting…' : redirecting ? 'Opening HubSpot…' : 'Connect with HubSpot'}
+          </Button>
+        </Stack>
+      ) : (
+        <>
+          <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: oauthAvailable ? 0 : 0.75 }}>
+            Create a Service Key in HubSpot and paste it here. Follow these steps:
+          </Typography>
+          <HubspotServiceKeyGuide pasteStep={(
+            <Stack gap={1}>
+              <Stack direction={{ xs: 'column', sm: 'row' }} gap={1.5}>
+                <TextField size="small" fullWidth type="password" label="HubSpot Service Key" placeholder="Starts with pat-…" value={token} onChange={(e) => setToken(e.target.value)} disabled={!canEdit || connect.isPending} autoComplete="off" />
+                <Button variant="contained" disabled={!canEdit || token.trim().length < 20 || connect.isPending} onClick={submit} sx={{ whiteSpace: 'nowrap' }}>{connect.isPending ? 'Checking…' : 'Connect'}</Button>
+              </Stack>
+              <Typography color="text.secondary" fontSize="var(--fs-12)">
+                PixlPush checks the key with HubSpot, encrypts it and never shows it again.{' '}
+                <Link href="https://developers.hubspot.com/docs/apps/developer-platform/build-apps/authentication/account-service-keys" target="_blank" rel="noopener noreferrer">HubSpot&apos;s guide</Link>
+              </Typography>
+            </Stack>
+          )} />
+        </>
+      )}
     </Card>
   );
 
-  const form = (
+  const statusCard = hubspot?.connected && (
     <Card className="saas-card">
-      <Typography fontWeight={700} fontSize="var(--fs-14)">{hubspot?.connected ? 'Replace the Service Key' : 'Connect with a Service Key'}</Typography>
-      <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: 0.75 }}>
-        In HubSpot, create a Service Key. You may need your HubSpot admin to give you access to this option.
-      </Typography>
-      <Box component="ol" sx={{ pl: 2.5, my: 1.5, color: 'text.secondary', fontSize: 'var(--fs-12)', '& li': { mb: 0.75 } }}>
-        <li>Open <strong>Development → Keys → Service keys</strong>, then choose <strong>Create service key</strong>. In some accounts, Service Keys are under <strong>Settings → Integrations</strong>.</li>
-        <li>Name the key (for example, <strong>PixlPush contacts</strong>) and allow <strong>crm.objects.contacts.read</strong> and <strong>crm.objects.contacts.write</strong>. PixlPush reads your contacts and adds your PixlPush users that HubSpot doesn&apos;t have yet. It never changes or deletes existing contacts.</li>
-        <li>Create the key, copy it, and paste it below. Keep the key private; PixlPush encrypts it and will not show it again.</li>
-      </Box>
-      <Link href="https://developers.hubspot.com/docs/apps/developer-platform/build-apps/authentication/account-service-keys" target="_blank" rel="noopener noreferrer" sx={{ display: 'inline-block', mb: 1.5, fontSize: 'var(--fs-12)' }}>
-        View HubSpot’s step-by-step guide with screenshots
-      </Link>
-      <Stack direction={{ xs: 'column', sm: 'row' }} gap={1.5}>
-        <TextField size="small" fullWidth type="password" label="HubSpot Service Key" placeholder="Starts with pat-…" value={token} onChange={(e) => setToken(e.target.value)} disabled={!canEdit || connect.isPending} autoComplete="off" />
+      <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ sm: 'center' }} gap={1.5}>
+        <Box sx={{ flex: 1 }}>
+          <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap">
+            <Typography fontWeight={700} fontSize="var(--fs-14)">HubSpot account {hubspot.portalId}</Typography>
+            <Typography color="text.secondary" fontSize="var(--fs-12)">{hubspot.authType === 'oauth' ? 'via HubSpot sign-in' : 'via Service Key'}</Typography>
+          </Stack>
+          <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: 0.5 }}>
+            {syncing ? 'Syncing now…' : hubspot.lastSyncedAt ? `Last checked ${new Date(hubspot.lastSyncedAt).toLocaleString()}. Checks for changes every 2 minutes.` : 'First sync starts within a minute.'}
+          </Typography>
+        </Box>
+        <Button variant="outlined" disabled={!canEdit || !hubspot.syncEnabled || syncing || syncNow.isPending} onClick={() => run(() => syncNow.mutateAsync())}>{syncing ? 'Syncing…' : 'Sync now'}</Button>
+      </Stack>
+      <Grid container spacing={1.5} sx={{ mt: 1 }}>
+        {[
+          ['Imported from HubSpot', hubspot.counts.created],
+          ['Sent to HubSpot', hubspot.counts.pushed ?? 0],
+          ['Details filled in', hubspot.counts.updated],
+          ['Skipped', hubspot.counts.skipped],
+        ].map(([label, value]) => (
+          <Grid item xs={6} md={3} key={label}>
+            <Box sx={{ p: 1.5, border: '1px solid #eeeaf3', borderRadius: 2 }}>
+              <Typography fontWeight={700} fontSize="var(--fs-18)">{Number(value).toLocaleString()}</Typography>
+              <Typography color="text.secondary" fontSize="var(--fs-12)">{label}</Typography>
+            </Box>
+          </Grid>
+        ))}
+      </Grid>
+      <Typography color="text.secondary" fontSize="var(--fs-11)" sx={{ mt: 1 }}>Totals since connecting. Skipped: contacts without an email or matching more than one user.</Typography>
+      {hubspot.lastError && <Alert severity="warning" sx={{ mt: 2 }}>{hubspot.lastError}</Alert>}
+      <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} gap={1} sx={{ mt: 2, pt: 2, borderTop: '1px solid #eeeaf3' }}>
+        <FormControlLabel
+          control={<Switch checked={hubspot.syncEnabled} disabled={!canEdit || setSyncEnabled.isPending} onChange={(_, on) => run(() => setSyncEnabled.mutateAsync(on))} />}
+          label={<Typography fontSize="var(--fs-13)">Sync automatically</Typography>}
+        />
         <Stack direction="row" gap={1}>
-          {replacing && !oauthAvailable && <Button onClick={() => { setReplacing(false); setToken(''); }}>Cancel</Button>}
-          <Button variant="contained" disabled={!canEdit || token.trim().length < 20 || connect.isPending} onClick={submit} sx={{ whiteSpace: 'nowrap' }}>{connect.isPending ? 'Checking…' : 'Connect'}</Button>
+          {!replacing && <Button disabled={!canEdit} onClick={() => setReplacing(true)}>{oauthAvailable ? 'Reconnect' : 'Replace key'}</Button>}
+          <Button color="error" disabled={!canEdit || disconnect.isPending} aria-haspopup="dialog" onClick={() => { setError(undefined); setDisconnectOpen(true); }}>Disconnect</Button>
         </Stack>
       </Stack>
     </Card>
   );
 
+  const status = !hubspot?.connected ? null : hubspot.status === 'error' ? ['warning', 'Needs attention'] as const : !hubspot.syncEnabled ? ['neutral', 'Paused'] as const : ['success', syncing ? 'Syncing' : 'Connected'] as const;
+
   return (
     <Stack gap={2.5}>
-      <Box>
-        <Typography variant="h3">HubSpot</Typography>
-        <Typography color="text.secondary" fontSize="var(--fs-12)">Keep HubSpot and PixlPush in step: HubSpot contacts become PixlPush users you can reach with campaigns and journeys, and new PixlPush users are added to HubSpot as contacts. Contacts sync about once an hour, and the Users page refreshes automatically.</Typography>
-      </Box>
+      <Link component={NextLink} href="/dashboard/integrations" underline="hover" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, fontSize: 'var(--fs-13)', alignSelf: 'flex-start' }}>
+        <ArrowBackRounded sx={{ fontSize: 16 }} /> All integrations
+      </Link>
+
+      <Card className="saas-card">
+        <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ sm: 'center' }} gap={2}>
+          <HubspotLogo size={48} />
+          <Box sx={{ flex: 1 }}>
+            <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap">
+              <Typography fontWeight={700} fontSize="var(--fs-16)">HubSpot</Typography>
+              <Chip size="small" label="CRM" className="neutral-chip" />
+              {status ? <SettingsStatus tone={status[0]}>{status[1]}</SettingsStatus> : <Chip size="small" variant="outlined" label="Not connected" />}
+            </Stack>
+            <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: 0.5 }}>
+              Keep HubSpot and PixlPush in step. HubSpot contacts become PixlPush users you can reach with push, email and journeys, and new PixlPush users are added to HubSpot as contacts.
+            </Typography>
+          </Box>
+        </Stack>
+      </Card>
+
       {query.isError && <Alert severity="error">{query.error.message}</Alert>}
       {error && <Alert severity="error" onClose={() => setError(undefined)}>{error}</Alert>}
-
-      {hubspot?.connected && (
-        <Card className="saas-card">
-          <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ sm: 'center' }} gap={1.5}>
-            <Box sx={{ flex: 1 }}>
-              <Stack direction="row" alignItems="center" gap={1}>
-                <Typography fontWeight={700} fontSize="var(--fs-14)">HubSpot portal {hubspot.portalId}</Typography>
-                <Typography color="text.secondary" fontSize="var(--fs-12)">{hubspot.authType === 'oauth' ? 'via HubSpot sign-in' : 'via Service Key'}</Typography>
-                <SettingsStatus tone={hubspot.status === 'error' ? 'warning' : !hubspot.syncEnabled ? 'neutral' : 'success'}>
-                  {hubspot.status === 'error' ? 'Needs attention' : !hubspot.syncEnabled ? 'Paused' : syncing ? 'Syncing' : 'Connected'}
-                </SettingsStatus>
-              </Stack>
-              <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: 0.5 }}>
-                {hubspot.lastSyncedAt ? `Last sync ${new Date(hubspot.lastSyncedAt).toLocaleString()}: ` : 'Current sync: '}
-                {hubspot.counts.created} added, {hubspot.counts.updated} updated, {hubspot.counts.skipped} skipped (no email or more than one match), {hubspot.counts.pushed ?? 0} sent to HubSpot.
-              </Typography>
-            </Box>
-            <Button variant="outlined" disabled={!canEdit || !hubspot.syncEnabled || syncing || syncNow.isPending} onClick={() => run(() => syncNow.mutateAsync())}>{syncing ? 'Syncing…' : 'Sync now'}</Button>
-          </Stack>
-          {hubspot.lastError && <Alert severity="warning" sx={{ mt: 2 }}>{hubspot.lastError}</Alert>}
-          <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} gap={1} sx={{ mt: 2, pt: 2, borderTop: '1px solid #eeeaf3' }}>
-            <FormControlLabel
-              control={<Switch checked={hubspot.syncEnabled} disabled={!canEdit || setSyncEnabled.isPending} onChange={(_, on) => run(() => setSyncEnabled.mutateAsync(on))} />}
-              label={<Typography fontSize="var(--fs-13)">Sync automatically</Typography>}
-            />
+      {marketplaceCode && (
+        <Alert
+          severity="info"
+          action={(
             <Stack direction="row" gap={1}>
-              {!replacing && <Button disabled={!canEdit} onClick={() => setReplacing(true)}>{oauthAvailable ? 'Reconnect' : 'Replace key'}</Button>}
-              <Button color="error" disabled={!canEdit || disconnect.isPending} aria-haspopup="dialog" onClick={() => { setError(undefined); setDisconnectOpen(true); }}>Disconnect</Button>
+              <Button color="inherit" onClick={() => setMarketplaceCode(undefined)} disabled={oauthCallback.isPending}>Cancel</Button>
+              <Button variant="contained" onClick={confirmMarketplaceInstall} disabled={!canEdit || oauthCallback.isPending}>{oauthCallback.isPending ? 'Connecting…' : 'Connect'}</Button>
             </Stack>
-          </Stack>
-        </Card>
+          )}
+        >
+          Finish installing PixlPush from HubSpot: connect it to the project <strong>{active?.name}</strong>? To use another project, switch projects first.
+        </Alert>
       )}
+      {!canEdit && active && <Alert severity="info">Only owners, admins and developers can change the HubSpot connection.</Alert>}
+
+      <Grid container spacing={2.5}>
+        <Grid item xs={12} md={8}>
+          <Stack gap={2.5}>
+            {statusCard}
+            {hubspot && (!hubspot.connected || replacing) && connectCard}
+          </Stack>
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <Stack gap={2.5}>
+            <Card className="saas-card">
+              <Typography fontWeight={700} fontSize="var(--fs-14)">How the sync works</Typography>
+              <Stack gap={1.5} sx={{ mt: 1.5 }}>
+                <Stack direction="row" gap={1.25}>
+                  <Box className="integration-icon" sx={{ width: 32, height: 32, flexShrink: 0 }}><CallReceivedRounded fontSize="small" /></Box>
+                  <Typography color="text.secondary" fontSize="var(--fs-12)"><strong>HubSpot → PixlPush.</strong> New and changed contacts come in within about 2 minutes. Only empty profile details are filled in.</Typography>
+                </Stack>
+                <Stack direction="row" gap={1.25}>
+                  <Box className="integration-icon" sx={{ width: 32, height: 32, flexShrink: 0 }}><CallMadeRounded fontSize="small" /></Box>
+                  <Typography color="text.secondary" fontSize="var(--fs-12)"><strong>PixlPush → HubSpot.</strong> Users added in the app, imported or tracked by the SDK are added as contacts with their name and country. Existing contacts are linked, never changed.</Typography>
+                </Stack>
+              </Stack>
+            </Card>
+            <Card className="saas-card">
+              <Typography fontWeight={700} fontSize="var(--fs-14)">Good to know</Typography>
+              <Box component="ul" sx={{ pl: 2.5, mb: 0, mt: 1, color: 'text.secondary', fontSize: 'var(--fs-12)', '& li': { mb: 0.5 } }}>
+                <li>Users are matched by HubSpot ID, then email, so no duplicates are made. Contacts without an email are skipped.</li>
+                <li>Unsubscribed in HubSpot means not opted in to email in PixlPush. Sync never opts someone in.</li>
+                <li>New contacts count toward your plan&apos;s user limit.</li>
+                <li>Nothing is ever deleted on either side.</li>
+              </Box>
+            </Card>
+            <Alert severity="info" icon={<LockRounded />}>HubSpot access is encrypted and never shown again. Disconnecting removes PixlPush&apos;s access from HubSpot.</Alert>
+          </Stack>
+        </Grid>
+      </Grid>
 
       <SidePanel
         open={disconnectOpen}
@@ -184,40 +270,10 @@ export default function HubspotPanel() {
         )}
       >
         <Typography color="text.secondary" fontSize="var(--fs-13)">
-          Disconnecting stops future HubSpot syncs. Users already synced stay in PixlPush.
+          Disconnecting stops future HubSpot syncs. Users already synced stay in PixlPush, and contacts stay in HubSpot.
         </Typography>
         {error && <Alert severity="error">{error}</Alert>}
       </SidePanel>
-
-      {marketplaceCode && (
-        <Alert
-          severity="info"
-          action={(
-            <Stack direction="row" gap={1}>
-              <Button color="inherit" onClick={() => setMarketplaceCode(undefined)} disabled={oauthCallback.isPending}>Cancel</Button>
-              <Button variant="contained" onClick={confirmMarketplaceInstall} disabled={!canEdit || oauthCallback.isPending}>{oauthCallback.isPending ? 'Connecting…' : 'Connect'}</Button>
-            </Stack>
-          )}
-        >
-          Finish installing PixlPush from HubSpot: connect it to the project <strong>{active?.name}</strong>? To use another project, switch projects first.
-        </Alert>
-      )}
-      {hubspot && (!hubspot.connected || replacing) && oauthAvailable && oauthForm}
-      {hubspot && (!hubspot.connected || replacing) && (!oauthAvailable || useKey) && form}
-
-      <Card className="saas-card">
-        <Typography fontWeight={700} fontSize="var(--fs-14)">What happens to your contacts</Typography>
-        <Box component="ul" sx={{ pl: 2.5, mb: 0, color: 'text.secondary', fontSize: 'var(--fs-12)', '& li': { mb: 0.5 } }}>
-          <li>PixlPush checks for an existing user before adding a contact, to help avoid duplicates. Contacts without an email are skipped.</li>
-          <li>Only empty profile details are filled in. Information already saved in PixlPush is kept as it is.</li>
-          <li>If someone has unsubscribed from email in HubSpot, PixlPush marks them as not opted in. Sync never opts someone in.</li>
-          <li>New contacts count toward your plan&apos;s user limit.</li>
-          <li>PixlPush users with an email that HubSpot doesn&apos;t have yet, whether added in the app, imported or tracked by the SDK, are added to HubSpot as contacts with their name and country. Contacts already in HubSpot are linked, never changed.</li>
-        </Box>
-      </Card>
-
-      {!canEdit && active && <Alert severity="info">Only owners, admins and developers can change the HubSpot connection.</Alert>}
-      <Alert severity="info" icon={<LockRounded />}>HubSpot access is encrypted and stored securely by PixlPush and never shown again. Disconnecting removes PixlPush&apos;s access from HubSpot.</Alert>
     </Stack>
   );
 }
