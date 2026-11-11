@@ -444,11 +444,16 @@ export interface UpdateProjectInput {
 }
 
 /** GET /projects/:id/firebase. Credentials themselves are never returned. */
-/** HubSpot contacts -> PixlPush users. The token is never returned. */
-export type HubspotSettings =
+/** HubSpot <-> PixlPush users. Tokens are never returned. */
+export type HubspotSettings = {
+  /** "Connect with HubSpot" (OAuth) is set up on the server. */
+  oauthAvailable?: boolean;
+} & (
   | { connected: false }
   | {
       connected: true;
+      /** oauth = "Connect with HubSpot"; token = pasted Service Key. */
+      authType?: 'oauth' | 'token';
       status: 'connected' | 'error';
       portalId: string;
       syncEnabled: boolean;
@@ -456,9 +461,10 @@ export type HubspotSettings =
       syncing: boolean;
       lastSyncedAt: string | null;
       lastError: string | null;
-      counts: { created: number; updated: number; skipped: number };
+      counts: { created: number; updated: number; skipped: number; pushed?: number };
       connectedAt: string;
-    };
+    }
+);
 
 export interface FirebaseSettings {
   status: "not_configured" | "connected" | "error";

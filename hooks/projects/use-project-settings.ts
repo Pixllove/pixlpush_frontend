@@ -46,6 +46,7 @@ export function useHubspotSettings(projectId: string | undefined) {
     setSyncEnabled: useAreaMutation(projectId, 'hubspot', hubspotApi.setSyncEnabled),
     syncNow: useAreaMutation(projectId, 'hubspot', (id, _: void) => hubspotApi.syncNow(id)),
     disconnect: useAreaMutation(projectId, 'hubspot', (id, _: void) => hubspotApi.disconnect(id)),
+    oauthCallback: useAreaMutation(projectId, 'hubspot', hubspotApi.oauthCallback),
   };
 }
 

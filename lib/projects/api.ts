@@ -120,6 +120,11 @@ export const hubspotApi = {
     authRequest<HubspotSettings>(at(projectId, "/hubspot"), { syncEnabled }, BASE, "PATCH"),
   syncNow: (projectId: string) => authRequest<HubspotSettings>(at(projectId, "/hubspot/sync"), {}, BASE),
   disconnect: (projectId: string) => authRequest<HubspotSettings>(at(projectId, "/hubspot"), {}, BASE, "DELETE"),
+  /** "Connect with HubSpot": the HubSpot consent page to send the browser to. */
+  oauthStart: (projectId: string) => authRequest<{ url: string }>(at(projectId, "/hubspot/oauth/start"), {}, BASE),
+  /** HubSpot sent the browser back with ?code and ?state. */
+  oauthCallback: (projectId: string, input: { code: string; state?: string }) =>
+    authRequest<HubspotSettings>(at(projectId, "/hubspot/oauth/callback"), input, BASE),
 };
 
 /** Firebase / FCM for one Project. Each Project has its own connection. */
