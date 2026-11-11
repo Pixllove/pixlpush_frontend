@@ -4,20 +4,18 @@ import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowForwardRounded, CheckCircleRounded, OpenInNewRounded, ReplayRounded } from '@mui/icons-material';
 import { Button, Chip, LinearProgress, Paper, Stack, Typography } from '@mui/material';
-import { initialOnboardingState, onboardingCompletedCount, onboardingPercentage, pushReadyOf, sdkSurfacesOf, type OnboardingState } from '@/lib/onboarding';
+import { initialOnboardingState, onboardingCompletedCount, onboardingPercentage, onboardingStepsOf, pushReadyOf, type OnboardingState, type OnboardingStepKind } from '@/lib/onboarding';
 import { firebaseApi, onboardingApi } from '@/lib/projects/api';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
 
-const items = [
-  ['Project basics', 'Choose a clear name for this product workspace.', 'Project name'],
-  ['Your product', 'Add a website or app-store link for setup context.', 'Product link'],
-  ['Channels', 'Select push, email, or in-app messaging for your team.', 'Channel preferences'],
-  ['Domain connection', 'Prepare a sending domain and review the DNS steps.', 'Email deliverability'],
-  ['Mobile push setup', 'Websites need no setup. Mobile apps connect Firebase credentials.', 'Push delivery'],
-];
-const sdkItems = {
-  mobile: ['App SDK', 'Install the SDK in your app and send your first product signal.', 'Product events'],
-  web: ['Web SDK', 'Add PixlPush to your website for events and Web Push.', 'Product events'],
+const stepCopy: Record<OnboardingStepKind, [string, string]> = {
+  basics: ['Choose a clear name for this product workspace.', 'Project name'],
+  products: ['Add a website or app-store link for setup context.', 'Product link'],
+  channels: ['Select push, email, or in-app messaging for your team.', 'Channel preferences'],
+  domain: ['Prepare a sending domain and review the DNS steps.', 'Email deliverability'],
+  'mobile-push': ['Connect Firebase credentials so your app can deliver push notifications.', 'Push delivery'],
+  'app-sdk': ['Install the SDK in your app and send your first product signal.', 'Product events'],
+  'web-sdk': ['Add PixlPush to your website for events and Web Push.', 'Product events'],
 };
 
 export default function OnboardingGuide() {
@@ -47,7 +45,11 @@ export default function OnboardingGuide() {
   }, [active?.name, projectId, progress.data]);
   const hasProject = Boolean(projectId);
   const displayState = state;
-  const activeSteps = [...items, ...sdkSurfacesOf(displayState.platforms).map((surface) => sdkItems[surface])].map((step, index) => ({ step, number: index + 1 }));
+  const activeSteps = onboardingStepsOf(displayState.platforms, displayState.channels).map(({ kind, title }, index) => ({
+    step: [title, ...stepCopy[kind]],
+    kind,
+    number: index + 1,
+  }));
   const firebaseConnected = pushReadyOf(firebase.data);
   const complete = hasProject ? onboardingCompletedCount(displayState, firebaseConnected) : 0;
   const percentage = hasProject ? onboardingPercentage(displayState, firebaseConnected) : 0;
@@ -64,12 +66,12 @@ export default function OnboardingGuide() {
         <strong className="guide-percent">{percentage}%</strong>
       </Stack>
       <LinearProgress variant="determinate" value={percentage} className="onboarding-progress" />
-      <div className="guide-timeline">{activeSteps.map(({ step: [title, detail, tag], number }) => {
+      <div className="guide-timeline">{activeSteps.map(({ step: [title, detail, tag], kind, number }) => {
         const done = displayState.completed.includes(number);
         return <article className={`guide-step${done ? ' completed' : ''}`} key={title}>
           <div className="guide-step-icon">{done ? <CheckCircleRounded/> : <span>{number}</span>}</div>
-          <div className="guide-step-copy"><div><Typography fontWeight={700}>{title}</Typography><Chip size="small" label={tag}/></div><Typography color="text.secondary" variant="body2">{detail}</Typography>{number === 1 && displayState.projectName && <small>Current value: {displayState.projectName}</small>}{number === 2 && <small>{[displayState.websiteUrl, displayState.androidAppUrl, displayState.iosAppUrl].filter(Boolean).join(' · ') || 'No links added yet'}</small>}{number === 4 && displayState.domain && <small>Domain: {displayState.domain}</small>}</div>
-          <div className="guide-step-status">{number === 5 && firebaseConnected ? <Chip size="small" color="success" label="Ready"/> : done ? <Chip size="small" color="success" label="Complete"/> : <Chip size="small" variant="outlined" label="To do"/>}</div>
+          <div className="guide-step-copy"><div><Typography fontWeight={700}>{title}</Typography><Chip size="small" label={tag}/></div><Typography color="text.secondary" variant="body2">{detail}</Typography>{kind === 'basics' && displayState.projectName && <small>Current value: {displayState.projectName}</small>}{kind === 'products' && <small>{[displayState.websiteUrl, displayState.androidAppUrl, displayState.iosAppUrl].filter(Boolean).join(' · ') || 'No links added yet'}</small>}{kind === 'domain' && displayState.domain && <small>Domain: {displayState.domain}</small>}</div>
+          <div className="guide-step-status">{kind === 'mobile-push' && firebaseConnected ? <Chip size="small" color="success" label="Ready"/> : done ? <Chip size="small" color="success" label="Complete"/> : <Chip size="small" variant="outlined" label="To do"/>}</div>
         </article>;
       })}</div>
       <div className="guide-note"><ReplayRounded fontSize="small"/><span>Domain and SDK steps are guidance. Firebase credentials are validated securely when you connect them from the onboarding flow.</span><Button size="small" href={displayState.platforms?.includes('web') ? '/dashboard/integrations/web/quickstart' : '/dashboard/integrations/react-native/quickstart'} endIcon={<OpenInNewRounded/>}>SDK guide</Button></div>
