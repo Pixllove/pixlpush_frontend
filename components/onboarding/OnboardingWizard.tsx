@@ -18,6 +18,7 @@ import { toggleProjectPlatform } from '@/lib/project-platforms';
 import type { ProjectPlatform } from '@/types/project';
 import { authApi, authKeys } from '@/lib/auth/api';
 import { firebaseApi, onboardingApi, projectApi, projectKeys } from '@/lib/projects/api';
+import { supportApi } from '@/lib/support/api';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
 import type { ApiError } from '@/types/auth';
 import { createSendingDomain, listSendingDomains } from '@/lib/sending-domains/api';
@@ -32,7 +33,7 @@ const steps = [
   ['Your products', 'Add your website or app links'],
   ['Channels', 'Choose how you’ll reach customers'],
   ['Domain', 'Prepare your sending domain'],
-  ['Push setup', 'Web: automatic · Mobile: Firebase'],
+  ['Mobile push setup', 'Web: automatic · Mobile: Firebase'],
   ['SDK install', 'Bring product signals into PixlPush'],
 ];
 const platformOptions: Array<{ id: ProjectPlatform; title: string; detail: string; icon: typeof LanguageRounded }> = [
@@ -45,6 +46,33 @@ const channelOptions: Array<{ id: string; title: string; detail: string; icon: t
   { id: 'email', title: 'Email', detail: 'Send lifecycle and product updates.', icon: MailOutlineRounded },
   { id: 'in-app', title: 'In-app messages', detail: 'Show timely messages inside your product.', icon: PhoneIphoneRounded },
 ];
+type SdkId = 'react-native' | 'flutter' | 'web' | 'wordpress' | 'php' | 'other';
+type SdkSurface = 'mobile' | 'web';
+const sdkOptions: Array<{ id: SdkId; title: string; detail: string; guide?: string }> = [
+  { id: 'react-native', title: 'React Native / Expo', detail: 'Mobile apps with React Native or Expo.', guide: '/dashboard/integrations/react-native/quickstart' },
+  { id: 'flutter', title: 'Flutter', detail: 'Cross-platform mobile apps built with Flutter.', guide: '/dashboard/integrations/flutter/quickstart' },
+  { id: 'web', title: 'Web / JavaScript', detail: 'Websites and JavaScript applications.', guide: '/dashboard/integrations/web/quickstart' },
+  { id: 'wordpress', title: 'WordPress', detail: 'WordPress sites and WooCommerce stores.', guide: '/dashboard/integrations/wordpress/quickstart' },
+  { id: 'php', title: 'PHP', detail: 'PHP applications and server-rendered products.', guide: '/dashboard/integrations/php/quickstart' },
+  { id: 'other', title: 'Other framework', detail: 'Request guidance for another framework.' },
+];
+
+const mobileSdkOptions = sdkOptions.filter((option) => ['react-native', 'flutter', 'other'].includes(option.id));
+const websiteSdkOption = sdkOptions.find((option) => option.id === 'web') ?? sdkOptions[0];
+
+const sdkPromptFor = (sdk: SdkId, projectName: string) => {
+  const framework = sdkOptions.find((option) => option.id === sdk)?.title ?? 'your framework';
+  return `You are a senior ${framework} engineer. Integrate PixlPush into the existing ${projectName || 'app'} for analytics, user identity, and push notifications.\n\nIMPORTANT — READ BEFORE CODING\n1. Inspect the repository to identify its framework, versions, package manager, app entry point, authentication flow, and existing Firebase or push setup.\n2. Use the official PixlPush SDK for ${framework} and follow the manual integration guide.\n3. Initialize it safely, register push permissions only when enabled, and track one first test event.\n4. Keep credentials and private keys out of source control, logs, and client-visible code.\n5. Explain the files changed and the verification steps when the integration is complete.`;
+};
+
+const websitePromptFor = (projectName: string) => `You are a senior web engineer. Integrate PixlPush into the existing ${projectName || 'website'} for analytics, user identity, and Web Push notifications.
+
+IMPLEMENTATION PLAN
+1. Inspect the project to identify its framework (for example Next.js, Nuxt, React, Vue, Vite, or plain HTML), package manager, build setup, and current service worker configuration.
+2. Read the official PixlPush Web SDK documentation and use the latest verified package version from the registry.
+3. Install and initialize the PixlPush Web SDK with the project key, identify authenticated users, and track a first test event.
+4. Configure the PixlPush service worker, request notification permission from a user action, and test a real browser notification.
+5. Keep keys and secrets out of source control, logs, and client-visible code. Explain every file changed and the verification steps when complete.`;
 
 /** Progress saved before push was split into web and mobile stores 'push': expand it to the selected product types. */
 function splitLegacyPush(channels: string[], platforms: ProjectPlatform[]) {
@@ -64,6 +92,16 @@ export default function OnboardingWizard() {
   });
   const [state, setState] = useState<OnboardingState>(initialOnboardingState);
   const [copied, setCopied] = useState(false);
+  const [selectedSdk, setSelectedSdk] = useState<SdkId>('web');
+  const [sdkSurface, setSdkSurface] = useState<SdkSurface>('mobile');
+  const [sdkRequestOpen, setSdkRequestOpen] = useState(false);
+  const [sdkRequestFramework, setSdkRequestFramework] = useState('');
+  const [sdkRequestDetails, setSdkRequestDetails] = useState('');
+  const [sdkRequestBusy, setSdkRequestBusy] = useState(false);
+  const [sdkRequestMessage, setSdkRequestMessage] = useState('');
+  const [developerEmail, setDeveloperEmail] = useState('');
+  const [developerEmailBusy, setDeveloperEmailBusy] = useState(false);
+  const [developerEmailMessage, setDeveloperEmailMessage] = useState('');
   const [firebaseDialogOpen, setFirebaseDialogOpen] = useState(false);
   const [firebaseFile, setFirebaseFile] = useState<{ name: string; text: string; projectId?: string; adminKey?: boolean }>();
   const [firebaseConfirm, setFirebaseConfirm] = useState('');
@@ -99,6 +137,12 @@ export default function OnboardingWizard() {
     enabled: Boolean(projectId),
     staleTime: 30_000,
   });
+  const sendingDomainsQuery = useQuery({
+    queryKey: ['projects', 'sending-domains', projectId],
+    queryFn: () => listSendingDomains(projectId!),
+    enabled: Boolean(projectId),
+    staleTime: 30_000,
+  });
 
   useEffect(() => {
     if (!projectId || !progressQuery.isSuccess || progressQuery.isFetching || hydratedProject.current === projectId) return;
@@ -126,9 +170,6 @@ export default function OnboardingWizard() {
     domain: value.domain,
     firebaseChecklist: value.firebaseChecklist,
     currentStep: value.currentStep,
-    // A Project exists before this wizard can persist anything, so the
-    // project-basics step is complete even for legacy progress rows.
-    completed: Array.from(new Set([1, ...value.completed])),
     skipped: value.skipped,
   });
 
@@ -153,9 +194,50 @@ export default function OnboardingWizard() {
   const firebaseConnected = firebaseQuery.data?.status === 'connected';
   const hasWeb = state.platforms.includes('web');
   const hasMobile = state.platforms.includes('mobile');
+  useEffect(() => {
+    if (hasMobile && !hasWeb) {
+      setSdkSurface('mobile');
+      setSelectedSdk((current) => mobileSdkOptions.some((option) => option.id === current) ? current : 'react-native');
+    } else if (hasWeb && !hasMobile) {
+      setSdkSurface('web');
+      setSelectedSdk('web');
+    } else if (hasMobile && hasWeb) {
+      setSelectedSdk((current) => current === 'web' ? 'react-native' : current);
+    }
+  }, [hasMobile, hasWeb]);
+  // Derive single-platform projects directly from the persisted Step 2 choice
+  // so the correct Step 6 surface is rendered on the first paint. The local
+  // tab state is only used when both product types are selected.
+  const isWebsiteSurface = hasWeb && !hasMobile
+    ? true
+    : hasMobile && !hasWeb
+      ? false
+      : sdkSurface === 'web';
+  const selectedSdkOption = isWebsiteSurface
+    ? websiteSdkOption
+    : (mobileSdkOptions.find((option) => option.id === selectedSdk) ?? mobileSdkOptions[0]);
+  const sdkPrompt = isWebsiteSurface ? websitePromptFor(state.projectName) : sdkPromptFor(selectedSdkOption.id, state.projectName);
   // Push step: mobile needs Firebase, a website-only Project needs nothing.
   const pushReady = isPushReady(state.platforms, firebaseQuery.data?.status);
-  const completedCount = [...new Set([1, ...state.completed])].filter((step) => step !== 5 || pushReady).length;
+  const domain = state.domain.trim().toLowerCase();
+  const domainOwnershipVerified = Boolean(
+    domain && sendingDomainsQuery.data?.some(
+      (sendingDomain) => sendingDomain.domain.trim().toLowerCase() === domain && sendingDomain.status === 'verified',
+    ),
+  );
+  const stepIsComplete = (step: number) => {
+    if (step === 1) return Boolean(state.projectName.trim());
+    if (step === 2) return state.platforms.length > 0
+      && (!hasWeb || Boolean(state.websiteUrl.trim()))
+      && (!hasMobile || Boolean(state.androidAppUrl.trim() || state.iosAppUrl.trim()));
+    if (step === 3) return state.channels.length > 0;
+    if (step === 4) return Boolean(state.senderEmail.trim() && domain && domainOwnershipVerified);
+    if (step === 5) return pushReady;
+    // SDK completion is confirmed by backend SDK activity, never by Continue.
+    return state.completed.includes(6);
+  };
+  const completedSteps = Array.from({ length: 6 }, (_, index) => index + 1).filter(stepIsComplete);
+  const completedCount = completedSteps.length;
   const goToStep = (step: number) => {
     localUserChange.current = true;
     setStepDirection(step >= currentStep ? 'forward' : 'backward');
@@ -184,7 +266,8 @@ export default function OnboardingWizard() {
   const next = async () => {
     localUserChange.current = true;
     const completed = new Set(state.completed);
-    completed.add(currentStep);
+    if (stepIsComplete(currentStep)) completed.add(currentStep);
+    else completed.delete(currentStep);
     setStepDirection('forward');
     if (!selectedProject) {
       if (projectsPending || projectsQuery.isPending || !await ensureProject()) return;
@@ -238,7 +321,7 @@ export default function OnboardingWizard() {
       const verificationId = projectId ?? await ensureProject();
       if (!verificationId) return;
       setVerificationProjectId(verificationId);
-      const existing = (await listSendingDomains(verificationId)).find((item) => item.domain === domain);
+      const existing = (await listSendingDomains(verificationId)).find((item) => item.domain.trim().toLowerCase() === domain);
       const sendingDomain = existing ?? await createSendingDomain(verificationId, { senderEmail });
       setDomainDialog({ kind: 'analyze', domain: sendingDomain });
     } catch (cause) {
@@ -377,9 +460,63 @@ export default function OnboardingWizard() {
     }
   };
 
-  const canContinue = currentStep === 1 ? Boolean(state.projectName.trim()) && !projectsPending && !projectsQuery.isPending : currentStep === 3 ? state.channels.length > 0 : currentStep === 2 ? state.platforms.length > 0 : currentStep === 5 ? pushReady : true;
+  // Continue is navigation, not a completion action. Incomplete steps remain
+  // incomplete and can be finished later from the onboarding guide.
+  const canContinue = true;
+  const copySdkPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(sdkPrompt);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setCopied(false);
+    }
+  };
+  const requestSdk = async () => {
+    if (!projectId || !sdkRequestFramework.trim() || !sdkRequestDetails.trim()) return;
+    setSdkRequestBusy(true);
+    setSdkRequestMessage('');
+    try {
+      await supportApi.create({
+        projectId,
+        topic: 'technical',
+        source: 'dashboard',
+        subject: `SDK request: ${sdkRequestFramework.trim()}`,
+        message: `Please add support for ${sdkRequestFramework.trim()}.\n\nRequest details:\n${sdkRequestDetails.trim()}`,
+      });
+      setSdkRequestMessage('Request sent. The PixlPush team will follow up in Help & Support.');
+      setSdkRequestFramework('');
+      setSdkRequestDetails('');
+    } catch (cause) {
+      setSdkRequestMessage((cause as Error).message || 'Could not send the SDK request. Please try again.');
+    } finally {
+      setSdkRequestBusy(false);
+    }
+  };
+  const sendDeveloperInstructions = async () => {
+    if (!projectId || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(developerEmail.trim())) return;
+    setDeveloperEmailBusy(true);
+    setDeveloperEmailMessage('');
+    try {
+      const result = await onboardingApi.sendSdkInstructions(projectId, {
+        developerEmail: developerEmail.trim(),
+        sdk: isWebsiteSurface ? 'PixlPush Web SDK & Web Push' : selectedSdkOption.title,
+        prompt: sdkPrompt,
+        ...(selectedSdkOption.guide ? { guideUrl: `${window.location.origin}${selectedSdkOption.guide}` } : {}),
+      });
+      setDeveloperEmailMessage(result.sent ? 'Instructions sent to your developer.' : 'We could not send the instructions. Please try again.');
+      if (result.sent) setDeveloperEmail('');
+    } catch (cause) {
+      setDeveloperEmailMessage((cause as Error).message || 'Could not send the instructions. Please try again.');
+    } finally {
+      setDeveloperEmailBusy(false);
+    }
+  };
   const firebaseProjectChange = Boolean(firebaseQuery.data?.firebaseProjectId && firebaseFile?.projectId && firebaseQuery.data.firebaseProjectId !== firebaseFile.projectId);
-  const heading = ['What should we call your project?', 'Tell us about your products', 'Which channels do you want to use?', 'Let’s get your domain ready.', hasMobile ? 'Set up push for your app.' : 'Website push is ready.', 'Add the PixlPush SDK to your app.'][currentStep - 1];
+  const heading = ['What should we call your project?', 'Tell us about your products', 'Which channels do you want to use?', 'Let’s get your domain ready.', hasMobile ? 'Set up push for your app.' : 'Website push is ready.', isWebsiteSurface ? 'Add PixlPush to your website.' : 'Add the PixlPush SDK to your app.'][currentStep - 1];
+  const questionEyebrow = currentStep === 6 && isWebsiteSurface
+    ? 'STEP 06.2 · WEBSITE INTEGRATION'
+    : `STEP ${String(currentStep).padStart(2, '0')} · ${steps[currentStep - 1][0].toUpperCase()}`;
   const prompt = [
     'I’m Max, your onboarding guide. Let’s start with a name for the product or workspace you’re setting up.',
     'Select the types of products you already have and add their links. We’ll tailor the next setup steps to your product portfolio.',
@@ -406,17 +543,18 @@ export default function OnboardingWizard() {
             <Box><Typography className="onboarding-eyebrow">YOUR PIXLPUSH SETUP</Typography><Typography variant="h6" fontWeight={700}>A strong foundation, one step at a time</Typography></Box>
           <Typography variant="body2" color="text.secondary">{completedCount} of 6 complete</Typography>
           </Stack>
-          {/* The bar tracks the step currently on screen, while the label separately reports saved completion. */}
           <LinearProgress
             variant="determinate"
+            // The wizard position advances when Continue is clicked. The
+            // completion count and checkmarks remain based on real setup data.
             value={((currentStep - 1) / (steps.length - 1)) * 100}
             className="onboarding-progress"
           />
           <div className="onboarding-stepper">
             {steps.map(([title], index) => {
               const number = index + 1;
-              const done = number < currentStep && (number === 5 ? pushReady : state.completed.includes(number));
-              const locked = number > currentStep;
+              const done = completedSteps.includes(number);
+              const locked = false;
               return <button key={title} className={`onboarding-step${done ? ' is-done' : ''}${currentStep === number ? ' is-current' : ''}`} onClick={() => !locked && goToStep(number)} disabled={locked}>
                 <span className="onboarding-step-number">{done ? <CheckRounded fontSize="small" /> : number}</span><span>{title}</span>
               </button>;
@@ -429,25 +567,25 @@ export default function OnboardingWizard() {
             <div className="onboarding-chat-head"><span className="max-avatar"><Image src="/assets/agent-avatar-max-v4.webp" alt="Max" width={52} height={52} /></span><span><strong>Max</strong><small>PIXLPUSH ONBOARDING GUIDE</small></span><Chip size="small" label="Ready to help" className="max-online" /></div>
             <div key={currentStep} className={`onboarding-chat-body onboarding-step-panel ${stepDirection}`}>
               <div className="max-message"><AutoAwesomeRounded fontSize="small" /><p>{prompt}</p></div>
-              <div className="onboarding-question"><Typography className="onboarding-eyebrow">STEP {String(currentStep).padStart(2, '0')} · {steps[currentStep - 1][0].toUpperCase()}</Typography><Typography variant="h4" className="onboarding-question-title">{heading}</Typography>
+              <div className="onboarding-question"><Typography className="onboarding-eyebrow">{questionEyebrow}</Typography><Typography variant="h4" className="onboarding-question-title">{heading}</Typography>
                 {currentStep === 1 && <TextField autoFocus fullWidth label="Project name" placeholder="e.g. Northstar Mobile" value={state.projectName} onChange={(e) => patch({ projectName: e.target.value })} helperText="You can change this any time." />}
                 {currentStep === 2 && <div className="onboarding-product-links">
                   <div className="onboarding-product-section-heading"><span className="onboarding-product-section-icon"><AutoAwesomeRounded /></span><span><strong>What types of products do you have?</strong><small>Select Website, Mobile App, or both. You can update this anytime in Project Settings.</small></span></div>
                   <div className="onboarding-product-options">{platformOptions.map(({ id, title, detail, icon: Icon }) => <button key={id} type="button" role="checkbox" aria-checked={state.platforms.includes(id)} className={`onboarding-channel${state.platforms.includes(id) ? ' selected' : ''}`} onClick={() => togglePlatform(id)}><span className="onboarding-channel-icon"><Icon /></span><span><strong>{title}</strong><small>{detail}</small></span>{state.platforms.includes(id) && <CheckRounded className="onboarding-channel-check"/>}</button>)}</div>
-                  {hasWeb && <>
+                  {state.platforms.length > 0 && <>
                   <div className="onboarding-product-section-heading"><span className="onboarding-product-section-icon"><LanguageRounded /></span><span><strong>Website</strong><small>Add the link to your existing website.</small></span></div>
                   <TextField fullWidth label="Website URL" placeholder="https://yourproduct.com" value={state.websiteUrl} onChange={(e) => updateWebsiteUrl(e.target.value)} />
                   </>}
-                  {/* The scan reads the website for store links, so it needs both a website and a mobile app. */}
-                  {hasWeb && hasMobile && <Button className="onboarding-scan-button" variant="outlined" disabled={!state.websiteUrl.trim() || appLinkScanState === 'checking'} onClick={() => void checkForAppLinks()} startIcon={appLinkScanState === 'checking' ? <AutoAwesomeRounded className="onboarding-scan-icon" /> : <SearchRounded />}>
+                  {/* The website field is available for every product selection; scanning is useful whenever mobile app links are being collected. */}
+                  {hasMobile && <Button className="onboarding-scan-button" variant="outlined" disabled={!state.websiteUrl.trim() || appLinkScanState === 'checking'} onClick={() => void checkForAppLinks()} startIcon={appLinkScanState === 'checking' ? <AutoAwesomeRounded className="onboarding-scan-icon" /> : <SearchRounded />}>
                     {appLinkScanState === 'checking' ? 'Checking for app links…' : 'Check for app links'}
                   </Button>}
-                  {hasWeb && hasMobile && appLinkScanState !== 'idle' && <div className={`onboarding-link-scan ${appLinkScanState}`} role="status">
+                  {hasMobile && appLinkScanState !== 'idle' && <div className={`onboarding-link-scan ${appLinkScanState}`} role="status">
                     {appLinkScanState === 'found' ? <CheckCircleRounded /> : <WarningAmberRounded />}
                     <span><strong>{appLinkScanState === 'checking' ? 'Looking for app-store links' : appLinkScanState === 'found' ? 'App links found' : appLinkScanState === 'error' ? 'Couldn’t check this website' : 'No app links found'}</strong><small>{appLinkScanState === 'checking' ? 'Reading your website for Google Play and App Store links.' : appLinkScanState === 'found' ? 'We added the links we found below. Check them before you continue.' : appLinkScanState === 'error' ? `${appLinkScanError} You can add the links manually below.` : 'Your website doesn’t link to Google Play or the App Store. Add the links manually below.'}</small></span>
                   </div>}
                   {hasMobile && <>
-                  <div className={`onboarding-product-section-heading${hasWeb ? ' app-links-heading' : ''}`}><span className="onboarding-product-section-icon"><PhoneIphoneRounded /></span><span><strong>Mobile App</strong><small>Add your existing app store links.</small></span></div>
+                  <div className="onboarding-product-section-heading app-links-heading"><span className="onboarding-product-section-icon"><PhoneIphoneRounded /></span><span><strong>Mobile App</strong><small>Add your existing app store links.</small></span></div>
                   <div className="onboarding-app-link-grid"><TextField fullWidth label="Android App URL" placeholder="Google Play Store URL" value={state.androidAppUrl} onChange={(e) => patch({ androidAppUrl: e.target.value })}/><TextField fullWidth label="iOS App URL" placeholder="Apple App Store URL" value={state.iosAppUrl} onChange={(e) => patch({ iosAppUrl: e.target.value })}/></div>
                   </>}
                   {state.platforms.length > 0 && <Typography variant="body2" color="text.secondary">We’ll use these links to personalize your setup and guide you through the relevant next steps.</Typography>}
@@ -462,13 +600,47 @@ export default function OnboardingWizard() {
                     </Button>
                   </div>
                   {domainVerificationError && <Alert severity="error">{domainVerificationError}</Alert>}
-                  <Paper elevation={0} className="onboarding-guidance"><strong>What happens next?</strong><span>We’ll guide you through a few simple steps to verify your domain and get it ready for sending emails.</span><small>You can verify it later. We’ll save this sender address for now.</small></Paper>
+                  {/* <Paper elevation={0} className="onboarding-guidance"><strong>What happens next?</strong><span>We’ll guide you through a few simple steps to verify your domain and get it ready for sending emails.</span><small>You can verify it later. We’ll save this sender address for now.</small></Paper> */}
                 </Stack>}
                 {currentStep === 5 && hasMobile && <Stack gap={2}><Paper elevation={0} className="onboarding-guidance"><strong>Firebase Cloud Messaging (mobile apps)</strong><span>Upload the Firebase service-account JSON used by this Project. PixlPush validates it with Google before encrypting and storing it.</span><small>Never paste credentials into chat or your app. The file is sent only to the authenticated backend.</small></Paper><Button variant="contained" onClick={openFirebaseWithMax} startIcon={<AutoAwesomeRounded />}>{firebaseConnected ? 'Review Firebase with Max' : 'Connect Firebase with Max'}</Button>{firebaseConnected && <Alert severity="success">Firebase is connected for this Project.</Alert>}</Stack>}
-                {currentStep === 6 && <Stack gap={2}><Paper elevation={0} className="onboarding-code"><code>Set up the PixlPush SDK in my {state.projectName || 'app'}. Guide me through installation, initialize it safely, register push permissions if enabled, and track a first test event. Do not expose secrets.</code><IconButton aria-label="Copy setup prompt" onClick={() => { navigator.clipboard?.writeText(`Set up the PixlPush SDK in my ${state.projectName || 'app'}. Guide me through installation, initialize it safely, register push permissions if enabled, and track a first test event. Do not expose secrets.`); setCopied(true); }}><ContentCopyRounded/></IconButton></Paper><Button href={hasMobile ? '/dashboard/integrations/react-native/quickstart' : '/dashboard/integrations/web/quickstart'} variant="outlined">{hasMobile ? 'View SDK integration guide' : 'View web SDK guide'}</Button></Stack>}
+                {currentStep === 6 && <Stack gap={2.5} className="onboarding-sdk-step">
+                  {hasWeb && hasMobile && <div className="onboarding-sdk-surface-tabs" role="tablist" aria-label="SDK integration type">
+                    <button type="button" role="tab" aria-selected={!isWebsiteSurface} className={!isWebsiteSurface ? 'selected' : ''} onClick={() => { setSdkSurface('mobile'); setSelectedSdk((current) => mobileSdkOptions.some((option) => option.id === current) ? current : 'react-native'); }}>Mobile SDK</button>
+                    <button type="button" role="tab" aria-selected={isWebsiteSurface} className={isWebsiteSurface ? 'selected' : ''} onClick={() => { setSdkSurface('web'); setSelectedSdk('web'); }}>Website SDK</button>
+                  </div>}
+                  <Typography className="onboarding-sdk-intro">{isWebsiteSurface ? 'Now let’s integrate PixlPush into your website. The Web SDK and Web Push are set up together in one guided flow. Copy the AI-ready prompt, follow the guide, or share the instructions with your developer.' : 'Let’s connect your mobile app to PixlPush. Copy the AI-ready prompt into your coding assistant, follow the manual guide, or share the instructions with your developer.'}</Typography>
+                  {isWebsiteSurface ? <>
+                    <Typography className="onboarding-website-subtitle" color="text.secondary">Set up analytics, user tracking, and Web Push notifications with one guided integration.</Typography>
+                    <div className="onboarding-website-overview">
+                      <div className="onboarding-website-overview-label"><LanguageRounded /><strong>One integration.<br />Two steps.</strong></div>
+                      <div className="onboarding-website-overview-step"><span>1</span><div><strong>Web SDK Integration</strong><small>Install the PixlPush Web SDK, initialize it, identify users and track events.</small></div></div>
+                      <ArrowForwardRounded className="onboarding-website-overview-arrow" />
+                      <div className="onboarding-website-overview-step"><span>2</span><div><strong>Web Push Integration</strong><small>Configure the service worker, push subscription and notification permissions, then test a real browser notification.</small></div></div>
+                    </div>
+                  </> : <>
+                    <div className="onboarding-sdk-selector">
+                      <Typography className="onboarding-sdk-selector-title">What technology is your app built with?</Typography>
+                      <Typography color="text.secondary" variant="body2">Select your framework to get the right integration instructions.</Typography>
+                      <div className="onboarding-sdk-options">
+                        {mobileSdkOptions.map((option) => <button key={option.id} type="button" className={`onboarding-sdk-option${selectedSdk === option.id ? ' selected' : ''}`} onClick={() => { setSelectedSdk(option.id); if (option.id === 'other') setSdkRequestOpen(true); }}>
+                          <span className="onboarding-sdk-radio" aria-hidden="true">{selectedSdk === option.id && <span />}</span>
+                          <span><strong>{option.title}</strong><small>{option.detail}</small></span>
+                        </button>)}
+                      </div>
+                    </div>
+                    <div className="onboarding-sdk-request-card"><div><strong>Need another SDK?</strong><small>Request an SDK for your framework. We’ll route it to Help & Support.</small></div><Button variant="outlined" onClick={() => setSdkRequestOpen(true)} endIcon={<ArrowForwardRounded />}>Request SDK</Button></div>
+                  </>}
+                  <Paper elevation={0} className="onboarding-sdk-prompt-panel">
+                    <div className="onboarding-sdk-prompt-head"><div><strong>{isWebsiteSurface ? 'PIXLPUSH WEB SDK & WEB PUSH' : `PIXLPUSH ${selectedSdkOption.title.toUpperCase()} SDK`}</strong><small>{isWebsiteSurface ? 'AI-ready setup · Complete integration in one prompt' : 'AI-ready setup'}</small></div><Button size="small" onClick={() => void copySdkPrompt()} startIcon={<ContentCopyRounded />}>{copied ? 'Copied' : 'Copy'}</Button></div>
+                    <code>{sdkPrompt}</code>
+                  </Paper>
+                  <Button variant="outlined" className="onboarding-sdk-copy-button" onClick={() => void copySdkPrompt()} startIcon={<ContentCopyRounded />}>{copied ? 'Prompt copied' : 'Copy AI Integration Prompt'}</Button>
+                  <div className="onboarding-sdk-guide-row"><span><strong>Prefer manual setup?</strong><small>Open the {isWebsiteSurface ? 'website' : 'SDK'} integration guide.</small></span><Button component="a" href={selectedSdkOption.guide ?? '/dashboard/integrations'} target="_blank" rel="noreferrer" variant="outlined" endIcon={<OpenInNewRounded />}>View {isWebsiteSurface ? 'Website' : 'SDK'} integration guide</Button></div>
+                  <div className="onboarding-sdk-developer"><Typography variant="h6">Or send instructions to your developer</Typography><Typography variant="body2" color="text.secondary">Share the setup instructions with the person responsible for your {isWebsiteSurface ? 'website' : 'app'}.</Typography><div className="onboarding-sdk-email-row"><TextField fullWidth type="email" placeholder="developer@company.com" value={developerEmail} onChange={(event) => { setDeveloperEmail(event.target.value); setDeveloperEmailMessage(''); }} /><Button variant="contained" disabled={developerEmailBusy || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(developerEmail.trim())} onClick={() => void sendDeveloperInstructions()} endIcon={<MailOutlineRounded />}>{developerEmailBusy ? 'Sending…' : 'Send'}</Button></div>{developerEmailMessage && <Alert severity={developerEmailMessage.includes('sent') ? 'success' : 'error'}>{developerEmailMessage}</Alert>}</div>
+                </Stack>}
               </div>
             </div>
-            <div className="onboarding-chat-footer">{saveError && <Alert severity="error" sx={{ mb: 1.5 }}>{saveError}</Alert>}<Typography variant="caption">Your progress is saved to this project. You can return from the Onboarding Guide on any device.</Typography><div className="onboarding-footer-actions">{currentStep > 1 && <Button variant="contained" className="onboarding-back-button" onClick={previous} startIcon={<ArrowBackRounded />}>Back</Button>}<Button variant="contained" disabled={!canContinue} onClick={next} endIcon={<ArrowForwardRounded />}>{currentStep === 6 ? 'Finish setup' : 'Continue'}{copied && currentStep === 6 ? ' · Prompt copied' : ''}</Button></div></div>
+            <div className="onboarding-chat-footer">{saveError && <Alert severity="error" sx={{ mb: 1.5 }}>{saveError}</Alert>}<Typography variant="caption">Your progress is saved to this project. You can return from the Onboarding Guide on any device.</Typography><div className="onboarding-footer-actions">{currentStep > 1 && <Button variant="contained" className="onboarding-back-button" onClick={previous} startIcon={<ArrowBackRounded />}>Back</Button>}<Button variant="contained" disabled={!canContinue} onClick={next} endIcon={<ArrowForwardRounded />}>{currentStep === 6 ? 'Finish setup' : 'Continue'}</Button></div></div>
           </Paper>
           <aside className="onboarding-side-note"><div className="onboarding-orbit"><span><Image className="onboarding-orbit-logo" src="/assets/favicon.webp" alt="PixlPush" width={52} height={52} /></span><i/><b/></div><Typography variant="h6">A little setup now.<br/>A clearer picture later.</Typography><Typography color="text.secondary">Max will keep your place so you can pause and pick up whenever you’re ready.</Typography></aside>
         </div>
@@ -525,18 +697,82 @@ export default function OnboardingWizard() {
             </Button>
           </DialogActions>
         </Dialog>
+        <Dialog
+          open={sdkRequestOpen}
+          onClose={() => { if (!sdkRequestBusy) setSdkRequestOpen(false); }}
+          fullWidth
+          maxWidth="sm"
+          aria-labelledby="sdk-request-title"
+        >
+          <DialogTitle id="sdk-request-title" className="sdk-request-dialog-title">
+            <div>
+              <AutoAwesomeRounded />
+              <span>
+                <strong>Request an SDK</strong>
+                <small>Tell us which framework you need and PixlPush support will follow up.</small>
+              </span>
+            </div>
+            <IconButton aria-label="Close SDK request" onClick={() => setSdkRequestOpen(false)} disabled={sdkRequestBusy}>
+              <CloseRounded />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent dividers>
+            <Stack gap={2}>
+              <TextField
+                autoFocus
+                fullWidth
+                required
+                label="Framework or platform"
+                placeholder="e.g. Vue, Angular, Kotlin"
+                value={sdkRequestFramework}
+                onChange={(event) => { setSdkRequestFramework(event.target.value); setSdkRequestMessage(''); }}
+              />
+              <TextField
+                fullWidth
+                required
+                multiline
+                minRows={4}
+                label="What should we support?"
+                placeholder="Tell us about your app and the SDK integration you need."
+                value={sdkRequestDetails}
+                onChange={(event) => { setSdkRequestDetails(event.target.value); setSdkRequestMessage(''); }}
+              />
+              {sdkRequestMessage && <Alert severity={sdkRequestMessage.startsWith('Request sent') ? 'success' : 'error'}>{sdkRequestMessage}</Alert>}
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setSdkRequestOpen(false)} disabled={sdkRequestBusy}>Cancel</Button>
+            <Button
+              variant="contained"
+              disabled={sdkRequestBusy || !sdkRequestFramework.trim() || !sdkRequestDetails.trim() || !projectId}
+              onClick={() => void requestSdk()}
+            >
+              {sdkRequestBusy ? 'Sending…' : 'Send request'}
+            </Button>
+          </DialogActions>
+        </Dialog>
         {domainDialog.kind === 'analyze' && verificationProjectId && <DomainAnalysisDialog
           projectId={verificationProjectId}
           domain={domainDialog.domain}
           onClose={closeDomainDialog}
-          onChanged={() => { void queryClient.invalidateQueries({ queryKey: ['projects', 'sending-domains', verificationProjectId] }); }}
+          onChanged={() => {
+            void Promise.all([
+              queryClient.invalidateQueries({ queryKey: ['projects', 'sending-domains', verificationProjectId] }),
+              queryClient.invalidateQueries({ queryKey: ['projects', verificationProjectId, 'onboarding'] }),
+            ]);
+          }}
           onManual={(domain) => setDomainDialog({ kind: 'dns', domainId: domain.id })}
         />}
         {domainDialog.kind === 'dns' && verificationProjectId && <DnsSetupDialog
           projectId={verificationProjectId}
           domainId={domainDialog.domainId}
           onClose={closeDomainDialog}
-          onChanged={() => { void queryClient.invalidateQueries({ queryKey: ['projects', 'sending-domains', verificationProjectId] }); }}
+          onChanged={() => {
+            void Promise.all([
+              queryClient.invalidateQueries({ queryKey: ['projects', 'sending-domains', verificationProjectId] }),
+              queryClient.invalidateQueries({ queryKey: ['projects', verificationProjectId, 'onboarding'] }),
+            ]);
+          }}
         />}
       </Container>
     </Box>

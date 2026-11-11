@@ -34,11 +34,12 @@ export function onboardingCompletedCount(
   state: Pick<OnboardingState, 'channels' | 'completed'>,
   firebaseConnected = false,
 ): number {
-  // A progress record belongs to an existing Project, so Project basics is
-  // complete even for legacy records that predate this invariant.
-  const completed = new Set([1, ...state.completed]);
+  const completed = new Set(state.completed);
+  // Compatibility for older API responses that did not include the derived
+  // push step. New responses already contain the authoritative list.
+  if (firebaseConnected) completed.add(5);
   return Array.from({ length: ONBOARDING_STEP_COUNT }, (_, index) => index + 1)
-    .filter((step) => step === 5 ? firebaseConnected : completed.has(step))
+    .filter((step) => completed.has(step))
     .length;
 }
 

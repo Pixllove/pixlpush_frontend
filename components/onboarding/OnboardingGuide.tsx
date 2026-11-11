@@ -13,7 +13,7 @@ const items = [
   ['Your product', 'Add a website or app-store link for setup context.', 'Product link'],
   ['Channels', 'Select push, email, or in-app messaging for your team.', 'Channel preferences'],
   ['Domain connection', 'Prepare a sending domain and review the DNS steps.', 'Email deliverability'],
-  ['Push setup', 'Websites need no setup. Mobile apps connect Firebase credentials.', 'Push delivery'],
+  ['Mobile push setup', 'Websites need no setup. Mobile apps connect Firebase credentials.', 'Push delivery'],
   ['SDK integration', 'Install the SDK and send your first product signal.', 'Product events'],
 ];
 
@@ -43,11 +43,7 @@ export default function OnboardingGuide() {
       : { ...initialOnboardingState, projectName: active?.name || '' });
   }, [active?.name, projectId, progress.data]);
   const hasProject = Boolean(projectId);
-  // Project creation itself completes the first step. This also repairs old
-  // progress rows that were created before the backend enforced that rule.
-  const displayState = hasProject
-    ? { ...state, completed: Array.from(new Set([1, ...state.completed])) }
-    : state;
+  const displayState = state;
   const activeSteps = items.map((step, index) => ({ step, number: index + 1 }));
   const firebaseConnected = pushReadyOf(firebase.data);
   const complete = hasProject ? onboardingCompletedCount(displayState, firebaseConnected) : 0;
@@ -66,7 +62,7 @@ export default function OnboardingGuide() {
       </Stack>
       <LinearProgress variant="determinate" value={percentage} className="onboarding-progress" />
       <div className="guide-timeline">{activeSteps.map(({ step: [title, detail, tag], number }) => {
-        const done = number === 5 ? firebaseConnected : displayState.completed.includes(number);
+        const done = displayState.completed.includes(number);
         return <article className={`guide-step${done ? ' completed' : ''}`} key={title}>
           <div className="guide-step-icon">{done ? <CheckCircleRounded/> : <span>{number}</span>}</div>
           <div className="guide-step-copy"><div><Typography fontWeight={700}>{title}</Typography><Chip size="small" label={tag}/></div><Typography color="text.secondary" variant="body2">{detail}</Typography>{number === 1 && displayState.projectName && <small>Current value: {displayState.projectName}</small>}{number === 2 && <small>{[displayState.websiteUrl, displayState.androidAppUrl, displayState.iosAppUrl].filter(Boolean).join(' · ') || 'No links added yet'}</small>}{number === 4 && displayState.domain && <small>Domain: {displayState.domain}</small>}</div>
