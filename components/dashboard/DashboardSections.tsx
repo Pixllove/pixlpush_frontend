@@ -877,7 +877,7 @@ export function UsersSection() {
     const csv = [
       columns,
       ...users.map((row) => [
-        row.externalUserId || row.email || row.id,
+        row.externalUserId || row.id,
         row.lifecycleSegment?.name || "No segment",
         row.email || "",
         formatDate(row.lastActiveAt),
@@ -912,7 +912,7 @@ export function UsersSection() {
           }}
         >
           <Typography fontSize="var(--fs-12)" fontWeight={500}>
-            {row.externalUserId || row.email || row.id}
+            {row.externalUserId || row.id}
           </Typography>
           <Typography color="text.secondary" fontSize="var(--fs-12)">
             {row.name || (row.status === "anonymous" ? "Anonymous visitor" : "Identified user")}

@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import NextLink from 'next/link';
-import { ArrowBackRounded, CallMadeRounded, CallReceivedRounded, LockRounded } from '@mui/icons-material';
-import { Alert, Box, Button, Card, Chip, FormControlLabel, Grid, Link, Stack, Switch, Tab, Tabs, TextField, Typography } from '@mui/material';
+import { ArrowBackRounded, CallMadeRounded, CallReceivedRounded, CheckCircleRounded, LockRounded, PauseCircleRounded } from '@mui/icons-material';
+import { Alert, Box, Button, Card, Chip, CircularProgress, FormControlLabel, Grid, Link, Stack, Switch, Tab, Tabs, TextField, Typography } from '@mui/material';
 import { HubspotLogo } from '@/components/integrations/registry';
 import HubspotServiceKeyGuide from './HubspotServiceKeyGuide';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
@@ -14,6 +14,16 @@ import SidePanel from './SidePanel';
 import type { ApiError } from '@/types/auth';
 
 const CONFIG_ROLES = ['owner', 'admin', 'developer'];
+
+/** "just now", "3 minutes ago", "2 hours ago". */
+function timeAgo(date: string | Date) {
+  const minutes = Math.round((Date.now() - new Date(date).getTime()) / 60_000);
+  if (minutes < 1) return 'just now';
+  const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
+  if (minutes < 60) return rtf.format(-minutes, 'minute');
+  if (minutes < 24 * 60) return rtf.format(-Math.round(minutes / 60), 'hour');
+  return new Date(date).toLocaleString();
+}
 
 /** HubSpot integration page: connect (sign-in or Service Key) and two-way sync status for the active Project. */
 export default function HubspotPanel() {
@@ -134,49 +144,71 @@ export default function HubspotPanel() {
 
   const statusCard = hubspot?.connected && (
     <Card className="saas-card">
-      <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ sm: 'center' }} gap={1.5}>
+      <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ sm: 'flex-start' }} gap={1.5}>
         <Box sx={{ flex: 1 }}>
-          <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap">
-            <Typography fontWeight={700} fontSize="var(--fs-14)">HubSpot account {hubspot.portalId}</Typography>
-            <Typography color="text.secondary" fontSize="var(--fs-12)">{hubspot.authType === 'oauth' ? 'via HubSpot sign-in' : 'via Service Key'}</Typography>
-          </Stack>
-          <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: 0.5 }}>
-            {syncing ? 'Syncing now…' : hubspot.lastSyncedAt ? `Last checked ${new Date(hubspot.lastSyncedAt).toLocaleString()}. Checks for changes every 2 minutes.` : 'First sync starts within a minute.'}
+          <Typography fontWeight={700} fontSize="var(--fs-14)">Connected to HubSpot</Typography>
+          <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: 0.25 }}>
+            HubSpot account {hubspot.portalId} · {hubspot.authType === 'oauth' ? 'Signed in with HubSpot' : 'Connected with a Service Key'}
           </Typography>
         </Box>
-        <Button variant="outlined" disabled={!canEdit || !hubspot.syncEnabled || syncing || syncNow.isPending} onClick={() => run(() => syncNow.mutateAsync())}>{syncing ? 'Syncing…' : 'Sync now'}</Button>
+        <Button variant="outlined" disabled={!canEdit || !hubspot.syncEnabled || syncing || syncNow.isPending} onClick={() => run(() => syncNow.mutateAsync())}>Sync now</Button>
       </Stack>
-      <Grid container spacing={1.5} sx={{ mt: 1 }}>
+
+      <Stack direction="row" alignItems="center" gap={1.25} sx={{ mt: 2, p: 1.5, borderRadius: 2, bgcolor: syncing ? '#f4effc' : hubspot.syncEnabled ? '#eefaf3' : '#f5f4f7' }}>
+        {syncing ? <CircularProgress size={18} thickness={5} /> : hubspot.syncEnabled ? <CheckCircleRounded sx={{ color: '#15965e', fontSize: 20 }} /> : <PauseCircleRounded sx={{ color: 'text.secondary', fontSize: 20 }} />}
+        <Box>
+          <Typography fontWeight={600} fontSize="var(--fs-13)">
+            {syncing ? (hubspot.lastSyncedAt ? 'Checking for changes…' : 'Bringing in your HubSpot contacts…') : hubspot.syncEnabled ? 'Everything is up to date' : 'Automatic sync is paused'}
+          </Typography>
+          <Typography color="text.secondary" fontSize="var(--fs-12)">
+            {syncing
+              ? (hubspot.lastSyncedAt ? 'This usually takes a few seconds.' : 'The first sync can take a few minutes for large accounts. You can leave this page.')
+              : hubspot.syncEnabled
+                ? `Last checked ${hubspot.lastSyncedAt ? timeAgo(hubspot.lastSyncedAt) : 'just now'}. PixlPush checks again every 2 minutes.`
+                : 'Turn on automatic sync to keep HubSpot and PixlPush in step.'}
+          </Typography>
+        </Box>
+      </Stack>
+
+      <Grid container spacing={1.5} sx={{ mt: 0.5 }}>
         {[
-          ['Imported from HubSpot', hubspot.counts.created],
-          ['Sent to HubSpot', hubspot.counts.pushed ?? 0],
-          ['Details filled in', hubspot.counts.updated],
-          ['Skipped', hubspot.counts.skipped],
-        ].map(([label, value]) => (
-          <Grid item xs={6} md={3} key={label}>
-            <Box sx={{ p: 1.5, border: '1px solid #eeeaf3', borderRadius: 2 }}>
+          ['Contacts imported', 'HubSpot contacts added to PixlPush', hubspot.counts.created],
+          ['Users sent to HubSpot', 'PixlPush users added as contacts', hubspot.counts.pushed ?? 0],
+          ['Profiles completed', 'Empty details filled in from HubSpot', hubspot.counts.updated],
+          ['Not imported', 'No email, or matches more than one user', hubspot.counts.skipped],
+        ].map(([label, help, value]) => (
+          <Grid item xs={6} md={3} key={label as string}>
+            <Box sx={{ p: 1.5, height: '100%', border: '1px solid #eeeaf3', borderRadius: 2 }}>
               <Typography fontWeight={700} fontSize="var(--fs-18)">{Number(value).toLocaleString()}</Typography>
-              <Typography color="text.secondary" fontSize="var(--fs-12)">{label}</Typography>
+              <Typography fontWeight={600} fontSize="var(--fs-12)">{label}</Typography>
+              <Typography color="text.secondary" fontSize="var(--fs-11)">{help}</Typography>
             </Box>
           </Grid>
         ))}
       </Grid>
-      <Typography color="text.secondary" fontSize="var(--fs-11)" sx={{ mt: 1 }}>Totals since connecting. Skipped: contacts without an email or matching more than one user.</Typography>
+      <Typography color="text.secondary" fontSize="var(--fs-11)" sx={{ mt: 1 }}>Totals since you connected HubSpot.</Typography>
       {hubspot.lastError && <Alert severity="warning" sx={{ mt: 2 }}>{hubspot.lastError}</Alert>}
-      <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} gap={1} sx={{ mt: 2, pt: 2, borderTop: '1px solid #eeeaf3' }}>
+
+      <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} gap={1.5} sx={{ mt: 2, pt: 2, borderTop: '1px solid #eeeaf3' }}>
         <FormControlLabel
+          sx={{ ml: 0, gap: 1 }}
           control={<Switch checked={hubspot.syncEnabled} disabled={!canEdit || setSyncEnabled.isPending} onChange={(_, on) => run(() => setSyncEnabled.mutateAsync(on))} />}
-          label={<Typography fontSize="var(--fs-13)">Sync automatically</Typography>}
+          label={(
+            <Box>
+              <Typography fontSize="var(--fs-13)" fontWeight={600}>Automatic sync</Typography>
+              <Typography color="text.secondary" fontSize="var(--fs-11)">{hubspot.syncEnabled ? 'On · checks every 2 minutes' : 'Off · nothing syncs until you turn it on'}</Typography>
+            </Box>
+          )}
         />
         <Stack direction="row" gap={1}>
-          {!replacing && <Button disabled={!canEdit} onClick={() => setReplacing(true)}>{oauthAvailable ? 'Reconnect' : 'Replace key'}</Button>}
-          <Button color="error" disabled={!canEdit || disconnect.isPending} aria-haspopup="dialog" onClick={() => { setError(undefined); setDisconnectOpen(true); }}>Disconnect</Button>
+          {!replacing && <Button variant="outlined" disabled={!canEdit} onClick={() => setReplacing(true)}>{oauthAvailable ? 'Change account' : 'Replace key'}</Button>}
+          <Button variant="outlined" color="error" disabled={!canEdit || disconnect.isPending} aria-haspopup="dialog" onClick={() => { setError(undefined); setDisconnectOpen(true); }}>Disconnect</Button>
         </Stack>
       </Stack>
     </Card>
   );
 
-  const status = !hubspot?.connected ? null : hubspot.status === 'error' ? ['warning', 'Needs attention'] as const : !hubspot.syncEnabled ? ['neutral', 'Paused'] as const : ['success', syncing ? 'Syncing' : 'Connected'] as const;
+  const status = !hubspot?.connected ? null : hubspot.status === 'error' ? ['warning', 'Needs attention'] as const : !hubspot.syncEnabled ? ['neutral', 'Paused'] as const : ['success', 'Connected'] as const;
 
   return (
     <Stack gap={2.5}>
