@@ -14,6 +14,7 @@ function useArea<T>(projectId: string | undefined, area: Area, fetch: (id: strin
     queryKey: projectKeys.setting(projectId ?? '', area),
     queryFn: () => fetch(projectId as string),
     enabled: Boolean(projectId),
+    refetchInterval: area === 'hubspot' ? 60_000 : false,
     retry: (count, error) => !isPermanentAuthError(error) && count < 2,
   });
 }

@@ -727,6 +727,7 @@ export function UsersSection() {
         cursor: userCursors[userCursors.length - 1],
       }),
     enabled: Boolean(active?.id),
+    refetchInterval: tab === "users" ? 60_000 : false,
   });
   const segmentsQuery = useQuery({
     queryKey: ["projects", "lifecycle-segments", active?.id],
@@ -821,6 +822,7 @@ export function UsersSection() {
     queryKey: ["projects", "users", "stats", active?.id],
     queryFn: () => userStatsApi.get(active!.id),
     enabled: Boolean(active?.id),
+    refetchInterval: tab === "users" ? 60_000 : false,
   });
   const stats = statsQuery.data;
   // Reachable also counts anonymous visitors who allowed push (a browser after logout or deletion).

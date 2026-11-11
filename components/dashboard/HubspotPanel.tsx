@@ -73,7 +73,7 @@ export default function HubspotPanel() {
     <Stack gap={2.5}>
       <Box>
         <Typography variant="h3">HubSpot</Typography>
-        <Typography color="text.secondary" fontSize="var(--fs-12)">Bring your HubSpot contacts into PixlPush as users, so you can reach them with campaigns and journeys. Contacts sync every hour.</Typography>
+        <Typography color="text.secondary" fontSize="var(--fs-12)">Bring your HubSpot contacts into PixlPush as users, so you can reach them with campaigns and journeys. Contacts sync about once an hour, and the Users page refreshes automatically.</Typography>
       </Box>
       {query.isError && <Alert severity="error">{query.error.message}</Alert>}
       {error && <Alert severity="error" onClose={() => setError(undefined)}>{error}</Alert>}
