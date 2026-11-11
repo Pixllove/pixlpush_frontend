@@ -17525,14 +17525,6 @@ body {
 .onboarding-product-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; max-width:580px; }
 .onboarding-domain-step { max-width:760px; }
 .onboarding-domain-question { color:#30203e; font-size:15px; font-weight:750; }
-.onboarding-domain-field-row { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:stretch; gap:10px; height:56px; }
-.onboarding-domain-field-row > .MuiFormControl-root { min-width:0; height:56px; }
-.onboarding-domain-field-row .MuiOutlinedInput-root { height:56px; align-items:center; }
-.onboarding-domain-field-row .MuiOutlinedInput-input { height:56px; box-sizing:border-box; padding:0 14px; display:flex; align-items:center; }
-.onboarding-domain-verify-button.MuiButton-root { align-self:center; width:auto; height:56px !important; min-height:56px !important; max-height:56px !important; box-sizing:border-box; padding:0 18px !important; line-height:1.2; border-color:#b995e3; color:#5f27ae; background:#fbf8fe; text-transform:none; white-space:nowrap; box-shadow:none; }
-.onboarding-domain-verify-button.MuiButton-root .MuiButton-label { display:flex; align-items:center; justify-content:center; }
-.onboarding-domain-verify-button.MuiButton-root:hover { border-color:#7f42c1; background:#f5edfc; box-shadow:0 5px 13px #6b31b31a; }
-.onboarding-domain-verify-button.Mui-disabled { color:#a69aad; border-color:#e5dfea; background:#f7f5f8; }
 .onboarding-scan-button.MuiButton-root { justify-self:start; min-height:39px; padding:8px 15px; color:#5f27ae; border:1px solid #cdb4e9; border-radius:10px; background:#fbf8fe; text-transform:none; box-shadow:none; }
 .onboarding-scan-button.MuiButton-root:hover { color:#4e1e99; border-color:#9d6ed4; background:#f5edfc; box-shadow:0 5px 13px #6b31b31a; }
 .onboarding-scan-button.Mui-disabled { color:#a69aad; border-color:#e5dfea; background:#f7f5f8; }
@@ -17633,10 +17625,6 @@ body {
 .onboarding-code .MuiIconButton-root { position:absolute; top:8px; right:8px; color:white; }
 .onboarding-sdk-step { max-width:900px; }
 .onboarding-sdk-intro { padding:16px 18px; border-radius:14px; background:#f7f2fb; color:#5c4e69; line-height:1.6 !important; }
-.onboarding-sdk-surface-tabs { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); width:100%; gap:6px; padding:6px; border:1px solid #e4d8ef; border-radius:16px; background:#fbf8fe; }
-.onboarding-sdk-surface-tabs button { min-height:52px; border:0; border-radius:11px; padding:12px 18px; color:#756481; background:transparent; font:inherit; font-size:15px; font-weight:800; cursor:pointer; transition:color .18s ease, background .18s ease, box-shadow .18s ease; }
-.onboarding-sdk-surface-tabs button:hover { color:#5d22b9; background:#f5edff; }
-.onboarding-sdk-surface-tabs button.selected { color:#5d22b9; background:#efe3ff; box-shadow:0 3px 8px #6d2bc71a; }
 .onboarding-website-subtitle { margin-top:-8px !important; line-height:1.55 !important; }
 .onboarding-website-overview { display:grid; grid-template-columns:minmax(150px,.72fr) minmax(0,1fr) auto minmax(0,1fr); align-items:center; gap:16px; padding:18px 20px; border:1px solid #e1d5ed; border-radius:16px; background:linear-gradient(110deg,#fcf9ff,#f6efff); }
 .onboarding-website-overview-label { display:flex; align-items:center; gap:12px; color:#2c1b3d; }
@@ -17682,7 +17670,6 @@ body {
 .sdk-request-dialog-title strong,.sdk-request-dialog-title small { display:block; }
 .sdk-request-dialog-title small { margin-top:3px; color:#7c7087; font-weight:400; }
 @media (max-width:700px) {
-  .onboarding-sdk-surface-tabs button { min-height:48px; padding-inline:10px; font-size:14px; }
   .onboarding-website-overview { grid-template-columns:1fr; gap:14px; }
   .onboarding-website-overview-arrow { display:none; }
   .onboarding-sdk-options { grid-template-columns:1fr; }
@@ -17749,8 +17736,6 @@ body {
   .onboarding-chat-body { padding:20px 16px; min-height:390px; }
   .onboarding-question { margin:24px 0 0; }
   .onboarding-product-options { grid-template-columns:1fr; max-width:none; }
-  .onboarding-domain-field-row { grid-template-columns:1fr; height:auto; }
-  .onboarding-domain-verify-button.MuiButton-root { width:100%; }
   .onboarding-app-link-grid { grid-template-columns:1fr; }
   .onboarding-channel-grid { grid-template-columns:1fr; }
   .onboarding-channel { min-height:unset; flex-direction:row; align-items:center; }

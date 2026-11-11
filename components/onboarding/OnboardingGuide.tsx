@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowForwardRounded, CheckCircleRounded, OpenInNewRounded, ReplayRounded } from '@mui/icons-material';
 import { Button, Chip, LinearProgress, Paper, Stack, Typography } from '@mui/material';
-import { initialOnboardingState, onboardingCompletedCount, onboardingPercentage, pushReadyOf, type OnboardingState } from '@/lib/onboarding';
+import { initialOnboardingState, onboardingCompletedCount, onboardingPercentage, pushReadyOf, sdkSurfacesOf, type OnboardingState } from '@/lib/onboarding';
 import { firebaseApi, onboardingApi } from '@/lib/projects/api';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
 
@@ -14,8 +14,11 @@ const items = [
   ['Channels', 'Select push, email, or in-app messaging for your team.', 'Channel preferences'],
   ['Domain connection', 'Prepare a sending domain and review the DNS steps.', 'Email deliverability'],
   ['Mobile push setup', 'Websites need no setup. Mobile apps connect Firebase credentials.', 'Push delivery'],
-  ['SDK integration', 'Install the SDK and send your first product signal.', 'Product events'],
 ];
+const sdkItems = {
+  mobile: ['App SDK', 'Install the SDK in your app and send your first product signal.', 'Product events'],
+  web: ['Web SDK', 'Add PixlPush to your website for events and Web Push.', 'Product events'],
+};
 
 export default function OnboardingGuide() {
   const [state, setState] = useState<OnboardingState>(initialOnboardingState);
@@ -44,7 +47,7 @@ export default function OnboardingGuide() {
   }, [active?.name, projectId, progress.data]);
   const hasProject = Boolean(projectId);
   const displayState = state;
-  const activeSteps = items.map((step, index) => ({ step, number: index + 1 }));
+  const activeSteps = [...items, ...sdkSurfacesOf(displayState.platforms).map((surface) => sdkItems[surface])].map((step, index) => ({ step, number: index + 1 }));
   const firebaseConnected = pushReadyOf(firebase.data);
   const complete = hasProject ? onboardingCompletedCount(displayState, firebaseConnected) : 0;
   const percentage = hasProject ? onboardingPercentage(displayState, firebaseConnected) : 0;
@@ -57,7 +60,7 @@ export default function OnboardingGuide() {
     </Paper>
     <Paper className="guide-progress-card" elevation={0}>
       <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" gap={1} alignItems={{ sm: 'center' }}>
-      <div><Typography variant="h6" fontWeight={700}>Setup progress</Typography><Typography color="text.secondary" variant="body2">{complete} of 6 steps complete</Typography></div>
+      <div><Typography variant="h6" fontWeight={700}>Setup progress</Typography><Typography color="text.secondary" variant="body2">{complete} of {activeSteps.length} steps complete</Typography></div>
         <strong className="guide-percent">{percentage}%</strong>
       </Stack>
       <LinearProgress variant="determinate" value={percentage} className="onboarding-progress" />
