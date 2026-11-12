@@ -444,27 +444,38 @@ export interface UpdateProjectInput {
 }
 
 /** GET /projects/:id/firebase. Credentials themselves are never returned. */
-/** HubSpot <-> PixlPush users. Tokens are never returned. */
-export type HubspotSettings = {
-  /** "Connect with HubSpot" (OAuth) is set up on the server. */
+/** Integration ids; the backend registry (src/modules/integrations/registry.ts) has the same list. */
+export type IntegrationProvider = 'hubspot' | 'salesforce' | 'pipedrive';
+
+/** GET /projects/:id/integrations/:provider. Credentials are never returned. */
+export type IntegrationSettings = {
+  provider: IntegrationProvider;
+  name: string;
+  /** "Connect with <CRM>" (OAuth) is set up on the server. */
   oauthAvailable?: boolean;
+  /** Something to do in the CRM before signing in (Salesforce: install the PixlPush package). */
+  oauthSetupUrl?: string | null;
 } & (
   | { connected: false }
   | {
       connected: true;
-      /** oauth = "Connect with HubSpot"; token = pasted Service Key. */
-      authType?: 'oauth' | 'token';
+      /** oauth = signed in; token = pasted API token or Service Key; client_credentials = the customer's own app. */
+      authType: 'oauth' | 'token' | 'client_credentials';
       status: 'connected' | 'error';
-      portalId: string;
+      /** HubSpot portal, Salesforce org or Pipedrive company. */
+      accountLabel: string;
       syncEnabled: boolean;
       /** A pass is queued or running. */
       syncing: boolean;
       lastSyncedAt: string | null;
       lastError: string | null;
-      counts: { created: number; updated: number; skipped: number; pushed?: number };
+      counts: { created: number; updated: number; skipped: number; pushed: number };
       connectedAt: string;
     }
 );
+
+/** PUT body: whatever the integration's manual connection asks for (Service Key, API token, app credentials). */
+export type IntegrationCredentials = Record<string, string>;
 
 export interface FirebaseSettings {
   status: "not_configured" | "connected" | "error";

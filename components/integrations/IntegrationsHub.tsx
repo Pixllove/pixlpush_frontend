@@ -5,11 +5,12 @@ import Link from 'next/link';
 import { AddRounded, ArrowForwardRounded, SearchRounded } from '@mui/icons-material';
 import { Box, Button, Card, Chip, Grid, InputAdornment, Stack, TextField, Typography } from '@mui/material';
 import SettingsStatus from '@/components/dashboard/SettingsStatus';
-import { INTEGRATIONS, type Integration } from './registry';
+import { useActiveProject } from '@/hooks/projects/use-active-project';
+import { useIntegrations } from '@/hooks/projects/use-project-settings';
+import { INTEGRATIONS, integrationStatus, type Integration, type IntegrationStatus } from './registry';
 
-function IntegrationCard({ integration }: { integration: Integration }) {
-  const { name, category, summary, href, Logo, useStatus } = integration;
-  const status = useStatus();
+function IntegrationCard({ integration, status }: { integration: Integration; status: IntegrationStatus }) {
+  const { name, category, summary, href, Logo } = integration;
   return (
     <Card className="integration-card" sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
       <Stack direction="row" alignItems="flex-start" justifyContent="space-between" gap={1}>
@@ -33,6 +34,10 @@ function IntegrationCard({ integration }: { integration: Integration }) {
 /** Integration directory, grouped by category like OneSignal's and MailerLite's. */
 export default function IntegrationsHub() {
   const [search, setSearch] = useState('');
+  // Every integration's status in one request.
+  const { active } = useActiveProject();
+  const settings = useIntegrations(active?.id).data;
+  const statusOf = (id: string) => integrationStatus(settings?.find((s) => s.provider === id));
   const q = search.trim().toLowerCase();
   const shown = INTEGRATIONS.filter((i) => !q || `${i.name} ${i.category} ${i.summary}`.toLowerCase().includes(q));
   const categories = [...new Set(shown.map((i) => i.category))];
@@ -52,7 +57,7 @@ export default function IntegrationsHub() {
           <Typography fontWeight={700} fontSize="var(--fs-13)" color="text.secondary" sx={{ mb: 1.5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{category}</Typography>
           <Grid container spacing={2}>
             {shown.filter((i) => i.category === category).map((i) => (
-              <Grid item xs={12} sm={6} lg={4} key={i.id}><IntegrationCard integration={i} /></Grid>
+              <Grid item xs={12} sm={6} lg={4} key={i.id}><IntegrationCard integration={i} status={statusOf(i.id)} /></Grid>
             ))}
           </Grid>
         </Box>
