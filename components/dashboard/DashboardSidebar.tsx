@@ -87,7 +87,7 @@ export default function DashboardSidebar({ active, setActive, mobileOpen, collap
   const onboardingPercent = !activeProject
     ? '0%'
     : onboarding.data && !onboarding.isPending && !firebase.isPending
-      ? `${onboardingPercentage({ ...onboarding.data, completed: Array.from(new Set([1, ...onboarding.data.completed])) }, pushReadyOf(firebase.data))}%`
+      ? `${onboardingPercentage(onboarding.data, pushReadyOf(firebase.data))}%`
       : '…';
   const switchProject = (value: string) => { setMenu(null); onChangeProject(value); };
 

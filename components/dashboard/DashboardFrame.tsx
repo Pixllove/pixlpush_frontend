@@ -146,10 +146,7 @@ export default function DashboardFrame({
     );
   }
   const onboardingPercent = activeProject && onboarding.data && !onboarding.isPending && !firebase.isPending
-    ? onboardingPercentage(
-      { ...onboarding.data, completed: Array.from(new Set([1, ...onboarding.data.completed])) },
-      pushReadyOf(firebase.data),
-    )
+    ? onboardingPercentage(onboarding.data, pushReadyOf(firebase.data))
     : null;
   const showOnboardingWarning = activeProject?.status !== 'suspended' && activeProject?.billing?.state !== 'locked' && active !== 'Onboarding Guide' && onboardingPercent !== null && onboardingPercent < 100;
   // Nothing invented: the heading names the real Project, or says there is none.

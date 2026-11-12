@@ -162,6 +162,8 @@ export const onboardingApi = {
   /** Reads the website on the server and returns the store links it links to (null when absent). */
   appLinks: (projectId: string, websiteUrl: string) =>
     authRequest<{ androidAppUrl: string | null; iosAppUrl: string | null }>(at(projectId, "/onboarding/app-links"), { websiteUrl }, BASE),
+  sendSdkInstructions: (projectId: string, input: { developerEmail: string; sdk: string; prompt: string; guideUrl?: string }) =>
+    authRequest<{ sent: boolean }>(at(projectId, "/onboarding/sdk-instructions"), input, BASE),
 };
 
 export type RoadmapStage = 'under_consideration' | 'future' | 'planned' | 'in_progress' | 'done' | 'unlikely_to_build';
