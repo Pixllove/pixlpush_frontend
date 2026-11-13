@@ -12,15 +12,19 @@ const isZone = (value: string) => {
  */
 export function setTimezoneOverride(timeZone: string | null) {
   if (typeof window === "undefined") return;
-  if (timeZone && isZone(timeZone)) window.localStorage.setItem(OVERRIDE_KEY, timeZone);
-  else window.localStorage.removeItem(OVERRIDE_KEY);
+  try {
+    if (timeZone && isZone(timeZone)) window.localStorage.setItem(OVERRIDE_KEY, timeZone);
+    else window.localStorage.removeItem(OVERRIDE_KEY);
+  } catch { /* Storage is optional in privacy mode and during server-side rendering. */ }
 }
 
 /** The zone dates are shown in: the profile's manual choice, else this device's zone. */
 export function getViewerTimezone(): string {
   if (typeof window !== "undefined") {
-    const chosen = window.localStorage.getItem(OVERRIDE_KEY);
-    if (chosen && isZone(chosen)) return chosen;
+    try {
+      const chosen = window.localStorage.getItem(OVERRIDE_KEY);
+      if (chosen && isZone(chosen)) return chosen;
+    } catch { /* Fall back to the device timezone when storage is unavailable. */ }
   }
   return getDeviceTimezone();
 }

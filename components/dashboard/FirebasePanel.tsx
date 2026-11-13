@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ProjectPlatform } from '@/types/project';
 import { toggleProjectPlatform } from '@/lib/project-platforms';
@@ -8,6 +9,7 @@ import { CheckCircleRounded, CloudUploadRounded, LanguageRounded, PhoneIphoneRou
 import { Alert, Box, Button, ButtonBase, Card, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Typography } from '@mui/material';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
 import { useFirebaseSettings } from '@/hooks/projects/use-project-settings';
+import { aiApi } from '@/lib/projects/ai';
 import SettingsStatus from './SettingsStatus';
 import type { ApiError } from '@/types/auth';
 
@@ -15,6 +17,8 @@ const CONFIG_ROLES = ['owner', 'admin', 'developer'];
 
 /** Firebase / FCM connection of the active Project. Every Project has its own. */
 export default function FirebasePanel() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { active } = useActiveProject();
   const { query, upload, verify, disconnect, platforms: savePlatforms } = useFirebaseSettings(active?.id);
   const config = query.data;
@@ -82,6 +86,15 @@ export default function FirebasePanel() {
     setError(undefined);
     try {
       await upload.mutateAsync({ serviceAccount: file.text, confirmFirebaseProjectId: isSwitch ? confirm.trim() : undefined });
+      const interactionId = searchParams.get('interactionId');
+      if (interactionId && active?.id) {
+        // The secure form is the only place allowed to handle the credential.
+        // The chat interaction is advanced only from the backend-confirmed
+        // onboarding state after the upload succeeds.
+        await aiApi.reloadInteraction(active.id, { interactionId, requestKey: crypto.randomUUID() });
+        await queryClient.invalidateQueries({ queryKey: ['projects', active.id, 'onboarding'] });
+        router.push('/dashboard');
+      }
       close();
     } catch (cause) {
       setError((cause as ApiError).message ?? 'Could not connect Firebase. Please try again.');

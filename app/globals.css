@@ -19405,23 +19405,46 @@ button[aria-expanded="true"] {
 /* Active conversations keep the header and composer fixed while only the transcript scrolls. */
 .dashboard-content:has(.chat-experience.is-standard-chat) {
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
   height: calc(100dvh - 60px);
   min-height: 0;
   padding: 8px 30px 0;
   overflow: hidden;
 }
-.chat-experience.is-standard-chat {
+.home-layout:has(.chat-experience.is-standard-chat) {
+  height: auto;
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow: hidden;
+}
+.home-experience:has(.chat-experience.is-standard-chat) {
   height: 100%;
   min-height: 0;
+  overflow: hidden;
+}
+.chat-experience.is-standard-chat {
+  box-sizing: border-box;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 .chat-experience.is-standard-chat .chat-thread {
   min-height: 0;
-  flex: 1 1 auto;
+  flex: 1 1 0%;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-color: rgba(103, 79, 132, 0.38) transparent;
-  padding-bottom: 190px;
+  padding-bottom: 24px;
+}
+.chat-experience.is-standard-chat .chat-composer-area {
+  position: relative;
+  inset: auto;
+  z-index: 4;
+  width: 100%;
+  flex: 0 0 auto;
+  align-self: stretch;
 }
 
 @media (max-height: 820px) and (min-width: 761px) {
@@ -19874,6 +19897,18 @@ button[aria-expanded="true"] {
   .home-layout.has-history .home-feature-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+/* Standard chat keeps the composer in the chat column, so the transcript can scroll above it
+   instead of continuing underneath a viewport-fixed input. */
+.chat-experience.is-standard-chat .chat-composer-area {
+  position: relative;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  width: 100%;
+  transition: none;
 }
 
 /* Journey A/B test. The variant row is never wider than the canvas: it centres under the test and

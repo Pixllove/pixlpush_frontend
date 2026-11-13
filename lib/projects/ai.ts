@@ -6,7 +6,103 @@ const at = (projectId: string, path = "") =>
   `/${encodeURIComponent(projectId)}/ai${path}`;
 
 /** Agents come from the backend registry; known ids keep autocomplete. */
-export type AiAssistantId = "Max" | "Ben" | "Nova" | "Anna" | (string & {});
+export type AiAgentId = "Max" | "Ben" | "Nova" | "Anna" | (string & {});
+/** Kept as an alias for the original Home AI contract. */
+export type AiAssistantId = AiAgentId;
+export type AiInteractionMode = "direct" | "handoff" | "consultation";
+export type AiCollaborationApprovalStatus =
+  | "not_required"
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "cancelled"
+  | "needs_data"
+  | "blocked";
+export type AiAgentTaskStatus =
+  | "queued"
+  | "running"
+  | "completed"
+  | "failed"
+  | "needs_data"
+  | "blocked"
+  | "cancelled"
+  | (string & {});
+
+export type AiAgentResult = {
+  taskKey: string;
+  agentId: AiAgentId;
+  status: "completed" | "failed" | "needs_data" | "blocked";
+  summary: string;
+  findings: string[];
+  evidence: Array<{ label: string; value: string; source?: string }>;
+  recommendations: string[];
+  missingData: string[];
+  confidence: "high" | "medium" | "low";
+  approvalRequired: boolean;
+  createdAt?: string;
+};
+
+export type AiCollaboration = {
+  id: string;
+  mode: AiInteractionMode;
+  leadAgent: AiAgentId;
+  activeAgent?: AiAgentId;
+  currentAgent?: AiAgentId | null;
+  nextAgent?: AiAgentId | null;
+  participants: Array<{
+    id?: string;
+    agentId: AiAgentId;
+    role: string;
+    status: string;
+    invitedAt?: string;
+    joinedAt?: string | null;
+    completedAt?: string | null;
+  }>;
+  tasks: Array<{
+    id: string;
+    taskKey: string;
+    agentId: AiAgentId;
+    type: string;
+    status: AiAgentTaskStatus;
+    attempt: number;
+    maxAttempts: number;
+    dependsOnTaskKey?: string | null;
+    startedAt?: string | null;
+    completedAt?: string | null;
+  }>;
+  results: AiAgentResult[];
+  events?: AiCollaborationEvent[];
+  approvalRequired: boolean;
+  approvalStatus: AiCollaborationApprovalStatus;
+  maxSpecialistCalls: number;
+  status?: string;
+};
+
+/** Normalized collaboration events returned by the backend. */
+export type AiCollaborationEvent = {
+  id: string;
+  collaborationId: string;
+  projectId?: string;
+  conversationId?: string;
+  type: string;
+  actorAgent?: AiAgentId | null;
+  targetAgent?: AiAgentId | null;
+  payload: unknown;
+  createdAt: string;
+};
+
+/** Normalized DTO returned by GET /conversations/:conversationId/collaborations. */
+export type AiCollaborationHistory = AiCollaboration & {
+  projectId?: string;
+  accountId?: string;
+  conversationId?: string;
+  createdAt: string;
+  updatedAt: string;
+  events: AiCollaborationEvent[];
+};
+
+/** Compatibility alias for code that imported the old persisted-result name. */
+export type AiStoredAgentResult = AiAgentResult & { id?: string; collaborationId?: string; createdAt?: string };
 export interface AiHandoff { assistant: AiAssistantId; name: string; role: string; reason?: string }
 export type AiFlowId = "campaigns" | "journey" | "segment" | "audience-group" | "engagement";
 export type AiResourceType = "journey" | "segment" | "audience-group" | "campaign";
@@ -83,7 +179,96 @@ export interface AiConversationMessage {
   role: "user" | "assistant" | "system";
   content: string;
   metadata?: Record<string, unknown>;
+  interaction?: AiInteraction | null;
   createdAt: string;
+}
+
+export type AiInteractionType =
+  | "onboarding"
+  | "business_analysis"
+  | "goal_selection"
+  | "journey_creation"
+  | "push_creation"
+  | "email_creation"
+  | "improvement"
+  | "analysis"
+  | "preview"
+  | "approval";
+
+export type AiInteractionStatus =
+  | "active"
+  | "awaiting_input"
+  | "awaiting_confirmation"
+  | "completed"
+  | "cancelled"
+  | "failed"
+  | "expired";
+
+export type AiInteractionFieldOption = string | { label: string; value: string; description?: string };
+
+export interface AiInteractionField {
+  key: string;
+  type: "text" | "url" | "choice" | "date" | "time" | "timezone" | "number" | "secure_upload" | "json" | (string & {});
+  label: string;
+  required?: boolean;
+  options?: string[];
+  sensitive?: boolean;
+}
+
+export type AiInteractionAction =
+  | "next"
+  | "submit"
+  | "preview"
+  | "approve"
+  | "edit"
+  | "analyze"
+  | "save_draft"
+  | "cancel"
+  | "retry"
+  | (string & {});
+
+/** Structured popup contract returned by the backend. */
+export interface AiInteraction {
+  interactionId: string;
+  type: AiInteractionType;
+  flowId: string;
+  status: AiInteractionStatus;
+  step: number;
+  totalSteps: number;
+  title: string;
+  description?: string;
+  fields: AiInteractionField[];
+  data: Record<string, unknown>;
+  actions: AiInteractionAction[];
+  requestKey: string;
+}
+
+export interface AiInteractionRequest {
+  interactionId: string;
+  requestKey: string;
+  step: number;
+  values?: Record<string, unknown>;
+  action?: AiInteractionAction;
+}
+
+export interface AiInteractionResponse {
+  conversationId?: string;
+  assistant?: AiAgentId;
+  message?: string;
+  interaction?: AiInteraction | null;
+  recommendation?: Record<string, unknown> | null;
+  analysis?: Record<string, unknown> | null;
+  result?: Record<string, unknown> | null;
+  createdResources?: AiCreatedResource[];
+  resourceMetadata?: Array<Record<string, unknown>>;
+  savedAsDraft?: boolean;
+  activationRequired?: boolean;
+  nextActions?: string[];
+  context?: { generatedAt: string };
+}
+
+function normalizeInteractionResponse(response: AiInteractionResponse | AiInteraction): AiInteractionResponse {
+  return "interactionId" in response ? { interaction: response } : response;
 }
 
 export interface AiInsight {
@@ -113,6 +298,38 @@ export interface AiProjectSnapshot {
   /** Setup state the Home prompts and Max use; absent on an older API. */
   setup?: { onboardingComplete: boolean; platforms: Array<"web" | "mobile">; firebaseConnected: boolean; pushReady: boolean; emailReady: boolean; sdkConnected: boolean };
   generatedAt: string;
+}
+
+export type AiOnboardingStepStatus = "complete" | "missing";
+
+/** Normalized onboarding status returned by the AI context endpoint. */
+export interface AiOnboardingStep {
+  number: number;
+  kind: string;
+  title: string;
+  status: AiOnboardingStepStatus;
+  reason: string;
+  action: string;
+  href: string;
+}
+
+export interface AiOnboardingStatus {
+  status: "skipped" | "complete" | "not_started" | "in_progress";
+  currentStep: number;
+  completedCount: number;
+  totalSteps: number;
+  completionPercentage: number;
+  platforms: string[];
+  channels: string[];
+  steps: AiOnboardingStep[];
+  completedSteps: AiOnboardingStep[];
+  missingSteps: AiOnboardingStep[];
+  nextStep: AiOnboardingStep | null;
+  firebaseConnected: boolean;
+  pushReady: boolean;
+  sdkReady: { mobile: boolean; web: boolean };
+  emailReady: boolean;
+  emailBlockers: unknown[];
 }
 
 /** A Home suggestion: ask Max, start a guided flow, or open the page where the user acts. */
@@ -163,6 +380,7 @@ export interface AiProjectContext {
   catalog?: AiCatalog;
   /** Four prompts for the customer's current stage (1 onboarding → 4 improve & grow). */
   suggestions?: { stage: 1 | 2 | 3 | 4; prompts: AiSuggestedPrompt[] };
+  onboarding?: AiOnboardingStatus;
 }
 
 export interface AiConversationListResponse {
@@ -188,8 +406,25 @@ export interface AiChatResponse {
   createdResources?: AiCreatedResource[];
   /** Set when another agent owns the request; the UI offers a switch. */
   handoff?: AiHandoff | null;
+  mode?: AiInteractionMode;
+  collaboration?: AiCollaboration | null;
+  agentResult?: AiAgentResult;
+  interaction?: AiInteraction | null;
   context: { generatedAt: string };
 }
+
+export type AiChatRequest = {
+  assistant: AiAgentId;
+  prompt: string;
+  conversationId?: string;
+  mode?: AiInteractionMode;
+  requestedAgent?: AiAgentId;
+  requestKey?: string;
+  resourceType?: "campaign" | "journey";
+  resourceId?: string;
+  from?: string;
+  to?: string;
+};
 
 export interface AiFlowDraftResponse {
   conversationId: string;
@@ -227,9 +462,33 @@ export const aiApi = {
     authRequest<{ websiteUrl: string; appStoreUrl: string | null; googlePlayUrl: string | null }>(at(projectId, "/business-context/detect-links"), input, BASE, "POST"),
   chat: (
     projectId: string,
-    input: { assistant: AiAssistantId; prompt: string; conversationId?: string },
+    input: AiChatRequest,
     signal?: AbortSignal,
   ) => authRequest<AiChatResponse>(at(projectId, "/chat"), input, BASE, undefined, { signal }),
+  collaborations: (projectId: string, conversationId: string) =>
+    authRequest<AiCollaborationHistory[]>(at(projectId, `/conversations/${encodeURIComponent(conversationId)}/collaborations`), undefined, BASE),
+  approveCollaboration: (projectId: string, collaborationId: string) =>
+    authRequest<{ collaborationId: string; approvalStatus: "approved"; activationRequired: true; message: string }>(
+      at(projectId, `/collaborations/${encodeURIComponent(collaborationId)}/approve`),
+      undefined,
+      BASE,
+      "POST",
+    ),
+  /** Available for deployments that expose the optional rejection endpoint. */
+  rejectCollaboration: (projectId: string, collaborationId: string) =>
+    authRequest<{ collaborationId: string; approvalStatus: "rejected"; message: string }>(
+      at(projectId, `/collaborations/${encodeURIComponent(collaborationId)}/reject`),
+      undefined,
+      BASE,
+      "POST",
+    ),
+  cancelCollaboration: (projectId: string, collaborationId: string) =>
+    authRequest<{ collaborationId: string; status: "cancelled" }>(
+      at(projectId, `/collaborations/${encodeURIComponent(collaborationId)}/cancel`),
+      undefined,
+      BASE,
+      "POST",
+    ),
   createConversation: (
     projectId: string,
     input: { assistant: AiAssistantId; title?: string; flowId?: AiFlowId; opening?: { prompt: string; response?: string } },
@@ -264,7 +523,7 @@ export const aiApi = {
   regenerate: (
     projectId: string,
     conversationId: string,
-    input: { assistant: AiAssistantId; prompt?: string },
+    input: Pick<AiChatRequest, "assistant" | "prompt" | "mode" | "requestedAgent" | "requestKey" | "resourceType" | "resourceId" | "from" | "to">,
     signal?: AbortSignal,
   ) => authRequest<AiChatResponse>(at(projectId, `/conversations/${encodeURIComponent(conversationId)}/regenerate`), input, BASE, undefined, { signal }),
   flowDraft: (
@@ -279,6 +538,16 @@ export const aiApi = {
     input: { assistant: AiAssistantId; answers: Record<string, string>; conversationId?: string },
     signal?: AbortSignal,
   ) => authRequest<AiFlowDraftResponse & { createdResources: NonNullable<AiChatResponse["createdResources"]> }>(at(projectId, `/flows/${encodeURIComponent(flowId)}/create`), input, BASE, undefined, { signal }),
+  submitInteraction: (projectId: string, input: AiInteractionRequest, signal?: AbortSignal) =>
+    authRequest<AiInteractionResponse | AiInteraction>(at(projectId, `/interactions/${encodeURIComponent(input.interactionId)}/submit`), input, BASE, "POST", { signal }).then(normalizeInteractionResponse),
+  cancelInteraction: (projectId: string, input: Pick<AiInteractionRequest, "interactionId" | "requestKey">, signal?: AbortSignal) =>
+    authRequest<AiInteractionResponse | AiInteraction>(at(projectId, `/interactions/` + encodeURIComponent(input.interactionId) + `/cancel`), { requestKey: input.requestKey }, BASE, "POST", { signal }).then(normalizeInteractionResponse),
+  retryInteraction: (projectId: string, input: Pick<AiInteractionRequest, "interactionId" | "requestKey">, signal?: AbortSignal) =>
+    authRequest<AiInteractionResponse | AiInteraction>(at(projectId, `/interactions/` + encodeURIComponent(input.interactionId) + `/retry`), { requestKey: input.requestKey }, BASE, "POST", { signal }).then(normalizeInteractionResponse),
+  reloadInteraction: (projectId: string, input: Pick<AiInteractionRequest, "interactionId" | "requestKey">, signal?: AbortSignal) => {
+    const requestKey = input.requestKey ? "?requestKey=" + encodeURIComponent(input.requestKey) : "";
+    return authRequest<AiInteraction>(at(projectId, `/interactions/` + encodeURIComponent(input.interactionId) + requestKey), undefined, BASE, undefined, { signal }).then(normalizeInteractionResponse);
+  },
   conversation: (projectId: string, conversationId: string) =>
     authRequest<AiConversation & { messages: AiConversationMessage[] }>(
       at(projectId, `/conversations/${encodeURIComponent(conversationId)}`),
