@@ -82,15 +82,25 @@ export default function IntegrationPanel({ provider }: { provider: IntegrationPr
     else if (code) setMarketplaceCode(code);
   }, [active?.id, finishOauth, crm.name]);
 
-  const startOauth = () => run(async () => {
-    setRedirecting(true);
-    try {
-      window.location.assign((await integrationsApi.oauthStart(active!.id, provider)).url);
-    } catch (cause) {
-      setRedirecting(false);
-      throw cause;
-    }
-  });
+  // Opens the consent page in a new tab. The tab must open synchronously on click (before the await)
+  // or popup blockers stop it. The callback lands in that tab; this tab refreshes status on focus.
+  const startOauth = () => {
+    const tab = window.open('', '_blank');
+    if (tab) tab.opener = null;
+    return run(async () => {
+      setRedirecting(true);
+      try {
+        const { url } = await integrationsApi.oauthStart(active!.id, provider);
+        if (tab) tab.location.href = url;
+        else window.location.assign(url); // popup blocked: fall back to same tab
+      } catch (cause) {
+        tab?.close();
+        throw cause;
+      } finally {
+        setRedirecting(false);
+      }
+    });
+  };
   const reset = () => { setForm({}); setReplacing(false); };
   const { fields } = crm.manual;
   const submit = () => run(async () => {
