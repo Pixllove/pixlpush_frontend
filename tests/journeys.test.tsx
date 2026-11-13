@@ -107,6 +107,15 @@ describe('builder ↔ API mapping', () => {
     ]);
   });
 
+  it('serializes and restores a tracked-event entrance trigger', () => {
+    const s = state();
+    s.entranceConfig = { lifecycle: '', audience: '', allUsers: false, event: 'signup' };
+    const input = toJourneyInput(s);
+    expect(input).toMatchObject({ trigger: 'event', entryEvent: 'signup', audience: {} });
+    const back = fromJourney({ ...input, id: 'event-journey', status: 'draft', displayStatus: 'draft', messageType: 'push', createdAt: '', activatedAt: null, steps: input.steps.map((step) => ({ ...step, stats: {} })) } as Journey);
+    expect(back.entranceConfig).toEqual({ lifecycle: '', audience: '', allUsers: false, event: 'signup' });
+  });
+
   it('refuses to save an incomplete journey with a sentence for the user', () => {
     const noAudience = state(); noAudience.entranceConfig.lifecycle = '';
     expect(() => toJourneyInput(noAudience)).toThrow(/who enters/);

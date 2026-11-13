@@ -11,7 +11,7 @@ export type BlockType = "entrance" | "email" | "notification" | "web_notificatio
 export type BlockStats = { waiting?: number; completed?: number; exitedEarly?: number; sent?: number; opened?: number; clicked?: number; paused?: number; deleted?: number; entered?: number; unreachable?: number };
 export type Block = { id: string; type: BlockType; title: string; description: string; sourceType?: BlockType; stats?: BlockStats };
 /** `lifecycle` and `audience` hold ids (of a Lifecycle Segment / Audience Group). */
-export type EntranceConfig = { lifecycle: string; audience: string; allUsers: boolean };
+export type EntranceConfig = { lifecycle: string; audience: string; allUsers: boolean; event?: string };
 /** Yes/No paths under a condition; `variants` holds the message blocks of an A/B test block. */
 export type Branches = Record<string, { yes: Block[]; no: Block[]; variants?: Block[] }>;
 export type BranchSide = "yes" | "no" | "variants";
@@ -155,7 +155,7 @@ export class JourneyIncomplete extends Error {}
 /** The builder's state as the body of POST/PATCH /journeys. */
 export function toJourneyInput(state: BuilderState): JourneyInput {
   const { entranceConfig: entrance, settings, conditionValues } = state;
-  if (!entrance.allUsers && !entrance.lifecycle && !entrance.audience) throw new JourneyIncomplete("Choose who enters this journey in the Entrance Trigger.");
+  if (!entrance.allUsers && !entrance.lifecycle && !entrance.audience && !entrance.event) throw new JourneyIncomplete("Choose who enters this journey in the Entrance Trigger.");
 
   const steps: JourneyStep[] = [];
   const runnable = (list: Block[]) => list.filter((block) => block.type !== "entrance");
@@ -263,8 +263,8 @@ export function toJourneyInput(state: BuilderState): JourneyInput {
   const exitWhen = settings[root.find((block) => block.type === "exit")?.id ?? "exit"] ?? {};
   return {
     name: state.name.trim() || "New Journey",
-    trigger: "audience",
-    audience: entrance.allUsers ? { allUsers: true } : entrance.lifecycle ? { lifecycleSegmentIds: [entrance.lifecycle] } : { audienceGroupIds: [entrance.audience] },
+    trigger: entrance.event ? "event" : "audience",
+    ...(entrance.event ? { entryEvent: entrance.event, audience: {} } : { audience: entrance.allUsers ? { allUsers: true } : entrance.lifecycle ? { lifecycleSegmentIds: [entrance.lifecycle] } : { audienceGroupIds: [entrance.audience] } }),
     exitOnAudienceLeave: exitWhen["Segment change"] === "yes" || exitWhen["Audience group change"] === "yes",
     exitRules: [...new Set(Object.keys(EXIT_RULES).filter((label) => exitWhen[label] === "yes").map((label) => EXIT_RULES[label]))],
     steps,
@@ -329,7 +329,7 @@ export function fromJourney(journey: Journey): BuilderState & { status: BuilderS
           : journey.status === "archived"
             ? "Stopped"
             : "Paused",
-    entranceConfig: { allUsers: Boolean(audience.allUsers), lifecycle: audience.lifecycleSegmentIds?.[0] ?? "", audience: audience.audienceGroupIds?.[0] ?? "" },
+    entranceConfig: { allUsers: Boolean(audience.allUsers), lifecycle: audience.lifecycleSegmentIds?.[0] ?? "", audience: audience.audienceGroupIds?.[0] ?? "", ...(journey.trigger === "event" && journey.entryEvent ? { event: journey.entryEvent } : {}) },
     blocks,
     branches,
     settings,

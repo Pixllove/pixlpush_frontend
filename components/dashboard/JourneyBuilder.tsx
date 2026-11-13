@@ -563,6 +563,8 @@ export default function JourneyBuilder() {
     });
   const entranceDescription = entranceConfig.allUsers
     ? "All users"
+    : entranceConfig.event
+      ? `Event: ${entranceConfig.event}`
     : entranceConfig.lifecycle
       ? `Lifecycle segment: ${nameOf(choices.segments, entranceConfig.lifecycle)}`
       : entranceConfig.audience
@@ -1879,6 +1881,34 @@ function EntranceSettings({
       </Box>
       <Stack gap={0.7}>
         <Typography className="journey-settings-label">
+          Tracked event
+        </Typography>
+        <Select
+          fullWidth
+          size="small"
+          value={config.event || ""}
+          displayEmpty
+          onChange={(event) =>
+            onChange({
+              ...config,
+              event: String(event.target.value),
+              lifecycle: "",
+              audience: "",
+              allUsers: false,
+            })
+          }
+        >
+          <MenuItem value="">Select tracked event</MenuItem>
+          {choices.events.map((item) => (
+            <MenuItem key={item.id} value={item.id}>
+              {item.name}
+            </MenuItem>
+          ))}
+        </Select>
+      </Stack>
+      <Typography className="journey-or">OR</Typography>
+      <Stack gap={0.7}>
+        <Typography className="journey-settings-label">
           Lifecycle segment
         </Typography>
         <Select
@@ -1891,6 +1921,7 @@ function EntranceSettings({
               ...config,
               lifecycle: String(event.target.value),
               audience: "",
+              event: "",
               allUsers: false,
             })
           }
@@ -1918,6 +1949,7 @@ function EntranceSettings({
               ...config,
               audience: String(event.target.value),
               lifecycle: "",
+              event: "",
               allUsers: false,
             })
           }
@@ -1942,6 +1974,7 @@ function EntranceSettings({
                 allUsers: event.target.checked,
                 lifecycle: "",
                 audience: "",
+                event: "",
               })
             }
           />
