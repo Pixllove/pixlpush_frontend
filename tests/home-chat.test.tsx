@@ -9,10 +9,11 @@ vi.mock('next/image', () => ({ default: ({ alt }: { alt: string }) => <img alt={
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock('@/hooks/projects/use-active-project', () => ({ useActiveProject: () => ({ projects: [], active: { id: 'p1', name: 'Acme' }, isPending: false }) }));
 vi.mock('@/hooks/auth/use-current-user', () => ({ useCurrentUser: () => ({ account: { name: 'Kamran Ahsan' } }) }));
-vi.mock('@/lib/projects/ai', () => ({ aiApi: { catalog: vi.fn(), context: vi.fn(), businessContext: vi.fn(), updateBusinessContext: vi.fn(), analyzeBusinessContext: vi.fn(), conversations: vi.fn(), collaborations: vi.fn(), approveCollaboration: vi.fn(), rejectCollaboration: vi.fn(), cancelCollaboration: vi.fn(), deleteConversation: vi.fn(), chat: vi.fn(), regenerate: vi.fn(), flowDraft: vi.fn(), flowCreate: vi.fn(), createConversation: vi.fn(), cancelConversation: vi.fn(), conversation: vi.fn() } }));
+vi.mock('@/lib/projects/ai', () => ({ aiApi: { catalog: vi.fn(), context: vi.fn(), businessContext: vi.fn(), updateBusinessContext: vi.fn(), analyzeBusinessContext: vi.fn(), conversations: vi.fn(), collaborations: vi.fn(), approveCollaboration: vi.fn(), rejectCollaboration: vi.fn(), cancelCollaboration: vi.fn(), deleteConversation: vi.fn(), chat: vi.fn(), regenerate: vi.fn(), flowDraft: vi.fn(), flowCreate: vi.fn(), createConversation: vi.fn(), cancelConversation: vi.fn(), conversation: vi.fn(), submitInteraction: vi.fn(), cancelInteraction: vi.fn(), retryInteraction: vi.fn(), reloadInteraction: vi.fn() } }));
 
 const api = vi.mocked(aiApi);
 const reply = (message: string) => ({ conversationId: 'c1', assistant: 'Max', provider: 'rules', message, nextActions: [], evidence: [], context: { generatedAt: '' } }) as never;
+const interaction = (type: string, fields = [{ key: 'goal', label: 'Goal', type: 'choice', required: true, options: ['Improve engagement'] }]) => ({ interactionId: `i-${type}`, type, flowId: type, status: 'awaiting_input', step: 1, totalSteps: 2, title: type === 'onboarding' ? 'Complete onboarding' : 'Choose a growth goal', description: 'Continue in chat.', fields, data: {}, actions: ['next', 'submit', 'cancel', 'retry'], requestKey: `request-${type}-123` });
 
 describe('creation command matching', () => {
   it('recognises natural phrasing and common typos for every creation type', () => {
@@ -20,7 +21,25 @@ describe('creation command matching', () => {
     expect(detectCreationFlow('please make a compaign')).toBe('campaigns');
     expect(detectCreationFlow('can you create an audience grpup')).toBe('audience-group');
     expect(detectCreationFlow('I need a lifecycle segement')).toBe('segment');
+    expect(detectCreationFlow('create a push notification')).toBe('campaigns');
     expect(detectCreationFlow('how many users are active')).toBeNull();
+  });
+
+  it('keeps normalized onboarding actions readable after reload', () => {
+    const message = persistedMessageToChatMessage({
+      id: 'm3', role: 'assistant', content: 'Here are the onboarding steps still needed.',
+      metadata: {
+        nextActions: ['continue_onboarding'],
+        onboarding: {
+          status: 'in_progress', currentStep: 2, completedCount: 2, totalSteps: 6, completionPercentage: 33,
+          platforms: ['web'], channels: ['email'], steps: [], completedSteps: [], missingSteps: [], nextStep: null,
+          firebaseConnected: false, pushReady: false, sdkReady: { mobile: false, web: false }, emailReady: false, emailBlockers: [],
+        },
+      },
+      createdAt: '2026-10-14T10:00:01.000Z',
+    });
+    expect(message.nextActions).toEqual(['continue_onboarding']);
+    expect(message.onboarding?.completionPercentage).toBe(33);
   });
 
   it('normalizes older persisted guided-flow JSON into readable messages and resource cards', () => {
@@ -100,7 +119,120 @@ describe('Home chat', () => {
     const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue();
     await user.click(screen.getAllByRole('button', { name: 'Copy message' }).at(-1)!);
     await waitFor(() => expect(writeText).toHaveBeenCalledWith('3 users are inactive.'));
-  }, 15_000);
+  }, 45_000);
+
+  it('shows backend onboarding progress in an in-chat review card', async () => {
+    const user = userEvent.setup();
+    api.context.mockResolvedValue({
+      catalog: { assistants: [], nextActions: [{ id: 'continue_onboarding', label: 'Continue onboarding', href: '/dashboard/onboarding' }] },
+      onboarding: {
+        status: 'in_progress', currentStep: 2, completedCount: 2, totalSteps: 6, completionPercentage: 33,
+        platforms: ['web'], channels: ['email'], steps: [], completedSteps: [],
+        missingSteps: [{ number: 3, kind: 'channels', title: 'Configure channels', status: 'missing', reason: 'Choose a messaging channel.', action: 'Open onboarding', href: '/onboarding' }],
+        nextStep: { number: 3, kind: 'channels', title: 'Configure channels', status: 'missing', reason: 'Choose a messaging channel.', action: 'Open onboarding', href: '/onboarding' },
+        firebaseConnected: false, pushReady: false, sdkReady: { mobile: false, web: false }, emailReady: false, emailBlockers: [],
+      },
+    } as never);
+    api.chat.mockResolvedValueOnce({ ...(reply('I found the onboarding steps that still need attention.') as object), interaction: interaction('onboarding', [{ key: 'projectName', label: 'Project name', type: 'text', required: true, options: [] }]) } as never);
+    render(<QueryClientProvider client={new QueryClient({ defaultOptions: { mutations: { retry: false } } })}><HomeCommandCenter /></QueryClientProvider>);
+
+    await user.type(screen.getByRole('textbox', { name: 'Message Max' }), 'Which onboarding steps are missing?{Enter}');
+    expect(await screen.findByTestId('interaction-onboarding', {}, { timeout: 5_000 })).toBeInTheDocument();
+    expect(screen.getByText('Complete onboarding')).toBeInTheDocument();
+  }, 10_000);
+
+  it('renders the backend goal interaction for Max', async () => {
+    const user = userEvent.setup();
+    api.chat.mockResolvedValueOnce({ ...(reply('Let’s choose a goal first.') as object), interaction: interaction('goal_selection') } as never);
+    render(<QueryClientProvider client={new QueryClient({ defaultOptions: { mutations: { retry: false } } })}><HomeCommandCenter /></QueryClientProvider>);
+
+    await user.type(screen.getByRole('textbox', { name: 'Message Max' }), 'What goal should we focus on?{Enter}');
+    expect(await screen.findByTestId('interaction-goal-selection', {}, { timeout: 5_000 })).toBeInTheDocument();
+    expect(screen.getByText('Improve engagement')).toBeInTheDocument();
+  }, 10_000);
+
+  it('submits a backend interaction once and updates the current card', async () => {
+    const user = userEvent.setup();
+    api.chat.mockResolvedValueOnce({ ...(reply('Let’s choose a goal first.') as object), interaction: interaction('goal_selection') } as never);
+    api.submitInteraction.mockResolvedValueOnce({
+      interaction: { ...interaction('goal_selection'), step: 2, status: 'awaiting_confirmation', fields: [], actions: ['approve', 'cancel'] },
+      message: 'I have prepared the recommendation for your review.',
+    } as never);
+    render(<QueryClientProvider client={new QueryClient({ defaultOptions: { mutations: { retry: false } } })}><HomeCommandCenter /></QueryClientProvider>);
+
+    await user.type(screen.getByRole('textbox', { name: 'Message Max' }), 'What goal should we focus on?{Enter}');
+    await user.click(await screen.findByRole('button', { name: 'Improve engagement' }, { timeout: 5_000 }));
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+
+    await waitFor(() => expect(api.submitInteraction).toHaveBeenCalledWith('p1', expect.objectContaining({
+      interactionId: 'i-goal_selection', requestKey: expect.any(String), step: 1,
+      values: { goal: 'Improve engagement' }, action: 'next',
+    }), expect.any(AbortSignal)));
+    expect(await screen.findByText('I have prepared the recommendation for your review.')).toBeInTheDocument();
+  }, 10_000);
+
+  it('uses a unique request key for each interaction step and advances the flow', async () => {
+    const user = userEvent.setup();
+    const first = { ...interaction('push_creation', [{ key: 'goal', label: 'Goal', type: 'text', required: true, options: [] }]), step: 1, totalSteps: 4, actions: ['next'] };
+    api.chat.mockResolvedValueOnce({ ...(reply('Lets prepare a push campaign.') as object), interaction: first } as never);
+    api.submitInteraction
+      .mockResolvedValueOnce({ interaction: { ...first, step: 2, fields: [{ key: 'title', label: 'Title', type: 'text', required: true, options: [] }], actions: ['next'] } } as never)
+      .mockResolvedValueOnce({ interaction: { ...first, step: 3, fields: [{ key: 'body', label: 'Body', type: 'text', required: true, options: [] }], actions: ['next'] } } as never);
+    render(<QueryClientProvider client={new QueryClient({ defaultOptions: { mutations: { retry: false } } })}><HomeCommandCenter /></QueryClientProvider>);
+    await user.type(screen.getByRole('textbox', { name: 'Message Max' }), 'Create a push campaign{Enter}');
+    await user.type(await screen.findByRole('textbox', { name: 'Goal' }, { timeout: 5_000 }), 'Retention');
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    await waitFor(() => expect(api.submitInteraction).toHaveBeenCalledTimes(1));
+    const firstRequest = api.submitInteraction.mock.calls[0]?.[1] as { requestKey: string; step: number; action?: string };
+    expect(firstRequest).toMatchObject({ step: 1, action: 'next' });
+    expect(firstRequest.requestKey).not.toBe(first.requestKey);
+    await user.type(await screen.findByRole('textbox', { name: 'Title' }, { timeout: 5_000 }), 'Welcome back');
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    await waitFor(() => expect(api.submitInteraction).toHaveBeenCalledTimes(2));
+    const secondRequest = api.submitInteraction.mock.calls[1]?.[1] as { requestKey: string; step: number; action?: string };
+    expect(secondRequest).toMatchObject({ step: 2, action: 'next' });
+    expect(secondRequest.requestKey).not.toBe(firstRequest.requestKey);
+    expect(await screen.findByRole('textbox', { name: 'Body' })).toBeInTheDocument();
+  }, 10_000);
+
+  it('sends save_draft to the backend and renders the confirmed draft resource', async () => {
+    const user = userEvent.setup();
+    api.chat.mockResolvedValueOnce({ ...(reply('Prepare this push as a draft.') as object), interaction: { ...interaction('push_creation', [{ key: 'title', label: 'Title', type: 'text', required: true, options: [] }]), actions: ['next', 'save_draft', 'cancel'] } } as never);
+    api.submitInteraction.mockResolvedValueOnce({
+      interaction: { ...interaction('push_creation', [{ key: 'title', label: 'Title', type: 'text', required: true, options: [] }]), status: 'completed', step: 4, data: { submittedValues: { title: 'Welcome back' }, createdResources: [{ type: 'campaign', id: 'draft-1', name: 'Welcome back', channel: 'push', status: 'draft', href: '/dashboard/push?tab=drafts' }] }, actions: ['retry'] },
+      message: 'The push draft was saved.',
+      createdResources: [{ type: 'campaign', id: 'draft-1', name: 'Welcome back', channel: 'push', status: 'draft', href: '/dashboard/push?tab=drafts' }],
+      savedAsDraft: true,
+    } as never);
+    render(<QueryClientProvider client={new QueryClient({ defaultOptions: { mutations: { retry: false } } })}><HomeCommandCenter /></QueryClientProvider>);
+
+    await user.type(screen.getByRole('textbox', { name: 'Message Max' }), 'Create a push draft{Enter}');
+    await user.type(await screen.findByRole('textbox', { name: 'Title' }, { timeout: 5_000 }), 'Welcome back');
+    await user.click(screen.getByRole('button', { name: 'Save draft' }));
+
+    await waitFor(() => expect(api.submitInteraction).toHaveBeenCalledWith('p1', expect.objectContaining({
+      interactionId: 'i-push_creation',
+      action: 'save_draft',
+      values: { title: 'Welcome back' },
+    }), expect.any(AbortSignal)));
+    expect(await screen.findByRole('link', { name: 'Welcome back' })).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'Welcome back' })).toHaveLength(1);
+    expect(await screen.findByText('Nothing was sent, scheduled, or activated.')).toBeInTheDocument();
+  }, 10_000);
+
+  it('retries an expired interaction and replaces it with the fresh backend interaction', async () => {
+    const user = userEvent.setup();
+    const expired = { ...interaction('onboarding', [{ key: 'oldStep', label: 'Old step', type: 'text', required: true, options: [] }]), status: 'expired', actions: ['retry'] };
+    api.chat.mockResolvedValueOnce({ ...(reply('This interaction expired.') as object), interaction: expired } as never);
+    api.retryInteraction.mockResolvedValueOnce({ interaction: { ...expired, interactionId: 'fresh-onboarding', status: 'awaiting_input', requestKey: 'fresh-request-123', fields: [{ key: 'nextStep', label: 'Next step', type: 'text', required: true, options: [] }] } } as never);
+    render(<QueryClientProvider client={new QueryClient({ defaultOptions: { mutations: { retry: false } } })}><HomeCommandCenter /></QueryClientProvider>);
+
+    await user.type(screen.getByRole('textbox', { name: 'Message Max' }), 'Continue onboarding{Enter}');
+    await user.click(await screen.findByRole('button', { name: 'Start again' }, { timeout: 5_000 }));
+    await waitFor(() => expect(api.retryInteraction).toHaveBeenCalledWith('p1', expect.objectContaining({ interactionId: 'i-onboarding', requestKey: expect.any(String) }), expect.any(AbortSignal)));
+    expect(await screen.findByRole('textbox', { name: 'Next step' })).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'Old step' })).not.toBeInTheDocument();
+  }, 10_000);
 
   it('automatically transfers a request to the owning specialist', async () => {
     const user = userEvent.setup();

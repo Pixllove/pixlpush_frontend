@@ -9,11 +9,13 @@ import { useRouter } from "next/navigation";
 import { useCurrentUser } from "@/hooks/auth/use-current-user";
 import { useActiveProject } from "@/hooks/projects/use-active-project";
 import { accountGreetingName } from "@/lib/auth/display-name";
-import { aiApi, type AiAgentId, type AiAgentResult, type AiAssistantId, type AiBusinessContext, type AiBusinessContextUpdate, type AiChatRequest, type AiChatResponse, type AiCollaboration, type AiCollaborationHistory, type AiConversationMessage, type AiConversationPreview, type AiCreatedResource, type AiFlowId, type AiFlowDraftResponse, type AiHandoff, type AiInteractionMode, type AiSuggestedPrompt, type AiProjectContext, type AiResourceType } from "@/lib/projects/ai";
+import { aiApi, type AiAgentId, type AiAgentResult, type AiAssistantId, type AiBusinessContext, type AiBusinessContextUpdate, type AiChatRequest, type AiChatResponse, type AiCollaboration, type AiCollaborationHistory, type AiConversationMessage, type AiConversationPreview, type AiCreatedResource, type AiFlowId, type AiFlowDraftResponse, type AiHandoff, type AiInteractionMode, type AiSuggestedPrompt, type AiProjectContext, type AiResourceType, type AiOnboardingStatus, type AiInteraction, type AiInteractionAction, type AiInteractionResponse, type AiInteractionRequest } from "@/lib/projects/ai";
 import { audienceGroupsApi, emailApi, firebaseApi, journeysApi, lifecycleSegmentsApi, pushApi, sdkKeyApi } from "@/lib/projects/api";
 import type { AudienceGroup, LifecycleSegment } from "@/types/project";
 import DeleteConfirmDialog from "@/components/dashboard/DeleteConfirmDialog";
 import CollaborationResultCard, { CollaborationTimeline, type CollaborationAgentProfile } from "@/components/dashboard/CollaborationResultCard";
+import OnboardingActionCard from "@/components/dashboard/OnboardingActionCard";
+import AiInteractionRenderer from "@/components/dashboard/AiInteractionRenderer";
 
 /** `flow` marks a guided-flow turn (it is re-run, not edited); `error` an answer that never arrived, so nothing was stored for it. */
 type ChatMessage = {
@@ -35,6 +37,9 @@ type ChatMessage = {
   resourceId?: string;
   from?: string;
   to?: string;
+  nextActions?: string[];
+  onboarding?: AiOnboardingStatus;
+  interaction?: AiInteraction | null;
 };
 type AiChatResponseWithHandoffState = AiChatResponse & { handoffCompleted?: boolean };
 type DraftInput = { flowId: AiFlowId; answers: Record<string, string>; conversationId?: string; assistant?: AiAssistantId };
@@ -55,7 +60,7 @@ const analysisPeriods = ["Last 7 days", "Last 30 days", "Last 90 days", "All tim
 /** Shown until the backend's progress-aware suggestions load (stage 1 defaults). */
 const fallbackPrompts: AiSuggestedPrompt[] = [
   { label: "What are my next steps?", action: "chat" },
-  { label: "Help me complete my onboarding", action: "link", href: "/onboarding" },
+  { label: "Help me complete my onboarding", action: "chat" },
   { label: "How can I import my users?", action: "link", href: "/dashboard/users?import=1" },
   { label: "Get a business analysis for my product", action: "chat" },
 ];
@@ -88,22 +93,28 @@ const guidedFlows: GuidedFlow[] = [
     subtitle: "I’ll help you define the audience, message and delivery channel before creating a campaign.",
     steps: [
       { question: "What is this campaign for?", choices: [
+        { label: "Drive repeat purchases", description: "Bring existing customers back to a product or plan they value." },
         { label: "Win back inactive users", description: "Reconnect with people who have gone quiet." },
         { label: "Announce something new", description: "Share a launch, update or important news." },
-        { label: "Drive a conversion", description: "Move people toward a purchase or key action." },
         { label: "Something else?", description: "Tell Max what you have in mind." },
       ] },
       { question: "Which channel should we use?", choices: [
-        { label: "Push notification", description: "Reach users with a timely mobile message." },
+        { label: "Push", description: "Reach users with a timely mobile message." },
         { label: "Email", description: "Send a richer message to your audience." },
         { label: "Email + push", description: "Coordinate both channels in one campaign." },
         { label: "Something else?", description: "Choose another delivery approach." },
       ] },
       { question: "Who should receive it?", choices: [
         { label: "All reachable users", description: "Include everyone who can receive messages." },
-        { label: "A specific audience", description: "Use a saved segment or audience definition." },
-        { label: "Users matching a behavior", description: "Target people based on what they did." },
+        { label: "A saved audience", description: "Use a saved segment or audience definition." },
+        { label: "Users inactive for 14+ days", description: "Target people who have gone quiet." },
         { label: "Something else?", description: "Describe the audience you want to reach." },
+      ] },
+      { question: "When should it be sent?", choices: [
+        { label: "Once at a chosen date and time", description: "Choose the delivery time when you review the draft." },
+        { label: "Every day", description: "Prepare a recurring daily schedule for review." },
+        { label: "Every week on selected days", description: "Prepare a recurring weekly schedule for review." },
+        { label: "Every month on a selected day", description: "Prepare a recurring monthly schedule for review." },
       ] },
     ],
   },
@@ -231,8 +242,8 @@ function relevantJourneyEvents(purpose?: string) {
   return [];
 }
 
-function journeyStepsFor(answers: Record<number, string>, groups: AudienceGroup[], segments: LifecycleSegment[], sdkIntegrated: boolean, paywallEventsReady: boolean, knownEvents: Set<string>, pushReady: boolean): FlowStep[] {
-  const base = guidedFlows.find((flow) => flow.id === "journey")!.steps;
+function journeyStepsFor(answers: Record<number, string>, groups: AudienceGroup[], segments: LifecycleSegment[], sdkIntegrated: boolean, paywallEventsReady: boolean, knownEvents: Set<string>, pushReady: boolean, definitionSteps?: FlowStep[]): FlowStep[] {
+  const base = (definitionSteps ?? guidedFlows.find((flow) => flow.id === "journey")!.steps).map((step) => ({ ...step, choices: step.choices.map((choice) => ({ ...choice })) }));
   const trigger = answers[1];
   const steps = base.slice();
   const paywallDropOff = answers[0] === "Paywall drop-off";
@@ -328,6 +339,7 @@ export function detectCreationFlow(value: string): CreationFlowId | null {
     || /audience\s*group/.test(normalized)
     || /targeting\s+group/.test(normalized);
   if (hasAudienceGroup) return "audience-group";
+  if (hasNearToken(tokens, "push") || /push\s+notification/.test(normalized)) return "campaigns";
   if (hasNearToken(tokens, "campaign") || hasNearToken(tokens, "compaign")) return "campaigns";
   if (hasNearToken(tokens, "journey") || hasNearToken(tokens, "automation")) return "journey";
   if (hasNearToken(tokens, "segment") || /lifecycle\s+audience/.test(normalized)) return "segment";
@@ -494,6 +506,7 @@ function BusinessContextCard({
   onDetectLinks,
   onComplete,
   onCancel,
+  completeLabel = "Continue to journey",
 }: {
   context: AiBusinessContext;
   loading: boolean;
@@ -503,6 +516,7 @@ function BusinessContextCard({
   onDetectLinks: (url: string) => Promise<{ websiteUrl: string; appStoreUrl: string | null; googlePlayUrl: string | null }>;
   onComplete: (context: AiBusinessContext) => void;
   onCancel: () => void;
+  completeLabel?: string;
 }) {
   const [phase, setPhase] = useState<BusinessContextPhase>("description");
   const [draft, setDraft] = useState<AiBusinessContext>(context);
@@ -696,7 +710,7 @@ function BusinessContextCard({
         <Box><Typography className="business-context-label">Website</Typography><Typography>{reviewValue(draft.websiteTitle || draft.websiteUrl)}</Typography>{draft.websiteSummary && <Typography className="business-context-summary">{draft.websiteSummary}</Typography>}<Button size="small" startIcon={<EditOutlined />} onClick={() => editPhase("website")}>Edit</Button></Box>
         <Box><Typography className="business-context-label">Mobile app</Typography><Typography>{draft.hasMobileApp === true ? reviewValue(draft.appName || draft.appStoreUrl || draft.googlePlayUrl) : draft.hasMobileApp === false ? "No app" : "Skipped"}</Typography>{draft.appSummary && <Typography className="business-context-summary">{draft.appSummary}</Typography>}<Button size="small" startIcon={<EditOutlined />} onClick={() => editPhase(draft.hasMobileApp ? "app-link" : "app-choice")}>Edit</Button></Box>
       </Stack>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 2 }}><Button className="guided-flow-secondary" onClick={() => goToPhase("description")}>Back</Button><Button className="guided-flow-next" variant="contained" onClick={() => onComplete(draft)}>Continue to journey</Button></Stack>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 2 }}><Button className="guided-flow-secondary" onClick={() => goToPhase("description")}>Back</Button><Button className="guided-flow-next" variant="contained" onClick={() => onComplete(draft)}>{completeLabel}</Button></Stack>
     </Box>}
   </Box>;
 }
@@ -932,14 +946,10 @@ const FLOW_HANDOFF_THINKING_MS = 2_200;
 const AGENT_SWITCH_THINKING_MS = 1_600;
 const AUTO_HANDOFF_THINKING_MS = 1_400;
 
-function isAnalysisRequest(value: string) {
-  return /\b(?:analy[sz]e|analyse|performance|results?|metrics?)\b/i.test(value)
-    && /\b(?:campaign|journey|email|push|retention|churn|audience|users?)\b/i.test(value);
-}
-
 function isOptimizationRequest(value: string) {
-  return /\b(?:improv\w*|optim\w*|underperform\w*|analy[sz]\w*|performance|conversion|engagement|drop.?off)\b/i.test(value)
-    && /\b(?:campaign|journey|automation|workflow|email|push)\w*\b/i.test(value);
+  const intent = /\b(?:improv\w*|optim\w*|underperform\w*|analy[sz]\w*|performance|conversion|engagement|drop.?off)\b/i.test(value);
+  const resource = /\b(?:campaign|journey|automation|workflow|email|push)\w*\b/i.test(value);
+  return intent && (resource || /\b(?:conversion|engagement)\s+optim\w*\b/i.test(value));
 }
 
 function isOnboardingPrompt(value: string) {
@@ -1071,6 +1081,15 @@ export function persistedMessageToChatMessage(message: AiConversationMessage): C
     ? metadata.mode
     : collaboration?.mode;
   const storedResourceType = metadata.resourceType === "campaign" || metadata.resourceType === "journey" ? metadata.resourceType : undefined;
+  const storedNextActions = Array.isArray(metadata.nextActions)
+    ? metadata.nextActions.filter((value): value is string => typeof value === "string")
+    : undefined;
+  const storedOnboarding = Object.keys(objectValue(metadata.onboarding)).length
+    ? objectValue(metadata.onboarding) as unknown as AiOnboardingStatus
+    : undefined;
+  const storedInteraction = message.interaction ?? (Object.keys(objectValue(metadata.interaction)).length
+    ? objectValue(metadata.interaction) as unknown as AiInteraction
+    : undefined);
   return {
     id: message.id,
     role: message.role === "assistant" ? "assistant" : "user",
@@ -1079,6 +1098,9 @@ export function persistedMessageToChatMessage(message: AiConversationMessage): C
     ...(typeof handoff.assistant === "string" ? { handoff: { assistant: handoff.assistant, name: String(handoff.name ?? handoff.assistant), role: String(handoff.role ?? ""), reason: typeof handoff.reason === "string" ? handoff.reason : undefined } } : {}),
     ...(storedMode ? { mode: storedMode } : {}),
     ...(collaboration ? { collaboration } : {}),
+    ...(storedNextActions ? { nextActions: storedNextActions } : {}),
+    ...(storedOnboarding ? { onboarding: storedOnboarding } : {}),
+    ...(storedInteraction ? { interaction: storedInteraction } : {}),
     ...(typeof metadata.requestKey === "string" ? { requestKey: metadata.requestKey } : {}),
     ...(typeof metadata.requestedAgent === "string" ? { requestedAgent: metadata.requestedAgent as AiAgentId } : {}),
     ...(storedResourceType ? { resourceType: storedResourceType } : {}),
@@ -1380,7 +1402,7 @@ export default function HomeCommandCenter() {
         const handoffMessage = responseMode === "handoff" && response.handoff
           ? { id: `handoff-${Date.now()}`, role: "assistant" as const, assistant: input.assistant ?? selectedAgent as AiAssistantId, mode: "handoff" as const, text: `${input.assistant ?? selectedAgent} handed this request to ${response.handoff.name}. ${response.handoff.reason ?? "They will continue with the relevant context."}` }
           : null;
-        const assistantMessage: ChatMessage = { id: `assistant-${Date.now()}`, role: "assistant", assistant: response.assistant, mode: responseMode, text: response.message, suggestedFlow, createdResources, ...(response.handoff ? { handoff: response.handoff } : {}), ...(response.collaboration ? { collaboration: response.collaboration } : {}), ...(response.agentResult ? { agentResult: response.agentResult } : {}), requestKey: input.requestKey, ...(input.requestedAgent ? { requestedAgent: input.requestedAgent } : {}), ...(input.resourceType ? { resourceType: input.resourceType } : {}), ...(input.resourceId ? { resourceId: input.resourceId } : {}), ...(input.from ? { from: input.from } : {}), ...(input.to ? { to: input.to } : {}) };
+        const assistantMessage: ChatMessage = { id: `assistant-${Date.now()}`, role: "assistant", assistant: response.assistant, mode: responseMode, text: response.message, suggestedFlow, createdResources, nextActions: response.nextActions ?? [], ...(response.interaction ? { interaction: response.interaction } : {}), ...(response.handoff ? { handoff: response.handoff } : {}), ...(response.collaboration ? { collaboration: response.collaboration } : {}), ...(response.agentResult ? { agentResult: response.agentResult } : {}), requestKey: input.requestKey, ...(input.requestedAgent ? { requestedAgent: input.requestedAgent } : {}), ...(input.resourceType ? { resourceType: input.resourceType } : {}), ...(input.resourceId ? { resourceId: input.resourceId } : {}), ...(input.from ? { from: input.from } : {}), ...(input.to ? { to: input.to } : {}) };
         setMessages((current) => response.cancelled
           ? current.some((message) => message.text === "Generation stopped.") ? current : [...current, { id: `assistant-stopped-${Date.now()}`, role: "assistant", text: response.message }]
           : [...current, ...(handoffMessage ? [handoffMessage] : []), assistantMessage]);
@@ -1417,6 +1439,123 @@ export default function HomeCommandCenter() {
       setMessages((current) => [...current, { id: `assistant-error-${Date.now()}`, role: "assistant", text: apiMessage(error, "The AI assistant could not respond. Please try again."), error: true }]);
     },
   });
+
+  type InteractionActionKind = "submit" | "cancel" | "retry" | "reload";
+  type InteractionMutationInput = {
+    action: InteractionActionKind;
+    interaction: AiInteraction;
+    requestKey: string;
+    fields?: Record<string, unknown>;
+    submitAction?: AiInteractionAction;
+  };
+  const [interactionErrors, setInteractionErrors] = useState<Record<string, string>>({});
+  const interactionMutation = useMutation({
+    mutationFn: async ({ action, interaction, requestKey, fields, submitAction }: InteractionMutationInput) => {
+      if (!projectId) throw new Error("Select a project before continuing this interaction.");
+      // The backend scopes idempotency by interaction, request key, step, and
+      // action. Keep the client-side in-flight guard on the same tuple so a
+      // reused request key can still submit a different step/action.
+      const requestAction = action === "submit" ? submitAction ?? "submit" : action;
+      const requestSignature = `interaction:${interaction.interactionId}:${requestKey}:${interaction.step}:${requestAction}`;
+      if (requestKeysInFlightRef.current.has(requestSignature)) throw { status: 409, code: "DUPLICATE_REQUEST", message: "This interaction request is already being processed." };
+      requestKeysInFlightRef.current.add(requestSignature);
+      const input: AiInteractionRequest = {
+        interactionId: interaction.interactionId,
+        requestKey,
+        step: interaction.step,
+        ...(fields ? { values: fields } : {}),
+        ...(submitAction === "next" || submitAction === "submit" || submitAction === "preview" || submitAction === "approve" || submitAction === "edit" || submitAction === "analyze" || submitAction === "save_draft" ? { action: submitAction } : {}),
+      };
+      const controller = new AbortController();
+      try {
+        if (action === "submit") return await aiApi.submitInteraction(projectId, input, controller.signal);
+        if (action === "cancel") return await aiApi.cancelInteraction(projectId, input, controller.signal);
+        if (action === "retry") return await aiApi.retryInteraction(projectId, input, controller.signal);
+        return await aiApi.reloadInteraction(projectId, input, controller.signal);
+      } finally {
+        requestKeysInFlightRef.current.delete(requestSignature);
+      }
+    },
+    onSuccess: (response: AiInteractionResponse, input: InteractionMutationInput) => {
+      setInteractionErrors((current) => { const next = { ...current }; delete next[input.interaction.interactionId]; return next; });
+      const nextInteraction = response.interaction ?? input.interaction;
+      const responseData = nextInteraction.data ?? {};
+      const enrichedInteraction: AiInteraction = {
+        ...nextInteraction,
+        data: {
+          ...responseData,
+          ...(response.recommendation ? { recommendation: response.recommendation } : {}),
+          ...(response.analysis ? { analysis: response.analysis } : {}),
+          ...(response.result ? { result: response.result } : {}),
+          ...(response.createdResources?.length ? { createdResources: response.createdResources } : {}),
+          ...(response.savedAsDraft ? { savedAsDraft: true } : {}),
+        },
+      };
+      setMessages((current) => {
+        const updated = current.map((message) => message.interaction?.interactionId === input.interaction.interactionId || message.interaction?.interactionId === nextInteraction.interactionId
+          ? { ...message, interaction: enrichedInteraction, createdResources: response.createdResources ?? message.createdResources }
+          : message);
+        if (!response.message?.trim()) return updated;
+        // The current message owns the interaction card. Append the returned
+        // assistant text as a plain message so the card is not duplicated.
+        return [...updated, { id: `assistant-interaction-${Date.now()}`, role: "assistant" as const, assistant: response.assistant ?? selectedAgent as AiAssistantId, text: response.message }];
+      });
+      if (response.conversationId) setConversationId(response.conversationId);
+      void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "ai", "context"] });
+      void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "onboarding"] });
+      if (response.createdResources?.length) {
+        for (const resource of response.createdResources) {
+          const key = resource.type === "journey"
+            ? "journeys"
+            : resource.type === "campaign"
+              ? resource.channel === "push" ? "push-campaigns" : "email-campaigns"
+              : resource.type === "segment" ? "lifecycle-segments" : "audience-groups";
+          void queryClient.invalidateQueries({ queryKey: ["projects", projectId, key] });
+        }
+      }
+    },
+    onError: (error, input) => {
+      const code = (error as { code?: string } | null)?.code;
+      if (code === "AI_INTERACTION_EXPIRED") {
+        setMessages((current) => current.map((message) => message.interaction?.interactionId === input.interaction.interactionId
+          ? { ...message, interaction: { ...message.interaction!, status: "expired", actions: ["retry", "reload"] } }
+          : message));
+      }
+      setInteractionErrors((current) => ({ ...current, [input.interaction.interactionId]: apiMessage(error, "This interaction could not be continued. Please try again.") }));
+    },
+  });
+
+  // Secure Firebase/SDK setup happens outside chat. Keep only the interaction
+  // identity in session storage, then hydrate the backend-confirmed next step
+  // when the user returns to Home. No credential or form value is persisted.
+  useEffect(() => {
+    if (!projectId || typeof window === "undefined") return;
+    const raw = window.sessionStorage.getItem("pixlpush:interaction-resume");
+    if (!raw) return;
+    try {
+      const resume = JSON.parse(raw) as { projectId?: string; interactionId?: string; conversationId?: string };
+      if (resume.projectId !== projectId || !resume.interactionId) return;
+      window.sessionStorage.removeItem("pixlpush:interaction-resume");
+      void aiApi.reloadInteraction(projectId, { interactionId: resume.interactionId, requestKey: stableRequestKey() }).then((response) => {
+        if (resume.conversationId) setConversationId(resume.conversationId);
+        if (!response.interaction) return;
+        setMessages((current) => {
+          const found = current.some((message) => message.interaction?.interactionId === response.interaction!.interactionId);
+          if (found) return current.map((message) => message.interaction?.interactionId === response.interaction!.interactionId ? { ...message, interaction: response.interaction } : message);
+          return [...current, { id: `assistant-resumed-interaction-${Date.now()}`, role: "assistant" as const, assistant: "Max" as AiAssistantId, text: "Your secure setup was checked. Continue with the next onboarding step below.", interaction: response.interaction }];
+        });
+        void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "ai", "context"] });
+        void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "onboarding"] });
+      }).catch(() => undefined);
+    } catch {
+      window.sessionStorage.removeItem("pixlpush:interaction-resume");
+    }
+  }, [projectId, queryClient]);
+
+  const runInteractionAction = (action: InteractionActionKind, interaction: AiInteraction, fields?: Record<string, unknown>, submitAction?: AiInteractionAction) => {
+    if (interactionMutation.isPending) return;
+    interactionMutation.mutate({ action, interaction, requestKey: stableRequestKey(), fields, submitAction });
+  };
 
   const updateCollaborationApproval = (collaborationId: string, status: AiCollaboration["approvalStatus"]) => {
     setMessages((current) => current.map((message) => message.collaboration?.id === collaborationId
@@ -1527,6 +1666,7 @@ export default function HomeCommandCenter() {
         setFlowConfirming(false);
         setBusinessContext(emptyBusinessContext);
         setBusinessContextComplete(false);
+        setInteractionErrors({});
         closeHistoryIfOverlay();
         setConversationSearch("");
       }
@@ -1540,7 +1680,7 @@ export default function HomeCommandCenter() {
     },
   });
 
-  const thinking = openingFlow || chatMutation.isPending || responsePacing || recommendationMutation.isPending || draftMutation.isPending;
+  const thinking = openingFlow || chatMutation.isPending || interactionMutation.isPending || responsePacing || recommendationMutation.isPending || draftMutation.isPending;
   const journeyBusy = activeFlow?.id === "journey" && (recommendationMutation.isPending || draftMutation.isPending);
   const emailAnalysisItems = (emailCampaignsQuery.data?.items ?? []).map((item) => ({ id: item.id, name: item.name }));
   const pushAnalysisItems = (pushCampaignsQuery.data?.items ?? []).map((item) => ({ id: item.id, name: item.name }));
@@ -1609,7 +1749,7 @@ export default function HomeCommandCenter() {
             ? "Start with an event or action when a user signs up or creates an account, then guide them toward their first key action."
             : undefined;
   const visibleFlowSteps = activeFlow?.id === "journey"
-    ? journeyStepsFor(flowAnswers, audienceGroupsQuery.data ?? [], lifecycleSegmentsQuery.data ?? [], sdkIntegrated, paywallEventsReady, knownEventNames, pushReady)
+    ? journeyStepsFor(flowAnswers, audienceGroupsQuery.data ?? [], lifecycleSegmentsQuery.data ?? [], sdkIntegrated, paywallEventsReady, knownEventNames, pushReady, activeFlow.steps)
     : activeFlow?.steps ?? [];
 
   useEffect(() => {
@@ -1622,6 +1762,7 @@ export default function HomeCommandCenter() {
     setFlowConfirming(false);
     setBusinessContext(emptyBusinessContext);
     setBusinessContextComplete(false);
+    setInteractionErrors({});
     businessContextHydratedRef.current = false;
     setAnalysisPhase(null);
     setAnalysisType(null);
@@ -1692,23 +1833,6 @@ export default function HomeCommandCenter() {
     if (!text || thinking) return;
     shouldStickToLatestRef.current = true;
     const selectedAssistant = selectedAgent as AiAgentId;
-    const maxConsultation = selectedAssistant === "Max" && collaborationModeFor(text, "Max") === "consultation";
-    if (isAnalysisRequest(text) && !maxConsultation) {
-      setMessages((current) => [...current, { id: `user-${Date.now()}`, role: "user", text }]);
-      setDraft("");
-      setEditing(null);
-      startAnalysisRequest(text);
-      return;
-    }
-    const creationFlow = detectCreationFlow(text);
-    if (creationFlow) {
-      // Creation commands are routed into the same guided setup as the four home cards.
-      // This prevents the general chat route from creating an empty draft before the user has supplied details.
-      setDraft("");
-      setEditing(null);
-      startFlow(creationFlow, text);
-      return;
-    }
     const assistant = (isOnboardingPrompt(text) ? "Max" : selectedAgent) as AiAgentId;
     const requestKey = stableRequestKey();
     const mode = isOnboardingPrompt(text) ? "direct" as const : collaborationModeFor(text, assistant);
@@ -1825,6 +1949,7 @@ export default function HomeCommandCenter() {
     setFlowConfirming(false);
     setBusinessContext(emptyBusinessContext);
     setBusinessContextComplete(false);
+    setInteractionErrors({});
     businessContextHydratedRef.current = false;
     setAnalysisPhase(null);
     setAnalysisType(null);
@@ -1892,7 +2017,7 @@ export default function HomeCommandCenter() {
   };
 
   const openConversation = async (id: string) => {
-    if (!projectId || thinking || openingConversationId) return;
+    if (!projectId || openingConversationId) return;
     shouldStickToLatestRef.current = true;
     setOpeningConversationId(id);
     setContextError(null);
@@ -1922,6 +2047,7 @@ export default function HomeCommandCenter() {
       setFlowConfirming(false);
       setBusinessContext(emptyBusinessContext);
       setBusinessContextComplete(false);
+      setInteractionErrors({});
       businessContextHydratedRef.current = false;
       setContextOpen(false);
       closeHistoryIfOverlay();
@@ -1941,13 +2067,22 @@ export default function HomeCommandCenter() {
 
   /** Suggested prompts act: links open the page, flows start the guided creation, the rest ask Max. */
   const runPrompt = (prompt: AiSuggestedPrompt) => {
-    if (prompt.action === "link") router.push(prompt.href);
+    if (prompt.action === "link" && /onboard/i.test(prompt.label)) sendMessage(prompt.label);
+    else if (prompt.action === "link") router.push(prompt.href);
     else if (prompt.action === "flow") startFlow(prompt.flow, prompt.prompt);
     else sendMessage(prompt.label);
   };
 
   const startFlow = (flowId: string, prompt?: string, approved = false) => {
-    const flow = guidedFlows.find((item) => item.id === flowId);
+    const backendDefinition = aiContext?.catalog?.flowDefinitions?.find((item) => item.id === flowId);
+    const flow = backendDefinition
+      ? {
+          id: backendDefinition.id,
+          title: backendDefinition.title,
+          subtitle: backendDefinition.subtitle,
+          steps: backendDefinition.steps.map((step) => ({ question: step.question, choices: step.choices.map((label) => ({ label, description: "" })) })),
+        } satisfies GuidedFlow
+      : guidedFlows.find((item) => item.id === flowId);
     if (!flow || !projectId || thinking) return;
     const isJourney = flowId === "journey";
     const flowAssistant: AiAssistantId = isJourney ? "Nova" : selectedAgent as AiAssistantId;
@@ -2389,6 +2524,13 @@ export default function HomeCommandCenter() {
               </>}
               {!message.error && message.agentResult && !message.collaboration && <CollaborationResultCard result={message.agentResult} profile={agentProfiles.find((profile) => profile.id === message.agentResult?.agentId) ?? { id: message.agentResult.agentId, role: "PixlPush specialist", avatar: "/assets/agent-avatar-max-v4.webp" }} />}
               <Typography className="chat-response" role={message.error ? "alert" : undefined}>{message.text}</Typography>
+              {!message.error && message.interaction && <AiInteractionRenderer interaction={message.interaction} onSubmit={(fields, submitAction) => runInteractionAction("submit", message.interaction!, fields, submitAction)} onCancel={() => runInteractionAction("cancel", message.interaction!)} onRetry={() => runInteractionAction("retry", message.interaction!)} onReload={() => runInteractionAction("reload", message.interaction!)} onSecureAction={(action) => {
+                if (typeof window !== "undefined") window.sessionStorage.setItem("pixlpush:interaction-resume", JSON.stringify({ projectId, interactionId: message.interaction!.interactionId, conversationId }));
+                const href = action.href || "/dashboard/settings/firebase";
+                const separator = href.includes("?") ? "&" : "?";
+                router.push(`${href}${separator}interactionId=${encodeURIComponent(message.interaction!.interactionId)}`);
+              }} busy={interactionMutation.isPending} error={interactionErrors[message.interaction.interactionId] ?? null} />}
+              {!message.error && !message.interaction && message.onboarding && <OnboardingActionCard onboarding={message.onboarding} nextActions={message.nextActions} catalogActions={aiContext?.catalog?.nextActions} />}
               {!message.error && message.suggestedFlow && <CreationOptions
                 flow={message.suggestedFlow}
                 onStart={() => startFlow(message.suggestedFlow!, lastUserIndex >= 0 ? messages[lastUserIndex].text : undefined)}

@@ -39,6 +39,7 @@ export type AiAgentResult = {
   missingData: string[];
   confidence: "high" | "medium" | "low";
   approvalRequired: boolean;
+  createdAt?: string;
 };
 
 export type AiCollaboration = {
@@ -178,7 +179,96 @@ export interface AiConversationMessage {
   role: "user" | "assistant" | "system";
   content: string;
   metadata?: Record<string, unknown>;
+  interaction?: AiInteraction | null;
   createdAt: string;
+}
+
+export type AiInteractionType =
+  | "onboarding"
+  | "business_analysis"
+  | "goal_selection"
+  | "journey_creation"
+  | "push_creation"
+  | "email_creation"
+  | "improvement"
+  | "analysis"
+  | "preview"
+  | "approval";
+
+export type AiInteractionStatus =
+  | "active"
+  | "awaiting_input"
+  | "awaiting_confirmation"
+  | "completed"
+  | "cancelled"
+  | "failed"
+  | "expired";
+
+export type AiInteractionFieldOption = string | { label: string; value: string; description?: string };
+
+export interface AiInteractionField {
+  key: string;
+  type: "text" | "url" | "choice" | "date" | "time" | "timezone" | "number" | "secure_upload" | "json" | (string & {});
+  label: string;
+  required?: boolean;
+  options?: string[];
+  sensitive?: boolean;
+}
+
+export type AiInteractionAction =
+  | "next"
+  | "submit"
+  | "preview"
+  | "approve"
+  | "edit"
+  | "analyze"
+  | "save_draft"
+  | "cancel"
+  | "retry"
+  | (string & {});
+
+/** Structured popup contract returned by the backend. */
+export interface AiInteraction {
+  interactionId: string;
+  type: AiInteractionType;
+  flowId: string;
+  status: AiInteractionStatus;
+  step: number;
+  totalSteps: number;
+  title: string;
+  description?: string;
+  fields: AiInteractionField[];
+  data: Record<string, unknown>;
+  actions: AiInteractionAction[];
+  requestKey: string;
+}
+
+export interface AiInteractionRequest {
+  interactionId: string;
+  requestKey: string;
+  step: number;
+  values?: Record<string, unknown>;
+  action?: AiInteractionAction;
+}
+
+export interface AiInteractionResponse {
+  conversationId?: string;
+  assistant?: AiAgentId;
+  message?: string;
+  interaction?: AiInteraction | null;
+  recommendation?: Record<string, unknown> | null;
+  analysis?: Record<string, unknown> | null;
+  result?: Record<string, unknown> | null;
+  createdResources?: AiCreatedResource[];
+  resourceMetadata?: Array<Record<string, unknown>>;
+  savedAsDraft?: boolean;
+  activationRequired?: boolean;
+  nextActions?: string[];
+  context?: { generatedAt: string };
+}
+
+function normalizeInteractionResponse(response: AiInteractionResponse | AiInteraction): AiInteractionResponse {
+  return "interactionId" in response ? { interaction: response } : response;
 }
 
 export interface AiInsight {
@@ -208,6 +298,38 @@ export interface AiProjectSnapshot {
   /** Setup state the Home prompts and Max use; absent on an older API. */
   setup?: { onboardingComplete: boolean; platforms: Array<"web" | "mobile">; firebaseConnected: boolean; pushReady: boolean; emailReady: boolean; sdkConnected: boolean };
   generatedAt: string;
+}
+
+export type AiOnboardingStepStatus = "complete" | "missing";
+
+/** Normalized onboarding status returned by the AI context endpoint. */
+export interface AiOnboardingStep {
+  number: number;
+  kind: string;
+  title: string;
+  status: AiOnboardingStepStatus;
+  reason: string;
+  action: string;
+  href: string;
+}
+
+export interface AiOnboardingStatus {
+  status: "skipped" | "complete" | "not_started" | "in_progress";
+  currentStep: number;
+  completedCount: number;
+  totalSteps: number;
+  completionPercentage: number;
+  platforms: string[];
+  channels: string[];
+  steps: AiOnboardingStep[];
+  completedSteps: AiOnboardingStep[];
+  missingSteps: AiOnboardingStep[];
+  nextStep: AiOnboardingStep | null;
+  firebaseConnected: boolean;
+  pushReady: boolean;
+  sdkReady: { mobile: boolean; web: boolean };
+  emailReady: boolean;
+  emailBlockers: unknown[];
 }
 
 /** A Home suggestion: ask Max, start a guided flow, or open the page where the user acts. */
@@ -258,6 +380,7 @@ export interface AiProjectContext {
   catalog?: AiCatalog;
   /** Four prompts for the customer's current stage (1 onboarding → 4 improve & grow). */
   suggestions?: { stage: 1 | 2 | 3 | 4; prompts: AiSuggestedPrompt[] };
+  onboarding?: AiOnboardingStatus;
 }
 
 export interface AiConversationListResponse {
@@ -286,6 +409,7 @@ export interface AiChatResponse {
   mode?: AiInteractionMode;
   collaboration?: AiCollaboration | null;
   agentResult?: AiAgentResult;
+  interaction?: AiInteraction | null;
   context: { generatedAt: string };
 }
 
@@ -414,6 +538,16 @@ export const aiApi = {
     input: { assistant: AiAssistantId; answers: Record<string, string>; conversationId?: string },
     signal?: AbortSignal,
   ) => authRequest<AiFlowDraftResponse & { createdResources: NonNullable<AiChatResponse["createdResources"]> }>(at(projectId, `/flows/${encodeURIComponent(flowId)}/create`), input, BASE, undefined, { signal }),
+  submitInteraction: (projectId: string, input: AiInteractionRequest, signal?: AbortSignal) =>
+    authRequest<AiInteractionResponse | AiInteraction>(at(projectId, `/interactions/${encodeURIComponent(input.interactionId)}/submit`), input, BASE, "POST", { signal }).then(normalizeInteractionResponse),
+  cancelInteraction: (projectId: string, input: Pick<AiInteractionRequest, "interactionId" | "requestKey">, signal?: AbortSignal) =>
+    authRequest<AiInteractionResponse | AiInteraction>(at(projectId, `/interactions/` + encodeURIComponent(input.interactionId) + `/cancel`), { requestKey: input.requestKey }, BASE, "POST", { signal }).then(normalizeInteractionResponse),
+  retryInteraction: (projectId: string, input: Pick<AiInteractionRequest, "interactionId" | "requestKey">, signal?: AbortSignal) =>
+    authRequest<AiInteractionResponse | AiInteraction>(at(projectId, `/interactions/` + encodeURIComponent(input.interactionId) + `/retry`), { requestKey: input.requestKey }, BASE, "POST", { signal }).then(normalizeInteractionResponse),
+  reloadInteraction: (projectId: string, input: Pick<AiInteractionRequest, "interactionId" | "requestKey">, signal?: AbortSignal) => {
+    const requestKey = input.requestKey ? "?requestKey=" + encodeURIComponent(input.requestKey) : "";
+    return authRequest<AiInteraction>(at(projectId, `/interactions/` + encodeURIComponent(input.interactionId) + requestKey), undefined, BASE, undefined, { signal }).then(normalizeInteractionResponse);
+  },
   conversation: (projectId: string, conversationId: string) =>
     authRequest<AiConversation & { messages: AiConversationMessage[] }>(
       at(projectId, `/conversations/${encodeURIComponent(conversationId)}`),
