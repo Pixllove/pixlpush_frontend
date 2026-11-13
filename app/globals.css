@@ -5176,55 +5176,109 @@ a {
   justify-content: center;
 }
 .journey-add-popover {
-  width: min(360px, calc(100vw - 32px));
-  max-height: min(680px, calc(100dvh - 32px));
-  overflow-y: auto;
+  width: min(340px, calc(100vw - 32px));
+  max-height: min(600px, calc(100dvh - 32px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   box-sizing: border-box;
-  padding: 18px;
+  padding: 16px 6px 10px 12px;
   border: 1px solid #e2e8f1;
-  border-radius: 8px;
+  border-radius: 12px;
   background: #fff;
   box-shadow: 0 22px 42px rgba(39, 56, 79, 0.2);
 }
+.journey-add-popover > .MuiStack:first-child {
+  flex: 0 0 auto;
+  padding: 0 6px 4px 6px;
+}
 .journey-add-popover > .MuiStack:first-child .MuiTypography-root {
   font-size: 16px;
+  font-weight: 600;
+  color: #182234;
 }
-.journey-add-group-label {
-  margin: 14px 0 7px;
-  color: #71809a;
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.06em;
+.journey-add-popover-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.journey-add-popover-list:hover {
+  scrollbar-color: #cfd8e6 transparent;
+}
+.journey-add-popover-list::-webkit-scrollbar {
+  width: 6px;
+}
+.journey-add-popover-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.journey-add-popover-list::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: transparent;
+}
+.journey-add-popover-list:hover::-webkit-scrollbar-thumb {
+  background: #cfd8e6;
+}
+.journey-add-popover-list::-webkit-scrollbar-thumb:hover {
+  background: #aebbd0;
+}
+/* scoped under the popup so MUI's own Typography sizes do not win */
+.journey-add-popover .journey-add-group-label {
+  margin: 14px 0 4px 8px;
+  color: #8a96ab;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.08em;
+}
+.journey-add-popover .journey-add-popover-list > div:first-child .journey-add-group-label {
+  margin-top: 8px;
+}
+.journey-add-popover .MuiStack-root:has(> .journey-add-popover-option) {
+  gap: 2px;
 }
 .journey-add-popover-option {
   width: 100%;
-  min-height: 58px;
+  min-height: 46px;
   display: flex !important;
   align-items: center;
   justify-content: flex-start !important;
   gap: 12px;
-  padding: 8px 6px !important;
+  padding: 5px 8px !important;
+  border-radius: 8px !important;
   color: #182234 !important;
   text-align: left !important;
   text-transform: none !important;
 }
 .journey-add-popover-option .journey-add-popover-icon {
-  flex: 0 0 40px;
+  flex: 0 0 32px;
   margin-left: 0;
 }
-.journey-add-popover-option .MuiTypography-root:first-child {
+.journey-add-popover .journey-add-popover-title {
   font-size: 14px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: #182234;
 }
-.journey-add-popover-option .MuiTypography-root:last-child {
+.journey-add-popover .journey-add-popover-hint {
+  overflow: hidden;
   font-size: 12px;
+  font-weight: 400;
+  line-height: 1.3;
+  color: #6b7689;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .journey-add-popover-option:hover {
   border-radius: 9px;
   background: #f7f9ff;
 }
 .journey-add-popover-icon {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   display: grid;
   place-items: center;
   flex: 0 0 auto;
@@ -5252,6 +5306,12 @@ a {
 }
 .journey-add-popover-option.repeat_journey .journey-add-popover-icon {
   background: #e7438c;
+}
+.journey-add-popover-option.ab_test .journey-add-popover-icon {
+  background: #0f9b8e;
+}
+.journey-add-popover-icon .MuiSvgIcon-root {
+  font-size: 18px;
 }
 .journey-create-hero {
   overflow: hidden;
@@ -5423,15 +5483,18 @@ a {
   box-shadow: 0 3px 12px rgba(49, 66, 90, 0.06);
 }
 .journey-builder-back-button {
-  min-height: 48px !important;
-  padding: 0 20px !important;
+  /* same height and corners as the journey name field next to it */
+  height: 40px !important;
+  min-height: 40px !important;
+  padding: 0 14px !important;
   border: 1px solid #d7e0ec !important;
-  border-radius: 10px !important;
+  border-radius: 8px !important;
   color: #344054 !important;
   background: #fff !important;
   text-transform: none !important;
-  font-size: 16px !important;
+  font-size: 14px !important;
   font-weight: 600 !important;
+  white-space: nowrap;
   box-shadow: 0 2px 5px rgba(49, 66, 90, 0.04);
 }
 .journey-builder-back-button:hover {
@@ -19811,4 +19874,95 @@ button[aria-expanded="true"] {
   .home-layout.has-history .home-feature-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+/* Journey A/B test. The variant row is never wider than the canvas: it centres under the test and
+   scrolls sideways when more variants than fit are added; phones stack variants like Yes/No paths. */
+.journey-builder-canvas {
+  container-type: inline-size;
+}
+.journey-ab-scroll {
+  width: 100%;
+}
+.journey-ab-add-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+.journey-ab-add.MuiButton-root {
+  padding: 2px 12px;
+  border: 1px dashed #9fb3d1;
+  border-radius: 999px;
+  background: #fff;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.journey-ab-add.MuiButton-root:hover {
+  border-style: solid;
+  background: #f4f7fc;
+}
+.journey-ab-full {
+  padding: 3px 12px;
+  border: 1px solid #dbe3ee;
+  border-radius: 999px;
+  color: #64748b;
+  background: #f6f8fb;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.journey-ab-empty {
+  padding: 12px 16px 0;
+  text-align: center;
+}
+.journey-ab-line {
+  display: none;
+}
+@media (min-width: 701px) {
+  .journey-ab-scroll {
+    width: 100cqw;
+    display: flex;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+  .journey-ab-variants.journey-branches {
+    flex: 0 0 auto;
+    width: calc(var(--ab-columns, 2) * 340px);
+    min-width: 340px;
+    margin: 0 auto;
+  }
+  .journey-ab-variants .journey-branch-columns {
+    align-items: stretch;
+  }
+  .journey-ab-variants .journey-branch-column {
+    width: calc(100% / var(--ab-columns, 2));
+  }
+  .journey-ab-variants .journey-branch-step {
+    flex: 1;
+    width: calc(100% - 24px);
+  }
+  .journey-ab-variants .journey-flow-block {
+    padding: 16px;
+  }
+  .journey-ab-line {
+    display: block;
+    flex: 1;
+    width: 2px;
+    min-height: 32px;
+    background: #b8c7d9;
+  }
+  .journey-ab-add-wrap {
+    position: absolute;
+    z-index: 2;
+    top: 22px;
+    left: 50%;
+    margin: 0;
+    transform: translate(-50%, -50%);
+  }
+}
+.journey-ab-row {
+  padding: 6px 8px;
+  border-radius: 8px;
+}
+.journey-ab-row.leader {
+  background: #e8f5e9;
 }

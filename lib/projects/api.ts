@@ -570,6 +570,9 @@ export const journeysApi = {
   /** activate (draft → live), pause, resume, archive (stops for good), duplicate (new draft copy). */
   action: (projectId: string, journeyId: string, action: "activate" | "pause" | "resume" | "archive" | "duplicate") =>
     authRequest<Journey>(at(projectId, journeyPath(journeyId, `/${action}`)), {}, BASE, "POST"),
+  /** Keep one variant of an A/B test step; the test and its other variants are removed (works while running). */
+  applyAbWinner: (projectId: string, journeyId: string, testKey: string, variantKey: string) =>
+    authRequest<Journey>(at(projectId, journeyPath(journeyId, `/ab-tests/${encodeURIComponent(testKey)}/apply`)), { variantKey }, BASE, "POST"),
   /** The users behind one builder counter. `step` is the step key; Entrance metrics take none. */
   users: (projectId: string, journeyId: string, params: { metric: JourneyUsersMetric; step?: string; search?: string; page?: number; limit?: number }) => {
     const query = new URLSearchParams({ metric: params.metric, page: String(params.page ?? 1), limit: String(params.limit ?? 25) });
