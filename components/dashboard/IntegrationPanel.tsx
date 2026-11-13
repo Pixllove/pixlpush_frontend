@@ -17,7 +17,7 @@ const CONFIG_ROLES = ['owner', 'admin', 'developer'];
 
 /** Same-origin channel the sign-in tab uses to hand the CRM's answer back to the tab that opened it. */
 const OAUTH_CHANNEL = 'pixlpush-integration-oauth';
-type OauthReturn = { provider: IntegrationProvider; code: string | null; state: string | null; denied: string | null };
+type OauthReturn = { provider: IntegrationProvider; code: string | null; state: string | null; denied: string | null; reason: string | null };
 
 /** "just now", "3 minutes ago", "2 hours ago". */
 function timeAgo(date: string | Date) {
@@ -67,9 +67,11 @@ export default function IntegrationPanel({ provider }: { provider: IntegrationPr
   };
 
   const { mutateAsync: finishOauth } = oauthCallback;
-  const handleReturn = ({ code, state, denied }: OauthReturn) => {
+  const handleReturn = ({ code, state, denied, reason }: OauthReturn) => {
     if (denied) {
-      setError(`${crm.name} was not connected: access was not approved.`);
+      // The CRM's own explanation (e.g. app not available in this org) beats a generic "not approved".
+      const why = denied === 'access_denied' && !reason ? 'access was not approved.' : (reason ?? denied).replace(/\+/g, ' ');
+      setError(`${crm.name} was not connected: ${why}`);
       return;
     }
     if (code && state) void run(async () => { await finishOauth({ code, state }); setReplacing(false); });
@@ -83,7 +85,7 @@ export default function IntegrationPanel({ provider }: { provider: IntegrationPr
   useEffect(() => {
     if (!active?.id || handledReturn.current) return;
     const params = new URLSearchParams(window.location.search);
-    const result: OauthReturn = { provider, code: params.get('code'), state: params.get('state'), denied: params.get('error') };
+    const result: OauthReturn = { provider, code: params.get('code'), state: params.get('state'), denied: params.get('error'), reason: params.get('error_description') };
     if (!result.code && !result.denied) return;
     handledReturn.current = true;
     window.history.replaceState(null, '', window.location.pathname);
