@@ -3,7 +3,7 @@
 import {
   AddRounded, BarChartOutlined, BoltOutlined, ChevronLeftRounded, ChevronRightRounded, DescriptionOutlined, EmailOutlined, GroupsOutlined,
   HistoryOutlined, HomeOutlined, InsightsOutlined, NotificationsNoneOutlined, PeopleAltOutlined, PersonOutlineOutlined, SettingsOutlined, SpaceDashboardOutlined, SupportAgentOutlined, TuneOutlined, UnfoldMoreRounded, ChecklistRounded,
-  MapOutlined, ExtensionOutlined,
+  MapOutlined, ExtensionOutlined, DynamicFormOutlined,
 } from '@mui/icons-material';
 import {
   Avatar, ButtonBase, Divider, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Menu, MenuItem, Tooltip, Typography,
@@ -25,6 +25,7 @@ const groups = [
       { label: 'Analytics', href: '/dashboard/analytics', icon: InsightsOutlined },
       { label: 'Users', href: '/dashboard/users', icon: PeopleAltOutlined },
       { label: 'Email', href: '/dashboard/email', icon: EmailOutlined },
+      { label: 'Forms', href: '/dashboard/forms', icon: DynamicFormOutlined },
       { label: 'Push Notifications', href: '/dashboard/push', icon: BoltOutlined },
       { label: 'Journey Automations', href: '/dashboard/journeys', icon: InsightsOutlined },
     ],
