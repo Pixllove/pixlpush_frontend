@@ -6,9 +6,10 @@ import HomeCommandCenter, { detectCreationFlow, persistedMessageToChatMessage } 
 import { aiApi } from '@/lib/projects/ai';
 
 vi.mock('next/image', () => ({ default: ({ alt }: { alt: string }) => <img alt={alt} /> }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock('@/hooks/projects/use-active-project', () => ({ useActiveProject: () => ({ projects: [], active: { id: 'p1', name: 'Acme' }, isPending: false }) }));
 vi.mock('@/hooks/auth/use-current-user', () => ({ useCurrentUser: () => ({ account: { name: 'Kamran Ahsan' } }) }));
-vi.mock('@/lib/projects/ai', () => ({ aiApi: { catalog: vi.fn(), context: vi.fn(), businessContext: vi.fn(), updateBusinessContext: vi.fn(), analyzeBusinessContext: vi.fn(), conversations: vi.fn(), deleteConversation: vi.fn(), chat: vi.fn(), regenerate: vi.fn(), flowDraft: vi.fn(), flowCreate: vi.fn(), createConversation: vi.fn(), cancelConversation: vi.fn(), conversation: vi.fn() } }));
+vi.mock('@/lib/projects/ai', () => ({ aiApi: { catalog: vi.fn(), context: vi.fn(), businessContext: vi.fn(), updateBusinessContext: vi.fn(), analyzeBusinessContext: vi.fn(), conversations: vi.fn(), collaborations: vi.fn(), approveCollaboration: vi.fn(), rejectCollaboration: vi.fn(), cancelCollaboration: vi.fn(), deleteConversation: vi.fn(), chat: vi.fn(), regenerate: vi.fn(), flowDraft: vi.fn(), flowCreate: vi.fn(), createConversation: vi.fn(), cancelConversation: vi.fn(), conversation: vi.fn() } }));
 
 const api = vi.mocked(aiApi);
 const reply = (message: string) => ({ conversationId: 'c1', assistant: 'Max', provider: 'rules', message, nextActions: [], evidence: [], context: { generatedAt: '' } }) as never;
@@ -55,8 +56,11 @@ describe('creation command matching', () => {
 describe('Home chat', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    window.localStorage.clear();
     api.catalog.mockReturnValue(new Promise(() => {}));
     api.context.mockReturnValue(new Promise(() => {}));
+    api.businessContext.mockResolvedValue({} as never);
+    api.collaborations.mockResolvedValue([]);
     api.createConversation.mockResolvedValue({ id: 'c1' } as never);
   });
 
@@ -71,14 +75,14 @@ describe('Home chat', () => {
     api.chat.mockResolvedValueOnce(reply('You have 12 users.'));
     await user.click(screen.getByRole('button', { name: 'Try again' }));
     expect(await screen.findByText('You have 12 users.', {}, { timeout: 3500 })).toBeInTheDocument();
-    expect(api.chat).toHaveBeenLastCalledWith('p1', { assistant: 'Max', prompt: 'how many users do I have', conversationId: 'c1' }, expect.any(AbortSignal));
+    expect(api.chat).toHaveBeenLastCalledWith('p1', expect.objectContaining({ assistant: 'Max', prompt: 'how many users do I have', conversationId: 'c1', mode: 'direct', requestKey: expect.any(String) }), expect.any(AbortSignal));
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 
     // The answer is stored now: Retry replaces that turn on the server.
     api.regenerate.mockResolvedValueOnce(reply('12 users, 9 reachable.'));
     await user.click(screen.getByRole('button', { name: 'Retry answer' }));
     expect(await screen.findByText('12 users, 9 reachable.', {}, { timeout: 3500 })).toBeInTheDocument();
-    expect(api.regenerate).toHaveBeenLastCalledWith('p1', 'c1', { assistant: 'Max', prompt: 'how many users do I have' }, expect.any(AbortSignal));
+    expect(api.regenerate).toHaveBeenLastCalledWith('p1', 'c1', expect.objectContaining({ assistant: 'Max', prompt: 'how many users do I have', mode: 'direct', requestKey: expect.any(String) }), expect.any(AbortSignal));
     expect(screen.queryByText('You have 12 users.')).not.toBeInTheDocument();
 
     // Edit rewrites the same message; an older backend without the route falls back to a plain turn.
@@ -89,8 +93,8 @@ describe('Home chat', () => {
     await user.clear(editor);
     await user.type(editor, 'how many are inactive{Enter}');
     expect(await screen.findByText('3 users are inactive.', {}, { timeout: 3500 })).toBeInTheDocument();
-    expect(api.regenerate).toHaveBeenLastCalledWith('p1', 'c1', { assistant: 'Max', prompt: 'how many are inactive' }, expect.any(AbortSignal));
-    expect(api.chat).toHaveBeenLastCalledWith('p1', { assistant: 'Max', prompt: 'how many are inactive', conversationId: 'c1' }, expect.any(AbortSignal));
+    expect(api.regenerate).toHaveBeenLastCalledWith('p1', 'c1', expect.objectContaining({ assistant: 'Max', prompt: 'how many are inactive', mode: 'direct', requestKey: expect.any(String) }), expect.any(AbortSignal));
+    expect(api.chat).toHaveBeenLastCalledWith('p1', expect.objectContaining({ assistant: 'Max', prompt: 'how many are inactive', conversationId: 'c1', mode: 'direct', requestKey: expect.any(String) }), expect.any(AbortSignal));
     expect(screen.queryByText('how many users do I have')).not.toBeInTheDocument();
 
     const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue();
@@ -118,7 +122,7 @@ describe('Home chat', () => {
     expect(screen.queryByRole('button', { name: 'Review switch to Nova' })).not.toBeInTheDocument();
 
     expect(await screen.findByText('Nova has prepared the next journey step.', {}, { timeout: 7000 })).toBeInTheDocument();
-    expect(api.regenerate).toHaveBeenCalledWith('p1', 'c1', { assistant: 'Nova', prompt: 'How should I improve this journey?' }, expect.any(AbortSignal));
+    expect(api.regenerate).toHaveBeenCalledWith('p1', 'c1', expect.objectContaining({ assistant: 'Nova', prompt: 'How should I improve this journey?', mode: 'handoff', requestKey: expect.any(String) }), expect.any(AbortSignal));
   }, 12_000);
 
   it('shows a deliberate thinking state before a manual agent switch', async () => {
@@ -135,7 +139,7 @@ describe('Home chat', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Reviewing this conversation for Nova');
     expect(screen.queryByRole('alertdialog', { name: 'Switch to Nova' })).not.toBeInTheDocument();
     expect(await screen.findByText('Nova has reviewed the project context.', {}, { timeout: 7000 })).toBeInTheDocument();
-    expect(api.regenerate).toHaveBeenCalledWith('p1', 'c1', { assistant: 'Nova', prompt: 'What should I do next?' }, expect.any(AbortSignal));
+    expect(api.regenerate).toHaveBeenCalledWith('p1', 'c1', expect.objectContaining({ assistant: 'Nova', prompt: 'What should I do next?', mode: 'direct', requestKey: expect.any(String) }), expect.any(AbortSignal));
   }, 12_000);
 
   it('searches recent conversations and resumes the selected thread', async () => {

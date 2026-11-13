@@ -9,10 +9,11 @@ import { useRouter } from "next/navigation";
 import { useCurrentUser } from "@/hooks/auth/use-current-user";
 import { useActiveProject } from "@/hooks/projects/use-active-project";
 import { accountGreetingName } from "@/lib/auth/display-name";
-import { aiApi, type AiAssistantId, type AiBusinessContext, type AiBusinessContextUpdate, type AiConversationMessage, type AiConversationPreview, type AiCreatedResource, type AiFlowId, type AiFlowDraftResponse, type AiHandoff, type AiSuggestedPrompt, type AiProjectContext, type AiResourceType } from "@/lib/projects/ai";
+import { aiApi, type AiAgentId, type AiAgentResult, type AiAssistantId, type AiBusinessContext, type AiBusinessContextUpdate, type AiChatRequest, type AiChatResponse, type AiCollaboration, type AiCollaborationHistory, type AiConversationMessage, type AiConversationPreview, type AiCreatedResource, type AiFlowId, type AiFlowDraftResponse, type AiHandoff, type AiInteractionMode, type AiSuggestedPrompt, type AiProjectContext, type AiResourceType } from "@/lib/projects/ai";
 import { audienceGroupsApi, emailApi, firebaseApi, journeysApi, lifecycleSegmentsApi, pushApi, sdkKeyApi } from "@/lib/projects/api";
 import type { AudienceGroup, LifecycleSegment } from "@/types/project";
 import DeleteConfirmDialog from "@/components/dashboard/DeleteConfirmDialog";
+import CollaborationResultCard, { CollaborationTimeline, type CollaborationAgentProfile } from "@/components/dashboard/CollaborationResultCard";
 
 /** `flow` marks a guided-flow turn (it is re-run, not edited); `error` an answer that never arrived, so nothing was stored for it. */
 type ChatMessage = {
@@ -25,7 +26,17 @@ type ChatMessage = {
   createdResources?: AiCreatedResource[];
   assistant?: AiAssistantId;
   handoff?: AiHandoff;
+  mode?: AiInteractionMode;
+  collaboration?: AiCollaboration | null;
+  agentResult?: AiAgentResult;
+  requestKey?: string;
+  requestedAgent?: AiAgentId;
+  resourceType?: "campaign" | "journey";
+  resourceId?: string;
+  from?: string;
+  to?: string;
 };
+type AiChatResponseWithHandoffState = AiChatResponse & { handoffCompleted?: boolean };
 type DraftInput = { flowId: AiFlowId; answers: Record<string, string>; conversationId?: string; assistant?: AiAssistantId };
 type FlowChoice = { label: string; description: string; disabled?: boolean };
 type GuidedFlow = { id: AiFlowId; title: string; subtitle: string; steps: Array<{ question: string; choices: FlowChoice[] }> };
@@ -926,6 +937,36 @@ function isAnalysisRequest(value: string) {
     && /\b(?:campaign|journey|email|push|retention|churn|audience|users?)\b/i.test(value);
 }
 
+function isOptimizationRequest(value: string) {
+  return /\b(?:improv\w*|optim\w*|underperform\w*|analy[sz]\w*|performance|conversion|engagement|drop.?off)\b/i.test(value)
+    && /\b(?:campaign|journey|automation|workflow|email|push)\w*\b/i.test(value);
+}
+
+function isOnboardingPrompt(value: string) {
+  return /\b(?:onboarding|setup|set up|integration|integrate|sdk|firebase|sender domain|senders? domain|next steps|missing steps)\b/i.test(value);
+}
+
+function collaborationModeFor(prompt: string, assistant: AiAgentId): AiInteractionMode {
+  // Max-led optimization is the backend's consultation workflow. A customer
+  // who explicitly picked Ben, Nova, or Anna stays in direct mode.
+  return assistant === "Max" && isOptimizationRequest(prompt) ? "consultation" : "direct";
+}
+
+function stableRequestKey() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  return `ai-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function analysisDateRange(period: string) {
+  const to = new Date();
+  const from = new Date(to);
+  if (period === "Last 7 days") from.setDate(from.getDate() - 7);
+  else if (period === "Last 30 days") from.setDate(from.getDate() - 30);
+  else if (period === "Last 90 days") from.setDate(from.getDate() - 90);
+  else return { from: undefined, to: undefined };
+  return { from: from.toISOString(), to: to.toISOString() };
+}
+
 function objectValue(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
@@ -1023,13 +1064,35 @@ export function persistedMessageToChatMessage(message: AiConversationMessage): C
     };
   }
   const handoff = objectValue(metadata.handoff);
+  const collaboration = Object.keys(objectValue(metadata.collaboration)).length
+    ? objectValue(metadata.collaboration) as unknown as AiCollaboration
+    : undefined;
+  const storedMode = metadata.mode === "direct" || metadata.mode === "handoff" || metadata.mode === "consultation"
+    ? metadata.mode
+    : collaboration?.mode;
+  const storedResourceType = metadata.resourceType === "campaign" || metadata.resourceType === "journey" ? metadata.resourceType : undefined;
   return {
     id: message.id,
     role: message.role === "assistant" ? "assistant" : "user",
     text: message.content,
-    ...(typeof metadata.assistant === "string" && message.role === "assistant" ? { assistant: metadata.assistant } : {}),
+    ...(typeof metadata.assistant === "string" ? { assistant: metadata.assistant as AiAssistantId } : {}),
     ...(typeof handoff.assistant === "string" ? { handoff: { assistant: handoff.assistant, name: String(handoff.name ?? handoff.assistant), role: String(handoff.role ?? ""), reason: typeof handoff.reason === "string" ? handoff.reason : undefined } } : {}),
+    ...(storedMode ? { mode: storedMode } : {}),
+    ...(collaboration ? { collaboration } : {}),
+    ...(typeof metadata.requestKey === "string" ? { requestKey: metadata.requestKey } : {}),
+    ...(typeof metadata.requestedAgent === "string" ? { requestedAgent: metadata.requestedAgent as AiAgentId } : {}),
+    ...(storedResourceType ? { resourceType: storedResourceType } : {}),
+    ...(typeof metadata.resourceId === "string" ? { resourceId: metadata.resourceId } : {}),
+    ...(typeof metadata.from === "string" ? { from: metadata.from } : {}),
+    ...(typeof metadata.to === "string" ? { to: metadata.to } : {}),
   };
+}
+
+function collaborationFromHistory(item: AiCollaborationHistory): AiCollaboration {
+  // The history endpoint is already normalized. Keep this adapter deliberately
+  // shallow so approval state, task keys, findings, and events are not rebuilt
+  // from private persistence metadata.
+  return item;
 }
 
 function draftMessage(result: AiFlowDraftResponse) {
@@ -1056,7 +1119,6 @@ function conversationGroup(value: string) {
 
 /** The sidebar sits beside the content from this width; below it, it slides over the page. */
 const HISTORY_DOCKED_QUERY = "(min-width: 1200px)";
-const HISTORY_PREF_KEY = "pixlpush.home.historySidebar";
 const historyDocked = () => typeof window !== "undefined" && window.matchMedia(HISTORY_DOCKED_QUERY).matches;
 
 function conversationTitle(prompt: string, fallback: string) {
@@ -1088,10 +1150,6 @@ export default function HomeCommandCenter() {
   const [contextOpen, setContextOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [pinOverrides, setPinOverrides] = useState<Record<string, string | null>>({});
-  // Docked sidebar opens by default on wide screens and remembers the user's choice.
-  useEffect(() => {
-    if (historyDocked() && window.localStorage.getItem(HISTORY_PREF_KEY) !== "closed") setHistoryOpen(true);
-  }, []);
   // The fixed sidebar starts right under the dashboard top bar, whatever height it has on this screen.
   useEffect(() => {
     const topbar = document.querySelector<HTMLElement>(".dashboard-topbar");
@@ -1134,10 +1192,13 @@ export default function HomeCommandCenter() {
   const [analysisResource, setAnalysisResource] = useState<{ id: string; name: string } | null>(null);
   const [analysisPeriod, setAnalysisPeriod] = useState<string | null>(null);
   const [selectedAgent, setSelectedAgent] = useState<string>("Max");
+  const [collaborationHistoryOpen, setCollaborationHistoryOpen] = useState(false);
+  const [retryingTaskKey, setRetryingTaskKey] = useState<string | null>(null);
   const [responsePacing, setResponsePacing] = useState(false);
   const [thinkingLabel, setThinkingLabel] = useState("Thinking");
   const responsePacingRef = useRef<{ timer: number; cancelled: boolean } | null>(null);
   const activeRequestRef = useRef<AbortController | null>(null);
+  const requestKeysInFlightRef = useRef(new Set<string>());
   const openingRequestRef = useRef(0);
 
   const scheduleThinking = (label: string, duration: number, onComplete: () => void) => {
@@ -1174,10 +1235,17 @@ export default function HomeCommandCenter() {
     enabled: Boolean(projectId),
     staleTime: 30_000,
   });
+  const collaborationHistoryQuery = useQuery({
+    queryKey: ["projects", projectId, "ai", "conversation", conversationId, "collaborations"],
+    queryFn: () => aiApi.collaborations(projectId!, conversationId!),
+    enabled: Boolean(projectId && conversationId),
+    staleTime: 5_000,
+  });
   const catalogAgents = contextQuery.data?.catalog?.assistants;
   const agents = useMemo(() => catalogAgents?.length
     ? catalogAgents.map((agent) => [agent.id, agent.role, agent.description, agent.avatar ?? fallbackAgents.find(([name]) => name === agent.id)?.[3] ?? fallbackAgents[0][3]] as const)
     : fallbackAgents, [catalogAgents]);
+  const agentProfiles = useMemo<CollaborationAgentProfile[]>(() => agents.map(([id, role, , avatar]) => ({ id: id as AiAgentId, role, avatar })), [agents]);
   const [, agentRole, , agentAvatar] = agents.find(([name]) => name === selectedAgent) ?? agents[0];
   const businessContextQuery = useQuery({
     queryKey: ["projects", projectId, "ai", "business-context"],
@@ -1232,9 +1300,16 @@ export default function HomeCommandCenter() {
   });
 
   const chatMutation = useMutation({
-    mutationFn: async (input: { prompt: string; conversationId?: string; replace?: boolean; assistant?: AiAssistantId }) => {
+    mutationFn: async (input: Omit<AiChatRequest, "assistant" | "prompt"> & { prompt: string; conversationId?: string; replace?: boolean; assistant?: AiAgentId }) => {
       if (!projectId) throw new Error("Select a project before using the AI assistant.");
-      const assistant = input.assistant ?? selectedAgent as AiAssistantId;
+      const requestedAssistant = input.assistant ?? selectedAgent as AiAgentId;
+      const onboarding = isOnboardingPrompt(input.prompt);
+      const assistant = onboarding ? "Max" : requestedAssistant;
+      const mode = onboarding ? "direct" : input.mode ?? collaborationModeFor(input.prompt, assistant);
+      const requestKey = input.requestKey ?? stableRequestKey();
+      if (requestKeysInFlightRef.current.has(requestKey)) throw { status: 409, code: "DUPLICATE_REQUEST", message: "This request is already being processed." };
+      requestKeysInFlightRef.current.add(requestKey);
+      if (onboarding && selectedAgent !== "Max") selectAgentDirect("Max");
       const controller = new AbortController();
       activeRequestRef.current = controller;
       try {
@@ -1256,30 +1331,61 @@ export default function HomeCommandCenter() {
         }
         if (input.replace && input.conversationId) {
           try {
-            const response = await aiApi.regenerate(projectId, threadId, { assistant, prompt: input.prompt }, controller.signal);
+            const response = await aiApi.regenerate(projectId, threadId, {
+              assistant,
+              prompt: input.prompt,
+              mode,
+              ...(input.requestedAgent ? { requestedAgent: input.requestedAgent } : {}),
+              requestKey,
+              ...(input.resourceType ? { resourceType: input.resourceType } : {}),
+              ...(input.resourceId ? { resourceId: input.resourceId } : {}),
+              ...(input.from ? { from: input.from } : {}),
+              ...(input.to ? { to: input.to } : {}),
+            }, controller.signal);
             return response;
           } catch (error) {
             // Keep compatibility with an older edge deployment while the route rolls out.
             if ((error as { code?: string } | null)?.code !== "ROUTE_NOT_FOUND") throw error;
           }
         }
-        const response = await aiApi.chat(projectId, { assistant, prompt: input.prompt, conversationId: threadId }, controller.signal);
+        const chatInput: AiChatRequest = {
+          assistant,
+          prompt: input.prompt,
+          conversationId: threadId,
+          mode,
+          requestKey,
+          ...(input.requestedAgent ? { requestedAgent: input.requestedAgent } : {}),
+          ...(input.resourceType ? { resourceType: input.resourceType } : {}),
+          ...(input.resourceId ? { resourceId: input.resourceId } : {}),
+          ...(input.from ? { from: input.from } : {}),
+          ...(input.to ? { to: input.to } : {}),
+        };
+        const response = await aiApi.chat(projectId, chatInput, controller.signal);
         return response;
       } finally {
         if (activeRequestRef.current === controller) activeRequestRef.current = null;
+        requestKeysInFlightRef.current.delete(requestKey);
       }
     },
     onSuccess: (response, input) => {
+      setRetryingTaskKey(null);
       scheduleThinking("Thinking through your request", MIN_AI_RESPONSE_MS, () => {
         setConversationId(response.conversationId);
+        const responseMode = response.mode ?? response.collaboration?.mode;
         const createdResources = response.createdResources ?? [];
         const suggestedFlow = response.creationIntent && !createdResources.length
           ? flowForResource(response.creationIntent.resourceType)
           : undefined;
+        const handoffCompleted = (response as AiChatResponseWithHandoffState).handoffCompleted === true;
+        const handoffMessage = responseMode === "handoff" && response.handoff
+          ? { id: `handoff-${Date.now()}`, role: "assistant" as const, assistant: input.assistant ?? selectedAgent as AiAssistantId, mode: "handoff" as const, text: `${input.assistant ?? selectedAgent} handed this request to ${response.handoff.name}. ${response.handoff.reason ?? "They will continue with the relevant context."}` }
+          : null;
+        const assistantMessage: ChatMessage = { id: `assistant-${Date.now()}`, role: "assistant", assistant: response.assistant, mode: responseMode, text: response.message, suggestedFlow, createdResources, ...(response.handoff ? { handoff: response.handoff } : {}), ...(response.collaboration ? { collaboration: response.collaboration } : {}), ...(response.agentResult ? { agentResult: response.agentResult } : {}), requestKey: input.requestKey, ...(input.requestedAgent ? { requestedAgent: input.requestedAgent } : {}), ...(input.resourceType ? { resourceType: input.resourceType } : {}), ...(input.resourceId ? { resourceId: input.resourceId } : {}), ...(input.from ? { from: input.from } : {}), ...(input.to ? { to: input.to } : {}) };
         setMessages((current) => response.cancelled
           ? current.some((message) => message.text === "Generation stopped.") ? current : [...current, { id: `assistant-stopped-${Date.now()}`, role: "assistant", text: response.message }]
-          : [...current, { id: `assistant-${Date.now()}`, role: "assistant", assistant: response.assistant, text: response.message, suggestedFlow, createdResources, ...(response.handoff ? { handoff: response.handoff } : {}) }]);
+          : [...current, ...(handoffMessage ? [handoffMessage] : []), assistantMessage]);
         void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "ai", "context"] });
+        void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "ai", "conversation", response.conversationId, "collaborations"] });
         if (response.createdResources?.length) {
           // The AI endpoint creates only editable drafts. Refresh the resource
           // lists so the new draft is visible immediately when the user opens
@@ -1293,18 +1399,56 @@ export default function HomeCommandCenter() {
             void queryClient.invalidateQueries({ queryKey: ["projects", projectId, key] });
           }
         }
-        if (!response.cancelled && response.handoff && response.handoff.assistant !== response.assistant) {
+        // New collaboration responses already contain the specialist answer. The
+        // replay is only for the legacy handoff payload that returned a lead
+        // message first; this prevents duplicate specialist turns.
+        if (!response.cancelled && response.handoff && response.handoff.assistant !== response.assistant && !handoffCompleted && !responseMode) {
           selectAgentDirect(response.handoff.assistant);
           scheduleThinking(`Connecting you to ${response.handoff.name}`, AUTO_HANDOFF_THINKING_MS, () => {
-            chatMutation.mutate({ prompt: input.prompt, conversationId: response.conversationId, replace: true, assistant: response.handoff!.assistant });
+            chatMutation.mutate({ prompt: input.prompt, conversationId: response.conversationId, replace: true, assistant: response.handoff!.assistant, mode: "handoff", requestedAgent: response.handoff!.assistant, requestKey: input.requestKey, ...(input.resourceType ? { resourceType: input.resourceType } : {}), ...(input.resourceId ? { resourceId: input.resourceId } : {}), ...(input.from ? { from: input.from } : {}), ...(input.to ? { to: input.to } : {}) });
           });
         }
+        if (responseMode === "handoff" && response.handoff) selectAgentDirect(response.handoff.assistant);
       });
     },
     onError: (error) => {
+      setRetryingTaskKey(null);
       if ((error as { code?: string } | null)?.code === "ABORTED") return;
       setMessages((current) => [...current, { id: `assistant-error-${Date.now()}`, role: "assistant", text: apiMessage(error, "The AI assistant could not respond. Please try again."), error: true }]);
     },
+  });
+
+  const updateCollaborationApproval = (collaborationId: string, status: AiCollaboration["approvalStatus"]) => {
+    setMessages((current) => current.map((message) => message.collaboration?.id === collaborationId
+      ? { ...message, collaboration: { ...message.collaboration, approvalStatus: status, approvalRequired: status === "pending" } }
+      : message));
+  };
+
+  const approvalMutation = useMutation({
+    mutationFn: async (input: { collaborationId: string; action: "approve" | "reject" }) => {
+      if (!projectId) throw new Error("Select a project before reviewing this recommendation.");
+      return input.action === "approve"
+        ? aiApi.approveCollaboration(projectId, input.collaborationId)
+        : aiApi.rejectCollaboration(projectId, input.collaborationId);
+    },
+    onSuccess: (response, input) => {
+      updateCollaborationApproval(input.collaborationId, response.approvalStatus);
+      void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "ai", "conversation", conversationId, "collaborations"] });
+    },
+    onError: (error) => setContextError(apiMessage(error, "That recommendation could not be reviewed. Please try again.")),
+  });
+
+  const cancelCollaborationMutation = useMutation({
+    mutationFn: async (collaborationId: string) => {
+      if (!projectId) throw new Error("Select a project before cancelling this collaboration.");
+      return aiApi.cancelCollaboration(projectId, collaborationId);
+    },
+    onSuccess: (response) => {
+      updateCollaborationApproval(response.collaborationId, "cancelled");
+      if (projectId && conversationId) void aiApi.cancelConversation(projectId, conversationId);
+      void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "ai", "conversation", conversationId, "collaborations"] });
+    },
+    onError: (error) => setContextError(apiMessage(error, "That collaboration could not be cancelled. Please try again.")),
   });
 
   const recommendationMutation = useMutation({
@@ -1487,7 +1631,22 @@ export default function HomeCommandCenter() {
     setLastDraft(null);
     setDeletedConversationIds(new Set());
     setDeleteTarget(null);
+    setCollaborationHistoryOpen(false);
+    setRetryingTaskKey(null);
   }, [projectId]);
+
+  useEffect(() => {
+    if (!projectId || typeof window === "undefined") return;
+    try {
+      const stored = window.localStorage.getItem(`pixlpush-ai-agent:${projectId}`);
+      if (stored && agents.some(([name]) => name === stored)) setSelectedAgent(stored);
+    } catch { /* Storage can be unavailable in privacy mode and test sandboxes. */ }
+  }, [projectId, agents]);
+
+  useEffect(() => {
+    if (!projectId || typeof window === "undefined" || !agents.some(([name]) => name === selectedAgent)) return;
+    try { window.localStorage.setItem(`pixlpush-ai-agent:${projectId}`, selectedAgent); } catch { /* non-persistent browser storage is optional */ }
+  }, [projectId, selectedAgent, agents]);
 
   useEffect(() => {
     if (savedBusinessContext) setBusinessContext(savedBusinessContext);
@@ -1510,10 +1669,11 @@ export default function HomeCommandCenter() {
       return;
     }
     const prompt = messages[currentLastUserIndex].text;
+    const previous = messages[currentLastUserIndex];
     setMessages((current) => current.slice(0, currentLastUserIndex + 1));
     scheduleThinking(`Reviewing this conversation for ${name}`, AGENT_SWITCH_THINKING_MS, () => {
       selectAgentDirect(name);
-      chatMutation.mutate({ prompt, conversationId, replace: true, assistant: name as AiAssistantId });
+      chatMutation.mutate({ prompt, conversationId, replace: true, assistant: name as AiAssistantId, mode: "direct", requestKey: stableRequestKey(), requestedAgent: name as AiAgentId, resourceType: previous.resourceType, resourceId: previous.resourceId, from: previous.from, to: previous.to });
     });
   };
 
@@ -1531,7 +1691,9 @@ export default function HomeCommandCenter() {
     const text = value.trim();
     if (!text || thinking) return;
     shouldStickToLatestRef.current = true;
-    if (isAnalysisRequest(text)) {
+    const selectedAssistant = selectedAgent as AiAgentId;
+    const maxConsultation = selectedAssistant === "Max" && collaborationModeFor(text, "Max") === "consultation";
+    if (isAnalysisRequest(text) && !maxConsultation) {
       setMessages((current) => [...current, { id: `user-${Date.now()}`, role: "user", text }]);
       setDraft("");
       setEditing(null);
@@ -1547,18 +1709,23 @@ export default function HomeCommandCenter() {
       startFlow(creationFlow, text);
       return;
     }
-    setMessages((current) => [...current, { id: `user-${Date.now()}`, role: "user", text }]);
+    const assistant = (isOnboardingPrompt(text) ? "Max" : selectedAgent) as AiAgentId;
+    const requestKey = stableRequestKey();
+    const mode = isOnboardingPrompt(text) ? "direct" as const : collaborationModeFor(text, assistant);
+    setMessages((current) => [...current, { id: `user-${Date.now()}`, role: "user", text, assistant, mode, requestKey }]);
     setDraft("");
     setEditing(null);
-    chatMutation.mutate({ prompt: text, conversationId });
+    chatMutation.mutate({ prompt: text, conversationId, assistant, mode, requestKey });
   };
 
   const stopGeneration = () => {
     const stoppedConversationId = conversationId;
+    const activeCollaboration = [...messages].reverse().find((message) => message.role === "assistant" && message.collaboration && !["approved", "rejected", "cancelled"].includes(message.collaboration.approvalStatus))?.collaboration;
     activeRequestRef.current?.abort();
     cancelThinking();
     openingRequestRef.current += 1;
     if (projectId && stoppedConversationId) void aiApi.cancelConversation(projectId, stoppedConversationId);
+    if (projectId && activeCollaboration) void aiApi.cancelCollaboration(projectId, activeCollaboration.id);
     if (openingFlow) {
       setOpeningFlow(false);
       setActiveFlow(null);
@@ -1581,13 +1748,50 @@ export default function HomeCommandCenter() {
     const stored = messages.slice(lastUserIndex + 1).some((message) => message.role === "assistant" && !message.error);
     setMessages((current) => [...current.slice(0, lastUserIndex), { ...current[lastUserIndex], text: prompt }]);
     setEditing(null);
-    chatMutation.mutate({ prompt, conversationId, replace: stored });
+    const originalPrompt = messages[lastUserIndex].text;
+    const previous = messages[lastUserIndex];
+    const assistant = (isOnboardingPrompt(prompt) ? "Max" : previous.assistant ?? selectedAgent) as AiAgentId;
+    const mode = isOnboardingPrompt(prompt) ? "direct" as const : previous.mode ?? collaborationModeFor(prompt, assistant);
+    chatMutation.mutate({
+      prompt,
+      conversationId,
+      replace: stored,
+      assistant,
+      mode,
+      requestedAgent: previous.requestedAgent,
+      requestKey: prompt === originalPrompt ? previous.requestKey ?? stableRequestKey() : stableRequestKey(),
+      resourceType: previous.resourceType,
+      resourceId: previous.resourceId,
+      from: previous.from,
+      to: previous.to,
+    });
   };
 
   const retryDraft = () => {
     if (!lastDraft || thinking) return;
     setMessages((current) => current.slice(0, -1));
     draftMutation.mutate(lastDraft);
+  };
+
+  const retryCollaborationTask = (message: ChatMessage, taskKey: string) => {
+    const prompt = messages.slice(0, messages.indexOf(message)).filter((item) => item.role === "user").at(-1)?.text;
+    const task = message.collaboration?.tasks.find((item) => item.taskKey === taskKey);
+    if (!prompt || !conversationId || !task || thinking) return;
+    setRetryingTaskKey(taskKey);
+    chatMutation.mutate({
+      prompt,
+      conversationId,
+      // A specialist retry is an isolated direct task. This prevents the
+      // backend consultation chain from starting Ben → Anna/Nova again.
+      assistant: task.agentId,
+      mode: "direct",
+      requestedAgent: task.agentId,
+      requestKey: stableRequestKey(),
+      resourceType: message.resourceType,
+      resourceId: message.resourceId,
+      from: message.from,
+      to: message.to,
+    });
   };
 
   const copyMessage = async (message: ChatMessage) => {
@@ -1632,6 +1836,8 @@ export default function HomeCommandCenter() {
     setContextOpen(false);
     setContextError(null);
     setCopied(null);
+    setCollaborationHistoryOpen(false);
+    setRetryingTaskKey(null);
     if (resetAgent) setSelectedAgent("Max");
   };
 
@@ -1678,9 +1884,11 @@ export default function HomeCommandCenter() {
     if (!analysisType || !analysisResource || !analysisPeriod) return;
     const typeLabel = analysisType === "email" ? "email campaign" : analysisType === "push" ? "push campaign" : "journey";
     const prompt = `Analyze this ${typeLabel}: ${analysisResource.name}. Analyze the period: ${analysisPeriod}. Use the available delivery, open, click, conversion, entry, step, and exit data. Explain the evidence, limits of the data, and practical next steps. Do not change, activate, or optimize anything automatically.`;
-    setMessages((current) => [...current, { id: `user-analysis-confirm-${Date.now()}`, role: "user", text: `Start analysis: ${typeLabel} “${analysisResource.name}”, ${analysisPeriod}.` }]);
+    const requestKey = stableRequestKey();
+    const range = analysisDateRange(analysisPeriod);
+    setMessages((current) => [...current, { id: `user-analysis-confirm-${Date.now()}`, role: "user", assistant: "Ben", mode: "direct", text: `Start analysis: ${typeLabel} “${analysisResource.name}”, ${analysisPeriod}.`, requestKey, resourceType: analysisType === "journey" ? "journey" : "campaign", resourceId: analysisResource.id, from: range.from, to: range.to }]);
     setAnalysisPhase(null);
-    chatMutation.mutate({ prompt, conversationId, assistant: "Ben" });
+    chatMutation.mutate({ prompt, conversationId, assistant: "Ben", mode: "direct", requestKey, resourceType: analysisType === "journey" ? "journey" : "campaign", resourceId: analysisResource.id, from: range.from, to: range.to });
   };
 
   const openConversation = async (id: string) => {
@@ -1693,7 +1901,16 @@ export default function HomeCommandCenter() {
       const loadedMessages = conversation.messages
         .filter((message) => message.role === "user" || message.role === "assistant")
         .map(persistedMessageToChatMessage);
-      setMessages(loadedMessages);
+      // Approval/cancellation changes are persisted on the collaboration, so
+      // reload the normalized collaboration DTOs and overlay them on the
+      // message timeline instead of trusting stale message metadata.
+      const collaborations = await aiApi.collaborations(projectId, id).catch(() => [] as AiCollaborationHistory[]);
+      const byId = new Map(collaborations.map((item) => [item.id, item]));
+      setMessages(loadedMessages.map((message) => {
+        const collaborationId = message.collaboration?.id;
+        const normalized = collaborationId ? byId.get(collaborationId) : undefined;
+        return normalized ? { ...message, mode: normalized.mode, collaboration: normalized } : message;
+      }));
       setConversationId(conversation.id);
       if (agents.some(([name]) => name === conversation.assistant)) selectAgentDirect(conversation.assistant);
       setEditing(null);
@@ -1974,7 +2191,6 @@ export default function HomeCommandCenter() {
   const toggleRecentHistory = () => {
     const nextOpen = !historyOpen;
     setHistoryOpen(nextOpen);
-    if (historyDocked()) window.localStorage.setItem(HISTORY_PREF_KEY, nextOpen ? "open" : "closed");
     setContext("recent");
     setContextError(null);
     if (!nextOpen) setConversationSearch("");
@@ -2157,6 +2373,21 @@ export default function HomeCommandCenter() {
             <Box className="chat-agent-mark"><Image src={messageAgent[3]} alt={`${messageAgent[0]} avatar`} width={38} height={38} /></Box>
             <Box>
               <Typography className="chat-agent-name">{messageAgent[0]} <span>{messageAgent[1]}</span></Typography>
+              {!message.error && message.collaboration && <>
+                <CollaborationTimeline
+                  collaboration={message.collaboration}
+                  profiles={agentProfiles}
+                  compact
+                  retryingTaskKey={retryingTaskKey}
+                  onRetry={(taskKey) => retryCollaborationTask(message, taskKey)}
+                  onApprove={message.collaboration.approvalStatus === "pending" ? () => approvalMutation.mutate({ collaborationId: message.collaboration!.id, action: "approve" }) : undefined}
+                  onReject={message.collaboration.approvalStatus === "pending" ? () => approvalMutation.mutate({ collaborationId: message.collaboration!.id, action: "reject" }) : undefined}
+                  onCancel={!['approved', 'rejected', 'cancelled', 'needs_data', 'blocked'].includes(message.collaboration.approvalStatus) ? () => cancelCollaborationMutation.mutate(message.collaboration!.id) : undefined}
+                  onViewDetails={() => { setCollaborationHistoryOpen(true); void collaborationHistoryQuery.refetch(); }}
+                  approvalBusy={approvalMutation.isPending || cancelCollaborationMutation.isPending}
+                />
+              </>}
+              {!message.error && message.agentResult && !message.collaboration && <CollaborationResultCard result={message.agentResult} profile={agentProfiles.find((profile) => profile.id === message.agentResult?.agentId) ?? { id: message.agentResult.agentId, role: "PixlPush specialist", avatar: "/assets/agent-avatar-max-v4.webp" }} />}
               <Typography className="chat-response" role={message.error ? "alert" : undefined}>{message.text}</Typography>
               {!message.error && message.suggestedFlow && <CreationOptions
                 flow={message.suggestedFlow}
@@ -2194,6 +2425,7 @@ export default function HomeCommandCenter() {
 
     <Menu anchorEl={contextAnchor} open={Boolean(contextAnchor)} onClose={() => setContextAnchor(null)} className="home-context-menu">
       <MenuItem onClick={() => openContext("recent")}><HistoryRounded /> Recent conversations</MenuItem>
+      <MenuItem disabled={!conversationId} onClick={() => { setContextAnchor(null); setCollaborationHistoryOpen(true); void collaborationHistoryQuery.refetch(); }}><HistoryRounded /> Collaboration history</MenuItem>
       <MenuItem onClick={() => openContext("insight")}><InsightsRounded /> Ben’s latest insight</MenuItem>
       <MenuItem onClick={() => openContext("handoff")}><PsychologyRounded /> Handoff history</MenuItem>
     </Menu>
@@ -2205,6 +2437,28 @@ export default function HomeCommandCenter() {
       <DialogContent>
         {context === "insight" && <Box className="insight-callout"><Typography fontSize="var(--fs-14)" fontWeight={600}>{aiContext?.latestInsight.title ?? "No insight yet"}</Typography><Typography fontSize="var(--fs-13)" color="text.secondary" sx={{ mt: .7 }}>{aiContext?.latestInsight.message ?? "The latest project insight will appear here."}</Typography><Stack direction="row" gap={1} sx={{ mt: 2 }}><Button variant="contained" size="small" href="/dashboard/journeys/create">Send insights to Nova</Button><Button size="small" href="/dashboard/users">Review audience</Button></Stack></Box>}
         {context === "handoff" && <Stack className="context-dialog-list">{aiContext?.handoffHistory?.length ? aiContext.handoffHistory.map((item) => <Stack direction="row" gap={1.5} className="context-dialog-row" key={`${item.assistant}-${item.action}`}><Box className="handoff-dot" /><Box><Typography fontSize="var(--fs-13)" fontWeight={600}>{item.assistant} <span className="handoff-action">{item.action}</span></Typography><Typography fontSize="var(--fs-12)" color="text.secondary">{item.status}</Typography></Box></Stack>) : <Typography color="text.secondary">No handoff history yet.</Typography>}</Stack>}
+      </DialogContent>
+    </Dialog>
+    <Dialog open={collaborationHistoryOpen} onClose={() => setCollaborationHistoryOpen(false)} maxWidth="md" fullWidth>
+      <DialogTitle>Collaboration history</DialogTitle>
+      <DialogContent>
+        {collaborationHistoryQuery.isPending ? <Typography color="text.secondary">Loading collaboration history…</Typography> : null}
+        {collaborationHistoryQuery.isError ? <Typography color="error.main" role="alert">{apiMessage(collaborationHistoryQuery.error, "Collaboration history could not be loaded.")}</Typography> : null}
+        {!collaborationHistoryQuery.isPending && !collaborationHistoryQuery.isError && !collaborationHistoryQuery.data?.length ? <Typography color="text.secondary">No collaboration has been recorded for this conversation.</Typography> : null}
+        <Stack gap={2}>
+          {collaborationHistoryQuery.data?.map((item) => {
+            const collaboration = collaborationFromHistory(item);
+            return <Box key={item.id} sx={{ p: 1.5, border: "1px solid rgba(89, 57, 111, .14)", borderRadius: 2 }}>
+              <Stack direction="row" justifyContent="space-between" gap={1} flexWrap="wrap">
+                <Typography fontWeight={700}>{collaboration.mode} · led by {collaboration.leadAgent}</Typography>
+                <Typography fontSize="var(--fs-11)" color="text.secondary">{new Date(item.createdAt).toLocaleString()}</Typography>
+              </Stack>
+                <Typography fontSize="var(--fs-12)" color="text.secondary" sx={{ mt: .5 }}>Approval: {collaboration.approvalStatus} · Status: {collaboration.status ?? "recorded"}</Typography>
+              <CollaborationTimeline collaboration={collaboration} profiles={agentProfiles} onApprove={collaboration.approvalStatus === "pending" ? () => approvalMutation.mutate({ collaborationId: collaboration.id, action: "approve" }) : undefined} onReject={collaboration.approvalStatus === "pending" ? () => approvalMutation.mutate({ collaborationId: collaboration.id, action: "reject" }) : undefined} onCancel={!['approved', 'rejected', 'cancelled', 'needs_data', 'blocked'].includes(collaboration.approvalStatus) ? () => cancelCollaborationMutation.mutate(collaboration.id) : undefined} approvalBusy={approvalMutation.isPending || cancelCollaborationMutation.isPending} />
+              {item.events.length ? <Box sx={{ mt: 1.25 }}><Typography fontSize="var(--fs-12)" fontWeight={700}>Events</Typography><Stack component="ul" sx={{ mt: .4, mb: 0, pl: 2.2 }} gap={.25}>{item.events.map((event) => <Typography component="li" fontSize="var(--fs-11)" color="text.secondary" key={event.id}>{event.type}{event.actorAgent ? ` · ${event.actorAgent}` : ""} · {new Date(event.createdAt).toLocaleString()}</Typography>)}</Stack></Box> : null}
+            </Box>;
+          })}
+        </Stack>
       </DialogContent>
     </Dialog>
     <DeleteConfirmDialog

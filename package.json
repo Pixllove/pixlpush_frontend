@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --experimental-https",
     "build": "node scripts/sync-sdk-versions.mjs && next build",
+    "typecheck": "tsc --noEmit --incremental false",
     "sync:sdk-versions": "node scripts/sync-sdk-versions.mjs",
     "start": "next start",
     "lint": "next lint",
