@@ -7,7 +7,8 @@ const ALLOWED = [
   "restore",
   "logo",
   "firebase",
-  "hubspot",
+  // Every integration: /integrations and /integrations/:provider/... (HubSpot, Salesforce, Pipedrive, ...).
+  "integrations",
   "onboarding",
   "sdk-keys",
   // Includes only the current read/status and test-send operations.

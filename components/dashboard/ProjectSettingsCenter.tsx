@@ -8,12 +8,11 @@ import { Box, Button, Card, Stack, Tab, Tabs, Typography } from '@mui/material';
 import DangerZonePanel from './DangerZonePanel';
 import EmailPanel from './EmailPanel';
 import FirebasePanel from './FirebasePanel';
-import HubspotPanel from './HubspotPanel';
 import ProjectDetailsPanel from './ProjectDetailsPanel';
 import SdkKeysPanel from './SdkKeysPanel';
 import SettingsStatus from './SettingsStatus';
 
-const tabs = ['Project & company details', 'Push setup', 'Domain', 'SDK keys', 'HubSpot', 'Data & privacy', 'Danger zone'];
+const tabs = ['Project & company details', 'Push setup', 'Domain', 'SDK keys', 'Data & privacy', 'Danger zone'];
 
 function ProjectAndCompanyDetailsPanel() {
   return <Stack gap={2.5}>
@@ -33,7 +32,6 @@ const panels: Record<string, (props: { onNavigate?: (tab: string) => void }) => 
   'Push setup': FirebasePanel,
   Domain: EmailPanel,
   'SDK keys': SdkKeysPanel,
-  HubSpot: HubspotPanel,
   'Data & privacy': PrivacyPanel,
   'Danger zone': DangerZonePanel,
 };
@@ -45,9 +43,8 @@ export default function ProjectSettingsCenter({ initialTab = 'Project & company 
     'Push setup': '/dashboard/settings/firebase',
     Domain: '/dashboard/settings/domain',
     'SDK keys': '/dashboard/settings/sdk-keys',
-    HubSpot: '/dashboard/settings/hubspot',
   };
-  const routeTab = pathname.endsWith('/firebase') ? 'Push setup' : pathname.endsWith('/domain') ? 'Domain' : pathname.endsWith('/sdk-keys') ? 'SDK keys' : pathname.endsWith('/hubspot') ? 'HubSpot' : null;
+  const routeTab = pathname.endsWith('/firebase') ? 'Push setup' : pathname.endsWith('/domain') ? 'Domain' : pathname.endsWith('/sdk-keys') ? 'SDK keys' : null;
   useEffect(() => {
     if (routeTab) setTab(routeTab);
   }, [routeTab]);

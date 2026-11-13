@@ -1,8 +1,10 @@
-import DashboardFrame from '@/components/dashboard/DashboardFrame';
-import ProjectSettingsCenter from '@/components/dashboard/ProjectSettingsCenter';
+import { redirect } from 'next/navigation';
 
-export const metadata = { title: 'HubSpot Settings — PixlPush' };
+type Props = { searchParams: Record<string, string | string[] | undefined> };
 
-export default function HubspotSettingsPage() {
-  return <DashboardFrame requiresProject active="Project Settings" title="Project settings" description="Manage the active Project without changing other Projects in your Account."><ProjectSettingsCenter initialTab="HubSpot" /></DashboardFrame>;
+// HubSpot moved to Integrations. Kept because the HubSpot app's OAuth redirect URL
+// points here: the ?code&state from HubSpot are passed on.
+export default function HubspotSettingsRedirect({ searchParams }: Props) {
+  const query = new URLSearchParams(Object.entries(searchParams).flatMap(([k, v]) => (Array.isArray(v) ? v : v ? [v] : []).map((x) => [k, x]))).toString();
+  redirect(`/dashboard/integrations/hubspot${query ? `?${query}` : ''}`);
 }

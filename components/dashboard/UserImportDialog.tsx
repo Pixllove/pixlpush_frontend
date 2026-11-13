@@ -112,7 +112,7 @@ const sources: {
     label: "HubSpot",
     description: "Connect HubSpot and keep your contacts in sync automatically.",
     icon: SyncRounded,
-    href: "/dashboard/settings/hubspot",
+    href: "/dashboard/integrations/hubspot",
   },
 ];
 

@@ -33,7 +33,9 @@ import type {
   CreatedSdkKey,
   EmailSettings,
   FirebaseSettings,
-  HubspotSettings,
+  IntegrationCredentials,
+  IntegrationProvider,
+  IntegrationSettings,
   ImportMappingInput,
   ImportPreview,
   ImportSuggestions,
@@ -110,16 +112,23 @@ export const projectApi = {
     authRequest<Project>(`/${encodeURIComponent(projectId)}/restore`, {}, BASE),
 };
 
-/** HubSpot contact sync for one Project. Syncs run in the backend worker. */
-export const hubspotApi = {
-  get: (projectId: string) => authRequest<HubspotSettings>(at(projectId, "/hubspot"), undefined, BASE),
-  /** Checked live with HubSpot before the token is stored. */
-  connect: (projectId: string, accessToken: string) =>
-    authRequest<HubspotSettings>(at(projectId, "/hubspot"), { accessToken }, BASE, "PUT"),
-  setSyncEnabled: (projectId: string, syncEnabled: boolean) =>
-    authRequest<HubspotSettings>(at(projectId, "/hubspot"), { syncEnabled }, BASE, "PATCH"),
-  syncNow: (projectId: string) => authRequest<HubspotSettings>(at(projectId, "/hubspot/sync"), {}, BASE),
-  disconnect: (projectId: string) => authRequest<HubspotSettings>(at(projectId, "/hubspot"), {}, BASE, "DELETE"),
+/** Every integration of one Project (HubSpot, Salesforce, Pipedrive, ...), one API. Syncs run in the backend worker. */
+export const integrationsApi = {
+  /** Every integration with its status, in one request. */
+  list: (projectId: string) => authRequest<IntegrationSettings[]>(at(projectId, "/integrations"), undefined, BASE),
+  get: (projectId: string, provider: IntegrationProvider) => authRequest<IntegrationSettings>(at(projectId, `/integrations/${provider}`), undefined, BASE),
+  /** Checked live with the integration before anything is stored. */
+  connect: (projectId: string, provider: IntegrationProvider, credentials: IntegrationCredentials) =>
+    authRequest<IntegrationSettings>(at(projectId, `/integrations/${provider}`), credentials, BASE, "PUT"),
+  setSyncEnabled: (projectId: string, provider: IntegrationProvider, syncEnabled: boolean) =>
+    authRequest<IntegrationSettings>(at(projectId, `/integrations/${provider}`), { syncEnabled }, BASE, "PATCH"),
+  syncNow: (projectId: string, provider: IntegrationProvider) => authRequest<IntegrationSettings>(at(projectId, `/integrations/${provider}/sync`), {}, BASE),
+  disconnect: (projectId: string, provider: IntegrationProvider) => authRequest<IntegrationSettings>(at(projectId, `/integrations/${provider}`), {}, BASE, "DELETE"),
+  /** "Connect with <CRM>": the consent page to send the browser to. */
+  oauthStart: (projectId: string, provider: IntegrationProvider) => authRequest<{ url: string }>(at(projectId, `/integrations/${provider}/oauth/start`), {}, BASE),
+  /** The CRM sent the browser back with ?code (and ?state when started here). */
+  oauthCallback: (projectId: string, provider: IntegrationProvider, input: { code: string; state?: string }) =>
+    authRequest<IntegrationSettings>(at(projectId, `/integrations/${provider}/oauth/callback`), input, BASE),
 };
 
 /** Firebase / FCM for one Project. Each Project has its own connection. */
@@ -1369,6 +1378,8 @@ export const projectKeys = {
   list: () => [...projectKeys.all, "list"] as const,
   detail: (id: string) => [...projectKeys.all, "detail", id] as const,
   /** Per-Project settings areas, e.g. setting(id, 'firebase'). */
-  setting: (id: string, area: "firebase" | "sdk-keys" | "email" | "hubspot") =>
+  setting: (id: string, area: "firebase" | "sdk-keys" | "email") =>
     [...projectKeys.all, area, id] as const,
+  /** All integrations of a Project; one provider is a key below it, so writes refresh both. */
+  integrations: (id: string) => [...projectKeys.all, "integrations", id] as const,
 };
