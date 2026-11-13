@@ -15,6 +15,10 @@ import type { IntegrationProvider } from '@/types/project';
 
 const CONFIG_ROLES = ['owner', 'admin', 'developer'];
 
+/** Same-origin channel the sign-in tab uses to hand the CRM's answer back to the tab that opened it. */
+const OAUTH_CHANNEL = 'pixlpush-integration-oauth';
+type OauthReturn = { provider: IntegrationProvider; code: string | null; state: string | null; denied: string | null; reason: string | null };
+
 /** "just now", "3 minutes ago", "2 hours ago". */
 function timeAgo(date: string | Date) {
   const minutes = Math.round((Date.now() - new Date(date).getTime()) / 60_000);
@@ -62,35 +66,81 @@ export default function IntegrationPanel({ provider }: { provider: IntegrationPr
     try { await action(); } catch (cause) { setError((cause as ApiError).message); }
   };
 
-  // Back from the CRM's consent page: ?code&state (approved) or ?error (cancelled). Handled once.
-  const handledReturn = useRef(false);
   const { mutateAsync: finishOauth } = oauthCallback;
-  useEffect(() => {
-    if (!active?.id || handledReturn.current) return;
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get('code');
-    const state = params.get('state');
-    const denied = params.get('error');
-    if (!code && !denied) return;
-    handledReturn.current = true;
-    window.history.replaceState(null, '', window.location.pathname);
+  const handleReturn = ({ code, state, denied, reason }: OauthReturn) => {
     if (denied) {
-      setError(`${crm.name} was not connected: access was not approved.`);
+      // The CRM's own explanation (e.g. app not available in this org) beats a generic "not approved".
+      const why = denied === 'access_denied' && !reason ? 'access was not approved.' : (reason ?? denied).replace(/\+/g, ' ');
+      setError(`${crm.name} was not connected: ${why}`);
       return;
     }
     if (code && state) void run(async () => { await finishOauth({ code, state }); setReplacing(false); });
     else if (code) setMarketplaceCode(code);
-  }, [active?.id, finishOauth, crm.name]);
+  };
 
-  const startOauth = () => run(async () => {
-    setRedirecting(true);
-    try {
-      window.location.assign((await integrationsApi.oauthStart(active!.id, provider)).url);
-    } catch (cause) {
-      setRedirecting(false);
-      throw cause;
+  // Back from the CRM's consent page: ?code&state (approved) or ?error (cancelled). Handled once.
+  // If a PixlPush tab started the sign-in (see startOauth) it takes the result and this tab closes;
+  // with no answer (popup was blocked, or the install started in the CRM's marketplace) it is finished here.
+  const handledReturn = useRef(false);
+  useEffect(() => {
+    if (!active?.id || handledReturn.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const result: OauthReturn = { provider, code: params.get('code'), state: params.get('state'), denied: params.get('error'), reason: params.get('error_description') };
+    if (!result.code && !result.denied) return;
+    handledReturn.current = true;
+    window.history.replaceState(null, '', window.location.pathname);
+    const channel = new BroadcastChannel(OAUTH_CHANNEL);
+    const fallback = setTimeout(() => { channel.close(); handleReturn(result); }, 1500);
+    channel.onmessage = (event) => {
+      if (event.data?.ack !== provider) return;
+      clearTimeout(fallback);
+      channel.close();
+      window.close();
+    };
+    channel.postMessage(result);
+  }, [active?.id, finishOauth, crm.name, provider]);
+
+  // This tab waits for the sign-in result while the consent page is open in the other tab.
+  const listener = useRef<BroadcastChannel>();
+  useEffect(() => () => listener.current?.close(), []);
+  const awaitReturn = () => {
+    listener.current?.close();
+    const channel = new BroadcastChannel(OAUTH_CHANNEL);
+    listener.current = channel;
+    channel.onmessage = (event) => {
+      const result = event.data as OauthReturn;
+      if (result?.provider !== provider) return;
+      channel.postMessage({ ack: provider });
+      channel.close();
+      listener.current = undefined;
+      window.focus();
+      handleReturn(result);
+    };
+  };
+
+  // Opens the consent page in a new tab. The tab must open synchronously on click (before the await)
+  // or popup blockers stop it. After approval that tab hands the result back here and closes.
+  const startOauth = () => {
+    const tab = window.open('', '_blank');
+    if (tab) {
+      tab.opener = null;
+      awaitReturn();
     }
-  });
+    return run(async () => {
+      setRedirecting(true);
+      try {
+        const { url } = await integrationsApi.oauthStart(active!.id, provider);
+        if (tab) tab.location.href = url;
+        else window.location.assign(url); // popup blocked: fall back to same tab
+      } catch (cause) {
+        tab?.close();
+        listener.current?.close();
+        throw cause;
+      } finally {
+        setRedirecting(false);
+      }
+    });
+  };
   const reset = () => { setForm({}); setReplacing(false); };
   const { fields } = crm.manual;
   const submit = () => run(async () => {

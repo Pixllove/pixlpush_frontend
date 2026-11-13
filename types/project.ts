@@ -661,7 +661,9 @@ export type JourneyDisplayStatus = "running" | "scheduled" | "draft" | "paused" 
 export interface JourneyStep {
   id?: string;
   key: string;
-  type: "push" | "email" | "delay" | "condition" | "repeat" | "exit";
+  type: "push" | "email" | "delay" | "condition" | "repeat" | "abtest" | "exit";
+  /** A/B test: keys of its 2–5 message variants. */
+  variants?: string[];
   channel?: "mobile" | "web";
   templateId?: string;
   /** Email steps: replace the template's subject / sender name. */

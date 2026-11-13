@@ -51,6 +51,9 @@ export type Integration = {
  * Sources: Salesforce from svgl.app; HubSpot and Pipedrive from theSVG (MIT), via Iconify.
  */
 function BrandLogo({ src, name, size = 40, bleed = false, pad = 0.14 }: { src: string; name: string; size?: number; bleed?: boolean; pad?: number }) {
+  // Fixed pixel box for the image: a % height inside the grid tile is circular, and a wide SVG
+  // (Salesforce) loaded late could be sized wrong and clipped out of view.
+  const inner = bleed ? size : size - 2 * Math.round(size * pad) - 2;
   return (
     <Box
       sx={{
@@ -63,10 +66,9 @@ function BrandLogo({ src, name, size = 40, bleed = false, pad = 0.14 }: { src: s
         display: 'grid',
         placeItems: 'center',
         overflow: 'hidden',
-        p: bleed ? 0 : `${Math.round(size * pad)}px`,
       }}
     >
-      <Box component="img" src={src} alt={name} sx={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
+      <Box component="img" src={src} alt={name} width={inner} height={inner} sx={{ width: inner, height: inner, objectFit: 'contain', display: 'block' }} />
     </Box>
   );
 }

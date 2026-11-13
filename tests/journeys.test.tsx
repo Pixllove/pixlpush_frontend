@@ -5,11 +5,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import JourneyBuilder from '@/components/dashboard/JourneyBuilder';
 import JourneyWorkspace from '@/components/dashboard/JourneyWorkspace';
 import { audienceGroupsApi, emailApi, eventsApi, journeysApi, lifecycleSegmentsApi, pushApi } from '@/lib/projects/api';
-import { conditionOptions, ENTRANCE, EXIT, fromJourney, mergeJourneyEventOptions, toJourneyInput, type BuilderState } from '@/lib/journeys';
+import { abResults, conditionOptions, ENTRANCE, EXIT, fromJourney, mergeJourneyEventOptions, toJourneyInput, type BuilderState } from '@/lib/journeys';
 import type { Journey, JourneyListItem } from '@/types/project';
 
 vi.mock('@/lib/projects/api', () => ({
-  journeysApi: { list: vi.fn(), get: vi.fn(), create: vi.fn(), update: vi.fn(), remove: vi.fn(), action: vi.fn() },
+  journeysApi: { list: vi.fn(), get: vi.fn(), create: vi.fn(), update: vi.fn(), remove: vi.fn(), action: vi.fn(), applyAbWinner: vi.fn() },
   lifecycleSegmentsApi: { list: vi.fn() },
   audienceGroupsApi: { list: vi.fn() },
   eventsApi: { listCatalog: vi.fn() },
@@ -221,5 +221,156 @@ describe('journey builder', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save & set live' }));
     expect(await screen.findByText('Your plan allows 1 active journey(s).')).toBeInTheDocument();
     expect(screen.getByText('Draft')).toBeInTheDocument();
+  });
+});
+
+describe('A/B test block', () => {
+  /** entrance -> A/B (3 push variants) -> wait -> exit */
+  const abState = (): BuilderState => ({
+    ...state(),
+    blocks: [ENTRANCE, block('ab', 'ab_test'), block('wait1', 'wait'), EXIT],
+    branches: { ab: { yes: [], no: [], variants: [block('va', 'notification'), block('vb', 'notification'), block('vc', 'notification')] } },
+    settings: { ab: { maxVariants: '3' }, va: { template: 'tplPush' }, vb: { template: 'tplPush' }, vc: { template: 'tplPush' }, wait1: { amount: '1', unit: 'days' } },
+    conditionValues: {},
+  });
+  const saved = (s: BuilderState, stats: Record<string, object> = {}, status: Journey['status'] = 'active') => {
+    const input = toJourneyInput(s);
+    return { ...input, id: 'j1', status, displayStatus: 'running', messageType: 'push', createdAt: '', activatedAt: '', steps: input.steps.map((step) => ({ ...step, stats: stats[step.key] })) } as Journey;
+  };
+
+  it('saves the test and its variants, every variant continuing to the step after the test', () => {
+    const steps = toJourneyInput(abState()).steps;
+    expect(steps.map((s) => [s.key, s.type])).toEqual([['ab', 'abtest'], ['va', 'push'], ['vb', 'push'], ['vc', 'push'], ['wait1', 'delay'], ['exit', 'exit']]);
+    expect(steps[0]).toMatchObject({ variants: ['va', 'vb', 'vc'], meta: { block: 'ab_test' } });
+    for (const variant of steps.slice(1, 4)) expect(variant).toMatchObject({ next: 'wait1', templateId: 'tplPush', channel: 'mobile', meta: { variantOf: 'ab' } });
+  });
+
+  it('refuses a test with too few or mixed variants, or a variant without a template', () => {
+    const one = abState(); one.branches.ab!.variants = [block('va', 'notification')];
+    expect(() => toJourneyInput(one)).toThrow(/2 to 5 variants/);
+    const six = abState(); six.branches.ab!.variants = ['a', 'b', 'c', 'd', 'e', 'f'].map((id) => block(id, 'notification'));
+    expect(() => toJourneyInput(six)).toThrow(/2 to 5 variants/);
+    const mixed = abState(); mixed.branches.ab!.variants = [block('va', 'notification'), block('m', 'email')]; mixed.settings.m = { template: 'tplMail' };
+    expect(() => toJourneyInput(mixed)).toThrow(/same kind of message/);
+    const noTemplate = abState(); noTemplate.settings.vb = {};
+    expect(() => toJourneyInput(noTemplate)).toThrow(/Select a template/);
+  });
+
+  it('comes back as the same canvas, and a kept winner comes back as a plain block', () => {
+    const back = fromJourney(saved(abState(), { va: { sent: 10 } }));
+    expect(back.blocks.map((b) => b.id)).toEqual(['entrance', 'ab', 'wait1', 'exit']);
+    expect(back.blocks[1]!.type).toBe('ab_test');
+    expect(back.branches.ab!.variants!.map((b) => [b.id, b.type])).toEqual([['va', 'notification'], ['vb', 'notification'], ['vc', 'notification']]);
+    expect(back.branches.ab!.variants![0]!.stats).toEqual({ sent: 10 });
+
+    // after Apply the test is gone; the winner keeps its meta but is drawn in the test's place
+    const journey = saved(abState());
+    journey.steps = journey.steps.filter((s) => !['ab', 'va', 'vc'].includes(s.key));
+    const applied = fromJourney(journey);
+    expect(applied.blocks.map((b) => [b.id, b.type])).toEqual([['entrance', 'entrance'], ['vb', 'notification'], ['wait1', 'wait'], ['exit', 'exit']]);
+  });
+
+  it('the builder chooses how many variants the test has: 2 by default, up to 5', async () => {
+    const tooMany = abState(); tooMany.settings.ab = {}; // default 2, but 3 were added
+    expect(() => toJourneyInput(tooMany)).toThrow(/has 3 variants but is set to 2/);
+    const raised = abState(); raised.settings.ab = { maxVariants: '5' };
+    expect(toJourneyInput(raised).steps[0]!.variants).toHaveLength(3);
+
+    // at the chosen number "Add variant" is replaced by a count
+    search = 'id=j1';
+    const full = abState(); full.branches.ab!.variants = full.branches.ab!.variants!.slice(0, 2); full.settings.ab = {};
+    api.get.mockResolvedValue(saved(full, {}, 'paused'));
+    wrap(<JourneyBuilder />);
+    expect(await screen.findByText('2 of 2 variants')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add variant' })).not.toBeInTheDocument();
+  });
+
+  it('lowering the number of variants removes the extra variant blocks from the end', async () => {
+    search = 'id=j1';
+    api.get.mockResolvedValue(saved(abState(), {}, 'paused')); // 3 variants, set to 3
+    api.update.mockResolvedValue({ id: 'j1' } as Journey);
+    wrap(<JourneyBuilder />);
+    expect(await screen.findByText('3 of 3 variants')).toBeInTheDocument();
+    await userEvent.click(screen.getByText('ab_test'));
+    await userEvent.click(screen.getByRole('combobox', { name: 'Number of variants' }));
+    await userEvent.click(await screen.findByRole('option', { name: '2 variants (A, B)' }));
+    expect(await screen.findByText('2 of 2 variants')).toBeInTheDocument();
+    expect(screen.queryByText('Variant C')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+    await waitFor(() => expect(api.update).toHaveBeenCalled());
+    const steps = api.update.mock.calls.at(-1)![2].steps!;
+    expect(steps.find((s) => s.key === 'ab')!.variants).toEqual(['va', 'vb']);
+    expect(steps.some((s) => s.key === 'vc')).toBe(false);
+  });
+
+  it('names the winner by click rate (push taps, email clicks), and none without clicks', () => {
+    const v = (id: string, type: 'notification' | 'email', stats: object) => ({ ...block(id, type), stats });
+    const push = abResults([v('a', 'notification', { sent: 100, opened: 5 }), v('b', 'notification', { sent: 50, opened: 10 }), v('c', 'notification', { sent: 0 })]);
+    expect(push.rows.map((r) => [r.letter, r.sent, r.clicks, r.rate])).toEqual([['A', 100, 5, 5], ['B', 50, 10, 20], ['C', 0, 0, 0]]);
+    expect(push.winner).toBe('b');
+    // email counts link clicks, not opens
+    expect(abResults([v('a', 'email', { sent: 10, opened: 9, clicked: 1 }), v('b', 'email', { sent: 10, opened: 1, clicked: 3 })]).winner).toBe('b');
+    // a tie on rate goes to the variant with more clicks, then to the first
+    expect(abResults([v('a', 'notification', { sent: 10, opened: 1 }), v('b', 'notification', { sent: 20, opened: 2 })]).winner).toBe('b');
+    expect(abResults([v('a', 'notification', { sent: 10, opened: 1 }), v('b', 'notification', { sent: 10, opened: 1 })]).winner).toBe('a');
+    expect(abResults([v('a', 'notification', { sent: 10 }), v('b', 'notification', { sent: 10 })]).winner).toBeNull();
+    expect(abResults([v('a', 'notification', {}), v('b', 'notification', {})]).winner).toBeNull();
+  });
+
+  it('shows each variant\'s results, applies the best one and reloads the canvas', async () => {
+    search = 'id=j1';
+    const stats = { va: { sent: 40, opened: 4 }, vb: { sent: 40, opened: 12 }, vc: { sent: 40, opened: 8 } };
+    api.get.mockResolvedValueOnce(saved(abState(), stats));
+    const after = saved(abState()); after.steps = after.steps.filter((s) => !['ab', 'va', 'vc'].includes(s.key));
+    api.get.mockResolvedValue(after);
+    api.applyAbWinner.mockResolvedValue({} as Journey);
+    wrap(<JourneyBuilder />);
+
+    await userEvent.click(await screen.findByText('ab_test'));
+    const panel = screen.getByText('Results').closest('.journey-settings-panel') as HTMLElement;
+    expect(within(panel).getByText('30%')).toBeInTheDocument(); // B: 12 of 40
+    // only the leader can be applied, and only after confirming
+    const apply = within(panel).getAllByRole('button', { name: /Apply/ });
+    expect(apply).toHaveLength(1);
+    await userEvent.click(apply[0]!);
+    await userEvent.click(await screen.findByRole('button', { name: 'Keep B' }));
+    await waitFor(() => expect(api.applyAbWinner).toHaveBeenCalledWith('p1', 'j1', 'ab', 'vb'));
+    await waitFor(() => expect(screen.queryByText('ab_test')).not.toBeInTheDocument());
+    expect(screen.getByText(/Winner kept/)).toBeInTheDocument();
+  });
+
+  it('shows the results from a variant card too, and Apply is hidden until something was clicked', async () => {
+    search = 'id=j1';
+    api.get.mockResolvedValue(saved(abState(), { va: { sent: 5 }, vb: { sent: 5 }, vc: { sent: 5 } }));
+    wrap(<JourneyBuilder />);
+    const variants = await screen.findAllByText('notification');
+    await userEvent.click(variants[1]!);
+    const panel = screen.getByText('Results').closest('.journey-settings-panel') as HTMLElement;
+    expect(within(panel).getAllByText('0%')).toHaveLength(3);
+    expect(within(panel).queryByRole('button', { name: /Apply/ })).not.toBeInTheDocument();
+  });
+
+  it('a new variant can only be the same kind of message as the first one', async () => {
+    search = 'id=j1';
+    const s = abState(); s.branches.ab!.variants = s.branches.ab!.variants!.slice(0, 2); s.settings.ab = { maxVariants: '3' };
+    api.get.mockResolvedValue(saved(s, {}, 'paused'));
+    wrap(<JourneyBuilder />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Add variant' }));
+    const menu = await screen.findByRole('dialog', { name: 'Add a step' });
+    expect(within(menu).getAllByRole('button').map((b) => b.textContent).filter((t) => t && !t.includes('×'))).toEqual([expect.stringContaining('Push notification')]);
+    expect(within(menu).queryByText('Email template')).not.toBeInTheDocument();
+    expect(within(menu).queryByText('Web push notification')).not.toBeInTheDocument();
+    expect(within(menu).queryByText('ACTIONS')).not.toBeInTheDocument();
+  });
+
+  it('a fresh A/B test offers the three message kinds, and is only offered on the main path', async () => {
+    wrap(<JourneyBuilder />);
+    await userEvent.click(screen.getAllByRole('button', { name: 'Add journey step' })[0]!);
+    await userEvent.click(within(await screen.findByRole('dialog', { name: 'Add a step' })).getByText('A/B test'));
+    await userEvent.click(await screen.findByRole('button', { name: 'Add variant' }));
+    const menu = await screen.findByRole('dialog', { name: 'Add a step' });
+    expect(['Email template', 'Push notification', 'Web push notification'].every((t) => within(menu).queryByText(t))).toBe(true);
+    expect(within(menu).queryByText('Wait')).not.toBeInTheDocument();
   });
 });

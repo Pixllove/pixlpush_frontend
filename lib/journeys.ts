@@ -6,13 +6,37 @@ import type { Journey, JourneyInput, JourneyStep } from "@/types/project";
  * one flat, ordered list of steps with forward jumps. This module converts between the two; nothing here
  * touches React or the network.
  */
-export type BlockType = "entrance" | "email" | "notification" | "web_notification" | "wait" | "condition" | "event" | "specific_time" | "repeat_journey" | "exit";
+export type BlockType = "entrance" | "email" | "notification" | "web_notification" | "wait" | "condition" | "event" | "specific_time" | "repeat_journey" | "ab_test" | "exit";
 /** The counters a card shows, as GET /journeys/:id reports them (the Entrance card uses `entered` / `unreachable`). */
 export type BlockStats = { waiting?: number; completed?: number; exitedEarly?: number; sent?: number; opened?: number; clicked?: number; paused?: number; deleted?: number; entered?: number; unreachable?: number };
 export type Block = { id: string; type: BlockType; title: string; description: string; sourceType?: BlockType; stats?: BlockStats };
 /** `lifecycle` and `audience` hold ids (of a Lifecycle Segment / Audience Group). */
 export type EntranceConfig = { lifecycle: string; audience: string; allUsers: boolean };
-export type Branches = Record<string, { yes: Block[]; no: Block[] }>;
+/** Yes/No paths under a condition; `variants` holds the message blocks of an A/B test block. */
+export type Branches = Record<string, { yes: Block[]; no: Block[]; variants?: Block[] }>;
+export type BranchSide = "yes" | "no" | "variants";
+export const MESSAGE_BLOCKS: BlockType[] = ["email", "notification", "web_notification"];
+const AB_LETTERS = "ABCDE";
+/** How many variants the builder allows for this test: their choice from 2 to 5, 2 when unset. */
+export const abMaxVariants = (own: Record<string, string> = {}) => Math.min(5, Math.max(2, Math.floor(Number(own.maxVariants) || 2)));
+
+/**
+ * One row per variant of an A/B test, and the variant to keep: the best click rate (a push tap,
+ * an email link click), a tie going to more clicks and then to the first. No clicks yet = no winner.
+ */
+export function abResults(variants: Block[]) {
+  const rows = variants.map((variant, index) => {
+    const sent = variant.stats?.sent ?? 0;
+    const clicks = (variant.type === "email" ? variant.stats?.clicked : variant.stats?.opened) ?? 0;
+    return { id: variant.id, letter: AB_LETTERS[index] ?? String(index + 1), sent, clicks, rate: sent ? Math.round((clicks / sent) * 100) : 0 };
+  });
+  const best = rows.reduce<(typeof rows)[number] | null>((top, row) => {
+    if (!top) return row;
+    const rate = (r: typeof row) => (r.sent ? r.clicks / r.sent : 0);
+    return rate(row) > rate(top) || (rate(row) === rate(top) && row.clicks > top.clicks) ? row : top;
+  }, null);
+  return { rows, winner: best && best.clicks > 0 ? best.id : null };
+}
 /** What the settings panel of each block holds, keyed by block id. */
 export type BlockSettings = Record<string, Record<string, string>>;
 export type BuilderStatus = "Draft" | "Running" | "Paused" | "Stopped";
@@ -163,6 +187,7 @@ export function toJourneyInput(state: BuilderState): JourneyInput {
       return { type: "repeat", key: block.id, count, amount, unit: (own.unit as JourneyStep["unit"]) || "days", meta };
     }
     if (block.type === "exit") return { type: "exit", key: block.id, meta };
+    if (block.type === "ab_test") return { type: "abtest", key: block.id, variants: [], meta };
 
     if (block.type === "event") {
       const event = own.event?.trim();
@@ -196,6 +221,25 @@ export function toJourneyInput(state: BuilderState): JourneyInput {
     const drawnAbove = state.blocks[state.blocks.indexOf(block) - 1];
     const step = emit(block, drawnAbove);
     steps.push(step);
+    if (block.type === "ab_test") {
+      // each user gets one variant; whichever it is, they continue with the block after the test
+      const variants = runnable(state.branches[block.id]?.variants ?? []);
+      if (variants.length < 2 || variants.length > 5) throw new JourneyIncomplete(`Add 2 to 5 variants to "${block.title}".`);
+      if (variants.some((variant) => variant.type !== variants[0]!.type || !MESSAGE_BLOCKS.includes(variant.type))) {
+        throw new JourneyIncomplete(`All variants of "${block.title}" must be the same kind of message.`);
+      }
+      const max = abMaxVariants(settings[block.id]);
+      if (variants.length > max) {
+        throw new JourneyIncomplete(`"${block.title}" has ${variants.length} variants but is set to ${max}. Remove some or raise the number of variants.`);
+      }
+      step.variants = variants.map((variant) => variant.id);
+      const after = root[index + 1]?.id ?? null;
+      for (const variant of variants) {
+        const variantStep = emit(variant, block);
+        steps.push({ ...variantStep, next: after, meta: { ...variantStep.meta, variantOf: block.id } });
+      }
+      return;
+    }
     if (block.type !== "condition" && block.type !== "event") return;
 
     const after = root[index + 1]?.id ?? null; // where both branches meet again
@@ -233,6 +277,7 @@ const TITLES: Record<JourneyStep["type"], [BlockType, string, string]> = {
   delay: ["wait", "Wait", "Pause before the next step."],
   condition: ["condition", "Condition", "Split subscribers into Yes and No paths."],
   repeat: ["repeat_journey", "Repeat same journey", "Repeat this journey for a user."],
+  abtest: ["ab_test", "A/B test", "Send each user one of 2 to 5 messages, then keep the best."],
   exit: ["exit", EXIT.title, EXIT.description],
 };
 
@@ -242,9 +287,11 @@ export function fromJourney(journey: Journey): BuilderState & { status: BuilderS
   const branches: Branches = {};
   const settings: BlockSettings = {};
   const conditionValues: Record<string, string[]> = {};
+  // a variant whose test was applied (removed) is drawn as a plain block where the test was
+  const tests = new Set(journey.steps.filter((step) => step.type === "abtest").map((step) => step.key));
 
   for (const step of journey.steps) {
-    const meta = (step.meta ?? {}) as { block?: BlockType; title?: string; settings?: Record<string, string>; branchOf?: string; branch?: "yes" | "no"; rules?: string[] };
+    const meta = (step.meta ?? {}) as { block?: BlockType; title?: string; settings?: Record<string, string>; branchOf?: string; branch?: "yes" | "no"; variantOf?: string; rules?: string[] };
     const [type, title, description] = TITLES[step.type];
     const blockType = meta.block ?? (step.type === "push" && step.channel === "web" ? "web_notification" : step.type === "delay" && (step.time || step.until) ? "specific_time" : type);
     const block: Block = { id: step.key, type: blockType, title: meta.title ?? title, description: blockType === "event" ? "Branch subscribers based on a tracked event." : description, stats: step.stats };
@@ -261,7 +308,10 @@ export function fromJourney(journey: Journey): BuilderState & { status: BuilderS
         : {}),
     };
     if (meta.rules?.length) conditionValues[block.id] = meta.rules.map((rule) => REACHABILITY_ALIASES[rule] ?? rule);
-    if (meta.branchOf && meta.branch) {
+    if (meta.variantOf && tests.has(meta.variantOf)) {
+      branches[meta.variantOf] ??= { yes: [], no: [] };
+      (branches[meta.variantOf].variants ??= []).push(block);
+    } else if (meta.branchOf && meta.branch) {
       branches[meta.branchOf] ??= { yes: [], no: [] };
       branches[meta.branchOf][meta.branch].push(block);
     } else blocks.push(block);
