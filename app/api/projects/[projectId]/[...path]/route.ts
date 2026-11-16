@@ -7,6 +7,8 @@ const ALLOWED = [
   "restore",
   "logo",
   "firebase",
+  // Direct Apple Push for iOS apps without Firebase.
+  "apns",
   // Every integration: /integrations and /integrations/:provider/... (HubSpot, Salesforce, Pipedrive, ...).
   "integrations",
   "onboarding",
@@ -37,6 +39,8 @@ const ALLOWED = [
   "email-campaigns",
   "email-deliveries",
   "journeys",
+  // Pop-ups, embedded forms and promotions.
+  "forms",
   "analytics",
   // Home AI workspace: /assistants, /context, /business-context,
   // /business-context/analyze, /chat, /conversations and /flows/:flowId/draft.
