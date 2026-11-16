@@ -2,6 +2,7 @@
 // from Packagist on every build (scripts/sync-sdk-versions.mjs).
 
 import versions from "../sdk-versions.json";
+import { fence } from "../prompt-kit";
 
 export const SDK_VERSION = versions.php;
 export const PACKAGE = "pixlpush/pixlpush-php";
@@ -355,3 +356,84 @@ export const troubleshooting = [
   ["Nothing sent from a queue worker or Octane", "Long-running processes never end the request.", "Laravel flushes for you; elsewhere call flush() after each job or request."],
   ["Nothing sent, isEnabled() is false", "The sdkKey is empty (env var not loaded, config cached before it was set).", "Set PIXLPUSH_SDK_KEY; in Laravel run php artisan config:clear."],
 ];
+
+/** Setup prompt for coding agents. Built from the same snippets the guides render, so it cannot drift from them. */
+export const aiPrompt = `You are a senior PHP engineer. Integrate the PixlPush PHP SDK (${PACKAGE} ${SDK_VERSION}) into this application: users and product events from the server, and optionally browser push on the pages it renders. Work like a careful reviewer is watching: small, focused changes that match the existing code.
+
+<goal>
+When you are done, the app creates one PixlPush client, gives every user a stable PixlPush id, identifies users on sign-up, login and profile changes, tracks its core events (webhooks idempotent), and passes the verification step below.
+</goal>
+
+<rules>
+1. Use ONLY the classes, options and methods in this prompt and its api_reference. Do not invent APIs. Do not set apiBaseUrl.
+2. Fit the codebase: follow its framework (Laravel, Symfony, CodeIgniter, Slim, Yii, Drupal, WordPress, plain PHP), container, config and naming conventions.
+3. One client per process, from configuration: the SDK key and identity secret come from environment variables, never hard-coded or committed.
+4. Privacy: the user id is a stable PixlPush id (Client::cuid(), stored with the user), never an email or a reused numeric id. Never send passwords, tokens or payment data as properties. Set emailConsent only from a real consent signal.
+5. Never let PixlPush break a request: keep the default non-strict mode in production (failures go to onError).
+6. Scope: do not refactor unrelated code or upgrade unrelated dependencies.
+7. Uncertainty: if something conflicts with these steps (several apps, unusual auth, long-running runtime), stop and ask one concise question instead of guessing.
+</rules>
+
+<workflow>
+Step 0 — Inspect, then plan. Before editing, report in a short list:
+- PHP version, framework and version, runtime (php-fpm, Octane, RoadRunner, Swoole, queue workers)
+- where users sign up, log in, change their profile and are deleted
+- payment or other webhooks that should become events
+- whether the app renders HTML pages (for optional browser push)
+- the files you intend to create or change
+Then proceed.
+
+Step 1 — Install:
+${fence("sh", code.install)}
+
+Step 2 — Configuration (placeholders; I will paste the key from PixlPush → Project settings → SDK keys):
+${fence("sh", code.env)}
+Create one client. Plain PHP:
+${fence("php", code.plain)}
+Laravel (auto-discovered):
+${fence("php", code.laravel)}
+Other frameworks: register PixlPush\\Client once in the container with the same options.
+
+Step 3 — A stable PixlPush id per user (migration plus sign-up):
+${fence("php", code.cuid)}
+
+Step 4 — Identity: after sign-up, login and profile changes.
+${fence("php", code.identify)}
+When an account is deleted:
+${fence("php", code.deleteUser)}
+
+Step 5 — Events: track the app's core actions (snake_case names, non-sensitive properties) where they complete. Prefer signed_up, checkout_started, purchase_completed, subscription_started and trial_started when the action exists.
+${fence("php", code.track)}
+Webhooks may arrive twice: pass a stored eventId.
+${fence("php", code.idempotent)}
+CLI scripts, queues and long-running workers: flush when a unit of work ends.
+${fence("php", code.flush)}
+
+Step 6 — Browser push (only if the app renders pages and I want push): add the web SDK to the main layout and serve the service worker.
+${fence("html", code.browser)}
+${fence("sh", code.worker)}
+${fence("html", code.button)}
+
+Step 7 — Verify:
+${fence("sh", code.verify)}
+Run the project's tests and static analysis and fix anything you introduced.
+</workflow>
+
+<acceptance_criteria>
+- One client per process, configured from the environment.
+- Every user has a stored PixlPush id; identify() runs on sign-up, login and profile changes.
+- Main conversion events are tracked; webhook events carry an eventId.
+- The verify command prints failed => 0, and test-user-1 appears in PixlPush → Users.
+- No secrets in the repo, no sensitive properties, no unrelated changes.
+</acceptance_criteria>
+
+<manual_steps>
+Do not attempt these. List them for me at the end:
+1. Create the SDK key in PixlPush and put it in the server environment.
+2. If identity verification is on, copy its secret into PIXLPUSH_IDENTITY_SECRET yourself.
+3. For browser push, choose the Website platform in PixlPush → Project settings → Push setup.
+</manual_steps>
+
+<final_report>
+End with: 1. Summary (two sentences). 2. Files changed (one line each). 3. Events tracked (name, where, properties). 4. Commands to run (migrations, composer). 5. Manual steps. 6. Open questions.
+</final_report>`;

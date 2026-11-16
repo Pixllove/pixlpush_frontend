@@ -45,7 +45,7 @@ const steps = [
 
 const cards = [
   { href: rn("quickstart"), icon: <BoltRounded />, title: "Quickstart", description: "From an empty app to a verified event." },
-  { href: rn("ai-setup"), icon: <AutoAwesomeRounded />, title: "AI agent setup", description: "One prompt for Cursor, Claude Code, Copilot and more." },
+  { href: rn("ai-setup"), icon: <AutoAwesomeRounded />, title: "AI agent setup", description: "A setup prompt for every SDK: Web, React Native, Flutter, PHP and WordPress." },
   { href: rn("all"), icon: <MenuBookRounded />, title: "All docs on one page", description: "Every guide in one scroll, for reading or printing." },
   { href: rn("firebase"), icon: <NotificationsActiveOutlined />, title: "Firebase & push setup", description: "Every file and key push needs, step by step." },
   { href: rn("sdk-keys"), icon: <KeyRounded />, title: "SDK keys", description: "Create, rotate, revoke, delete." },

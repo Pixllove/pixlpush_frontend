@@ -5,11 +5,12 @@ import NotificationsActiveOutlined from "@mui/icons-material/NotificationsActive
 import BoltRounded from "@mui/icons-material/BoltRounded";
 import { Box } from "@mui/material";
 import CodeBlock from "../CodeBlock";
+import { HowToUseSection, PromptSection } from "../AiSetup";
 import CodeTabs from "../CodeTabs";
 import { Body, Callout, Checklist, DataTable, Expect, LinkCard, List, Section, Step, SubHeading } from "../DocsPrimitives";
 import { LinkBox } from "../links";
 import { guideHref } from "../registry";
-import { aiPrompt, code, configOptions, installCommands, pushInstallCommands } from "./content";
+import { code, configOptions, installCommands, pushInstallCommands } from "./content";
 
 export type GuideProps = { base: string };
 const A = ({ href, children }: { href: string; children: ReactNode }) => <LinkBox href={href} sx={{ color: "inherit" }}>{children}</LinkBox>;
@@ -108,10 +109,7 @@ export function Quickstart({ base }: GuideProps) {
 
 export function AiSetup({ base }: GuideProps) {
   return <>
-    <Section id="prompt" title="The prompt">
-      <Body>Copy this into Claude Code, Cursor, GitHub Copilot, Codex, Windsurf, Gemini CLI, Cline or any coding agent, from the root of your app. It uses the same code as the <A href={rn(base, "quickstart")}>Quickstart</A>.</Body>
-      <CodeBlock code={aiPrompt} language="Markdown" download="pixlpush-setup-prompt.md" filename="pixlpush-setup-prompt.md" lineNumbers={false} maxHeight={520} wrap />
-    </Section>
+    <PromptSection platformId="react-native" base={base} intro={<>Copy this into Claude Code, Cursor, GitHub Copilot, Codex, Windsurf, Gemini CLI, Cline or any coding agent, from the root of your app. It uses the same code as the <A href={rn(base, "quickstart")}>Quickstart</A>.</>} />
     <Section id="outcome" title="After it finishes: what to check in your diff">
       <Body>Before you merge, compare the agent’s changes with this list. Every change it makes should be one of these. Anything else, like changed prices, copy or purchase logic, was not asked for: reject it.</Body>
       <DataTable code={false} headers={["Where", "What you’ll see", "Why"]} rows={[
@@ -131,16 +129,7 @@ export function AiSetup({ base }: GuideProps) {
         "The verify script prints failed: 0, remaining: 0, and qa-user-001 appears in PixlPush → Users.",
       ]} />
     </Section>
-    <Section id="how" title="How to use it">
-      <DataTable code={false} headers={["Agent", "Where to paste it"]} rows={[
-        ["Claude Code", "Run claude in the project root and paste it, or save it as CLAUDE.md."],
-        ["Cursor", "Agent mode in chat, or save it under .cursor/rules/."],
-        ["GitHub Copilot", "Copilot Chat in agent mode, or .github/copilot-instructions.md."],
-        ["Codex / Gemini CLI", "Paste it into the CLI session, or save it as AGENTS.md / GEMINI.md."],
-        ["Windsurf / Cline / others", "Paste it into the agent chat with file editing enabled."],
-      ]} />
-      <List ordered items={["Open your app’s repository in the agent (agent or edit mode, not plain chat).", "Paste the prompt and let it inspect the project first.", "Review the diff, paste your development SDK key, and run the verify script."]} />
-    </Section>
+    <HowToUseSection steps={["Open your app’s repository in the agent (agent or edit mode, not plain chat).", "Paste the prompt and let it inspect the project first.", "Review the diff, paste your development SDK key, and run the verify script."]} />
     <Section id="manual" title="What you do by hand">
       <Body>The agent writes the push code but can’t use the Firebase, Apple or PixlPush consoles. Follow <A href={rn(base, "firebase")}>Firebase & push setup</A> to create <code>google-services.json</code>, <code>GoogleService-Info.plist</code>, the APNs key and the service-account JSON.</Body>
       <Callout tone="danger" title="Never give the agent your secrets">Upload the service-account JSON and the <code>.p8</code> key yourself. They never belong in the repo or the app.</Callout>

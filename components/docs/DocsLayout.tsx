@@ -6,7 +6,6 @@ import { usePathname, useRouter } from "next/navigation";
 import CloseRounded from "@mui/icons-material/CloseRounded";
 import MenuRounded from "@mui/icons-material/MenuRounded";
 import SearchRounded from "@mui/icons-material/SearchRounded";
-import AutoAwesomeRounded from "@mui/icons-material/AutoAwesomeRounded";
 import { Box, Button, Drawer, IconButton, ListSubheader, MenuItem, Select, Stack, Typography } from "@mui/material";
 import { tokens } from "@/lib/theme";
 import DocsSearchDialog from "./DocsSearchDialog";
@@ -39,7 +38,7 @@ function GuideNav({ base, platformId, pathname, onNavigate }: { base: string; pl
     {platform.groups?.map((group) => <Box key={group} sx={{ mb: 2.5 }}>
       <Typography component="h2" sx={{ px: 1.25, mb: .75, color: tokens.textMuted, fontSize: "var(--fs-11)", fontWeight: 600, letterSpacing: "var(--ls-overline)", textTransform: "uppercase" }}>{group}</Typography>
       <Stack component="ul" gap={.25} sx={{ m: 0, p: 0, listStyle: "none" }}>
-        {platform.guides?.filter((guide) => guide.group === group && (guide.slug !== "ai-setup" || pathname === guideHref(base, platform.id, guide.slug))).map((guide) => {
+        {platform.guides?.filter((guide) => guide.group === group).map((guide) => {
           const href = guideHref(base, platform.id, guide.slug);
           const current = pathname === href;
           return <li key={guide.slug}><Box component={NextLink} href={href} onClick={onNavigate} aria-current={current ? "page" : undefined}
@@ -79,10 +78,6 @@ export default function DocsLayout({ base, variant, children }: { base: string; 
       <Typography component={NextLink} href={base === "/docs" ? "/docs" : guideHref(base, platformId)} sx={{ display: { xs: "none", sm: "block" }, color: tokens.text, fontWeight: 600, fontSize: "var(--fs-14)", textDecoration: "none", whiteSpace: "nowrap" }}>Developer docs</Typography>
       <Stack direction="row" alignItems="stretch" gap={1.5}>
       <Box sx={{ display: { xs: "none", md: "flex" } }}><PlatformSelect base={base} current={platformId} /></Box>
-      {(platformId === "react-native" || platformId === "web") && pathname !== guideHref(base, platformId, "ai-setup") && <Button component={NextLink} href={guideHref(base, platformId, "ai-setup")} startIcon={<AutoAwesomeRounded />} variant="contained" className="docs-ai-shine"
-        sx={{ position: "relative", overflow: "hidden", minHeight: 0, py: 0, px: { xs: 1.25, sm: 1.75 }, whiteSpace: "nowrap", background: "linear-gradient(135deg,#6d28d9,#9333ea 55%,#db2777)", "&:hover": { background: "linear-gradient(135deg,#5b21b6,#7e22ce 55%,#be185d)" } }}>
-        <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>AI setup prompt</Box><Box component="span" sx={{ display: { sm: "none" } }}>AI</Box>
-      </Button>}
       </Stack>
       <Button className="docs-search-button" onClick={openSearch} aria-label="Search documentation" aria-keyshortcuts="Meta+K Control+K /" variant="outlined" startIcon={<SearchRounded />}
         endIcon={<Box component="kbd" sx={{ display: { xs: "none", sm: "inline" }, fontFamily: "var(--pp-mono)", fontSize: "var(--fs-11)", color: tokens.textMuted }}>{shortcut}</Box>}

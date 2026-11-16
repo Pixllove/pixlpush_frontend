@@ -2,6 +2,7 @@
 // from WordPress.org on every build (scripts/sync-sdk-versions.mjs).
 
 import versions from "../sdk-versions.json";
+import { fence } from "../prompt-kit";
 
 export const PLUGIN_VERSION = versions.wordpress;
 
@@ -85,3 +86,73 @@ export const troubleshooting = [
   ["Nothing reaches PixlPush from the server", "Your host blocks outbound HTTPS from PHP.", "Turn on Debug logging and check wp-content/debug.log (WP_DEBUG_LOG)."],
   ["Push works on desktop, not on the phone", "Mobile Safari needs the site on the Home Screen; some Android browsers block notifications.", "Test in Chrome on Android, or install the site on iOS 16.4+."],
 ];
+
+/** Setup prompt for coding agents. Built from the same snippets and settings the guides render. */
+export const aiPrompt = `You are a senior WordPress engineer. Add PixlPush (WordPress plugin "pixlpush" ${PLUGIN_VERSION}) to this site: web push, page views, identity for logged-in users, and the site's own custom events. Work like a careful reviewer is watching: small, focused changes that match the existing theme or plugin code.
+
+<goal>
+When you are done, the PixlPush plugin is installed and active, a "Turn on notifications" button is placed where it fits the site, custom actions that matter for the business are tracked, and the service worker check below passes.
+</goal>
+
+<plugin_facts>
+- The plugin loads the PixlPush web SDK on every page, serves the service worker at /?pixlpush_sw=1, identifies logged-in users and logs them out of PixlPush on logout.
+- It already tracks these events; never add them yourself:
+${automaticEvents.map(([name, where, what]) => `  - ${name} (${where}): ${what}`).join("\n")}
+- Settings live in Settings → PixlPush (wp-admin). They are entered by a person, not by code.
+- Server helpers: pixlpush_client() returns the configured PHP client (null when not configured); pixlpush_user_id($wpUserId) returns that user's PixlPush id.
+</plugin_facts>
+
+<rules>
+1. Use ONLY the plugin, shortcode, helpers and methods in this prompt and its api_reference. Do not invent hooks or options.
+2. Put custom code in the child theme's functions.php or a small site plugin (mu-plugin), never in the PixlPush plugin or a parent theme.
+3. Always guard server calls: if ($pixlpush = pixlpush_client()) { … } so the site works while PixlPush is not configured.
+4. Privacy: never send passwords, tokens, payment details or other sensitive values as properties.
+5. Scope: do not change unrelated templates, plugins or caching rules beyond the service-worker exclusion below.
+6. Uncertainty: if something conflicts with these steps (multisite, headless WordPress, a page builder without shortcodes), stop and ask one concise question instead of guessing.
+</rules>
+
+<workflow>
+Step 0 — Inspect, then plan. Before editing, report in a short list:
+- WordPress version, active theme (child theme or not), WooCommerce or membership/LMS plugins
+- caching, security or maintenance plugins (they can block the service worker)
+- where a notifications button fits (header, footer, account page)
+- custom actions worth tracking (forms, courses, bookings, downloads)
+- the files you intend to create or change
+Then proceed.
+
+Step 1 — Install and activate (WP-CLI if available; otherwise tell me to use Plugins → Add New → "PixlPush"):
+${fence("sh", "wp plugin install pixlpush --activate")}
+
+Step 2 — The button. Place the shortcode in a template, block or widget:
+${fence("text", code.shortcodeFull)}
+Or turn an existing link or button into one:
+${fence("html", code.ownButton)}
+
+Step 3 — Custom events from the server (child theme or site plugin):
+${fence("php", code.phpTrack)}
+Extra user fields:
+${fence("php", code.phpIdentify)}
+From the browser:
+${fence("html", code.jsTrack)}
+
+Step 4 — Service worker. If a caching, security or maintenance plugin is active, exclude /?pixlpush_sw=1 from it. Then check it returns JavaScript (not HTML):
+${fence("sh", code.swCheck)}
+</workflow>
+
+<acceptance_criteria>
+- The plugin is active and the button renders on the chosen pages.
+- Custom events use snake_case names, are guarded with pixlpush_client(), and do not duplicate the automatic ones.
+- /?pixlpush_sw=1 returns JavaScript with HTTP 200.
+- No changes to the PixlPush plugin files, no sensitive properties, no unrelated changes.
+</acceptance_criteria>
+
+<manual_steps>
+Do not attempt these. List them for me at the end:
+1. Settings → PixlPush: paste the SDK key (and the identity verification secret if it is on in PixlPush).
+2. PixlPush → Project settings → Push setup: choose Website.
+3. Visit the site, click the button, allow notifications and send a test push.
+</manual_steps>
+
+<final_report>
+End with: 1. Summary (two sentences). 2. Files changed (one line each). 3. Events tracked (name, where, properties). 4. Manual steps. 5. Open questions.
+</final_report>`;

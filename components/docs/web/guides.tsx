@@ -7,12 +7,13 @@ import CodeRounded from "@mui/icons-material/CodeRounded";
 import FingerprintRounded from "@mui/icons-material/FingerprintRounded";
 import NotificationsActiveOutlined from "@mui/icons-material/NotificationsActiveOutlined";
 import CodeBlock from "../CodeBlock";
+import { HowToUseSection, PromptSection } from "../AiSetup";
 import CodeTabs from "../CodeTabs";
 import { Body, Callout, Checklist, DataTable, Expect, LinkCard, List, Section, Step } from "../DocsPrimitives";
 import { SuggestedEvents } from "../SuggestedEvents";
 import { LinkBox } from "../links";
 import { guideHref } from "../registry";
-import { aiPrompt, code, configOptions, errorCodes, installCommands, methods, PACKAGE, SDK_VERSION, troubleshooting } from "./content";
+import { code, configOptions, errorCodes, installCommands, methods, PACKAGE, SDK_VERSION, troubleshooting } from "./content";
 
 export type WebGuideProps = { base: string };
 const A = ({ href, children }: { href: string; children: ReactNode }) => <LinkBox href={href} sx={{ color: "inherit" }}>{children}</LinkBox>;
@@ -132,10 +133,7 @@ export function Quickstart({ base }: WebGuideProps) {
 
 export function AiSetup({ base }: WebGuideProps) {
   return <>
-    <Section id="prompt" title="The prompt">
-      <Body>Copy this into Claude Code, Codex, Cursor, GitHub Copilot, Gemini CLI, Windsurf, Cline or any coding agent, from the root of your website’s repository. It detects your framework, uses the same code as these guides, and lists only real SDK methods, so the agent doesn’t invent APIs.</Body>
-      <CodeBlock code={aiPrompt} language="Markdown" download="pixlpush-web-setup-prompt.md" filename="pixlpush-web-setup-prompt.md" lineNumbers={false} maxHeight={520} wrap />
-    </Section>
+    <PromptSection platformId="web" base={base} intro={<>Copy this into Claude Code, Codex, Cursor, GitHub Copilot, Gemini CLI, Windsurf, Cline or any coding agent, from the root of your website’s repository. It detects your framework, uses the same code as these guides, and lists only real SDK methods, so the agent doesn’t invent APIs.</>} />
     <Section id="outcome" title="After it finishes: what to check in your diff">
       <Body>Before you merge, compare the agent’s changes with this list. Every change it makes should be one of these. Anything else, like changed prices, copy or logic, was not asked for: reject it.</Body>
       <DataTable code={false} headers={["Where", "What you’ll see", "Why"]} rows={[
@@ -157,17 +155,7 @@ export function AiSetup({ base }: WebGuideProps) {
         "Type check, lint and build pass.",
       ]} />
     </Section>
-    <Section id="how" title="How to use it">
-      <DataTable code={false} headers={["Agent", "Where to paste it"]} rows={[
-        ["Claude Code", "Run claude in the project root and paste it, or save it as CLAUDE.md."],
-        ["Codex (CLI, IDE or cloud)", "Paste it into the session, or save it as AGENTS.md in the repo root."],
-        ["Cursor", "Agent mode in chat, or save it under .cursor/rules/."],
-        ["GitHub Copilot", "Copilot Chat in agent mode, or .github/copilot-instructions.md."],
-        ["Gemini CLI", "Paste it into the session, or save it as GEMINI.md."],
-        ["Windsurf / Cline / others", "Paste it into the agent chat with file editing enabled."],
-      ]} />
-      <List ordered items={["Open your website’s repository in the agent (agent or edit mode, not plain chat).", "Paste the prompt. The agent first reports what it found (framework, auth, toasts, CSP) and its plan.", "Answer any question it asks, review the diff, then paste your development SDK key.", <>Run the site, click the notifications button, and follow <A href={web(base, "production")}>Verify &amp; ship</A>.</>]} />
-    </Section>
+    <HowToUseSection steps={["Open your website’s repository in the agent (agent or edit mode, not plain chat).", "Paste the prompt. The agent first reports what it found (framework, auth, toasts, CSP) and its plan.", "Answer any question it asks, review the diff, then paste your development SDK key.", <>Run the site, click the notifications button, and follow <A href={web(base, "production")}>Verify &amp; ship</A>.</>]} />
     <Section id="manual" title="What you do by hand">
       <List items={["Create the SDK key in PixlPush and paste it into your env file.", "Choose the Website platform in Project settings (no Firebase needed).", "If you use identity verification, put the secret in your server’s environment yourself.", "Click Allow on the permission prompt and send a test push."]} />
       <Callout tone="danger" title="Never give the agent secrets">The SDK key is public, but an identity-verification secret is not. Add it to your server environment yourself.</Callout>

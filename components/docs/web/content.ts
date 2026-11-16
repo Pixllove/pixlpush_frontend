@@ -424,16 +424,6 @@ When you are done, the site initializes PixlPush once on the client, identifies 
 - Push needs a service worker file served from the site root at /pixlpush-sw.js. The SDK registers it under its own scope (/pixlpush/), so an existing service worker (PWA, caching) is untouched.
 </sdk_facts>
 
-<api_whitelist>
-Use only these. Do not invent methods or options.
-- init(config) · getStatus() · flush() · onError(fn)
-- identify({ externalUserId, email?, name?, emailConsent?, userHash?, properties? }) · updateUser(fields) · reset() · deleteUser()
-- track(name, properties?) · setConsent({ analytics?, email?, push? })
-- isPushSupported() · getPushPermission() · requestPushPermission() · unsubscribePush() · onPushPermissionChange(fn)
-- onNotificationReceived(fn) · onNotificationOpened(fn) · openNotification(notification)
-- Config options: sdkKey, projectId, environment, debug, notificationIcon, serviceWorkerPath, serviceWorkerScope, trackPageViews, autoPush.
-</api_whitelist>
-
 <rules>
 1. Fit the codebase: follow its framework, language (TS/JS), folder layout, naming, formatting, state and auth patterns. Adapt file paths; keep behaviour identical.
 2. Client only: initialize in client code (React provider / Vue plugin / Angular provider / onMount). Never call the SDK at module top level of a server component or SSR-only file.

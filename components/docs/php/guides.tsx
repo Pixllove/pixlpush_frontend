@@ -5,6 +5,7 @@ import BoltRounded from "@mui/icons-material/BoltRounded";
 import FingerprintRounded from "@mui/icons-material/FingerprintRounded";
 import NotificationsActiveOutlined from "@mui/icons-material/NotificationsActiveOutlined";
 import CodeBlock from "../CodeBlock";
+import { AiSetupGuide } from "../AiSetup";
 import CodeTabs from "../CodeTabs";
 import { Body, Callout, Checklist, DataTable, Expect, LinkCard, List, Section, Step } from "../DocsPrimitives";
 import { LinkBox } from "../links";
@@ -333,9 +334,18 @@ export function Reference({ base }: PhpGuideProps) {
   </>;
 }
 
+function AiSetup({ base }: PhpGuideProps) {
+  return <AiSetupGuide platformId="php" base={base}
+    intro="Copy this into Claude Code, Codex, Cursor, GitHub Copilot, Gemini CLI or any coding agent, from the root of your PHP app. It detects your framework (Laravel, Symfony, plain PHP and more), uses the same code as these guides and lists only real SDK methods."
+    steps={["Open your app’s repository in the agent (agent or edit mode, not plain chat).", "Paste the prompt. The agent first reports your framework, runtime, auth and webhooks, and its plan.", "Review the diff, run the migration it adds, put the SDK key in your environment and run the verify command."]}
+    manual={["Create the SDK key in PixlPush and put it in the server environment (PIXLPUSH_SDK_KEY).", "If identity verification is on, copy its secret into PIXLPUSH_IDENTITY_SECRET yourself.", "For browser push, choose the Website platform in PixlPush → Push setup."]}
+    secret="The SDK key and the identity-verification secret belong in your server environment, not in the repo." />;
+}
+
 export const phpGuides: Record<string, ComponentType<PhpGuideProps>> = {
   "": Overview,
   quickstart: Quickstart,
+  "ai-setup": AiSetup,
   installation: Installation,
   laravel: Laravel,
   frameworks: Frameworks,

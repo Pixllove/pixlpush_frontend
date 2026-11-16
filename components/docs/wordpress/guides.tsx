@@ -5,6 +5,7 @@ import BoltRounded from "@mui/icons-material/BoltRounded";
 import NotificationsActiveOutlined from "@mui/icons-material/NotificationsActiveOutlined";
 import ShoppingCartOutlined from "@mui/icons-material/ShoppingCartOutlined";
 import CodeBlock from "../CodeBlock";
+import { AiSetupGuide } from "../AiSetup";
 import { Body, Callout, Checklist, DataTable, Expect, LinkCard, List, Section, Step } from "../DocsPrimitives";
 import { LinkBox } from "../links";
 import { guideHref } from "../registry";
@@ -208,9 +209,18 @@ export function Reference({ base }: WordPressGuideProps) {
   </>;
 }
 
+function AiSetup({ base }: WordPressGuideProps) {
+  return <AiSetupGuide platformId="wordpress" base={base}
+    intro="The plugin needs no code. Use this prompt when you want an agent to place the subscribe button in your theme and track your site’s own events (forms, courses, bookings) from a child theme or a small site plugin."
+    steps={["Open your site’s theme or plugin code in the agent (agent or edit mode, not plain chat).", "Paste the prompt. The agent first reports your theme, plugins and caching, and its plan.", "Review the diff, then paste the SDK key in Settings → PixlPush yourself."]}
+    manual={["Settings → PixlPush: paste the SDK key, and the identity verification secret if it is on.", "PixlPush → Project settings → Push setup: choose Website.", "Visit the site, click the button, allow notifications and send a test push."]}
+    secret="Paste the SDK key and the identity secret in Settings → PixlPush yourself; never in theme files." />;
+}
+
 export const wordpressGuides: Record<string, ComponentType<WordPressGuideProps>> = {
   "": Overview,
   quickstart: Quickstart,
+  "ai-setup": AiSetup,
   settings: Settings,
   "subscribe-button": SubscribeButton,
   identity: Identity,

@@ -2,6 +2,7 @@
 // from pub.dev on every build (scripts/sync-sdk-versions.mjs).
 
 import versions from "../sdk-versions.json";
+import { fence } from "../prompt-kit";
 
 export const SDK_VERSION = versions.flutter;
 export const REVIEWED_AGAINST = `pixlpush Flutter SDK ${SDK_VERSION}`;
@@ -206,3 +207,81 @@ export const errorCodes: [string, string, string][] = [
   ["QUEUE_FULL", "The offline queue reached maxQueueSize.", "Flush/reconnect or increase the limit deliberately."],
   ["STORAGE_ERROR", "Persistent storage failed.", "Check platform storage configuration and available space."],
 ];
+
+/** Setup prompt for coding agents. Built from the same snippets the guides render, so it cannot drift from them. */
+export const aiPrompt = `You are a senior Flutter engineer. Integrate the PixlPush Flutter SDK (pixlpush ${SDK_VERSION}) into this app: analytics, user identity and push notifications. Work like a careful reviewer is watching: small, focused changes that match the existing code.
+
+<goal>
+When you are done, the app configures PixlPush once at startup, identifies users on sign-in, resets on sign-out, tracks its core product events, receives push through Firebase Cloud Messaging (or APNs on iOS without Firebase), and passes the verification step below.
+</goal>
+
+<rules>
+1. Use ONLY the classes, options and methods in this prompt and its api_reference. Do not invent APIs. Do not set apiBaseUrl or sdkVersion.
+2. Fit the codebase: follow its state management (Provider, Riverpod, Bloc, GetX…), folder layout, naming and lints. Adapt file paths; keep behaviour identical.
+3. Secrets: only the public SDK key and project ID go in the app, through --dart-define. Never add a Firebase service-account JSON, an APNs .p8 key or a dashboard token to the repo or the app.
+4. Privacy: externalUserId is the stable internal user ID, never an email. Never send passwords, tokens or payment data as properties.
+5. Permission: ask for push permission from onboarding or a settings button, not silently at launch, unless the app already does so.
+6. Scope: do not refactor unrelated code, upgrade unrelated dependencies, or touch the Firebase, Apple or PixlPush consoles.
+7. Uncertainty: if the project conflicts with these steps (no clear auth flow, flavors, an existing FCM handler), stop and ask one concise question instead of guessing.
+</rules>
+
+<workflow>
+Step 0 — Inspect, then plan. Before editing, report in a short list:
+- Flutter and Dart versions, platforms built (android, ios, web)
+- whether firebase_core / firebase_messaging are already used, and how
+- the main() entry point and the state management in use
+- where sign-in and sign-out happen
+- the files you intend to create or change
+Then proceed.
+
+Step 1 — Install. Add to pubspec.yaml, then run flutter pub get:
+${fence("yaml", code.install)}
+
+Step 2 — Public config through --dart-define (placeholder; I will paste the key from PixlPush → Project settings → SDK keys):
+${fence("dart", code.key)}
+${fence("sh", code.localDevelopment)}
+
+Step 3 — Configure once → lib/services/pixlpush.dart
+${fence("dart", code.initialize)}
+Call it from main():
+${fence("dart", code.main)}
+
+Step 4 — Identity: hook into the existing auth flow (identify after sign-in, await reset on sign-out).
+${fence("dart", code.identify)}
+
+Step 5 — Events: track the app's core actions (snake_case names, non-sensitive properties) next to the code that completes them. Prefer signed_up, paywall_viewed, checkout_started, purchase_completed and trial_started when the action exists; skip the ones the app does not have.
+${fence("dart", code.track)}
+If a consent prompt exists, forward its answers:
+${fence("dart", code.consent)}
+
+Step 6 — Push. The Firebase adapter owns notification display, token sync and taps:
+${fence("dart", code.permission)}
+${fence("dart", code.foreground)}
+Listeners and deep links (route with the app's own router):
+${fence("dart", code.deepLink)}
+
+Step 7 — Verify (debug builds only):
+${fence("dart", code.status)}
+${fence("dart", code.flush)}
+Run flutter analyze and the existing tests, and fix anything you introduced.
+</workflow>
+
+<acceptance_criteria>
+- configure() runs exactly once per launch, before runApp.
+- identify() runs after every sign-in; reset() is awaited on sign-out.
+- The app's main conversion events are tracked.
+- flush() reports failed: 0, remaining: 0, and the QA user appears in PixlPush → Users.
+- No secrets, no sensitive properties, no unrelated changes.
+</acceptance_criteria>
+
+<manual_steps>
+Do not attempt these. List them for me at the end:
+1. Firebase project → add the Android and iOS apps → place google-services.json and GoogleService-Info.plist (or run flutterfire configure).
+2. Apple Developer → APNs .p8 key → upload it to Firebase, or to PixlPush → Push setup → Apple Push for iOS without Firebase.
+3. Upload the Firebase service-account JSON in PixlPush → Project settings → Push setup.
+4. Paste the development SDK key; create a separate production key before release.
+</manual_steps>
+
+<final_report>
+End with: 1. Summary (two sentences). 2. Files changed (one line each). 3. Events tracked (name, file, properties). 4. Commands to run. 5. Manual steps. 6. Open questions.
+</final_report>`;

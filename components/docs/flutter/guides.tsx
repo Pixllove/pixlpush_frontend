@@ -5,6 +5,7 @@ import FingerprintRounded from "@mui/icons-material/FingerprintRounded";
 import NotificationsActiveOutlined from "@mui/icons-material/NotificationsActiveOutlined";
 import BoltRounded from "@mui/icons-material/BoltRounded";
 import CodeBlock from "../CodeBlock";
+import { AiSetupGuide } from "../AiSetup";
 import CodeTabs from "../CodeTabs";
 import { Body, Callout, Checklist, DataTable, Expect, LinkCard, List, Section, Step } from "../DocsPrimitives";
 import { LinkBox } from "../links";
@@ -457,9 +458,18 @@ export function Reference() {
   </>;
 }
 
+function AiSetup({ base }: FlutterGuideProps) {
+  return <AiSetupGuide platformId="flutter" base={base}
+    intro="Copy this into Claude Code, Codex, Cursor, GitHub Copilot, Gemini CLI or any coding agent, from the root of your Flutter app. It uses the same code as the Quickstart and lists only real SDK methods, so the agent doesn’t invent APIs."
+    steps={["Open your app’s repository in the agent (agent or edit mode, not plain chat).", "Paste the prompt. The agent first reports what it found (Firebase, state management, auth) and its plan.", "Review the diff, run it with your development SDK key through --dart-define, and check that flush() reports failed: 0."]}
+    manual={["Add the Android and iOS apps in Firebase and place their config files (or run flutterfire configure).", "Upload the APNs key to Firebase, or connect Apple Push in PixlPush → Push setup for iOS without Firebase.", "Upload the Firebase service-account JSON in PixlPush → Push setup.", "Create the SDK key in PixlPush and pass it with --dart-define."]}
+    secret="The service-account JSON and the .p8 key go to Firebase and PixlPush only, never into the repo or the app." />;
+}
+
 export const flutterGuides: Record<string, ComponentType<FlutterGuideProps>> = {
   "": Overview,
   quickstart: Quickstart,
+  "ai-setup": AiSetup,
   installation: Installation,
   "sdk-keys": SdkKeys,
   firebase: Firebase,
