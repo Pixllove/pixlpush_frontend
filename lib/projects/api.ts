@@ -32,6 +32,8 @@ import type {
   PlanName,
   CreatedSdkKey,
   EmailSettings,
+  ApnsSettings,
+  ApnsUpload,
   FirebaseSettings,
   IntegrationCredentials,
   IntegrationProvider,
@@ -155,6 +157,14 @@ export const firebaseApi = {
       BASE,
       "DELETE",
     ),
+};
+
+/** Direct Apple Push (APNs) for iOS apps without Firebase. Validated live with Apple before anything is stored. */
+export const apnsApi = {
+  get: (projectId: string) => authRequest<ApnsSettings>(at(projectId, "/apns"), undefined, BASE),
+  upload: (projectId: string, input: ApnsUpload) => authRequest<ApnsSettings>(at(projectId, "/apns"), input, BASE, "PUT"),
+  verify: (projectId: string) => authRequest<ApnsSettings>(at(projectId, "/apns/verify"), {}, BASE),
+  disconnect: (projectId: string) => authRequest<ApnsSettings>(at(projectId, "/apns"), {}, BASE, "DELETE"),
 };
 
 /** Durable setup progress for the active Project's onboarding guide. */

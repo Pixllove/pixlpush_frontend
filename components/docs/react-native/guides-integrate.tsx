@@ -124,6 +124,20 @@ export function Events({ base }: GuideProps) {
   </>;
 }
 
+const IOS_APNS_TOKEN = `import { Platform } from "react-native";
+import * as Notifications from "expo-notifications";
+import { PixlPush } from "@pixlpush/react-native";
+
+/** iOS app without Firebase: register the native APNs token with PixlPush. */
+export async function registerIosPush() {
+  if (Platform.OS !== "ios") return;
+  const { status } = await Notifications.requestPermissionsAsync();
+  if (status !== "granted") return;
+  // The native device token (hex), NOT getExpoPushTokenAsync().
+  const { data: token } = await Notifications.getDevicePushTokenAsync();
+  await PixlPush.updatePushToken(token, "apns", "granted");
+}`;
+
 export function Push({ base }: GuideProps) {
   return <>
     <Section id="how" title="How push works">
@@ -133,7 +147,7 @@ export function Push({ base }: GuideProps) {
         "PixlPush sends through FCM (FCM relays to APNs on iOS) with a pp_job_id in the data payload.",
         "A tap is reported back with that job ID, which attributes the open to the campaign or journey.",
       ]} />
-      <Callout tone="warning" title="Use native FCM tokens">PixlPush mobile push delivery uses tokens registered with provider <code>&quot;fcm&quot;</code>. Expo push tokens are not interchangeable with the native FCM token used by Firebase Messaging.</Callout>
+      <Callout tone="warning" title="Use native device tokens">Send the native FCM token with provider <code>&quot;fcm&quot;</code>, or, for an iOS app without Firebase, the native APNs device token with provider <code>&quot;apns&quot;</code> (<LinkBox href={rn(base, "push", "ios-without-firebase")} sx={{ color: "inherit" }}>iOS without Firebase</LinkBox>). Expo push tokens (<code>ExponentPushToken[…]</code>) work with neither.</Callout>
       <Body>Tokens rotate and can move between users on a shared device. Never use one as a user identifier.</Body>
     </Section>
     <Section id="listeners" title="Register listeners first">
@@ -188,7 +202,18 @@ export function Push({ base }: GuideProps) {
     <Section id="expo-notifications" title="Using expo-notifications">
       <Body>If <code>expo-notifications</code> is installed, the SDK also records taps from its response listener. For tokens, React Native Firebase is the supported path on both platforms. Without it, Android can still register its FCM device token:</Body>
       <CodeBlock code={code.expoToken} />
-      <Body>On iOS, use React Native Firebase for the supported FCM registration path rather than passing an Expo push token to PixlPush.</Body>
+      <Body>On iOS without Firebase, register the native APNs token instead: see <LinkBox href={rn(base, "push", "ios-without-firebase")} sx={{ color: "inherit" }}>iOS without Firebase</LinkBox>. Never pass an Expo push token to PixlPush.</Body>
+    </Section>
+    <Section id="ios-without-firebase" title="iOS without Firebase (APNs)">
+      <Body>If your iOS app does not include Firebase, PixlPush can send through Apple Push (APNs) directly. Connect your APNs key once in Project settings → Push setup → <b>Apple Push (iOS without Firebase)</b>: upload the <code>.p8</code> file from Apple Developer → Keys with its Key ID, your Team ID and the app’s bundle ID. Android apps still need Firebase.</Body>
+      <Body>Then send the native device token (hex) with provider <code>&quot;apns&quot;</code>:</Body>
+      <CodeBlock code={IOS_APNS_TOKEN} filename="src/notifications/register-ios-push.ts" />
+      <List items={[
+        "Development (Xcode) and TestFlight / App Store tokens both work; PixlPush picks the right Apple server per token.",
+        "The tap still reports the open: pp_job_id is at the top level of the APNs payload, where the SDK reads it.",
+        "Images: add a Notification Service Extension that downloads pp_image_url (PixlPush sets mutable-content).",
+        "Project settings → Push setup shows the number of iOS devices on the Apple Push card.",
+      ]} />
     </Section>
     <Section id="cli-module" title="React Native CLI adapter">
       <Body>A bare React Native CLI app can use Notifee or another local-notification library. Pass a <code>NotificationModule</code> to <code>configure()</code>; the adapter forwards display and response callbacks to the SDK. Do not call a click endpoint or a manual PixlPush open method.</Body>
@@ -206,7 +231,7 @@ export function Push({ base }: GuideProps) {
           "Logout: the former user no longer receives pushes on this device.",
         ]} />
       <SubHeading>Verify in PixlPush</SubHeading>
-      <Body>Project settings → Firebase / FCM shows the active device-token count under <b>Token sync</b>; send a test push to your QA user and confirm its open is counted.</Body>
+      <Body>Project settings → Push setup shows the Firebase device-token count under <b>Token sync</b> and the iOS device count on the Apple Push card; send a test push to your QA user and confirm its open is counted.</Body>
     </Section>
   </>;
 }

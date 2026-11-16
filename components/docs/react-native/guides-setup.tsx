@@ -389,7 +389,7 @@ export function Firebase({ base }: GuideProps) {
         ["“…not allowed to send messages via FCM”", "The account lacks the Firebase Cloud Messaging API Admin role.", "Add the role (step 5, Option A)."],
         ["API disabled / “has not been used”", "Firebase Cloud Messaging API is off for the project.", "Google Cloud → APIs & Services → enable “Firebase Cloud Messaging API”, then Re-check."],
         ["Message skipped: no_active_push_subscription", "That user has no active device token (or logged out on it).", "Open the app, allow notifications, syncPushToken()."],
-        ["Message failed: firebase_not_configured", "No service account connected.", "Do step 6."],
+        ["Message failed: push_not_configured", "No Firebase service account or APNs key connected for this device type.", "Do step 6, or connect APNs for iOS without Firebase."],
         ["Android build: “No matching client found for package name”", "applicationId ≠ the package registered in Firebase.", "Register the right package or fix applicationId."],
         ["Android build: “File google-services.json is missing”", "Wrong location or renamed file.", "Place it at android/app/google-services.json."],
         ["iOS crash in FirebaseApp.configure", "The plist isn’t in the app target.", "Re-add it with your target ticked."],

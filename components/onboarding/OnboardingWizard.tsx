@@ -18,6 +18,7 @@ import { toggleProjectPlatform } from '@/lib/project-platforms';
 import type { ProjectPlatform } from '@/types/project';
 import { authApi, authKeys } from '@/lib/auth/api';
 import { firebaseApi, onboardingApi, projectApi, projectKeys } from '@/lib/projects/api';
+import ApnsConnectDialog from '@/components/dashboard/ApnsConnectDialog';
 import { supportApi } from '@/lib/support/api';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
 import type { ApiError } from '@/types/auth';
@@ -201,8 +202,9 @@ export default function OnboardingWizard() {
     ? websiteSdkOption
     : (mobileSdkOptions.find((option) => option.id === selectedSdk) ?? mobileSdkOptions[0]);
   const sdkPrompt = isWebsiteSurface ? websitePromptFor(state.projectName) : sdkPromptFor(selectedSdkOption.id, state.projectName);
-  // Push step: mobile needs Firebase, a website-only Project needs nothing.
-  const pushReady = isPushReady(state.platforms, firebaseQuery.data?.status);
+  // Push step: mobile needs Firebase or an APNs key (iOS without Firebase); a website-only Project needs nothing.
+  const apnsConnected = firebaseQuery.data?.apns?.status === 'connected';
+  const pushReady = isPushReady(state.platforms, firebaseQuery.data?.status, firebaseQuery.data?.apns?.status);
   const domain = state.domain.trim().toLowerCase();
   const domainOwnershipVerified = Boolean(
     domain && sendingDomainsQuery.data?.some(
@@ -232,6 +234,12 @@ export default function OnboardingWizard() {
   const patch = (value: Partial<OnboardingState>) => {
     localUserChange.current = true;
     setState((previous) => ({ ...previous, ...value, skipped: false }));
+  };
+  const [apnsDialogOpen, setApnsDialogOpen] = useState(false);
+  /** Connecting APNs completes the Mobile push step, the same as connecting Firebase. */
+  const markMobilePushDone = () => {
+    const mobilePushStep = onboardingStepsOf(state.platforms, state.channels).findIndex((step) => step.kind === 'mobile-push') + 1;
+    if (mobilePushStep > 0) setState({ ...state, completed: [...new Set([...state.completed, mobilePushStep])], skipped: false });
   };
   const openFirebaseWithMax = () => {
     localUserChange.current = true;
@@ -519,7 +527,7 @@ export default function OnboardingWizard() {
     products: 'Select the types of products you already have and add their links. We’ll tailor the next setup steps to your product portfolio.',
     channels: 'Choose every channel you plan to use. We’ll tailor the remaining setup to your selections.',
     domain: 'Enter the email address you want to use for sending emails (e.g., info@yourbrand.com). This is the address your recipients will see when they receive your emails.',
-    'mobile-push': 'Mobile apps send push through Firebase Cloud Messaging. Upload the service-account JSON and I’ll validate it securely.',
+    'mobile-push': 'Mobile apps send push through Firebase Cloud Messaging, or Apple Push (APNs) for iOS apps without Firebase. Upload the key and I’ll validate it securely.',
     'app-sdk': 'Install the SDK in your app when you’re ready to send product events and register devices. Here’s a starter prompt you can share with your coding assistant.',
     'web-sdk': 'Now add PixlPush to your website so it can track visitors and send Web Push. Here’s a starter prompt you can share with your coding assistant.',
   } as const;
@@ -600,7 +608,7 @@ export default function OnboardingWizard() {
                   {domainVerificationError && <Alert severity="error">{domainVerificationError}</Alert>}
                   {/* <Paper elevation={0} className="onboarding-guidance"><strong>What happens next?</strong><span>We’ll guide you through a few simple steps to verify your domain and get it ready for sending emails.</span><small>You can verify it later. We’ll save this sender address for now.</small></Paper> */}
                 </Stack>}
-                {activeStep.kind === 'mobile-push' && hasMobile && <Stack gap={2}><Paper elevation={0} className="onboarding-guidance"><strong>Firebase Cloud Messaging (mobile apps)</strong><span>Upload the Firebase service-account JSON used by this Project. PixlPush validates it with Google before encrypting and storing it.</span><small>Never paste credentials into chat or your app. The file is sent only to the authenticated backend.</small></Paper><Button variant="contained" onClick={openFirebaseWithMax} startIcon={<AutoAwesomeRounded />}>{firebaseConnected ? 'Review Firebase with Max' : 'Connect Firebase with Max'}</Button>{firebaseConnected && <Alert severity="success">Firebase is connected for this Project.</Alert>}</Stack>}
+                {activeStep.kind === 'mobile-push' && hasMobile && <Stack gap={2}><Paper elevation={0} className="onboarding-guidance"><strong>Firebase Cloud Messaging (mobile apps)</strong><span>Upload the Firebase service-account JSON used by this Project. PixlPush validates it with Google before encrypting and storing it.</span><small>Never paste credentials into chat or your app. The file is sent only to the authenticated backend.</small></Paper><Button variant="contained" onClick={openFirebaseWithMax} startIcon={<AutoAwesomeRounded />}>{firebaseConnected ? 'Review Firebase with Max' : 'Connect Firebase with Max'}</Button>{firebaseConnected && <Alert severity="success">Firebase is connected for this Project.</Alert>}<Paper elevation={0} className="onboarding-guidance"><strong>iOS app without Firebase?</strong><span>Send through Apple Push (APNs) directly with the .p8 key from your Apple Developer account. Android apps still need Firebase.</span></Paper><Button variant="outlined" onClick={() => setApnsDialogOpen(true)}>{apnsConnected ? 'Review Apple Push (APNs)' : 'Connect Apple Push (APNs)'}</Button>{apnsConnected && <Alert severity="success">Apple Push is connected for this Project.</Alert>}<ApnsConnectDialog open={apnsDialogOpen} onClose={() => setApnsDialogOpen(false)} projectId={projectId} existing={firebaseQuery.data?.apns} onConnected={markMobilePushDone} /></Stack>}
                 {isSdkStep && <Stack gap={2.5} className="onboarding-sdk-step">
                   <Typography className="onboarding-sdk-intro">{isWebsiteSurface ? 'Now let’s integrate PixlPush into your website. The Web SDK and Web Push are set up together in one guided flow. Copy the AI-ready prompt, follow the guide, or share the instructions with your developer.' : 'Let’s connect your mobile app to PixlPush. Copy the AI-ready prompt into your coding assistant, follow the manual guide, or share the instructions with your developer.'}</Typography>
                   {isWebsiteSurface ? <>

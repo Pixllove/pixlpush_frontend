@@ -80,13 +80,16 @@ export const onboardingStepCount = (
 
 export const SDK_STEP_TITLES: Record<SdkSurface, string> = { mobile: 'App SDK', web: 'Web SDK' };
 
-/** Same rule as the backend: mobile needs a connected Firebase, web needs no setup. */
-export const isPushReady = (platforms: ProjectPlatform[] | undefined, firebaseStatus: string | undefined) =>
-  !(platforms ?? ['mobile']).includes('mobile') || firebaseStatus === 'connected';
+/**
+ * Same rule as the backend: mobile needs a connected Firebase or a connected
+ * APNs key (iOS apps without Firebase); web needs no setup.
+ */
+export const isPushReady = (platforms: ProjectPlatform[] | undefined, firebaseStatus: string | undefined, apnsStatus?: string) =>
+  !(platforms ?? ['mobile']).includes('mobile') || firebaseStatus === 'connected' || apnsStatus === 'connected';
 
-/** The backend's answer, falling back to the old rule for an older API. */
+/** The backend's answer, falling back to the same rule for an older API. */
 export const pushReadyOf = (firebase: FirebaseSettings | undefined) =>
-  firebase?.pushReady ?? firebase?.status === 'connected';
+  firebase?.pushReady ?? (firebase?.status === 'connected' || firebase?.apns?.status === 'connected');
 
 /** Counts resolved setup steps using the current channel-derived step list. */
 export function onboardingCompletedCount(

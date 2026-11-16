@@ -490,6 +490,29 @@ export interface FirebaseSettings {
   activeTokens?: number;
   /** Websites: set up automatically by the web SDK, no Firebase needed. */
   webPush?: { enabled: boolean; enabledAt: string | null; activeBrowsers: number };
+  /** iOS apps without Firebase: direct Apple push. */
+  apns?: ApnsSettings;
+}
+
+/** Direct Apple Push (APNs) for iOS apps that do not use Firebase. The .p8 key is never returned. */
+export interface ApnsSettings {
+  status: "not_configured" | "connected" | "error";
+  teamId?: string;
+  keyId?: string;
+  bundleId?: string;
+  lastError?: string | null;
+  validatedAt?: string | null;
+  /** Active iOS devices registered with an APNs token. */
+  activeDevices?: number;
+}
+
+export interface ApnsUpload {
+  teamId: string;
+  keyId: string;
+  bundleId: string;
+  /** Text of the .p8 file; leave out to keep the stored key and change ids only. */
+  privateKey?: string;
+  confirmBundleId?: string;
 }
 
 export interface SdkKey {

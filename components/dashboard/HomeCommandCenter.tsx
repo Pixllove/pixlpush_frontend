@@ -11,6 +11,7 @@ import { useActiveProject } from "@/hooks/projects/use-active-project";
 import { accountGreetingName } from "@/lib/auth/display-name";
 import { aiApi, type AiAgentId, type AiAgentResult, type AiAssistantId, type AiBusinessContext, type AiBusinessContextUpdate, type AiChatRequest, type AiChatResponse, type AiCollaboration, type AiCollaborationHistory, type AiConversationMessage, type AiConversationPreview, type AiCreatedResource, type AiFlowId, type AiFlowDraftResponse, type AiHandoff, type AiInteractionMode, type AiSuggestedPrompt, type AiProjectContext, type AiResourceType, type AiOnboardingStatus, type AiInteraction, type AiInteractionAction, type AiInteractionResponse, type AiInteractionRequest } from "@/lib/projects/ai";
 import { audienceGroupsApi, emailApi, firebaseApi, journeysApi, lifecycleSegmentsApi, pushApi, sdkKeyApi } from "@/lib/projects/api";
+import { pushReadyOf } from "@/lib/onboarding";
 import type { AudienceGroup, LifecycleSegment } from "@/types/project";
 import DeleteConfirmDialog from "@/components/dashboard/DeleteConfirmDialog";
 import CollaborationResultCard, { CollaborationTimeline, type CollaborationAgentProfile } from "@/components/dashboard/CollaborationResultCard";
@@ -1723,10 +1724,10 @@ export default function HomeCommandCenter() {
     enabled: Boolean(projectId) && activeFlow?.id === "journey",
     staleTime: 30_000,
   });
-  const pushReady = sdkIntegrated && firebaseSettingsQuery.data?.status === "connected";
+  const pushReady = sdkIntegrated && pushReadyOf(firebaseSettingsQuery.data);
   const pushUnavailableReason = !sdkIntegrated
     ? "Push is unavailable until the SDK is integrated."
-    : "Push is unavailable until Firebase / FCM is connected in Settings.";
+    : "Push is unavailable until Firebase or Apple Push (APNs) is connected in Settings → Push setup.";
   const relevantEvents = relevantJourneyEvents(flowAnswers[0]);
   const eventActionReady = relevantEvents.length === 0 || relevantEvents.some((event) => knownEventNames.has(event));
   const engagementEvent = ["app_closed", "session_ended"].find((name) => knownEventNames.has(name));

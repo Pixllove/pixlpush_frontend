@@ -272,11 +272,30 @@ export function Events({ base }: FlutterGuideProps) {
   </>;
 }
 
+const IOS_APNS_TOKEN = `import 'package:flutter/services.dart';
+import 'package:pixlpush/pixlpush.dart';
+
+const _channel = MethodChannel('app/apns');
+
+/// iOS app without Firebase: register the native APNs token with PixlPush.
+Future<void> registerIosPush() async {
+  // Your AppDelegate answers with the hex device token after the user allows notifications.
+  final token = await _channel.invokeMethod<String>('deviceToken');
+  if (token == null || token.isEmpty) return;
+  await PixlPush.instance.updatePushToken(token, provider: PushProvider.apns, permission: 'granted');
+}`;
+
 export function Push({ base }: FlutterGuideProps) {
   return <>
     <Section id="how" title="How push works">
       <Body>PixlPush sends through Firebase Cloud Messaging. The Flutter adapter uses the FCM registration token, not an Expo token or a token from an unrelated provider. Every PixlPush notification carries <code>data.pp_job_id</code> so the SDK can attribute the open.</Body>
       <Callout tone="warning" title="The click count needs pp_job_id">Notifications sent directly from Firebase without the PixlPush job field can display normally, but they cannot increase the click count for a PixlPush notification.</Callout>
+    </Section>
+    <Section id="ios-without-firebase" title="iOS without Firebase (APNs)">
+      <Body>If your iOS app does not include Firebase, PixlPush can send through Apple Push (APNs) directly. Connect the APNs key once in Project settings → Push setup → <b>Apple Push (iOS without Firebase)</b> (the <code>.p8</code> file, its Key ID, your Team ID and the bundle ID). Android apps still need Firebase.</Body>
+      <Body>Get the native device token from iOS (for example from <code>didRegisterForRemoteNotificationsWithDeviceToken</code> through a method channel) and register it with provider <code>apns</code>:</Body>
+      <CodeBlock code={IOS_APNS_TOKEN} language="Dart" filename="lib/services/ios_push.dart" />
+      <Body>The token is the hex string of the device token bytes. Development and App Store tokens both work; PixlPush picks the right Apple server per token.</Body>
     </Section>
     <Section id="initialize" title="Initialize the adapter">
       <CodeBlock code={code.push} language="Dart" filename="lib/services/pixlpush.dart" />

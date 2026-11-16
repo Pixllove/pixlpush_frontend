@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { emailApi, firebaseApi, integrationsApi, onboardingApi, projectKeys, sdkKeyApi } from '@/lib/projects/api';
+import { apnsApi, emailApi, firebaseApi, integrationsApi, onboardingApi, projectKeys, sdkKeyApi } from '@/lib/projects/api';
 import type { IntegrationCredentials, IntegrationProvider, IntegrationSettings, ProjectPlatform } from '@/types/project';
 import { isPermanentAuthError } from '@/lib/auth/client';
 import type { ApiError } from '@/types/auth';
@@ -36,6 +36,18 @@ export function useFirebaseSettings(projectId: string | undefined) {
     disconnect: useAreaMutation(projectId, 'firebase', (id, _: void) => firebaseApi.disconnect(id)),
     /** Website / mobile choice; stored on the Project through the onboarding API. */
     platforms: useAreaMutation(projectId, 'firebase', (id, platforms: ProjectPlatform[]) => onboardingApi.update(id, { platforms })),
+  };
+}
+
+/**
+ * Direct APNs (iOS without Firebase). Its status comes back inside the Firebase
+ * settings (one request for the whole Push setup card), so writes refresh that area.
+ */
+export function useApnsSettings(projectId: string | undefined) {
+  return {
+    upload: useAreaMutation(projectId, 'firebase', apnsApi.upload),
+    verify: useAreaMutation(projectId, 'firebase', (id, _: void) => apnsApi.verify(id)),
+    disconnect: useAreaMutation(projectId, 'firebase', (id, _: void) => apnsApi.disconnect(id)),
   };
 }
 

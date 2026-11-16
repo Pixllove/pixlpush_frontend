@@ -13,7 +13,7 @@ const stepCopy: Record<OnboardingStepKind, [string, string]> = {
   products: ['Add a website or app-store link for setup context.', 'Product link'],
   channels: ['Select push, email, or in-app messaging for your team.', 'Channel preferences'],
   domain: ['Prepare a sending domain and review the DNS steps.', 'Email deliverability'],
-  'mobile-push': ['Connect Firebase credentials so your app can deliver push notifications.', 'Push delivery'],
+  'mobile-push': ['Connect Firebase, or an APNs key for iOS apps without Firebase, so your app can deliver push notifications.', 'Push delivery'],
   'app-sdk': ['Install the SDK in your app and send your first product signal.', 'Product events'],
   'web-sdk': ['Add PixlPush to your website for events and Web Push.', 'Product events'],
 };
