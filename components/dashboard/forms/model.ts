@@ -1,0 +1,473 @@
+import { z } from 'zod';
+
+/*
+ * The form draft is the single source of truth for the forms module: the wizard, editor, renderer,
+ * list and HTML export all read it. The zod schema doubles as the contract for the Forms API.
+ */
+
+export const formKinds = ['popup', 'embedded', 'promotion'] as const;
+export const formStatuses = ['draft', 'active', 'paused'] as const;
+export const blockTypes = ['heading', 'text', 'image', 'imageText', 'button', 'divider', 'countdown', 'social', 'list', 'video', 'code', 'fields'] as const;
+export const fieldTypes = ['email', 'text', 'phone', 'number', 'select', 'checkbox', 'date', 'hidden'] as const;
+export const socialPlatforms = ['Facebook', 'Instagram', 'X', 'LinkedIn', 'YouTube'] as const;
+export const fonts = ['Inter', 'Manrope', 'Arial', 'Georgia', 'Courier New'] as const;
+
+export type FormKind = (typeof formKinds)[number];
+export type FormStatus = (typeof formStatuses)[number];
+export type BlockType = (typeof blockTypes)[number];
+export type FieldType = (typeof fieldTypes)[number];
+export type SocialPlatform = (typeof socialPlatforms)[number];
+
+export const kindLabel: Record<FormKind, string> = { popup: 'Pop-up', embedded: 'Embedded form', promotion: 'Promotion' };
+export const kindPlural: Record<FormKind, string> = { popup: 'pop-ups', embedded: 'embedded forms', promotion: 'promotions' };
+export const statusLabel: Record<FormStatus, string> = { draft: 'Draft', active: 'Active', paused: 'Paused' };
+
+const hex = z.string().regex(/^#[0-9a-f]{6}$/i);
+const align = z.enum(['left', 'center', 'right']);
+
+export const blockSchema = z.object({
+  id: z.string(),
+  type: z.enum(blockTypes),
+  text: z.string().optional(),
+  align: align.optional(),
+  size: z.number().optional(),
+  weight: z.number().optional(),
+  color: hex.optional(),
+  src: z.string().optional(),
+  alt: z.string().optional(),
+  href: z.string().optional(),
+  width: z.number().optional(),
+  side: z.enum(['left', 'right']).optional(),
+  label: z.string().optional(),
+  action: z.enum(['submit', 'url']).optional(),
+  bg: hex.optional(),
+  textColor: hex.optional(),
+  radius: z.number().optional(),
+  fullWidth: z.boolean().optional(),
+  thickness: z.number().optional(),
+  spacing: z.number().optional(),
+  endsAt: z.string().optional(),
+  onExpire: z.enum(['hide', 'text']).optional(),
+  expiredText: z.string().optional(),
+  links: z.array(z.object({ platform: z.enum(socialPlatforms), url: z.string() })).optional(),
+  items: z.array(z.string()).optional(),
+  html: z.string().optional(),
+});
+
+export const fieldSchema = z.object({
+  id: z.string(),
+  type: z.enum(fieldTypes),
+  label: z.string(),
+  placeholder: z.string(),
+  required: z.boolean(),
+  half: z.boolean(),
+  options: z.array(z.string()),
+  value: z.string(),
+});
+
+export const designSchema = z.object({
+  popupType: z.enum(['lightbox', 'slidein', 'bar', 'fullscreen']),
+  barPosition: z.enum(['top', 'bottom']),
+  slidePosition: z.enum(['left', 'right']),
+  promoPosition: z.enum(['center', 'corner', 'banner']),
+  layout: z.enum(['plain', 'border', 'topSidebar', 'leftSidebar', 'rightSidebar', 'boxed']),
+  display: z.enum(['stacked', 'horizontal']),
+  align,
+  width: z.number(),
+  background: hex,
+  transparent: z.boolean(),
+  backgroundImage: z.string(),
+  radius: z.number(),
+  shadow: z.boolean(),
+  sidebarColor: hex,
+  sidebarImage: z.string(),
+  sidebarFit: z.enum(['fit', 'fill']),
+  backdropColor: hex,
+  backdropOpacity: z.number(),
+  font: z.enum(fonts),
+  headingColor: hex,
+  textColor: hex,
+  labelColor: hex,
+  inputBg: hex,
+  inputBorder: hex,
+  inputRadius: z.number(),
+  buttonBg: hex,
+  buttonText: hex,
+  buttonRadius: z.number(),
+  showClose: z.boolean(),
+  closeColor: hex,
+});
+
+const toggle = <T extends z.ZodRawShape>(shape: T) => z.object({ on: z.boolean(), ...shape });
+
+export const optionsSchema = z.object({
+  labelsAbove: z.boolean(),
+  privacy: toggle({ text: z.string(), url: z.string() }),
+  consent: toggle({ text: z.string() }),
+  permissions: toggle({ text: z.string(), items: z.array(z.string()) }),
+  interests: toggle({ label: z.string(), items: z.array(z.string()) }),
+  hidden: toggle({ name: z.string(), value: z.string() }),
+  recaptcha: z.boolean(),
+  doubleOptIn: z.boolean(),
+});
+
+export const successSchema = z.object({
+  mode: z.enum(['message', 'redirect']),
+  heading: z.string(),
+  text: z.string(),
+  buttonLabel: z.string(),
+  buttonUrl: z.string(),
+  coupon: z.string(),
+  redirectUrl: z.string(),
+});
+
+export const behaviourSchema = z.object({
+  delayOn: z.boolean(),
+  delay: z.number(),
+  scrollOn: z.boolean(),
+  scroll: z.number(),
+  exitOn: z.boolean(),
+  clickOn: z.boolean(),
+  frequency: z.number(),
+  frequencyUnit: z.enum(['days', 'weeks', 'months']),
+  schedule: z.enum(['now', 'range']),
+  startAt: z.string(),
+  endAt: z.string(),
+  pages: z.enum(['all', 'hide', 'show']),
+  urls: z.string(),
+  strict: z.boolean(),
+  hideDesktop: z.boolean(),
+  hideTablet: z.boolean(),
+  hideMobile: z.boolean(),
+});
+
+export const formDraftSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  kind: z.enum(formKinds),
+  status: z.enum(formStatuses),
+  groups: z.array(z.string()),
+  template: z.string(),
+  design: designSchema,
+  blocks: z.array(blockSchema),
+  fields: z.array(fieldSchema),
+  options: optionsSchema,
+  success: successSchema,
+  behaviour: behaviourSchema,
+  stats: z.object({ views: z.number(), subscribers: z.number() }),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export type Block = z.infer<typeof blockSchema>;
+export type FormField = z.infer<typeof fieldSchema>;
+export type FormDesign = z.infer<typeof designSchema>;
+export type FormOptions = z.infer<typeof optionsSchema>;
+export type FormSuccess = z.infer<typeof successSchema>;
+export type FormBehaviour = z.infer<typeof behaviourSchema>;
+export type FormDraft = z.infer<typeof formDraftSchema>;
+
+export const makeId = () => Math.random().toString(36).slice(2, 10);
+
+/* ---------- defaults ---------- */
+
+export function defaultDesign(kind: FormKind): FormDesign {
+  return {
+    popupType: 'lightbox', barPosition: 'top', slidePosition: 'right', promoPosition: 'center',
+    layout: 'plain', display: 'stacked', align: 'center',
+    width: kind === 'embedded' ? 560 : kind === 'promotion' ? 380 : 440,
+    background: '#ffffff', transparent: false, backgroundImage: '', radius: 12, shadow: kind !== 'embedded',
+    sidebarColor: '#f3eefc', sidebarImage: '', sidebarFit: 'fill',
+    backdropColor: '#1b1025', backdropOpacity: 40,
+    font: 'Inter', headingColor: '#1e1429', textColor: '#5b5266', labelColor: '#1e1429',
+    inputBg: '#ffffff', inputBorder: '#d9d3e1', inputRadius: 6,
+    buttonBg: '#5517b8', buttonText: '#ffffff', buttonRadius: 6,
+    showClose: kind !== 'embedded', closeColor: '#5b5266',
+  };
+}
+
+export const blockDefaults: Record<BlockType, Omit<Block, 'id' | 'type'>> = {
+  heading: { text: 'Your headline goes here', align: 'left', size: 24, weight: 700 },
+  text: { text: 'Add supporting text that explains your offer or newsletter.', align: 'left', size: 15 },
+  image: { src: '', alt: '', href: '', width: 100, align: 'center' },
+  imageText: { src: '', alt: '', text: 'Tell your story with a visual and a short message.', side: 'left' },
+  button: { label: 'Learn more', action: 'url', href: 'https://', fullWidth: true },
+  divider: { color: '#eae6ef', thickness: 1, spacing: 8 },
+  countdown: { endsAt: '', text: 'Offer ends in', onExpire: 'text', expiredText: 'This offer has ended.', align: 'center' },
+  social: { links: [{ platform: 'Facebook', url: 'https://facebook.com/' }, { platform: 'Instagram', url: 'https://instagram.com/' }, { platform: 'LinkedIn', url: 'https://linkedin.com/' }], size: 32, align: 'center' },
+  list: { items: ['Weekly product tips', 'Early access to new features', 'No spam, unsubscribe any time'], size: 15 },
+  video: { href: '' },
+  code: { html: '<div style="padding:12px;border:1px dashed #d9d3e1;border-radius:6px;text-align:center">Your custom HTML</div>' },
+  fields: { label: 'Subscribe' },
+};
+
+export const blockLabel: Record<BlockType, string> = {
+  heading: 'Heading', text: 'Text', image: 'Image', imageText: 'Image & text', button: 'Button', divider: 'Divider',
+  countdown: 'Countdown', social: 'Social links', list: 'List', video: 'Video', code: 'Custom code', fields: 'Signup fields',
+};
+
+export const makeBlock = (type: BlockType, props: Partial<Block> = {}): Block => ({ id: makeId(), type, ...structuredClone(blockDefaults[type]), ...props });
+
+export const fieldTypeLabel: Record<FieldType, string> = {
+  email: 'Email', text: 'Text', phone: 'Phone', number: 'Number', select: 'Dropdown', checkbox: 'Checkbox', date: 'Date', hidden: 'Hidden',
+};
+
+export const makeField = (type: FieldType, props: Partial<FormField> = {}): FormField => ({
+  id: makeId(), type, label: type === 'email' ? 'Email' : fieldTypeLabel[type], placeholder: type === 'email' ? 'Email address' : '',
+  required: type === 'email', half: false, options: type === 'select' ? ['Option 1', 'Option 2'] : [], value: '', ...props,
+});
+
+export function defaultDraft(input: { name: string; kind: FormKind; groups?: string[] }): FormDraft {
+  const now = new Date().toISOString();
+  return {
+    id: makeId(), name: input.name.trim(), kind: input.kind, status: 'draft', groups: input.groups ?? [], template: 'newsletter',
+    design: defaultDesign(input.kind),
+    blocks: [
+      makeBlock('heading', { text: 'Join our newsletter' }),
+      makeBlock('text', { text: 'Get product updates, helpful resources and fresh ideas in your inbox.' }),
+      makeBlock('fields'),
+    ],
+    fields: [makeField('email')],
+    options: {
+      labelsAbove: false,
+      privacy: { on: false, text: 'We respect your privacy. Read our', url: 'https://' },
+      consent: { on: false, text: 'I agree to receive emails and accept the privacy policy.' },
+      permissions: { on: false, text: 'Choose how you would like to hear from us:', items: ['Email', 'Product news'] },
+      interests: { on: false, label: 'I am interested in', items: ['Product updates', 'Offers'] },
+      hidden: { on: false, name: 'source', value: '' },
+      recaptcha: false,
+      doubleOptIn: false,
+    },
+    success: { mode: 'message', heading: 'Thank you!', text: 'You have successfully joined our subscriber list.', buttonLabel: '', buttonUrl: 'https://', coupon: '', redirectUrl: 'https://' },
+    behaviour: {
+      delayOn: true, delay: 5, scrollOn: false, scroll: 50, exitOn: false, clickOn: false,
+      frequency: 1, frequencyUnit: 'months', schedule: 'now', startAt: '', endAt: '',
+      pages: 'all', urls: '', strict: false, hideDesktop: false, hideTablet: false, hideMobile: false,
+    },
+    stats: { views: 0, subscribers: 0 },
+    createdAt: now, updatedAt: now,
+  };
+}
+
+/* ---------- templates ---------- */
+
+export type Template = { id: string; name: string; category: string; kinds: FormKind[]; apply: (draft: FormDraft) => FormDraft };
+
+const inDays = (days: number) => {
+  const date = new Date(Date.now() + days * 864e5);
+  date.setSeconds(0, 0);
+  return toLocalInput(date);
+};
+
+/** `YYYY-MM-DDTHH:mm` in local time, the value a datetime-local input uses. */
+export const toLocalInput = (date: Date) => new Date(date.getTime() - date.getTimezoneOffset() * 6e4).toISOString().slice(0, 16);
+
+export const templates: Template[] = [
+  { id: 'blank', name: 'Start from scratch', category: 'Blank', kinds: [...formKinds], apply: (d) => ({ ...d, blocks: [makeBlock('heading', { text: 'Untitled form' }), makeBlock('fields')] }) },
+  { id: 'newsletter', name: 'Clean newsletter', category: 'Lead generation', kinds: [...formKinds], apply: (d) => d },
+  {
+    id: 'waitlist', name: 'Product waitlist', category: 'Lead generation', kinds: ['popup', 'embedded', 'promotion'],
+    apply: (d) => ({
+      ...d,
+      design: { ...d.design, layout: 'leftSidebar', sidebarColor: '#1b1025', width: Math.max(d.design.width, 600) },
+      blocks: [makeBlock('heading', { text: 'Be first in line' }), makeBlock('text', { text: 'Join the waitlist and we will let you know the moment we launch.' }), makeBlock('fields', { label: 'Join the waitlist' })],
+      fields: [makeField('text', { label: 'First name', placeholder: 'First name' }), makeField('email')],
+    }),
+  },
+  {
+    id: 'discount', name: 'First order discount', category: 'Offers', kinds: ['popup', 'promotion'],
+    apply: (d) => ({
+      ...d,
+      design: { ...d.design, layout: 'topSidebar', sidebarColor: '#f97316' },
+      blocks: [makeBlock('heading', { text: 'Get 15% off your first order', align: 'center' }), makeBlock('text', { text: 'Sign up and we will send your code straight away.', align: 'center' }), makeBlock('fields', { label: 'Get my code' })],
+      success: { ...d.success, heading: 'Here is your code', text: 'Use it at checkout within 7 days.', coupon: 'WELCOME15' },
+    }),
+  },
+  {
+    id: 'countdown', name: 'Event countdown', category: 'Event sign-up', kinds: ['popup', 'embedded', 'promotion'],
+    apply: (d) => ({
+      ...d,
+      blocks: [makeBlock('heading', { text: 'Live workshop: ship faster', align: 'center' }), makeBlock('countdown', { endsAt: inDays(7), text: 'Starts in' }), makeBlock('fields', { label: 'Save my seat' })],
+      fields: [makeField('text', { label: 'Name', placeholder: 'Your name' }), makeField('email')],
+    }),
+  },
+  {
+    id: 'guide', name: 'Free guide download', category: 'Resource sharing', kinds: ['popup', 'embedded'],
+    apply: (d) => ({
+      ...d,
+      blocks: [makeBlock('heading', { text: 'Download the free guide' }), makeBlock('list', { items: ['20 proven onboarding emails', 'Subject lines that get opened', 'A 30-day sending plan'] }), makeBlock('fields', { label: 'Send me the guide' })],
+      success: { ...d.success, heading: 'Check your inbox', text: 'The guide is on its way.', buttonLabel: 'Download now', buttonUrl: 'https://' },
+    }),
+  },
+  {
+    id: 'banner', name: 'Announcement banner', category: 'Offers', kinds: ['promotion'],
+    apply: (d) => ({
+      ...d,
+      design: { ...d.design, promoPosition: 'banner', background: '#1b1025', headingColor: '#ffffff', textColor: '#d9d3e1' },
+      blocks: [makeBlock('heading', { text: 'Spring sale: 30% off everything', size: 20, align: 'center' }), makeBlock('button', { label: 'Shop the sale', align: 'center', fullWidth: false })],
+    }),
+  },
+];
+
+export const templatesFor = (kind: FormKind) => templates.filter((template) => template.kinds.includes(kind));
+
+export function applyTemplate(draft: FormDraft, templateId: string): FormDraft {
+  const template = templates.find((item) => item.id === templateId) ?? templates[0];
+  const base = defaultDraft({ name: draft.name, kind: draft.kind, groups: draft.groups });
+  return { ...template.apply({ ...base, id: draft.id, status: draft.status, behaviour: draft.behaviour, createdAt: draft.createdAt, stats: draft.stats }), template: template.id };
+}
+
+/* ---------- pure edits ---------- */
+
+const indexOf = (blocks: Block[], id?: string | null) => blocks.findIndex((block) => block.id === id);
+
+export function insertBlock(draft: FormDraft, block: Block, afterId?: string | null): FormDraft {
+  // After the selected block; with nothing selected, just above the signup fields.
+  const after = indexOf(draft.blocks, afterId);
+  const fieldsAt = draft.blocks.findIndex((item) => item.type === 'fields');
+  const at = after !== -1 ? after + 1 : fieldsAt !== -1 ? fieldsAt : draft.blocks.length;
+  const blocks = [...draft.blocks];
+  blocks.splice(at, 0, block);
+  return { ...draft, blocks };
+}
+
+export function moveBlock(draft: FormDraft, id: string, to: number): FormDraft {
+  const from = indexOf(draft.blocks, id);
+  if (from === -1) return draft;
+  const blocks = [...draft.blocks];
+  const [block] = blocks.splice(from, 1);
+  blocks.splice(Math.max(0, Math.min(to, blocks.length)), 0, block);
+  return { ...draft, blocks };
+}
+
+export function duplicateBlock(draft: FormDraft, id: string): { draft: FormDraft; id?: string } {
+  const block = draft.blocks.find((item) => item.id === id);
+  if (!block || block.type === 'fields') return { draft };
+  const copy = { ...structuredClone(block), id: makeId() };
+  return { draft: insertBlock(draft, copy, id), id: copy.id };
+}
+
+/** The signup fields block is required: it can move but never be removed. */
+export const removeBlock = (draft: FormDraft, id: string): FormDraft =>
+  ({ ...draft, blocks: draft.blocks.filter((block) => block.id !== id || block.type === 'fields') });
+
+export const updateBlock = (draft: FormDraft, id: string, patch: Partial<Block>): FormDraft =>
+  ({ ...draft, blocks: draft.blocks.map((block) => block.id === id ? { ...block, ...patch } : block) });
+
+export const updateField = (draft: FormDraft, id: string, patch: Partial<FormField>): FormDraft =>
+  ({ ...draft, fields: draft.fields.map((field) => field.id === id ? { ...field, ...patch } : field) });
+
+/** Email is required on every form: it can move but never be removed or made optional. */
+export const removeField = (draft: FormDraft, id: string): FormDraft =>
+  ({ ...draft, fields: draft.fields.filter((field) => field.id !== id || field.type === 'email') });
+
+export function moveField(draft: FormDraft, id: string, by: -1 | 1): FormDraft {
+  const from = draft.fields.findIndex((field) => field.id === id);
+  const to = from + by;
+  if (from === -1 || to < 0 || to >= draft.fields.length) return draft;
+  const fields = [...draft.fields];
+  [fields[from], fields[to]] = [fields[to], fields[from]];
+  return { ...draft, fields };
+}
+
+/* ---------- editor history ---------- */
+
+export type EditorState = { draft: FormDraft; past: FormDraft[]; future: FormDraft[]; lastKey?: string };
+export type EditorAction =
+  | { type: 'update'; fn: (draft: FormDraft) => FormDraft; key?: string }
+  | { type: 'undo' }
+  | { type: 'redo' }
+  | { type: 'reset'; draft: FormDraft };
+
+const HISTORY = 100;
+
+/** Edits that share a `key` (typing in one field) collapse into a single undo step. */
+export function editorReducer(state: EditorState, action: EditorAction): EditorState {
+  switch (action.type) {
+    case 'update': {
+      const draft = action.fn(state.draft);
+      if (draft === state.draft) return state;
+      const merge = action.key !== undefined && action.key === state.lastKey;
+      return { draft, past: merge ? state.past : [...state.past, state.draft].slice(-HISTORY), future: [], lastKey: action.key };
+    }
+    case 'undo': {
+      const previous = state.past.at(-1);
+      return previous ? { draft: previous, past: state.past.slice(0, -1), future: [state.draft, ...state.future] } : state;
+    }
+    case 'redo': {
+      const [next, ...future] = state.future;
+      return next ? { draft: next, past: [...state.past, state.draft], future } : state;
+    }
+    case 'reset':
+      return { draft: action.draft, past: [], future: [] };
+  }
+}
+
+/* ---------- validation ---------- */
+
+export const isHttpUrl = (value: string) => {
+  try {
+    const url = new URL(value.trim());
+    return (url.protocol === 'https:' || url.protocol === 'http:') && Boolean(url.hostname.includes('.'));
+  } catch {
+    return false;
+  }
+};
+
+export const urlLines = (value: string) => value.split('\n').map((line) => line.trim()).filter(Boolean);
+
+export function behaviourErrors(b: FormBehaviour): Partial<Record<keyof FormBehaviour | 'trigger', string>> {
+  const errors: Partial<Record<keyof FormBehaviour | 'trigger', string>> = {};
+  if (!b.delayOn && !b.scrollOn && !b.exitOn && !b.clickOn) errors.trigger = 'Choose at least one way to show the form.';
+  if (b.delayOn && !(Number.isInteger(b.delay) && b.delay >= 0 && b.delay <= 600)) errors.delay = 'Enter 0 to 600 seconds.';
+  if (!(Number.isInteger(b.frequency) && b.frequency >= 1 && b.frequency <= 365)) errors.frequency = 'Enter a whole number from 1 to 365.';
+  if (b.schedule === 'range') {
+    if (!b.startAt) errors.startAt = 'Choose a start date.';
+    if (!b.endAt) errors.endAt = 'Choose an end date.';
+    else if (b.startAt && b.endAt <= b.startAt) errors.endAt = 'End must be after the start.';
+  }
+  if (b.pages !== 'all' && urlLines(b.urls).length === 0) errors.urls = 'Add at least one page address.';
+  if (b.hideDesktop && b.hideTablet && b.hideMobile) errors.hideMobile = 'The form must show on at least one device.';
+  return errors;
+}
+
+export function successErrors(s: FormSuccess): Partial<Record<keyof FormSuccess, string>> {
+  const errors: Partial<Record<keyof FormSuccess, string>> = {};
+  if (s.mode === 'redirect' && !isHttpUrl(s.redirectUrl)) errors.redirectUrl = 'Enter a full address, for example https://example.com/thanks.';
+  if (s.mode === 'message' && s.buttonLabel.trim() && !isHttpUrl(s.buttonUrl)) errors.buttonUrl = 'Enter a full https:// address for the button.';
+  return errors;
+}
+
+export function blockErrors(block: Block): string | undefined {
+  if (block.type === 'button' && block.action === 'url' && !isHttpUrl(block.href ?? '')) return 'Add a full https:// link for this button.';
+  if (block.type === 'countdown' && !block.endsAt) return 'Choose when the countdown ends.';
+  if ((block.type === 'image' || block.type === 'imageText') && block.src && !block.alt?.trim()) return 'Describe the image in the alt text.';
+  return undefined;
+}
+
+/** Problems that stop a form from being activated, in the order a person would fix them. */
+export function publishProblems(draft: FormDraft): string[] {
+  const problems: string[] = [];
+  if (!draft.name.trim()) problems.push('Give the form a name.');
+  if (draft.groups.length === 0) problems.push('Choose at least one subscriber group.');
+  for (const block of draft.blocks) {
+    const error = blockErrors(block);
+    if (error) problems.push(`${blockLabel[block.type]}: ${error}`);
+  }
+  problems.push(...Object.values(successErrors(draft.success)));
+  if (draft.kind !== 'embedded') problems.push(...Object.values(behaviourErrors(draft.behaviour)));
+  return problems;
+}
+
+/* ---------- colour ---------- */
+
+const luminance = (color: string) => {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(color.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+
+/** WCAG contrast ratio of two #rrggbb colours (1–21). */
+export function contrastRatio(a: string, b: string) {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}

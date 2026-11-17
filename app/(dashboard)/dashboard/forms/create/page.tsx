@@ -1,12 +1,13 @@
+import { Suspense } from 'react';
 import DashboardFrame from '@/components/dashboard/DashboardFrame';
-import FormCreateWorkspace from '@/components/dashboard/FormCreateWorkspace';
+import { FormCreate } from '@/components/dashboard/forms/FormWizard';
 
 export const metadata = { title: 'Create form — PixlPush' };
 
 export default function CreateFormPage() {
   return (
     <DashboardFrame requiresProject active="Forms" title="" description="" hideHeader>
-      <FormCreateWorkspace />
+      <Suspense fallback={null}><FormCreate /></Suspense>
     </DashboardFrame>
   );
 }
