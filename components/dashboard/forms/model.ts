@@ -546,5 +546,5 @@ export function contrastRatio(a: string, b: string) {
 }
 
 /** Image URLs this project uploaded, wherever they sit in a draft (blocks, side panel, background). */
-const UPLOAD_URL = /[^"\s]*\/projects\/[\w-]+\/email\/(?:images|logos)\/[\w-]+\.(?:png|jpe?g|gif|webp)/g;
+const UPLOAD_URL = /[^"\s]*\/projects\/[\w-]+\/forms\/images\/[\w-]+\.(?:png|jpe?g|gif|webp)/g;
 export const uploadsIn = (draft: FormDraft) => new Set(JSON.stringify(draft).match(UPLOAD_URL) ?? []);

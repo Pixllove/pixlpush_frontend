@@ -326,6 +326,24 @@ export async function deleteForm(id: string, projectId: string): Promise<void> {
   await authRequest<void>(path(projectId, `/${encodeURIComponent(id)}`), {}, base, 'DELETE');
 }
 
+/** Uploads a form image into the Project's forms folder; returns its public URL. */
+export async function uploadFormImage(file: File, projectId: string): Promise<{ url: string }> {
+  const body = new FormData();
+  body.append('file', file);
+  // No Content-Type header: the browser adds the multipart boundary itself.
+  const response = await fetch(`${base}${path(projectId, '/assets')}`, { method: 'POST', body, credentials: 'same-origin' }).catch(() => {
+    throw { status: 0, message: 'Cannot reach the server. Check your connection.' };
+  });
+  const payload = await response.json().catch(() => undefined);
+  if (!response.ok) throw { status: response.status, message: payload?.error?.message ?? (response.status === 413 ? 'The image is too large. Use one under 5 MB.' : 'The image could not be uploaded.') };
+  return payload.data;
+}
+
+/** Removes a form image no saved form uses any more; one still in use is kept. */
+export async function deleteFormImage(url: string, projectId: string): Promise<void> {
+  await authRequest<unknown>(path(projectId, '/assets'), { url }, base, 'DELETE');
+}
+
 export async function duplicateForm(id: string, projectId: string): Promise<FormDraft> {
   return fromApi(await authRequest<ApiForm>(path(projectId, `/${encodeURIComponent(id)}/duplicate`), {}, base));
 }

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import { DeleteOutlineRounded, ExpandMoreRounded, ImageOutlined } from '@mui/icons-material';
 import { Accordion, AccordionDetails, AccordionSummary, Box, Button, FormControlLabel, IconButton, InputAdornment, Slider, Stack, Switch, TextField, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from '@mui/material';
-import { emailApi } from '@/lib/projects/api';
+import { uploadFormImage } from '@/lib/forms';
 
 /* Inspector primitives for the form editor. Every control has a visible label that is also its accessible name. */
 
@@ -133,7 +133,7 @@ export function ImageField({ label, value, onChange, projectId }: { label: strin
               setError('');
               setUploading(true);
               try {
-                const asset = await emailApi.templates.uploadAsset(projectId, file, 'image');
+                const asset = await uploadFormImage(file, projectId);
                 onChange(asset.url);
               } catch (cause) {
                 setError((cause as { message?: string })?.message || 'That image could not be uploaded. Try again.');

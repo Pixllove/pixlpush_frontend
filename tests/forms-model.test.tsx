@@ -227,7 +227,7 @@ describe('forms repository', () => {
   });
 
   it('finds every uploaded image a draft uses, and nothing else', () => {
-    const upload = (name: string) => `https://storage.example.com/uploads/projects/p_1/email/images/${name}.webp`;
+    const upload = (name: string) => `https://storage.example.com/uploads/projects/p_1/forms/images/${name}.webp`;
     const d = { ...draft(), design: { ...draft().design, sidebarImage: upload('side'), backgroundImage: 'https://other.example.com/bg.png' }, blocks: [makeBlock('image', { src: upload('block') })] };
     expect([...uploadsIn(d)].sort()).toEqual([upload('block'), upload('side')]);
   });

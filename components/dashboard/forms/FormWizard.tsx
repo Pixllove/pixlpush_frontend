@@ -15,8 +15,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import EmptyState, { listEmpty } from '@/components/dashboard/EmptyState';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
 import SearchField from '@/components/dashboard/SearchField';
-import { createForm, formsKeys, getForm, listGroups, saveForm, setFormStatus } from '@/lib/forms';
-import { emailApi } from '@/lib/projects/api';
+import { createForm, deleteFormImage, formsKeys, getForm, listGroups, saveForm, setFormStatus } from '@/lib/forms';
 import FormEditor, { EditorSkeleton, type SaveState } from './FormEditor';
 import { applyTemplate, behaviourErrors, defaultDraft, editorReducer, uploadsIn, isEditorStep, kindPlural, templatesFor, urlLines, type FormBehaviour, type FormDraft, type UsageMode } from './model';
 import { FormThumbnail, InstallPanel, SaveStatus, StatusControl } from './shared';
@@ -248,7 +247,7 @@ function WizardSteps({ id, projectId, initial }: { id: string; projectId: string
     const kept = uploadsIn(draft);
     const unused = [...seenUploads.current].filter((url) => !kept.has(url));
     seenUploads.current = kept;
-    unused.forEach((url) => void emailApi.templates.deleteAsset(projectId, url).catch(() => undefined));
+    unused.forEach((url) => void deleteFormImage(url, projectId).catch(() => undefined));
   };
 
   /** Saves first, so leaving a step never loses an edit. */
