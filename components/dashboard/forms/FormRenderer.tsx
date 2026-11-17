@@ -37,31 +37,32 @@ export const rgba = (hex: string, opacity: number) => {
   return `rgba(${r}, ${g}, ${b}, ${opacity / 100})`;
 };
 
-const isFullBleed = (draft: FormDraft) =>
-  (draft.kind === 'popup' && (draft.design.popupType === 'bar' || draft.design.popupType === 'fullscreen')) ||
-  (draft.kind === 'promotion' && draft.design.promoPosition === 'banner');
+const isFullBleed = (draft: FormDraft) => draft.design.popupType === 'bar' || draft.design.popupType === 'fullscreen';
 
 /** The page area around the form: backdrop and position (centre, corner, top/bottom bar, full screen). */
+/** CSS position from 0–100 sliders; serves object-position, background-position and the zoom origin. */
+export const focusPosition = (x: number, y: number) => `${x}% ${y}%`;
+
+/** background-size for the card background from its fit mode and zoom (100 = no zoom). */
+function bgSize(fit: string, zoom: number): string {
+  if (fit === 'tile') return `${Math.max(100, zoom)}%`;
+  if (fit === 'contain') return zoom > 100 ? `${zoom}% auto` : 'contain';
+  return zoom > 100 ? `${zoom}% auto` : 'cover'; // cover
+}
+
 export function FormStage(props: RenderProps) {
   const { draft } = props;
   const d = draft.design;
   let justify = 'center';
   let align = 'center';
-  let backdrop = draft.kind !== 'embedded';
+  let backdrop = true;
   let padding: number | string = 24;
-  if (draft.kind === 'embedded') {
-    justify = d.align === 'left' ? 'flex-start' : d.align === 'right' ? 'flex-end' : 'center';
-    align = 'flex-start';
-  } else if (draft.kind === 'popup' && d.popupType === 'slidein') {
+  if (d.popupType === 'slidein') {
     backdrop = false; align = 'flex-end'; justify = d.slidePosition === 'left' ? 'flex-start' : 'flex-end';
-  } else if (draft.kind === 'popup' && d.popupType === 'bar') {
+  } else if (d.popupType === 'bar') {
     backdrop = false; padding = 0; align = d.barPosition === 'top' ? 'flex-start' : 'flex-end';
-  } else if (draft.kind === 'popup' && d.popupType === 'fullscreen') {
+  } else if (d.popupType === 'fullscreen') {
     padding = 0; align = 'stretch';
-  } else if (draft.kind === 'promotion' && d.promoPosition === 'corner') {
-    backdrop = false; align = 'flex-end'; justify = 'flex-end';
-  } else if (draft.kind === 'promotion' && d.promoPosition === 'banner') {
-    backdrop = false; padding = 0; align = 'flex-end';
   }
   return (
     <div style={{ position: 'relative', display: 'flex', justifyContent: justify, alignItems: align, padding, minHeight: '100%', boxSizing: 'border-box', background: backdrop ? rgba(d.backdropColor, d.backdropOpacity) : 'transparent' }}>
@@ -73,7 +74,7 @@ export function FormStage(props: RenderProps) {
 export function FormCard({ draft, view = 'form', mode = 'editor', narrow = false, wrap, onSubmit, onClose }: RenderProps) {
   const d = draft.design;
   const fullBleed = isFullBleed(draft);
-  const fullscreen = draft.kind === 'popup' && d.popupType === 'fullscreen';
+  const fullscreen = d.popupType === 'fullscreen';
   const sideLayout = d.layout === 'leftSidebar' || d.layout === 'rightSidebar';
   const side = d.layout === 'topSidebar' || (sideLayout && narrow) ? 'top' : d.layout === 'leftSidebar' ? 'left' : d.layout === 'rightSidebar' ? 'right' : null;
   const boxed = d.layout === 'boxed';
@@ -86,10 +87,10 @@ export function FormCard({ draft, view = 'form', mode = 'editor', narrow = false
     overflow: 'hidden', borderRadius: fullBleed ? 0 : d.radius,
     background: boxed ? d.sidebarColor : d.transparent ? 'transparent' : d.background,
     backgroundImage: d.backgroundImage && !boxed ? `url("${d.backgroundImage}")` : undefined,
-    backgroundSize: 'cover', backgroundPosition: 'center',
+    backgroundSize: bgSize(d.backgroundFit, d.backgroundZoom), backgroundRepeat: d.backgroundFit === 'tile' ? 'repeat' : 'no-repeat', backgroundPosition: focusPosition(d.backgroundX, d.backgroundY),
     border: d.layout === 'border' ? `8px solid ${d.sidebarColor}` : undefined,
     boxShadow: d.shadow ? '0 24px 60px rgba(27, 16, 37, 0.18)' : 'none',
-    fontFamily: fontStack[d.font], color: d.textColor, fontSize: 15, lineHeight: 1.5, textAlign: 'left',
+    fontFamily: fontStack[d.font], color: d.textColor, fontSize: 15, lineHeight: 1.5, textAlign: d.align,
   };
   const body: CSSProperties = {
     flex: 1, minWidth: 0, boxSizing: 'border-box', display: 'flex', flexDirection: 'column', justifyContent: fullscreen ? 'center' : undefined,
@@ -100,7 +101,17 @@ export function FormCard({ draft, view = 'form', mode = 'editor', narrow = false
 
   return (
     <div style={card} data-pixlpush-card="">
-      {side && <div aria-hidden style={{ flex: side === 'top' ? '0 0 140px' : '0 0 38%', minHeight: 140, background: d.sidebarColor, backgroundImage: d.sidebarImage ? `url("${d.sidebarImage}")` : undefined, backgroundSize: d.sidebarFit === 'fit' ? 'contain' : 'cover', backgroundRepeat: 'no-repeat', backgroundPosition: 'center' }} />}
+      {side && (
+        <div aria-hidden style={{ position: 'relative', overflow: 'hidden', flex: side === 'top' ? `0 0 ${Math.round((d.sidebarWidth / 100) * 320)}px` : `0 0 ${d.sidebarWidth}%`, minHeight: 140, background: d.sidebarColor }}>
+          {d.sidebarImage && <img src={d.sidebarImage} alt="" aria-hidden style={{
+            position: 'absolute', inset: 0, width: '100%', height: '100%',
+            objectFit: d.sidebarFit === 'fit' ? 'contain' : 'cover',
+            objectPosition: focusPosition(d.sidebarX, d.sidebarY),
+            transform: d.sidebarZoom > 100 ? `scale(${d.sidebarZoom / 100})` : undefined,
+            transformOrigin: focusPosition(d.sidebarX, d.sidebarY),
+          }} />}
+        </div>
+      )}
       <form
         style={body}
         noValidate={editor}
@@ -118,7 +129,7 @@ export function FormCard({ draft, view = 'form', mode = 'editor', narrow = false
               })}
         </div>
       </form>
-      {d.showClose && draft.kind !== 'embedded' && (
+      {d.showClose && (
         <button type="button" aria-label="Close" tabIndex={editor ? -1 : undefined} onClick={onClose} data-pixlpush-close=""
           style={{ position: 'absolute', top: 8, right: 8, width: 32, height: 32, border: 0, borderRadius: 16, background: 'transparent', color: d.closeColor, fontSize: 22, lineHeight: '32px', cursor: 'pointer' }}>
           ×

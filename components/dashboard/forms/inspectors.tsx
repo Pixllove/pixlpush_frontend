@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
-import { AddRounded, ArrowDownwardRounded, ArrowUpwardRounded, DeleteOutlineRounded, EditOutlined } from '@mui/icons-material';
-import { Alert, Box, Button, Chip, IconButton, Menu, MenuItem, Stack, TextField, Tooltip, Typography } from '@mui/material';
+import { useState, type ReactNode } from 'react';
+import { AddRounded, ArrowDownwardRounded, ArrowUpwardRounded, DeleteOutlineRounded, EditOutlined, LockOutlined } from '@mui/icons-material';
+import { Alert, Box, Button, IconButton, Menu, MenuItem, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import CodeEditor from './CodeEditor';
 import { ColorField, ImageField, InspectorSection, NumberSlider, Segmented, SettingSwitch, StringList, type SegmentOption } from './controls';
 import {
-  blockErrors, contrastRatio, fieldTypeLabel, fieldTypes, fonts, makeField, moveField, removeField, socialPlatforms, successErrors, updateBlock, updateField,
-  type Block, type FormDesign, type FormDraft, type FormField, type SocialPlatform,
+  blockErrors, contrastRatio, fieldTypeLabel, fieldTypes, fonts, isHttpUrl, makeField, moveField, removeField, socialPlatforms, successErrors, updateBlock, updateField,
+  type Block, type FormDesign, type FormDraft, type FormField, type SocialPlatform, blockLabel,
 } from './model';
 
 export type Update = (fn: (draft: FormDraft) => FormDraft, key?: string) => void;
@@ -40,20 +40,35 @@ function ContrastWarning({ pairs }: { pairs: Array<[string, string, string]> }) 
   return <Alert severity="warning">{failing.join(' and ')} may be hard to read on this background (below 4.5:1 contrast).</Alert>;
 }
 
+/** Drag to choose which part of an image shows, and how far it is zoomed in. */
+function ImageAdjust({ x, y, zoom, onX, onY, onZoom, onReset }: { x: number; y: number; zoom: number; onX: (v: number) => void; onY: (v: number) => void; onZoom: (v: number) => void; onReset: () => void }) {
+  return (
+    <Stack gap={1.5} sx={{ p: 1.5, border: '1px solid var(--pp-border)', borderRadius: 2, bgcolor: 'var(--pp-subtle)' }}>
+      <Typography className="pp-form-hint">Drag the sliders to choose which part of the image shows. Zoom in to crop tighter.</Typography>
+      <NumberSlider label="Move left ↔ right" unit="%" min={0} max={100} value={x} onChange={onX} />
+      <NumberSlider label="Move up ↕ down" unit="%" min={0} max={100} value={y} onChange={onY} />
+      <NumberSlider label="Zoom" unit="%" min={100} max={300} step={5} value={zoom} onChange={onZoom} />
+      {(x !== 50 || y !== 50 || zoom !== 100) && <Button size="small" onClick={onReset} sx={{ alignSelf: 'flex-start', minWidth: 0, minHeight: 0, p: 0, mt: -0.5 }}>Reset image</Button>}
+    </Stack>
+  );
+}
+
 /* ---------- Style tab: form-level design ---------- */
 
-export function StylePanel({ draft, update }: { draft: FormDraft; update: Update }) {
+export function StylePanel({ draft, update, projectId }: { draft: FormDraft; update: Update; projectId: string }) {
   const d = draft.design;
   const set = <K extends keyof FormDesign>(key: K) => (value: FormDesign[K]) => update((current) => ({ ...current, design: { ...current.design, [key]: value } }), `design.${key}`);
   const usesSidebar = d.layout !== 'plain';
-  const overlay = (draft.kind === 'popup' && (d.popupType === 'lightbox' || d.popupType === 'fullscreen')) || (draft.kind === 'promotion' && d.promoPosition === 'center');
-  const fullBleed = (draft.kind === 'popup' && (d.popupType === 'bar' || d.popupType === 'fullscreen')) || (draft.kind === 'promotion' && d.promoPosition === 'banner');
+  const overlay = d.popupType === 'lightbox' || d.popupType === 'fullscreen';
+  const fullBleed = d.popupType === 'bar' || d.popupType === 'fullscreen';
   const background = d.transparent ? '#ffffff' : d.background;
 
   return (
     <Box>
-      <InspectorSection title={draft.kind === 'embedded' ? 'Placement' : 'Type and position'}>
-        {draft.kind === 'popup' && (
+      <InspectorSection title="Type and position">
+        {draft.behaviour.mode === 'inline' ? (
+          <Typography className="pp-form-hint">This form sits inside your page (chosen in “How to use”), so pop-up type and overlay don’t apply.</Typography>
+        ) : (
           <>
             <Segmented label="Pop-up type" iconOnly value={d.popupType} onChange={set('popupType')} options={[
               { value: 'lightbox', label: 'Lightbox (centre)', icon: glyph('center') },
@@ -65,8 +80,6 @@ export function StylePanel({ draft, update }: { draft: FormDraft; update: Update
             {d.popupType === 'bar' && <Segmented label="Bar position" value={d.barPosition} onChange={set('barPosition')} options={[{ value: 'top', label: 'Top', icon: glyph('barTop') }, { value: 'bottom', label: 'Bottom', icon: glyph('barBottom') }]} />}
           </>
         )}
-        {draft.kind === 'promotion' && <Segmented label="Position" iconOnly value={d.promoPosition} onChange={set('promoPosition')} options={[{ value: 'center', label: 'Centred', icon: glyph('center') }, { value: 'corner', label: 'Corner', icon: glyph('corner') }, { value: 'banner', label: 'Bottom banner', icon: glyph('barBottom') }]} />}
-        {draft.kind === 'embedded' && <Segmented label="Alignment on the page" iconOnly value={d.align} onChange={set('align')} options={[{ value: 'left', label: 'Left', icon: glyph('alignLeft') }, { value: 'center', label: 'Centre', icon: glyph('center') }, { value: 'right', label: 'Right', icon: glyph('alignRight') }]} />}
         <NumberSlider label={fullBleed ? 'Content width' : 'Width'} unit="px" min={300} max={960} step={10} value={d.width} onChange={set('width')} />
       </InspectorSection>
 
@@ -82,8 +95,16 @@ export function StylePanel({ draft, update }: { draft: FormDraft; update: Update
         {usesSidebar && <ColorField label={d.layout === 'border' ? 'Border colour' : d.layout === 'boxed' ? 'Outer colour' : 'Side panel colour'} value={d.sidebarColor} onChange={set('sidebarColor')} />}
         {(d.layout === 'topSidebar' || d.layout === 'leftSidebar' || d.layout === 'rightSidebar') && (
           <>
-            <ImageField label="Side panel image" value={d.sidebarImage} onChange={set('sidebarImage')} />
-            {d.sidebarImage && <Segmented label="Image fit" value={d.sidebarFit} onChange={set('sidebarFit')} options={[{ value: 'fill', label: 'Fill' }, { value: 'fit', label: 'Fit' }]} />}
+            <NumberSlider label={d.layout === 'topSidebar' ? 'Panel height' : 'Panel width'} unit="%" min={20} max={60} value={d.sidebarWidth} onChange={set('sidebarWidth')} />
+            <ImageField label="Side panel image" value={d.sidebarImage} projectId={projectId} onChange={set('sidebarImage')} />
+            {d.sidebarImage && (
+              <>
+                <Segmented label="How the image fills the panel" value={d.sidebarFit} onChange={set('sidebarFit')} options={[{ value: 'fill', label: 'Fill' }, { value: 'fit', label: 'Fit' }]} />
+                <Typography className="pp-form-hint">{d.sidebarFit === 'fill' ? 'The image covers the whole panel and may be cropped.' : 'The whole image is shown; the panel colour fills any gaps.'}</Typography>
+                <ImageAdjust x={d.sidebarX} y={d.sidebarY} zoom={d.sidebarZoom} onX={set('sidebarX')} onY={set('sidebarY')} onZoom={set('sidebarZoom')}
+                  onReset={() => update((current) => ({ ...current, design: { ...current.design, sidebarX: 50, sidebarY: 50, sidebarZoom: 100 } }))} />
+              </>
+            )}
           </>
         )}
         <NumberSlider label="Corner radius" unit="px" min={0} max={32} value={d.radius} onChange={set('radius')} />
@@ -93,31 +114,28 @@ export function StylePanel({ draft, update }: { draft: FormDraft; update: Update
       <InspectorSection title="Background">
         <SettingSwitch label="Transparent background" description="Let the page behind the form show through." checked={d.transparent} onChange={set('transparent')} />
         {!d.transparent && <ColorField label="Background colour" value={d.background} onChange={set('background')} />}
-        <ImageField label="Background image" value={d.backgroundImage} onChange={set('backgroundImage')} />
+        <ImageField label="Background image" value={d.backgroundImage} projectId={projectId} onChange={set('backgroundImage')} />
+        {d.backgroundImage && (
+          <>
+            <Segmented label="How the background sits" value={d.backgroundFit} onChange={set('backgroundFit')} options={[{ value: 'cover', label: 'Fill' }, { value: 'contain', label: 'Fit' }, { value: 'tile', label: 'Tile' }]} />
+            <Typography className="pp-form-hint">{d.backgroundFit === 'cover' ? 'Covers the whole form and may be cropped.' : d.backgroundFit === 'contain' ? 'Shows the whole image; the background colour fills any gaps.' : 'Repeats to fill the form.'}</Typography>
+            <ImageAdjust x={d.backgroundX} y={d.backgroundY} zoom={d.backgroundZoom} onX={set('backgroundX')} onY={set('backgroundY')} onZoom={set('backgroundZoom')}
+              onReset={() => update((current) => ({ ...current, design: { ...current.design, backgroundX: 50, backgroundY: 50, backgroundZoom: 100 } }))} />
+          </>
+        )}
       </InspectorSection>
 
-      <InspectorSection title="Text">
+      <InspectorSection title="Fonts and colours">
         <TextField select label="Font" value={d.font} onChange={(event) => set('font')(event.target.value as FormDesign['font'])}>
           {fonts.map((font) => <MenuItem key={font} value={font} sx={{ fontFamily: font }}>{font}</MenuItem>)}
         </TextField>
         <ColorField label="Heading colour" value={d.headingColor} onChange={set('headingColor')} />
         <ColorField label="Text colour" value={d.textColor} onChange={set('textColor')} />
-        <ColorField label="Field label colour" value={d.labelColor} onChange={set('labelColor')} />
         <ContrastWarning pairs={[['Headings', d.headingColor, background], ['Text', d.textColor, background]]} />
       </InspectorSection>
 
-      <InspectorSection title="Fields and button" defaultExpanded={false}>
-        <ColorField label="Field background" value={d.inputBg} onChange={set('inputBg')} />
-        <ColorField label="Field border" value={d.inputBorder} onChange={set('inputBorder')} />
-        <NumberSlider label="Field radius" unit="px" min={0} max={24} value={d.inputRadius} onChange={set('inputRadius')} />
-        <ColorField label="Button colour" value={d.buttonBg} onChange={set('buttonBg')} />
-        <ColorField label="Button text colour" value={d.buttonText} onChange={set('buttonText')} />
-        <NumberSlider label="Button radius" unit="px" min={0} max={24} value={d.buttonRadius} onChange={set('buttonRadius')} />
-        <ContrastWarning pairs={[['Button text', d.buttonText, d.buttonBg]]} />
-      </InspectorSection>
 
-      {draft.kind !== 'embedded' && (
-        <InspectorSection title="Overlay and close" defaultExpanded={false}>
+      <InspectorSection title="Overlay and close" defaultExpanded={false}>
           {overlay ? (
             <>
               <ColorField label="Overlay colour" value={d.backdropColor} onChange={set('backdropColor')} />
@@ -127,87 +145,98 @@ export function StylePanel({ draft, update }: { draft: FormDraft; update: Update
           <SettingSwitch label="Close button" description="Visitors can dismiss the form." checked={d.showClose} onChange={set('showClose')}>
             <ColorField label="Close button colour" value={d.closeColor} onChange={set('closeColor')} />
           </SettingSwitch>
-        </InspectorSection>
-      )}
+      </InspectorSection>
     </Box>
   );
 }
 
 /* ---------- block inspector ---------- */
 
-export function BlockInspector({ block, draft, update }: { block: Block; draft: FormDraft; update: Update }) {
+export type Part = 'design' | 'settings';
+
+/**
+ * One block's controls, split the same way for every block: Settings holds what it says and does
+ * (text, links, images, dates, items, code); Design holds how it looks (alignment, size, colours, spacing).
+ */
+export function BlockInspector({ block, draft, update, projectId, part, bare = false }: { block: Block; draft: FormDraft; update: Update; projectId: string; part: Part; bare?: boolean }) {
   const set = (patch: Partial<Block>, key?: string) => update((current) => updateBlock(current, block.id, patch), key && `${block.id}.${key}`);
   const error = blockErrors(block);
   const colorOr = (value: string | undefined, fallback: string) => value ?? fallback;
   const d = draft.design;
+  const settings = part === 'settings';
+  const none = (text: string) => <Typography className="pp-form-hint">{text}</Typography>;
 
   return (
-    <Stack gap={2} sx={{ p: 2 }}>
-      {error && <Alert severity="warning">{error}</Alert>}
+    <Stack gap={2} sx={{ p: bare ? 0 : 2 }}>
+      {settings && error && <Alert severity="warning">{error}</Alert>}
 
       {(block.type === 'heading' || block.type === 'text') && (
         <>
-          <TextField label={block.type === 'heading' ? 'Heading' : 'Text'} multiline={block.type === 'text'} rows={block.type === 'text' ? 4 : undefined} value={block.text ?? ''} onChange={(event) => set({ text: event.target.value }, 'text')} />
+          {settings && <TextField label={block.type === 'heading' ? 'Heading' : 'Text'} multiline={block.type === 'text'} rows={block.type === 'text' ? 5 : undefined} value={block.text ?? ''} onChange={(event) => set({ text: event.target.value }, 'text')} />}
+          {!settings && <>
           <Segmented label="Alignment" value={block.align ?? 'left'} onChange={(align) => set({ align })} options={alignOptions} />
           <NumberSlider label="Size" unit="px" min={11} max={48} value={block.size ?? (block.type === 'heading' ? 24 : 15)} onChange={(size) => set({ size }, 'size')} />
           <Segmented label="Weight" value={String(block.weight ?? (block.type === 'heading' ? 700 : 400)) as '400' | '600' | '700'} onChange={(weight) => set({ weight: Number(weight) })} options={[{ value: '400', label: 'Regular' }, { value: '600', label: 'Semibold' }, { value: '700', label: 'Bold' }]} />
           <ColorField label="Colour" value={colorOr(block.color, block.type === 'heading' ? d.headingColor : d.textColor)} onChange={(color) => set({ color }, 'color')} />
           {block.color && <Button size="small" sx={{ alignSelf: 'flex-start' }} onClick={() => set({ color: undefined })}>Use the form&apos;s colour</Button>}
+          </>}
         </>
       )}
 
-      {(block.type === 'image' || block.type === 'imageText') && (
+      {(block.type === 'image' || block.type === 'imageText') && (settings ? (
         <>
-          <ImageField label="Image" value={block.src ?? ''} onChange={(src) => set({ src })} />
+          <ImageField label="Image" value={block.src ?? ''} projectId={projectId} onChange={(src) => set({ src })} />
           <TextField label="Alt text" helperText="Describes the image for screen readers." value={block.alt ?? ''} onChange={(event) => set({ alt: event.target.value }, 'alt')} />
-          {block.type === 'image' && (
-            <>
-              <TextField label="Link (optional)" placeholder="https://" value={block.href ?? ''} onChange={(event) => set({ href: event.target.value }, 'href')} />
-              <NumberSlider label="Width" unit="%" min={20} max={100} step={5} value={block.width ?? 100} onChange={(width) => set({ width }, 'width')} />
-              <Segmented label="Alignment" value={block.align ?? 'center'} onChange={(align) => set({ align })} options={alignOptions} />
-            </>
-          )}
-          {block.type === 'imageText' && (
-            <>
-              <TextField label="Text" multiline rows={3} value={block.text ?? ''} onChange={(event) => set({ text: event.target.value }, 'text')} />
-              <Segmented label="Image side" value={block.side ?? 'left'} onChange={(side) => set({ side })} options={[{ value: 'left', label: 'Left' }, { value: 'right', label: 'Right' }]} />
-            </>
-          )}
+          {block.type === 'image' && <TextField label="Link (optional)" placeholder="https://" value={block.href ?? ''} onChange={(event) => set({ href: event.target.value }, 'href')} />}
+          {block.type === 'imageText' && <TextField label="Text" multiline rows={4} value={block.text ?? ''} onChange={(event) => set({ text: event.target.value }, 'text')} />}
         </>
-      )}
+      ) : block.type === 'image' ? (
+        <>
+          <NumberSlider label="Width" unit="%" min={20} max={100} step={5} value={block.width ?? 100} onChange={(width) => set({ width }, 'width')} />
+          <Segmented label="Alignment" value={block.align ?? 'center'} onChange={(align) => set({ align })} options={alignOptions} />
+        </>
+      ) : (
+        <>
+          <Segmented label="Image side" value={block.side ?? 'left'} onChange={(side) => set({ side })} options={[{ value: 'left', label: 'Left' }, { value: 'right', label: 'Right' }]} />
+          <ColorField label="Text colour" value={colorOr(block.color, d.textColor)} onChange={(color) => set({ color }, 'color')} />
+        </>
+      ))}
 
-      {block.type === 'button' && (
+      {block.type === 'button' && (settings ? (
         <>
           <TextField label="Button text" value={block.label ?? ''} onChange={(event) => set({ label: event.target.value }, 'label')} />
           <Segmented label="When clicked" value={block.action ?? 'url'} onChange={(action) => set({ action })} options={[{ value: 'url', label: 'Open a link' }, { value: 'submit', label: 'Submit the form' }]} />
           {block.action !== 'submit' && <TextField label="Link" placeholder="https://" value={block.href ?? ''} onChange={(event) => set({ href: event.target.value }, 'href')} />}
+        </>
+      ) : (
+        <>
           <SettingSwitch label="Full width" checked={block.fullWidth ?? true} onChange={(fullWidth) => set({ fullWidth })} />
-          {!block.fullWidth && <Segmented label="Alignment" value={block.align ?? 'left'} onChange={(align) => set({ align })} options={alignOptions} />}
+          {!(block.fullWidth ?? true) && <Segmented label="Alignment" value={block.align ?? 'left'} onChange={(align) => set({ align })} options={alignOptions} />}
           <ColorField label="Button colour" value={colorOr(block.bg, d.buttonBg)} onChange={(bg) => set({ bg }, 'bg')} />
           <ColorField label="Text colour" value={colorOr(block.textColor, d.buttonText)} onChange={(textColor) => set({ textColor }, 'textColor')} />
           <NumberSlider label="Corner radius" unit="px" min={0} max={24} value={block.radius ?? d.buttonRadius} onChange={(radius) => set({ radius }, 'radius')} />
+          <ContrastWarning pairs={[['Button text', colorOr(block.textColor, d.buttonText), colorOr(block.bg, d.buttonBg)]]} />
         </>
-      )}
+      ))}
 
-      {block.type === 'divider' && (
+      {block.type === 'divider' && (settings ? none('A divider has nothing to set up. Change its colour and spacing in Design.') : (
         <>
           <ColorField label="Colour" value={block.color ?? '#eae6ef'} onChange={(color) => set({ color }, 'color')} />
           <NumberSlider label="Thickness" unit="px" min={1} max={8} value={block.thickness ?? 1} onChange={(thickness) => set({ thickness }, 'thickness')} />
           <NumberSlider label="Space above and below" unit="px" min={0} max={40} value={block.spacing ?? 8} onChange={(spacing) => set({ spacing }, 'spacing')} />
         </>
-      )}
+      ))}
 
-      {block.type === 'countdown' && (
+      {block.type === 'countdown' && (settings ? (
         <>
           <TextField label="Ends at" type="datetime-local" InputLabelProps={{ shrink: true }} value={block.endsAt ?? ''} onChange={(event) => set({ endsAt: event.target.value })} helperText="In your local time zone." />
           <TextField label="Label above the timer" value={block.text ?? ''} onChange={(event) => set({ text: event.target.value }, 'text')} />
-          <Segmented label="Alignment" value={block.align ?? 'center'} onChange={(align) => set({ align })} options={alignOptions} />
           <Segmented label="When time runs out" value={block.onExpire ?? 'text'} onChange={(onExpire) => set({ onExpire })} options={[{ value: 'text', label: 'Show a message' }, { value: 'hide', label: 'Hide the timer' }]} />
           {block.onExpire !== 'hide' && <TextField label="Message" value={block.expiredText ?? ''} onChange={(event) => set({ expiredText: event.target.value }, 'expiredText')} />}
         </>
-      )}
+      ) : <Segmented label="Alignment" value={block.align ?? 'center'} onChange={(align) => set({ align })} options={alignOptions} />)}
 
-      {block.type === 'social' && (
+      {block.type === 'social' && (settings ? (
         <>
           {(block.links ?? []).map((link, index) => (
             <Stack key={index} gap={1} className="pp-form-row-card">
@@ -221,50 +250,80 @@ export function BlockInspector({ block, draft, update }: { block: Block; draft: 
             </Stack>
           ))}
           <Button variant="outlined" size="small" startIcon={<AddRounded />} sx={{ alignSelf: 'flex-start' }} onClick={() => set({ links: [...(block.links ?? []), { platform: 'X', url: 'https://' }] })}>Add link</Button>
+        </>
+      ) : (
+        <>
           <NumberSlider label="Icon size" unit="px" min={24} max={56} value={block.size ?? 32} onChange={(size) => set({ size }, 'size')} />
           <Segmented label="Alignment" value={block.align ?? 'center'} onChange={(align) => set({ align })} options={alignOptions} />
           <ColorField label="Icon colour" value={colorOr(block.color, d.headingColor)} onChange={(color) => set({ color }, 'color')} />
         </>
-      )}
+      ))}
 
-      {block.type === 'list' && (
-        <>
-          <StringList label="Item" items={block.items ?? []} addLabel="Add item" onChange={(items) => set({ items }, 'items')} />
-          <NumberSlider label="Size" unit="px" min={11} max={24} value={block.size ?? 15} onChange={(size) => set({ size }, 'size')} />
-        </>
-      )}
+      {block.type === 'list' && (settings
+        ? <StringList label="Item" items={block.items ?? []} addLabel="Add item" onChange={(items) => set({ items }, 'items')} />
+        : (
+          <>
+            <NumberSlider label="Size" unit="px" min={11} max={24} value={block.size ?? 15} onChange={(size) => set({ size }, 'size')} />
+            <ColorField label="Colour" value={colorOr(block.color, d.textColor)} onChange={(color) => set({ color }, 'color')} />
+          </>
+        ))}
 
-      {block.type === 'video' && <TextField label="Video link" placeholder="https://youtube.com/watch?v=…" helperText="A YouTube link or a direct .mp4 / .webm file." value={block.href ?? ''} onChange={(event) => set({ href: event.target.value }, 'href')} />}
+      {block.type === 'video' && (settings
+        ? <TextField label="Video link" placeholder="https://youtube.com/watch?v=…" helperText="A YouTube link or a direct .mp4 / .webm file." value={block.href ?? ''} onChange={(event) => set({ href: event.target.value }, 'href')} />
+        : none('A video fills the form width. Change the form width in Design with nothing selected.'))}
 
-      {block.type === 'code' && (
-        <CodeEditor value={block.html ?? ''} onChange={(html) => set({ html }, 'html')} />
-      )}
+      {block.type === 'code' && (settings
+        ? <CodeEditor value={block.html ?? ''} onChange={(html) => set({ html }, 'html')} />
+        : none('Custom code is styled by its own CSS. Write a <style> tag in Settings.'))}
     </Stack>
+  );
+}
+
+/** Every content block on the form, in order, with its content and style, so nothing needs a click on the canvas. */
+export function BlockSections({ draft, update, projectId }: { draft: FormDraft; update: Update; projectId: string }) {
+  const blocks = draft.blocks.filter((block) => block.type !== 'fields');
+  const repeated = (type: Block['type']) => blocks.filter((block) => block.type === type).length > 1;
+  return (
+    <>
+      {blocks.map((block) => {
+        const title = repeated(block.type) ? `${blockLabel[block.type]} ${blocks.filter((item) => item.type === block.type).indexOf(block) + 1}` : blockLabel[block.type];
+        return (
+          <InspectorSection key={block.id} title={title}>
+            <BlockInspector block={block} draft={draft} update={update} projectId={projectId} part="settings" bare />
+            <BlockInspector block={block} draft={draft} update={update} projectId={projectId} part="design" bare />
+          </InspectorSection>
+        );
+      })}
+    </>
   );
 }
 
 /* ---------- signup fields ---------- */
 
-export function FieldsInspector({ block, draft, update }: { block: Block; draft: FormDraft; update: Update }) {
+/** Settings for the signup fields: which inputs there are and what the button says. */
+export function FieldsSettings({ block, draft, update }: { block: Block; draft: FormDraft; update: Update }) {
   const [editing, setEditing] = useState<string | null>(null);
   const [menu, setMenu] = useState<HTMLElement | null>(null);
   const setField = (field: FormField, patch: Partial<FormField>, key?: string) => update((current) => updateField(current, field.id, patch), key && `${field.id}.${key}`);
 
   return (
     <Box>
-      <InspectorSection title="Fields">
+      <InspectorSection title="Signup fields">
+        <Typography className="pp-form-hint">What people fill in. Add more here or from <strong>Form fields</strong> in the Elements panel.</Typography>
         <Stack gap={0.5}>
           {draft.fields.map((field, index) => (
             <Box key={field.id} className="pp-form-field-row">
               <Stack direction="row" alignItems="center" gap={0.5}>
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Typography noWrap className="pp-form-switch-label">{field.label || fieldTypeLabel[field.type]}{field.required ? ' *' : ''}</Typography>
-                  <Typography className="pp-form-switch-text">{fieldTypeLabel[field.type]}</Typography>
+                  <Typography className="pp-form-switch-text">{field.type === 'email' ? 'Always included' : fieldTypeLabel[field.type]}</Typography>
                 </Box>
                 <Tooltip title="Move up"><span><IconButton aria-label={`Move ${field.label} up`} disabled={index === 0} onClick={() => update((current) => moveField(current, field.id, -1))}><ArrowUpwardRounded fontSize="small" /></IconButton></span></Tooltip>
                 <Tooltip title="Move down"><span><IconButton aria-label={`Move ${field.label} down`} disabled={index === draft.fields.length - 1} onClick={() => update((current) => moveField(current, field.id, 1))}><ArrowDownwardRounded fontSize="small" /></IconButton></span></Tooltip>
                 <Tooltip title={editing === field.id ? 'Close' : 'Edit'}><IconButton aria-label={`Edit ${field.label}`} aria-expanded={editing === field.id} onClick={() => setEditing(editing === field.id ? null : field.id)}><EditOutlined fontSize="small" /></IconButton></Tooltip>
-                <Tooltip title={field.type === 'email' ? 'Email is required on every form' : 'Remove'}><span><IconButton aria-label={`Remove ${field.label}`} disabled={field.type === 'email'} onClick={() => update((current) => removeField(current, field.id))}><DeleteOutlineRounded fontSize="small" /></IconButton></span></Tooltip>
+                {field.type === 'email'
+                  ? <Tooltip title="Every form collects an email, so this field stays."><LockOutlined fontSize="small" sx={{ mx: 1, color: 'text.disabled' }} aria-label="Email is always included" /></Tooltip>
+                  : <Tooltip title="Remove"><IconButton aria-label={`Remove ${field.label}`} onClick={() => update((current) => removeField(current, field.id))}><DeleteOutlineRounded fontSize="small" /></IconButton></Tooltip>}
               </Stack>
               {editing === field.id && (
                 <Stack gap={1.5} sx={{ pt: 1.5 }}>
@@ -292,48 +351,73 @@ export function FieldsInspector({ block, draft, update }: { block: Block; draft:
           ))}
         </Menu>
       </InspectorSection>
-      <InspectorSection title="Layout and button">
+      <InspectorSection title="Submit button">
         <TextField label="Button text" value={block.label ?? ''} onChange={(event) => update((current) => updateBlock(current, block.id, { label: event.target.value }), `${block.id}.label`)} />
-        <Segmented label="Field layout" value={draft.design.display} onChange={(display) => update((current) => ({ ...current, design: { ...current.design, display } }))} options={[{ value: 'stacked', label: 'Stacked' }, { value: 'horizontal', label: 'In one row' }]} />
-        <SettingSwitch label="Labels above fields" description="Otherwise the label is shown as placeholder text." checked={draft.options.labelsAbove} onChange={(labelsAbove) => update((current) => ({ ...current, options: { ...current.options, labelsAbove } }))} />
       </InspectorSection>
     </Box>
   );
 }
 
-/* ---------- form settings (nothing selected) ---------- */
-
-export function FormSettings({ draft, update }: { draft: FormDraft; update: Update }) {
-  const o = draft.options;
-  const set = <K extends keyof FormDraft['options']>(key: K, value: FormDraft['options'][K], typing?: string) => update((current) => ({ ...current, options: { ...current.options, [key]: value } }), typing && `options.${typing}`);
+/** Design for the signup fields: layout, labels and the input and button colours. */
+export function FieldsDesign({ draft, update }: { draft: FormDraft; update: Update }) {
+  const d = draft.design;
+  const set = <K extends keyof FormDesign>(key: K) => (value: FormDesign[K]) => update((current) => ({ ...current, design: { ...current.design, [key]: value } }), `design.${key}`);
   return (
     <Box>
+      <InspectorSection title="Layout">
+        <Segmented label="Field layout" value={d.display} onChange={set('display')} options={[{ value: 'stacked', label: 'Stacked' }, { value: 'horizontal', label: 'In one row' }]} />
+        <SettingSwitch label="Labels above fields" description="Otherwise the label is shown as placeholder text." checked={draft.options.labelsAbove} onChange={(labelsAbove) => update((current) => ({ ...current, options: { ...current.options, labelsAbove } }))} />
+      </InspectorSection>
+      <InspectorSection title="Fields">
+        <ColorField label="Field background" value={d.inputBg} onChange={set('inputBg')} />
+        <ColorField label="Field border" value={d.inputBorder} onChange={set('inputBorder')} />
+        <ColorField label="Field label colour" value={d.labelColor} onChange={set('labelColor')} />
+        <NumberSlider label="Field corners" unit="px" min={0} max={24} value={d.inputRadius} onChange={set('inputRadius')} />
+      </InspectorSection>
+      <InspectorSection title="Submit button">
+        <ColorField label="Button colour" value={d.buttonBg} onChange={set('buttonBg')} />
+        <ColorField label="Button text colour" value={d.buttonText} onChange={set('buttonText')} />
+        <NumberSlider label="Button corners" unit="px" min={0} max={24} value={d.buttonRadius} onChange={set('buttonRadius')} />
+        <ContrastWarning pairs={[['Button text', d.buttonText, d.buttonBg]]} />
+      </InspectorSection>
+    </Box>
+  );
+}
+
+/* ---------- Settings tab: everything about the form, always visible ---------- */
+
+export function FormSettings({ draft, update, blockSections }: { draft: FormDraft; update: Update; blockSections?: ReactNode }) {
+  const o = draft.options;
+  const set = <K extends keyof FormDraft['options']>(key: K, value: FormDraft['options'][K], typing?: string) => update((current) => ({ ...current, options: { ...current.options, [key]: value } }), typing && `options.${typing}`);
+  const fieldsBlock = draft.blocks.find((block) => block.type === 'fields');
+  return (
+    <Box>
+      {blockSections}
+      <InspectorSection title="Name">
+        <TextField label="Form name" value={draft.name} error={!draft.name.trim()} helperText={draft.name.trim() ? 'Only your team sees this name.' : 'Enter a name for the form.'}
+          onChange={(event) => update((current) => ({ ...current, name: event.target.value }), 'name')} />
+      </InspectorSection>
+      {fieldsBlock && <FieldsSettings block={fieldsBlock} draft={draft} update={update} />}
+      <InspectorSection title="After someone signs up">
+        <SuccessInspector draft={draft} update={update} />
+      </InspectorSection>
       <InspectorSection title="Consent and privacy">
-        <SettingSwitch label="Privacy policy" description="A line with a link to your privacy policy." checked={o.privacy.on} onChange={(on) => set('privacy', { ...o.privacy, on })}>
+        <SettingSwitch label="Privacy policy link" description="Shows a line with a link to your privacy policy." checked={o.privacy.on} onChange={(on) => set('privacy', { ...o.privacy, on })}>
           <TextField label="Text before the link" value={o.privacy.text} onChange={(event) => set('privacy', { ...o.privacy, text: event.target.value }, 'privacy.text')} />
-          <TextField label="Privacy policy link" placeholder="https://" value={o.privacy.url} onChange={(event) => set('privacy', { ...o.privacy, url: event.target.value }, 'privacy.url')} />
+          <TextField label="Privacy policy link" placeholder="https://example.com/privacy" value={o.privacy.url} error={o.privacy.on && !isHttpUrl(o.privacy.url)} helperText={o.privacy.on && !isHttpUrl(o.privacy.url) ? 'Enter the full web address, such as https://example.com/privacy.' : ' '} onChange={(event) => set('privacy', { ...o.privacy, url: event.target.value }, 'privacy.url')} />
         </SettingSwitch>
-        <SettingSwitch label="Confirmation checkbox" description="Subscribers must tick it to sign up." checked={o.consent.on} onChange={(on) => set('consent', { ...o.consent, on })}>
+        <SettingSwitch label="Consent checkbox" description="People must tick it before they can sign up." checked={o.consent.on} onChange={(on) => set('consent', { ...o.consent, on })}>
           <TextField label="Checkbox text" multiline rows={2} value={o.consent.text} onChange={(event) => set('consent', { ...o.consent, text: event.target.value }, 'consent.text')} />
         </SettingSwitch>
-        <SettingSwitch label="Marketing permissions (GDPR)" description="Let subscribers choose how you contact them." checked={o.permissions.on} onChange={(on) => set('permissions', { ...o.permissions, on })}>
-          <TextField label="Intro text" value={o.permissions.text} onChange={(event) => set('permissions', { ...o.permissions, text: event.target.value }, 'permissions.text')} />
-          <StringList label="Permission" items={o.permissions.items} addLabel="Add permission" onChange={(items) => set('permissions', { ...o.permissions, items }, 'permissions.items')} />
+      </InspectorSection>
+      <InspectorSection title="Tag new subscribers">
+        <SettingSwitch label="Add a tag" description="Saves the same value on everyone who signs up here, so you can find them later (for example source = spring-sale)." checked={o.hidden.on} onChange={(on) => set('hidden', { ...o.hidden, on })}>
+          <TextField label="Tag name" value={o.hidden.name} onChange={(event) => set('hidden', { ...o.hidden, name: event.target.value }, 'hidden.name')} />
+          <TextField label="Tag value" placeholder="spring-sale" value={o.hidden.value} onChange={(event) => set('hidden', { ...o.hidden, value: event.target.value }, 'hidden.value')} />
         </SettingSwitch>
       </InspectorSection>
-      <InspectorSection title="Segmentation">
-        <SettingSwitch label="Interest groups" description="Subscribers pick the topics they want." checked={o.interests.on} onChange={(on) => set('interests', { ...o.interests, on })}>
-          <TextField label="Question" value={o.interests.label} onChange={(event) => set('interests', { ...o.interests, label: event.target.value }, 'interests.label')} />
-          <StringList label="Interest" items={o.interests.items} addLabel="Add interest" onChange={(items) => set('interests', { ...o.interests, items }, 'interests.items')} />
-        </SettingSwitch>
-        <SettingSwitch label="Hidden segmentation field" description="Tags every subscriber from this form with a value." checked={o.hidden.on} onChange={(on) => set('hidden', { ...o.hidden, on })}>
-          <TextField label="Field name" value={o.hidden.name} onChange={(event) => set('hidden', { ...o.hidden, name: event.target.value }, 'hidden.name')} />
-          <TextField label="Value" placeholder="spring-campaign" value={o.hidden.value} onChange={(event) => set('hidden', { ...o.hidden, value: event.target.value }, 'hidden.value')} />
-        </SettingSwitch>
-      </InspectorSection>
-      <InspectorSection title="Protection">
-        <SettingSwitch label="reCAPTCHA" description="Blocks spam sign-ups with an invisible check." checked={o.recaptcha} onChange={(recaptcha) => set('recaptcha', recaptcha)} />
-        <SettingSwitch label="Double opt-in" description="New subscribers confirm by email before they are added." checked={o.doubleOptIn} onChange={(doubleOptIn) => set('doubleOptIn', doubleOptIn)} />
+      <InspectorSection title="Spam protection" defaultExpanded={false}>
+        <Typography color="text.secondary" fontSize="var(--fs-13)">Always on. A hidden check and request limits stop bots; you don’t need to set anything up.</Typography>
       </InspectorSection>
     </Box>
   );
@@ -346,8 +430,8 @@ export function SuccessInspector({ draft, update }: { draft: FormDraft; update: 
   const errors = successErrors(s);
   const set = (patch: Partial<FormDraft['success']>, key?: string) => update((current) => ({ ...current, success: { ...current.success, ...patch } }), key && `success.${key}`);
   return (
-    <Stack gap={2} sx={{ p: 2 }}>
-      <Segmented label="After someone signs up" value={s.mode} onChange={(mode) => set({ mode })} options={[{ value: 'message', label: 'Show a message' }, { value: 'redirect', label: 'Go to a page' }]} />
+    <Stack gap={2}>
+      <Segmented label="What happens next" value={s.mode} onChange={(mode) => set({ mode })} options={[{ value: 'message', label: 'Show a message' }, { value: 'redirect', label: 'Go to a page' }]} />
       {s.mode === 'redirect' ? (
         <TextField label="Page address" placeholder="https://example.com/thanks" value={s.redirectUrl} error={Boolean(errors.redirectUrl)} helperText={errors.redirectUrl} onChange={(event) => set({ redirectUrl: event.target.value }, 'redirectUrl')} />
       ) : (
@@ -359,7 +443,6 @@ export function SuccessInspector({ draft, update }: { draft: FormDraft; update: 
           {s.buttonLabel.trim() && <TextField label="Button link" placeholder="https://" value={s.buttonUrl} error={Boolean(errors.buttonUrl)} helperText={errors.buttonUrl} onChange={(event) => set({ buttonUrl: event.target.value }, 'buttonUrl')} />}
         </>
       )}
-      {draft.options.doubleOptIn && <Chip size="small" label="Double opt-in is on: people also get a confirmation email." />}
     </Stack>
   );
 }

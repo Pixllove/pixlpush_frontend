@@ -39,7 +39,7 @@ const ALLOWED = [
   "email-campaigns",
   "email-deliveries",
   "journeys",
-  // Pop-ups, embedded forms and promotions.
+  // Pop-up forms.
   "forms",
   "analytics",
   // Home AI workspace: /assistants, /context, /business-context,

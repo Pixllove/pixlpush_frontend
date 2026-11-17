@@ -1,11 +1,11 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-import { renderFormHtml, installSnippet } from '@/components/dashboard/forms/exportHtml';
+import { describe, expect, it, vi } from 'vitest';
+import { renderFormHtml } from '@/components/dashboard/forms/exportHtml';
 import { countdownParts } from '@/components/dashboard/forms/FormRenderer';
 import {
-  applyTemplate, behaviourErrors, contrastRatio, defaultDraft, duplicateBlock, editorReducer, formDraftSchema, insertBlock, makeBlock, moveBlock,
-  publishProblems, removeBlock, removeField, successErrors, type FormDraft,
+  applyTemplate, behaviourErrors, installSnippets, contrastRatio, defaultDraft, duplicateBlock, editorReducer, formDraftSchema, insertBlock, makeBlock, makeField, moveBlock,
+  publishProblems, removeBlock, withFieldsBlock, removeField, successErrors, uploadsIn, type FormDraft,
 } from '@/components/dashboard/forms/model';
-import { createGroup, deleteForm, duplicateForm, getForm, listForms, listGroups, saveForm } from '@/lib/forms';
+import { createForm, createGroup, deleteForm, duplicateForm, getForm, getFormAnalytics, listForms, listGroups, saveForm, setFormStatus } from '@/lib/forms';
 
 const draft = (): FormDraft => defaultDraft({ name: '  Spring launch ', kind: 'popup', groups: ['all'] });
 const types = (d: FormDraft) => d.blocks.map((block) => block.type);
@@ -56,6 +56,7 @@ describe('form model', () => {
     expect(applied.groups).toEqual(['all']);
     expect(types(applied)).toContain('countdown');
     expect(applied.template).toBe('countdown');
+    expect(draft().template).toBe(''); // no template until one is chosen
   });
 });
 
@@ -68,6 +69,10 @@ describe('validation', () => {
     expect(behaviourErrors({ ...b, schedule: 'range', startAt: '2026-12-02T10:00', endAt: '2026-12-01T10:00' })).toHaveProperty('endAt');
     expect(behaviourErrors({ ...b, pages: 'show', urls: '  \n ' })).toHaveProperty('urls');
     expect(behaviourErrors({ ...b, hideDesktop: true, hideTablet: true, hideMobile: true })).toHaveProperty('hideMobile');
+    // "Every visit" needs no wait; click and inline forms have no triggers to check.
+    expect(behaviourErrors({ ...b, repeat: 'always', frequency: Number.NaN })).toEqual({});
+    expect(behaviourErrors({ ...b, mode: 'click', delayOn: false })).toEqual({});
+    expect(behaviourErrors({ ...b, mode: 'inline', delayOn: false, pages: 'show', urls: '' })).toEqual({});
   });
 
   it('checks success links and blocks publishing until problems are fixed', () => {
@@ -77,6 +82,25 @@ describe('validation', () => {
     expect(publishProblems(d)).toEqual([]);
     expect(publishProblems({ ...d, groups: [] })).toContain('Choose at least one subscriber group.');
     expect(publishProblems(insertBlock(d, makeBlock('countdown'), null))[0]).toMatch(/Countdown/);
+    expect(publishProblems({ ...d, options: { ...d.options, privacy: { ...d.options.privacy, on: true, url: 'https://' } } })).toContain('Add a complete privacy policy web address.');
+  });
+
+  it('loads forms saved before the image adjustment settings, filling in defaults', () => {
+    const d = draft();
+    const { sidebarX, sidebarY, sidebarZoom, sidebarWidth, backgroundX, backgroundY, backgroundZoom, backgroundFit, ...olderDesign } = d.design;
+    const parsed = formDraftSchema.safeParse({ ...d, design: olderDesign });
+    expect(parsed.success).toBe(true);
+    expect(parsed.success && parsed.data.design).toMatchObject({ sidebarX: 50, sidebarY: 50, sidebarZoom: 100, sidebarWidth: 38, backgroundFit: 'cover', backgroundX: 50, backgroundY: 50, backgroundZoom: 100 });
+    void [sidebarX, sidebarY, sidebarZoom, sidebarWidth, backgroundX, backgroundY, backgroundZoom, backgroundFit];
+  });
+
+  it('puts the signup fields back on a form that arrives without them', () => {
+    const d = draft();
+    const stripped = { ...d, blocks: d.blocks.filter((block) => block.type !== 'fields') };
+    const fixed = withFieldsBlock(stripped, 'Join now');
+    expect(types(fixed).filter((type) => type === 'fields')).toHaveLength(1);
+    expect(fixed.blocks.at(-1)).toMatchObject({ type: 'fields', label: 'Join now' });
+    expect(withFieldsBlock(d)).toBe(d); // already there: unchanged, never doubled
   });
 
   it('measures contrast', () => {
@@ -100,33 +124,148 @@ describe('export', () => {
     expect(html).toContain('>Join</button>');
   });
 
-  it('gives embedded forms a placement div and pop-ups a head script only', () => {
-    expect(installSnippet({ ...draft(), kind: 'embedded' })).toMatch(/<div data-pixlpush-form=/);
-    expect(installSnippet(draft())).not.toMatch(/<div/);
+  it('gives install code that matches how the form is used', () => {
+    const d = { ...draft(), publicKey: 'pf_abcdefghijkl', scriptUrl: 'https://api.example.com/forms/v1/embed.js' };
+    expect(installSnippets(draft())).toBeNull();
+    const auto = installSnippets(d)!;
+    expect(auto).toHaveLength(1);
+    expect(auto[0].code).toBe('<script src="https://api.example.com/forms/v1/embed.js" data-pixlpush-form="pf_abcdefghijkl" async></script>');
+    const click = installSnippets({ ...d, behaviour: { ...d.behaviour, mode: 'click' } })!.map((s) => s.code);
+    expect(click[0]).not.toContain('data-pixlpush-form');
+    expect(click[1]).toBe('<button type="button" data-pixlpush-open="pf_abcdefghijkl">Subscribe</button>');
+    const inline = installSnippets({ ...d, behaviour: { ...d.behaviour, mode: 'inline' } })!.map((s) => s.code);
+    expect(inline[0]).toBe('<div data-pixlpush-form="pf_abcdefghijkl"></div>');
+    expect(inline[1]).toContain('embed.js');
   });
 });
 
 describe('forms repository', () => {
-  beforeEach(() => localStorage.clear());
-
-  it('saves, lists, duplicates and deletes', async () => {
-    const saved = await saveForm(draft());
-    expect(await getForm(saved.id)).toMatchObject({ name: 'Spring launch' });
-    const copy = await duplicateForm(saved.id);
-    expect(copy).toMatchObject({ name: 'Spring launch (copy)', status: 'draft' });
-    expect(await listForms()).toHaveLength(2);
-    await deleteForm(saved.id);
-    await expect(getForm(saved.id)).rejects.toThrow();
+  it('uses the project API for listing, creating, and publishing forms', async () => {
+    const originalFetch = globalThis.fetch;
+    const initial = draft();
+    const apiForm = {
+      id: initial.id, publicKey: 'pk_123', name: initial.name, type: initial.kind, status: 'draft', templateKey: initial.template,
+      content: { editorState: initial }, design: {}, settings: {}, behavior: {}, groupIds: initial.groups,
+      metrics: { views: 5, subscribers: 1 }, embed: { snippet: '<script src="https://app.test/forms/v1/embed.js" data-form="pk_123"></script>' },
+      createdAt: initial.createdAt, updatedAt: initial.updatedAt,
+    };
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const response = url.includes('?') ? { data: { items: [apiForm], total: 1, page: 1, limit: 10, counts: { types: { popup: 1 }, statuses: { all: 1, active: 0, draft: 1, paused: 0 } } } } : { data: { ...apiForm, status: init?.method === 'POST' ? 'active' : apiForm.status } };
+      return { ok: true, status: 200, json: async () => response } as Response;
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      const page = await listForms('project_1', { type: 'popup', page: 1, limit: 10 });
+      expect(page.total).toBe(1);
+      expect(page.items[0]).toMatchObject({ id: initial.id, publicKey: 'pk_123' });
+      const created = await createForm(initial, 'project_1');
+      expect(created.id).toBe(initial.id);
+      expect(String(fetchMock.mock.calls[0][0])).toContain('/project_1/forms?');
+      const createdBody = JSON.parse(String(fetchMock.mock.calls[1][1]?.body));
+      expect(createdBody).toHaveProperty('content.editorState');
+      expect(createdBody.settings.privacyPolicy.url).toBeNull();
+      expect(createdBody.content.success.button.url).toBeNull();
+      await saveForm({ ...initial, name: 'Spring update', fields: [...initial.fields, makeField('select', { id: 'city', label: 'City', options: ['Lahore', 'Karachi'] })] }, 'project_1');
+      expect(fetchMock.mock.calls[2][1]?.method).toBe('PATCH');
+      const savedBody = JSON.parse(String(fetchMock.mock.calls[2][1]?.body));
+      expect(savedBody.name).toBe('Spring update');
+      expect(savedBody.content.fields.custom[0]).toMatchObject({ key: 'field_city', type: 'select', options: ['Lahore', 'Karachi'] });
+      const active = await setFormStatus(initial.id, 'active', 'project_1');
+      expect(active.status).toBe('active');
+      expect(String(fetchMock.mock.calls[3][0])).toContain('/project_1/forms/');
+      expect(String(fetchMock.mock.calls[3][0])).toContain('/activate');
+    } finally {
+      vi.stubGlobal('fetch', originalFetch);
+    }
   });
 
-  it('skips corrupted entries instead of failing', async () => {
-    localStorage.setItem('pixlpush.forms.v1', JSON.stringify([{ nope: true }, await saveForm(draft()).then(() => JSON.parse(localStorage.getItem('pixlpush.forms.v1')!)[0])]));
-    expect(await listForms()).toHaveLength(1);
+  it('sends a burst of concurrent saves through the account API without browser storage', async () => {
+    const originalFetch = globalThis.fetch;
+    const initial = draft();
+    const apiForm = {
+      id: initial.id, publicKey: 'pk_123', name: initial.name, type: initial.kind, status: 'draft', templateKey: initial.template,
+      content: { editorState: initial }, design: {}, settings: {}, behavior: {}, groupIds: initial.groups,
+      metrics: { views: 0, subscribers: 0 }, embed: { snippet: null }, createdAt: initial.createdAt, updatedAt: initial.updatedAt,
+    };
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => ({ ok: true, status: 200, json: async () => ({ data: apiForm }) } as Response));
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      const results = await Promise.all(Array.from({ length: 100 }, (_, index) => saveForm({ ...initial, name: `Concurrent form ${index}` }, 'project_1')));
+      expect(results).toHaveLength(100);
+      expect(fetchMock).toHaveBeenCalledTimes(100);
+      expect(fetchMock.mock.calls.every(([, init]) => init?.method === 'PATCH')).toBe(true);
+    } finally {
+      vi.stubGlobal('fetch', originalFetch);
+    }
   });
 
-  it('creates unique groups', async () => {
-    await createGroup('VIP');
-    await expect(createGroup(' vip ')).rejects.toThrow(/already exists/);
-    expect((await listGroups()).map((group) => group.name)).toContain('VIP');
+  it('sends the server only values it accepts: blank text skipped, long text cut, empty labels filled', async () => {
+    const originalFetch = globalThis.fetch;
+    const initial = draft();
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => ({ ok: true, status: 200, json: async () => ({ data: { id: initial.id, name: initial.name, type: 'popup', status: 'draft', content: { editorState: initial }, design: {}, settings: {}, behavior: {}, groupIds: [], embed: { snippet: null }, createdAt: initial.createdAt, updatedAt: initial.updatedAt } }) } as Response));
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      const blocks = [
+        makeBlock('heading', { text: '   ' }),
+        makeBlock('text', { text: 'x'.repeat(2500) }),
+        makeBlock('button', { label: '', action: 'url', href: 'https://example.com' }),
+        makeBlock('imageText', { src: 'https://cdn.example.com/a.png', text: '' }),
+        makeBlock('fields', { label: '' }),
+      ];
+      await saveForm({ ...initial, blocks, success: { ...initial.success, heading: '' } }, 'project_1');
+      const { content } = JSON.parse(String(fetchMock.mock.calls[0][1]?.body));
+      expect(content.blocks.map((block: { type: string }) => block.type)).toEqual(['text', 'button', 'image']);
+      expect(content.blocks[0].text).toHaveLength(2000);
+      expect(content.blocks[1].label).toBe('Learn more');
+      expect(content.submitLabel).toBe('Subscribe');
+      expect(content.success.blocks.map((block: { id: string }) => block.id)).toEqual(['success-text']);
+      expect(content.editorState.blocks).toHaveLength(5);
+    } finally {
+      vi.stubGlobal('fetch', originalFetch);
+    }
+  });
+
+  it('finds every uploaded image a draft uses, and nothing else', () => {
+    const upload = (name: string) => `https://storage.example.com/uploads/projects/p_1/email/images/${name}.webp`;
+    const d = { ...draft(), design: { ...draft().design, sidebarImage: upload('side'), backgroundImage: 'https://other.example.com/bg.png' }, blocks: [makeBlock('image', { src: upload('block') })] };
+    expect([...uploadsIn(d)].sort()).toEqual([upload('block'), upload('side')]);
+  });
+
+  it('covers form details, duplication, deletion, analytics, and project groups', async () => {
+    const originalFetch = globalThis.fetch;
+    const initial = draft();
+    const apiForm = {
+      id: initial.id, publicKey: 'pk_123', name: initial.name, type: initial.kind, status: 'draft', templateKey: initial.template,
+      content: { editorState: initial }, design: {}, settings: {}, behavior: {}, groupIds: initial.groups,
+      metrics: { views: 0, subscribers: 0 }, embed: { snippet: null }, createdAt: initial.createdAt, updatedAt: initial.updatedAt,
+    };
+    const analytics = {
+      formId: initial.id, status: 'draft', live: false, range: { from: '2026-10-18', to: '2026-11-17', timezone: 'UTC', days: 30 },
+      totals: { views: 3, uniqueVisitors: 2, subscribers: 1, conversionRate: 33.33 }, allTime: { views: 3, subscribers: 1, conversionRate: 33.33 }, series: [],
+    };
+    const group = { id: 'group_1', name: 'Newsletter', description: 'Updates', memberCount: 4, rules: null };
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      let data: unknown = apiForm;
+      if (url.includes('/analytics')) data = analytics;
+      else if (url.includes('/audience-groups') && init?.method === 'POST') data = group;
+      else if (url.includes('/audience-groups')) data = [group, { ...group, id: 'group_2', name: 'Smart group', rules: {} }];
+      return { ok: true, status: init?.method === 'DELETE' ? 204 : 200, json: async () => init?.method === 'DELETE' ? undefined : { data } } as Response;
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      expect((await getForm(initial.id, 'project_1')).publicKey).toBe('pk_123');
+      expect((await duplicateForm(initial.id, 'project_1')).status).toBe('draft');
+      await deleteForm(initial.id, 'project_1');
+      expect((await getFormAnalytics(initial.id, 'project_1')).allTime.views).toBe(3);
+      // Forms share the project's audience groups, rule-based ones included.
+      expect((await listGroups('project_1')).map((g) => g.id)).toEqual(['group_1', 'group_2']);
+      expect(await createGroup(' VIP ', ' Launch ', 'project_1')).toMatchObject({ name: 'Newsletter' });
+      expect(fetchMock.mock.calls.map(([, init]) => init?.method ?? 'GET')).toEqual(['GET', 'POST', 'DELETE', 'GET', 'GET', 'POST']);
+      expect(JSON.parse(String(fetchMock.mock.calls[5][1]?.body))).toMatchObject({ name: 'VIP', description: 'Launch', rules: null });
+    } finally {
+      vi.stubGlobal('fetch', originalFetch);
+    }
   });
 });

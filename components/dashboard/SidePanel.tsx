@@ -3,12 +3,14 @@
 import { CloseRounded } from '@mui/icons-material';
 import { Box, Drawer, IconButton, Stack, Typography } from '@mui/material';
 
+type PanelWidth = string | number | Partial<Record<'xs' | 'sm' | 'md' | 'lg' | 'xl', string | number>>;
+
 /**
  * The dashboard's right-hand panel (audit log details, creating SDK keys, …):
  * small uppercase label, title, close button, content, optional footer pinned
  * to the bottom for actions. Full width on phones, 440px from `sm` up.
  */
-export default function SidePanel({ open, onClose, eyebrow, title, children, footer, label, closeLabel = 'Close panel' }: {
+export default function SidePanel({ open, onClose, eyebrow, title, children, footer, label, closeLabel = 'Close panel', width, zIndex, className }: {
   open: boolean;
   onClose: () => void;
   /** Small uppercase line above the title, e.g. "Activity details". */
@@ -20,9 +22,15 @@ export default function SidePanel({ open, onClose, eyebrow, title, children, foo
   /** Accessible name of the panel; defaults to the eyebrow. */
   label?: string;
   closeLabel?: string;
+  /** Override the standard 440px width for workspaces that need more room. */
+  width?: PanelWidth;
+  /** Raise the panel above an existing modal when it is opened from a modal workflow. */
+  zIndex?: number;
+  /** Optional paper class for specialized panel layouts. */
+  className?: string;
 }) {
   return (
-    <Drawer anchor="right" open={open} onClose={onClose} PaperProps={{ sx: { width: { xs: '100%', sm: 440 } } }}>
+    <Drawer anchor="right" open={open} onClose={onClose} sx={zIndex ? { zIndex } : undefined} PaperProps={{ className, sx: { width: width ?? { xs: '100%', sm: 440 } } }}>
       <Stack sx={{ height: '100%' }} role="dialog" aria-label={label ?? eyebrow}>
         <Stack sx={{ p: 3, flex: 1, overflowY: 'auto' }} gap={2}>
           <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap={1}>

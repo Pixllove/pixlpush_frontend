@@ -5,7 +5,7 @@ import { z } from 'zod';
  * list and HTML export all read it. The zod schema doubles as the contract for the Forms API.
  */
 
-export const formKinds = ['popup', 'embedded', 'promotion'] as const;
+export const formKinds = ['popup'] as const;
 export const formStatuses = ['draft', 'active', 'paused'] as const;
 export const blockTypes = ['heading', 'text', 'image', 'imageText', 'button', 'divider', 'countdown', 'social', 'list', 'video', 'code', 'fields'] as const;
 export const fieldTypes = ['email', 'text', 'phone', 'number', 'select', 'checkbox', 'date', 'hidden'] as const;
@@ -18,8 +18,8 @@ export type BlockType = (typeof blockTypes)[number];
 export type FieldType = (typeof fieldTypes)[number];
 export type SocialPlatform = (typeof socialPlatforms)[number];
 
-export const kindLabel: Record<FormKind, string> = { popup: 'Pop-up', embedded: 'Embedded form', promotion: 'Promotion' };
-export const kindPlural: Record<FormKind, string> = { popup: 'pop-ups', embedded: 'embedded forms', promotion: 'promotions' };
+export const kindLabel: Record<FormKind, string> = { popup: 'Pop-up' };
+export const kindPlural: Record<FormKind, string> = { popup: 'pop-ups' };
 export const statusLabel: Record<FormStatus, string> = { draft: 'Draft', active: 'Active', paused: 'Paused' };
 
 const hex = z.string().regex(/^#[0-9a-f]{6}$/i);
@@ -69,7 +69,6 @@ export const designSchema = z.object({
   popupType: z.enum(['lightbox', 'slidein', 'bar', 'fullscreen']),
   barPosition: z.enum(['top', 'bottom']),
   slidePosition: z.enum(['left', 'right']),
-  promoPosition: z.enum(['center', 'corner', 'banner']),
   layout: z.enum(['plain', 'border', 'topSidebar', 'leftSidebar', 'rightSidebar', 'boxed']),
   display: z.enum(['stacked', 'horizontal']),
   align,
@@ -77,11 +76,23 @@ export const designSchema = z.object({
   background: hex,
   transparent: z.boolean(),
   backgroundImage: z.string(),
+  /** Background image: how it sits, where it focuses and how far it is zoomed in (100 = no zoom). */
+  backgroundFit: z.enum(['cover', 'contain', 'tile']).default('cover'),
+  /** Which part of the image stays in view: 0 = left/top, 50 = centre, 100 = right/bottom. */
+  backgroundX: z.number().default(50),
+  backgroundY: z.number().default(50),
+  backgroundZoom: z.number().default(100),
   radius: z.number(),
   shadow: z.boolean(),
   sidebarColor: hex,
   sidebarImage: z.string(),
   sidebarFit: z.enum(['fit', 'fill']),
+  /** How a Fill image is aligned when it is cropped (face/subject kept in view). */
+  sidebarX: z.number().default(50),
+  sidebarY: z.number().default(50),
+  /** Side panel width as a percent of the form (side layouts), and image zoom (100 = no zoom). */
+  sidebarWidth: z.number().default(38),
+  sidebarZoom: z.number().default(100),
   backdropColor: hex,
   backdropOpacity: z.number(),
   font: z.enum(fonts),
@@ -121,13 +132,19 @@ export const successSchema = z.object({
   redirectUrl: z.string(),
 });
 
+export const usageModes = ['click', 'auto', 'inline'] as const;
+export type UsageMode = (typeof usageModes)[number];
+
 export const behaviourSchema = z.object({
+  /** How the website uses the form: opens on click, pops up by itself, or sits in a spot on the page. */
+  mode: z.enum(usageModes).default('auto'),
   delayOn: z.boolean(),
   delay: z.number(),
   scrollOn: z.boolean(),
   scroll: z.number(),
   exitOn: z.boolean(),
-  clickOn: z.boolean(),
+  /** always: on every visit until they sign up; after: wait `frequency` units after it was closed. */
+  repeat: z.enum(['always', 'after']).default('after'),
   frequency: z.number(),
   frequencyUnit: z.enum(['days', 'weeks', 'months']),
   schedule: z.enum(['now', 'range']),
@@ -146,6 +163,12 @@ export const formDraftSchema = z.object({
   name: z.string(),
   kind: z.enum(formKinds),
   status: z.enum(formStatuses),
+  /** Issued by the Forms API; unavailable until the form exists on the server. */
+  publicKey: z.string().optional(),
+  /** The forms runtime script URL from the API. */
+  scriptUrl: z.string().optional(),
+  /** Exact, API-generated install instructions; null until first activation. */
+  embedSnippet: z.string().nullable().optional(),
   groups: z.array(z.string()),
   template: z.string(),
   design: designSchema,
@@ -173,16 +196,16 @@ export const makeId = () => Math.random().toString(36).slice(2, 10);
 
 export function defaultDesign(kind: FormKind): FormDesign {
   return {
-    popupType: 'lightbox', barPosition: 'top', slidePosition: 'right', promoPosition: 'center',
+    popupType: 'lightbox', barPosition: 'top', slidePosition: 'right',
     layout: 'plain', display: 'stacked', align: 'center',
-    width: kind === 'embedded' ? 560 : kind === 'promotion' ? 380 : 440,
-    background: '#ffffff', transparent: false, backgroundImage: '', radius: 12, shadow: kind !== 'embedded',
-    sidebarColor: '#f3eefc', sidebarImage: '', sidebarFit: 'fill',
+    width: 440,
+    background: '#ffffff', transparent: false, backgroundImage: '', backgroundFit: 'cover', backgroundX: 50, backgroundY: 50, backgroundZoom: 100, radius: 12, shadow: true,
+    sidebarColor: '#f3eefc', sidebarImage: '', sidebarFit: 'fill', sidebarX: 50, sidebarY: 50, sidebarWidth: 38, sidebarZoom: 100,
     backdropColor: '#1b1025', backdropOpacity: 40,
     font: 'Inter', headingColor: '#1e1429', textColor: '#5b5266', labelColor: '#1e1429',
     inputBg: '#ffffff', inputBorder: '#d9d3e1', inputRadius: 6,
     buttonBg: '#5517b8', buttonText: '#ffffff', buttonRadius: 6,
-    showClose: kind !== 'embedded', closeColor: '#5b5266',
+    showClose: true, closeColor: '#5b5266',
   };
 }
 
@@ -220,7 +243,8 @@ export const makeField = (type: FieldType, props: Partial<FormField> = {}): Form
 export function defaultDraft(input: { name: string; kind: FormKind; groups?: string[] }): FormDraft {
   const now = new Date().toISOString();
   return {
-    id: makeId(), name: input.name.trim(), kind: input.kind, status: 'draft', groups: input.groups ?? [], template: 'newsletter',
+    // No template until the person picks one ("" = not chosen yet).
+    id: makeId(), name: input.name.trim(), kind: input.kind, status: 'draft', groups: input.groups ?? [], template: '',
     design: defaultDesign(input.kind),
     blocks: [
       makeBlock('heading', { text: 'Join our newsletter' }),
@@ -240,8 +264,8 @@ export function defaultDraft(input: { name: string; kind: FormKind; groups?: str
     },
     success: { mode: 'message', heading: 'Thank you!', text: 'You have successfully joined our subscriber list.', buttonLabel: '', buttonUrl: 'https://', coupon: '', redirectUrl: 'https://' },
     behaviour: {
-      delayOn: true, delay: 5, scrollOn: false, scroll: 50, exitOn: false, clickOn: false,
-      frequency: 1, frequencyUnit: 'months', schedule: 'now', startAt: '', endAt: '',
+      mode: 'auto', delayOn: true, delay: 5, scrollOn: false, scroll: 50, exitOn: false,
+      repeat: 'after', frequency: 1, frequencyUnit: 'months', schedule: 'now', startAt: '', endAt: '',
       pages: 'all', urls: '', strict: false, hideDesktop: false, hideTablet: false, hideMobile: false,
     },
     stats: { views: 0, subscribers: 0 },
@@ -266,7 +290,23 @@ export const templates: Template[] = [
   { id: 'blank', name: 'Start from scratch', category: 'Blank', kinds: [...formKinds], apply: (d) => ({ ...d, blocks: [makeBlock('heading', { text: 'Untitled form' }), makeBlock('fields')] }) },
   { id: 'newsletter', name: 'Clean newsletter', category: 'Lead generation', kinds: [...formKinds], apply: (d) => d },
   {
-    id: 'waitlist', name: 'Product waitlist', category: 'Lead generation', kinds: ['popup', 'embedded', 'promotion'],
+    id: 'slidein', name: 'Corner newsletter', category: 'Lead generation', kinds: ['popup'],
+    apply: (d) => ({
+      ...d,
+      design: { ...d.design, popupType: 'slidein', width: 360 },
+      blocks: [makeBlock('heading', { text: 'Get the weekly digest', size: 20 }), makeBlock('text', { text: 'One short email every Friday. Unsubscribe any time.' }), makeBlock('fields', { label: 'Subscribe' })],
+    }),
+  },
+  {
+    id: 'bar', name: 'Announcement bar', category: 'Offers', kinds: ['popup'],
+    apply: (d) => ({
+      ...d,
+      design: { ...d.design, popupType: 'bar', barPosition: 'top', display: 'horizontal', background: '#1b1025', headingColor: '#ffffff', textColor: '#e9e3f2', closeColor: '#ffffff' },
+      blocks: [makeBlock('heading', { text: 'Free shipping on your first order', size: 17 }), makeBlock('fields', { label: 'Get the code' })],
+    }),
+  },
+  {
+    id: 'waitlist', name: 'Product waitlist', category: 'Lead generation', kinds: ['popup'],
     apply: (d) => ({
       ...d,
       design: { ...d.design, layout: 'leftSidebar', sidebarColor: '#1b1025', width: Math.max(d.design.width, 600) },
@@ -275,7 +315,7 @@ export const templates: Template[] = [
     }),
   },
   {
-    id: 'discount', name: 'First order discount', category: 'Offers', kinds: ['popup', 'promotion'],
+    id: 'discount', name: 'First order discount', category: 'Offers', kinds: ['popup'],
     apply: (d) => ({
       ...d,
       design: { ...d.design, layout: 'topSidebar', sidebarColor: '#f97316' },
@@ -284,7 +324,7 @@ export const templates: Template[] = [
     }),
   },
   {
-    id: 'countdown', name: 'Event countdown', category: 'Event sign-up', kinds: ['popup', 'embedded', 'promotion'],
+    id: 'countdown', name: 'Event countdown', category: 'Event sign-up', kinds: ['popup'],
     apply: (d) => ({
       ...d,
       blocks: [makeBlock('heading', { text: 'Live workshop: ship faster', align: 'center' }), makeBlock('countdown', { endsAt: inDays(7), text: 'Starts in' }), makeBlock('fields', { label: 'Save my seat' })],
@@ -292,19 +332,11 @@ export const templates: Template[] = [
     }),
   },
   {
-    id: 'guide', name: 'Free guide download', category: 'Resource sharing', kinds: ['popup', 'embedded'],
+    id: 'guide', name: 'Free guide download', category: 'Resource sharing', kinds: ['popup'],
     apply: (d) => ({
       ...d,
       blocks: [makeBlock('heading', { text: 'Download the free guide' }), makeBlock('list', { items: ['20 proven onboarding emails', 'Subject lines that get opened', 'A 30-day sending plan'] }), makeBlock('fields', { label: 'Send me the guide' })],
       success: { ...d.success, heading: 'Check your inbox', text: 'The guide is on its way.', buttonLabel: 'Download now', buttonUrl: 'https://' },
-    }),
-  },
-  {
-    id: 'banner', name: 'Announcement banner', category: 'Offers', kinds: ['promotion'],
-    apply: (d) => ({
-      ...d,
-      design: { ...d.design, promoPosition: 'banner', background: '#1b1025', headingColor: '#ffffff', textColor: '#d9d3e1' },
-      blocks: [makeBlock('heading', { text: 'Spring sale: 30% off everything', size: 20, align: 'center' }), makeBlock('button', { label: 'Shop the sale', align: 'center', fullWidth: false })],
     }),
   },
 ];
@@ -345,6 +377,15 @@ export function duplicateBlock(draft: FormDraft, id: string): { draft: FormDraft
   if (!block || block.type === 'fields') return { draft };
   const copy = { ...structuredClone(block), id: makeId() };
   return { draft: insertBlock(draft, copy, id), id: copy.id };
+}
+
+/**
+ * Every form has exactly one signup fields block. The server keeps the fields separately from the
+ * blocks, so a form rebuilt from server data can arrive without it: put it back at the end.
+ */
+export function withFieldsBlock(draft: FormDraft, label?: string): FormDraft {
+  if (draft.blocks.some((block) => block.type === 'fields')) return draft;
+  return { ...draft, blocks: [...draft.blocks, makeBlock('fields', label ? { label } : {})] };
 }
 
 /** The signup fields block is required: it can move but never be removed. */
@@ -416,11 +457,13 @@ export const isHttpUrl = (value: string) => {
 
 export const urlLines = (value: string) => value.split('\n').map((line) => line.trim()).filter(Boolean);
 
+/** Only an automatic pop-up has triggers, pages, devices and repeats; click and inline forms just show. */
 export function behaviourErrors(b: FormBehaviour): Partial<Record<keyof FormBehaviour | 'trigger', string>> {
   const errors: Partial<Record<keyof FormBehaviour | 'trigger', string>> = {};
-  if (!b.delayOn && !b.scrollOn && !b.exitOn && !b.clickOn) errors.trigger = 'Choose at least one way to show the form.';
+  if (b.mode !== 'auto') return errors;
+  if (!b.delayOn && !b.scrollOn && !b.exitOn) errors.trigger = 'Choose at least one way to show the form.';
   if (b.delayOn && !(Number.isInteger(b.delay) && b.delay >= 0 && b.delay <= 600)) errors.delay = 'Enter 0 to 600 seconds.';
-  if (!(Number.isInteger(b.frequency) && b.frequency >= 1 && b.frequency <= 365)) errors.frequency = 'Enter a whole number from 1 to 365.';
+  if (b.repeat === 'after' && !(Number.isInteger(b.frequency) && b.frequency >= 1 && b.frequency <= 365)) errors.frequency = 'Enter a whole number from 1 to 365.';
   if (b.schedule === 'range') {
     if (!b.startAt) errors.startAt = 'Choose a start date.';
     if (!b.endAt) errors.endAt = 'Choose an end date.';
@@ -450,13 +493,43 @@ export function publishProblems(draft: FormDraft): string[] {
   const problems: string[] = [];
   if (!draft.name.trim()) problems.push('Give the form a name.');
   if (draft.groups.length === 0) problems.push('Choose at least one subscriber group.');
+  if (draft.options.privacy.on && !isHttpUrl(draft.options.privacy.url)) problems.push('Add a complete privacy policy web address.');
   for (const block of draft.blocks) {
     const error = blockErrors(block);
     if (error) problems.push(`${blockLabel[block.type]}: ${error}`);
   }
   problems.push(...Object.values(successErrors(draft.success)));
-  if (draft.kind !== 'embedded') problems.push(...Object.values(behaviourErrors(draft.behaviour)));
+  problems.push(...Object.values(behaviourErrors(draft.behaviour)));
   return problems;
+}
+
+/** Wizard steps that open the full-screen editor: every step but the dashboard pages (unknown steps open the editor). */
+export const isEditorStep = (step: string | null | undefined) => !['details', 'audience', 'design', 'setup', 'behaviour'].includes(step ?? '');
+
+/* ---------- install code ---------- */
+
+export type Snippet = { title: string; help: string; code: string };
+
+/**
+ * The install code for how the website uses the form (see behaviour.mode). The runtime reads the key from
+ * the script tag (auto), from any data-pixlpush-open element (click), or from the box it renders into (inline).
+ * Null until the API has issued the key and script address.
+ */
+export function installSnippets(draft: FormDraft): Snippet[] | null {
+  if (!draft.publicKey || !draft.scriptUrl) return null;
+  const key = draft.publicKey;
+  const mode = draft.behaviour.mode;
+  const script = `<script src="${draft.scriptUrl}"${mode === 'auto' ? ` data-pixlpush-form="${key}"` : ''} async></script>`;
+  const scriptStep = { title: 'Add the script', help: 'Paste it just before the closing </body> tag on every page where the form is used. Most website builders call this "custom code" or "footer code".', code: script };
+  if (mode === 'click') return [
+    scriptStep,
+    { title: 'Add the button', help: 'Paste it where the button should appear. Or add data-pixlpush-open="' + key + '" to a button or link you already have.', code: `<button type="button" data-pixlpush-open="${key}">Subscribe</button>` },
+  ];
+  if (mode === 'inline') return [
+    { title: 'Add the form box', help: 'Paste it where the form should appear on the page, for example in your footer or sidebar.', code: `<div data-pixlpush-form="${key}"></div>` },
+    scriptStep,
+  ];
+  return [scriptStep];
 }
 
 /* ---------- colour ---------- */
@@ -471,3 +544,7 @@ export function contrastRatio(a: string, b: string) {
   const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
   return (hi + 0.05) / (lo + 0.05);
 }
+
+/** Image URLs this project uploaded, wherever they sit in a draft (blocks, side panel, background). */
+const UPLOAD_URL = /[^"\s]*\/projects\/[\w-]+\/email\/(?:images|logos)\/[\w-]+\.(?:png|jpe?g|gif|webp)/g;
+export const uploadsIn = (draft: FormDraft) => new Set(JSON.stringify(draft).match(UPLOAD_URL) ?? []);

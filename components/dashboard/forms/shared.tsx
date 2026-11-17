@@ -2,22 +2,21 @@
 
 import { useMemo, useState, type ReactNode } from 'react';
 import { CheckRounded, ContentCopyRounded, ErrorOutlineRounded } from '@mui/icons-material';
-import { Alert, Box, Button, CircularProgress, FormControlLabel, IconButton, Snackbar, Stack, Switch, Tab, Tabs, Tooltip, Typography } from '@mui/material';
+import { Alert, Box, CircularProgress, FormControlLabel, IconButton, Snackbar, Stack, Switch, Tooltip, Typography } from '@mui/material';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { formsKeys, saveForm } from '@/lib/forms';
-import { installSnippet, renderFormHtml } from './exportHtml';
 import { FormCard } from './FormRenderer';
 import type { SaveState } from './FormEditor';
-import { publishProblems, statusLabel, type FormDraft, type FormStatus } from './model';
+import { installSnippets, publishProblems, statusLabel, type FormDraft, type FormStatus } from './model';
 
 /**
- * Autosave state as a small pill: a spinner while saving, a check that pops in once saved, an error
- * mark when the browser refused to store it. Announced politely to screen readers.
+ * Autosave state as a small pill: a spinner while saving, a check that pops in once saved, and a
+ * clear retry hint if the account API is unreachable. Announced politely to screen readers.
  */
 export function SaveStatus({ state, long = false }: { state: SaveState; long?: boolean }) {
   const text = state === 'saving' ? 'Saving…' : state === 'error' ? 'Not saved' : long ? 'All changes saved' : 'Saved';
   return (
-    <Tooltip title={state === 'error' ? 'This browser could not store the form. Free up storage and keep editing to retry.' : state === 'saved' ? 'Your changes are saved automatically' : ''}>
+    <Tooltip title={state === 'error' ? 'We could not save these changes to your account. Check your connection, then make another edit to retry.' : state === 'saved' ? 'Your changes are saved to your account automatically' : ''}>
       <span className={`pp-save is-${state}`} role="status" aria-live="polite">
         <span className="pp-save-icon" aria-hidden>
           {state === 'saving' ? <CircularProgress size={12} thickness={6} color="inherit" /> : state === 'error' ? <ErrorOutlineRounded /> : <CheckRounded key="check" />}
@@ -52,19 +51,19 @@ export function FormThumbnail({ draft, width = 132, height = 100, scale = 0.32 }
 export const statusChipClass = (status: FormStatus) => `pp-form-status is-${status}`;
 export const StatusChip = ({ status }: { status: FormStatus }) => <span className={statusChipClass(status)}>{statusLabel[status]}</span>;
 
-export function useSaveForm() {
+export function useSaveForm(projectId: string) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: saveForm,
+    mutationFn: (draft: FormDraft) => saveForm(draft, projectId),
     onSuccess: (saved) => {
-      client.setQueryData(formsKeys.one(saved.id), saved);
-      void client.invalidateQueries({ queryKey: formsKeys.all, exact: true });
+      client.setQueryData(formsKeys.one(projectId, saved.id), saved);
+      void client.invalidateQueries({ queryKey: formsKeys.all });
     },
   });
 }
 
 /** Turns a form on or off. A form with problems cannot go live; the reasons are listed instead. */
-export function StatusControl({ draft, onChange }: { draft: FormDraft; onChange: (status: FormStatus) => void }) {
+export function StatusControl({ draft, onChange, busy = false, error }: { draft: FormDraft; onChange: (status: FormStatus) => void; busy?: boolean; error?: string }) {
   const problems = useMemo(() => publishProblems(draft), [draft]);
   const live = draft.status === 'active';
   return (
@@ -72,7 +71,7 @@ export function StatusControl({ draft, onChange }: { draft: FormDraft; onChange:
       <FormControlLabel
         className="pp-form-switch"
         labelPlacement="start"
-        control={<Switch checked={live} disabled={!live && problems.length > 0} onChange={(event) => onChange(event.target.checked ? 'active' : 'paused')} />}
+        control={<Switch checked={live} disabled={busy || (!live && problems.length > 0)} onChange={(event) => onChange(event.target.checked ? 'active' : 'paused')} />}
         label={<Box><Typography className="pp-form-switch-label">{live ? 'Form is live' : 'Form is not live'}</Typography><Typography className="pp-form-switch-text">{live ? 'It shows on your site and collects subscribers.' : draft.status === 'paused' ? 'Paused: visitors do not see it.' : 'Turn it on when you have installed the code.'}</Typography></Box>}
       />
       {!live && problems.length > 0 && (
@@ -81,17 +80,15 @@ export function StatusControl({ draft, onChange }: { draft: FormDraft; onChange:
           <Box component="ul" sx={{ m: 0, pl: 2.5 }}>{problems.map((problem) => <li key={problem}>{problem}</li>)}</Box>
         </Alert>
       )}
+      {error && <Alert severity="error">{error}</Alert>}
     </Stack>
   );
 }
 
-/** Install code: the script snippet, and for embedded forms the static HTML too. */
-export function InstallPanel({ draft }: { draft: FormDraft }) {
-  const [tab, setTab] = useState<'snippet' | 'html'>('snippet');
+/** One copyable piece of install code. */
+export function CodeSnippet({ code, label }: { code: string; label: string }) {
   const [copied, setCopied] = useState(false);
   const [notice, notify] = useNotice();
-  const code = useMemo(() => (tab === 'html' ? renderFormHtml(draft) : installSnippet(draft)), [draft, tab]);
-
   const copy = async () => {
     try {
       if (!navigator.clipboard) throw new Error('unsupported');
@@ -103,28 +100,31 @@ export function InstallPanel({ draft }: { draft: FormDraft }) {
       notify('Copy failed. Select the code and copy it manually.');
     }
   };
-
   return (
     <Box>
-      {draft.kind === 'embedded' && (
-        <Tabs value={tab} onChange={(_, value) => setTab(value)} aria-label="Install method">
-          <Tab value="snippet" label="JavaScript snippet" />
-          <Tab value="html" label="HTML code" />
-        </Tabs>
-      )}
-      <Typography color="text.secondary" fontSize="var(--fs-13)" sx={{ mb: 1.5 }}>
-        {tab === 'html'
-          ? 'Paste this where the form should appear. It is a static copy: edits you make later need a fresh copy.'
-          : draft.kind === 'embedded'
-            ? 'Add the script once to your site, then place the div where the form should appear. Later edits update automatically.'
-            : 'Add this before the closing </head> tag on every page. Behaviour settings decide where and when it appears.'}
-      </Typography>
       <Box className="pp-form-code">
-        <pre tabIndex={0} aria-label="Install code">{code}</pre>
-        <Tooltip title={copied ? 'Copied' : 'Copy code'}><IconButton aria-label="Copy install code" onClick={copy}>{copied ? <CheckRounded /> : <ContentCopyRounded />}</IconButton></Tooltip>
+        <pre tabIndex={0} aria-label={label}>{code}</pre>
+        <Tooltip title={copied ? 'Copied' : 'Copy code'}><IconButton aria-label={`Copy ${label.toLowerCase()}`} onClick={copy}>{copied ? <CheckRounded /> : <ContentCopyRounded />}</IconButton></Tooltip>
       </Box>
-      <Button size="small" sx={{ mt: 1 }} onClick={copy} startIcon={<ContentCopyRounded />}>Copy code</Button>
       {notice}
     </Box>
+  );
+}
+
+/** Install code for the way this form is used on the website, as numbered steps. */
+export function InstallPanel({ draft }: { draft: FormDraft }) {
+  const snippets = installSnippets(draft);
+  if (!snippets) return <Typography color="text.secondary" fontSize="var(--fs-13)">The install code appears once the form is saved.</Typography>;
+  return (
+    <Stack gap={2}>
+      {snippets.map((snippet, index) => (
+        <Box key={snippet.title}>
+          <Typography fontWeight={600}>{snippets.length > 1 ? `${index + 1}. ` : ''}{snippet.title}</Typography>
+          <Typography color="text.secondary" fontSize="var(--fs-13)" sx={{ mb: 1 }}>{snippet.help}</Typography>
+          <CodeSnippet code={snippet.code} label={snippet.title} />
+        </Box>
+      ))}
+      {draft.status !== 'active' && <Alert severity="info">The code starts working as soon as you make the form live.</Alert>}
+    </Stack>
   );
 }

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import { DeleteOutlineRounded, ExpandMoreRounded, ImageOutlined } from '@mui/icons-material';
 import { Accordion, AccordionDetails, AccordionSummary, Box, Button, FormControlLabel, IconButton, InputAdornment, Slider, Stack, Switch, TextField, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from '@mui/material';
+import { emailApi } from '@/lib/projects/api';
 
 /* Inspector primitives for the form editor. Every control has a visible label that is also its accessible name. */
 
@@ -16,13 +17,14 @@ export function InspectorSection({ title, defaultExpanded = true, children }: { 
 }
 
 /** A labelled on/off row: label and optional description on the left, the themed Switch on the right. */
-export function SettingSwitch({ label, description, checked, onChange, children }: { label: string; description?: string; checked: boolean; onChange: (value: boolean) => void; children?: ReactNode }) {
+export function SettingSwitch({ label, description, checked, onChange, children, disabled = false }: { label: string; description?: string; checked: boolean; onChange: (value: boolean) => void; children?: ReactNode; disabled?: boolean }) {
   return (
     <Box>
       <FormControlLabel
         className="pp-form-switch"
+        disabled={disabled}
         labelPlacement="start"
-        control={<Switch checked={checked} onChange={(event) => onChange(event.target.checked)} />}
+        control={<Switch checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} />}
         label={<Box><Typography className="pp-form-switch-label">{label}</Typography>{description && <Typography className="pp-form-switch-text">{description}</Typography>}</Box>}
       />
       {checked && children && <Stack gap={1.5} sx={{ mt: 1.5 }}>{children}</Stack>}
@@ -65,7 +67,8 @@ export function ColorField({ label, value, onChange }: { label: string; value: s
 }
 
 /** A number with both a slider and a typed value; out-of-range input is clamped. */
-export function NumberSlider({ label, value, min, max, step = 1, unit = '', onChange }: { label: string; value: number; min: number; max: number; step?: number; unit?: string; onChange: (value: number) => void }) {
+export function NumberSlider({ label, value: raw, min, max, step = 1, unit = '', onChange }: { label: string; value: number; min: number; max: number; step?: number; unit?: string; onChange: (value: number) => void }) {
+  const value = Number.isFinite(raw) ? raw : min;
   const clamp = (next: number) => Math.min(max, Math.max(min, Math.round(next / step) * step));
   return (
     <Box>
@@ -102,35 +105,39 @@ export function Segmented<T extends string>({ label, value, options, onChange, i
   );
 }
 
-const MAX_IMAGE_BYTES = 1_000_000;
+const MAX_IMAGE_BYTES = 5_000_000;
 
 /**
- * Picks an image and stores it as a data URL so the draft survives a reload.
- * ponytail: data URLs in browser storage, capped at 1 MB; the upload API replaces this with a hosted URL.
+ * Uploads an image to the project's media storage and saves its hosted URL in the form draft.
  */
-export function ImageField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+export function ImageField({ label, value, onChange, projectId }: { label: string; value: string; onChange: (value: string) => void; projectId: string }) {
   const [error, setError] = useState('');
+  const [uploading, setUploading] = useState(false);
   return (
     <Box>
       <Typography className="pp-form-control-label" sx={{ mb: 0.75 }}>{label}</Typography>
       <Stack direction="row" gap={1} alignItems="center">
         <Box className="pp-form-image-thumb" sx={{ backgroundImage: value ? `url("${value}")` : undefined }}>{!value && <ImageOutlined fontSize="small" />}</Box>
-        <Button component="label" variant="outlined" size="small">
-          {value ? 'Replace' : 'Upload image'}
+        <Button component="label" variant="outlined" size="small" disabled={uploading}>
+          {uploading ? 'Uploading…' : value ? 'Replace' : 'Upload image'}
           <input
             hidden
             type="file"
-            accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml"
-            onChange={(event) => {
+            accept="image/png,image/jpeg,image/gif,image/webp"
+            onChange={async (event) => {
               const file = event.target.files?.[0];
               event.target.value = '';
               if (!file) return;
-              if (file.size > MAX_IMAGE_BYTES) return setError('Choose an image under 1 MB.');
+              if (file.size > MAX_IMAGE_BYTES) return setError('Choose an image under 5 MB.');
+              if (!['image/png', 'image/jpeg', 'image/gif', 'image/webp'].includes(file.type)) return setError('Choose a PNG, JPEG, GIF, or WebP image.');
               setError('');
-              const reader = new FileReader();
-              reader.onload = () => typeof reader.result === 'string' && onChange(reader.result);
-              reader.onerror = () => setError('That image could not be read. Try another file.');
-              reader.readAsDataURL(file);
+              setUploading(true);
+              try {
+                const asset = await emailApi.templates.uploadAsset(projectId, file, 'image');
+                onChange(asset.url);
+              } catch (cause) {
+                setError((cause as { message?: string })?.message || 'That image could not be uploaded. Try again.');
+              } finally { setUploading(false); }
             }}
           />
         </Button>

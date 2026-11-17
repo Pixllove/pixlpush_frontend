@@ -8,20 +8,25 @@ import { Box, Button, Paper, Skeleton, Stack, Typography } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import DeleteConfirmDialog from '@/components/dashboard/DeleteConfirmDialog';
 import EmptyState from '@/components/dashboard/EmptyState';
-import { deleteForm, duplicateForm, formsKeys, getForm, listGroups } from '@/lib/forms';
+import { useActiveProject } from '@/hooks/projects/use-active-project';
+import { deleteForm, duplicateForm, formsKeys, getForm, getFormAnalytics, listGroups, setFormStatus } from '@/lib/forms';
 import { FormPreview } from './FormEditor';
 import { conversion, formatDate } from './FormsList';
 import { kindLabel, templates, urlLines, type FormDraft } from './model';
-import { FormThumbnail, InstallPanel, StatusChip, StatusControl, useNotice, useSaveForm } from './shared';
+import { FormThumbnail, InstallPanel, StatusChip, StatusControl, useNotice } from './shared';
+
+const usageLabel = { click: 'Opens when someone clicks a button', auto: 'Pops up on its own', inline: 'Embedded in a spot on the page' } as const;
 
 export function behaviourSummary(draft: FormDraft): Array<[string, string]> {
   const b = draft.behaviour;
-  const triggers = [b.delayOn && `after ${b.delay}s`, b.scrollOn && `at ${b.scroll}% scroll`, b.exitOn && 'on exit intent', b.clickOn && 'on click'].filter(Boolean).join(', ');
+  if (b.mode !== 'auto') return [['How it is used', usageLabel[b.mode]]];
+  const triggers = [b.delayOn && `after ${b.delay}s`, b.scrollOn && `at ${b.scroll}% scroll`, b.exitOn && 'when leaving'].filter(Boolean).join(', ');
   const devices = [b.hideDesktop && 'desktop', b.hideTablet && 'tablet', b.hideMobile && 'mobile'].filter(Boolean);
   const pages = b.pages === 'all' ? 'Every page' : `${b.pages === 'hide' ? 'All pages except' : 'Only'} ${urlLines(b.urls).length} page${urlLines(b.urls).length === 1 ? '' : 's'}${b.strict ? ' (exact match)' : ''}`;
   return [
+    ['How it is used', usageLabel.auto],
     ['Shows', triggers || 'Never (no trigger)'],
-    ['Repeats', `Every ${b.frequency} ${b.frequencyUnit} for people who did not subscribe`],
+    ['Shows again', b.repeat === 'always' ? 'On every visit until they sign up' : `${b.frequency} ${b.frequencyUnit} after it was closed`],
     ['Schedule', b.schedule === 'now' ? 'As soon as it is live' : `${b.startAt.replace('T', ' ')} to ${b.endAt.replace('T', ' ')}`],
     ['Pages', pages],
     ['Devices', devices.length ? `Hidden on ${devices.join(', ')}` : 'All devices'],
@@ -29,16 +34,19 @@ export function behaviourSummary(draft: FormDraft): Array<[string, string]> {
 }
 
 export default function FormOverview({ id }: { id: string }) {
+  const { active } = useActiveProject();
+  const projectId = active?.id;
   const router = useRouter();
   const client = useQueryClient();
-  const form = useQuery({ queryKey: formsKeys.one(id), queryFn: () => getForm(id) });
-  const groups = useQuery({ queryKey: formsKeys.groups, queryFn: listGroups });
-  const save = useSaveForm();
+  const form = useQuery({ queryKey: formsKeys.one(projectId ?? '', id), queryFn: () => getForm(id, projectId!), enabled: Boolean(projectId) });
+  const analytics = useQuery({ queryKey: formsKeys.analytics(projectId ?? '', id, {}), queryFn: () => getFormAnalytics(id, projectId!), enabled: Boolean(projectId) });
+  const groups = useQuery({ queryKey: formsKeys.groupsFor(projectId ?? ''), queryFn: () => listGroups(projectId!), enabled: Boolean(projectId) });
   const [deleting, setDeleting] = useState(false);
   const [preview, setPreview] = useState(false);
   const [notice, notify] = useNotice();
-  const duplicate = useMutation({ mutationFn: () => duplicateForm(id), onSuccess: (copy) => { void client.invalidateQueries({ queryKey: formsKeys.all }); router.push(`/dashboard/forms/${copy.id}`); } });
-  const remove = useMutation({ mutationFn: () => deleteForm(id), onSuccess: () => { void client.invalidateQueries({ queryKey: formsKeys.all }); router.push('/dashboard/forms'); } });
+  const statusChange = useMutation({ mutationFn: (status: FormDraft['status']) => setFormStatus(id, status, projectId!), onSuccess: (saved) => { client.setQueryData(formsKeys.one(projectId!, id), saved); void client.invalidateQueries({ queryKey: formsKeys.all }); notify(saved.status === 'active' ? 'Form is live' : 'Form paused'); } });
+  const duplicate = useMutation({ mutationFn: () => duplicateForm(id, projectId!), onSuccess: (copy) => { void client.invalidateQueries({ queryKey: formsKeys.all }); router.push(`/dashboard/forms/${copy.id}`); } });
+  const remove = useMutation({ mutationFn: () => deleteForm(id, projectId!), onSuccess: () => { void client.invalidateQueries({ queryKey: formsKeys.all }); router.push('/dashboard/forms'); } });
 
   if (form.isError) return <EmptyState tone="error" title="This form could not be opened" description={(form.error as Error).message} action={{ label: 'Back to forms', href: '/dashboard/forms' }} />;
   if (!form.data) return <Box className="pp-form-wizard"><Skeleton height={48} width={280} /><Skeleton variant="rounded" height={320} sx={{ mt: 2 }} /></Box>;
@@ -61,12 +69,12 @@ export default function FormOverview({ id }: { id: string }) {
           <Button variant="outlined" startIcon={<VisibilityOutlined />} onClick={() => setPreview(true)}>Preview</Button>
           <Button variant="outlined" startIcon={<ContentCopyRounded />} disabled={duplicate.isPending} onClick={() => duplicate.mutate()}>Duplicate</Button>
           <Button variant="outlined" color="error" startIcon={<DeleteOutlineRounded />} onClick={() => setDeleting(true)}>Delete</Button>
-          <Button variant="contained" startIcon={<EditOutlined />} component={Link} href={`/dashboard/forms/${id}/edit?step=editor`}>Edit form</Button>
+          <Button variant="contained" startIcon={<EditOutlined />} component={Link} href={`/dashboard/forms/${id}/edit?step=${draft.groups.length === 0 ? 'audience' : 'editor'}`}>Edit form</Button>
         </Stack>
       </Stack>
 
       <Box className="pp-form-overview-stats">
-        {[['Views', draft.stats.views.toLocaleString()], ['Subscribers', draft.stats.subscribers.toLocaleString()], ['Conversion rate', conversion(draft)]].map(([label, value]) => (
+        {[['Views', (analytics.data?.allTime.views ?? draft.stats.views).toLocaleString()], ['Subscribers', (analytics.data?.allTime.subscribers ?? draft.stats.subscribers).toLocaleString()], ['Conversion rate', analytics.data ? `${analytics.data.allTime.conversionRate.toFixed(1)}%` : conversion(draft)]].map(([label, value]) => (
           <Paper key={label} className="pp-form-stat"><Typography className="pp-forms-metric-label">{label}</Typography><Typography className="pp-form-stat-value">{value}</Typography></Paper>
         ))}
       </Box>
@@ -75,18 +83,16 @@ export default function FormOverview({ id }: { id: string }) {
         <Stack gap={2}>
           <Paper className="pp-form-step-card">
             <Typography variant="h3" sx={{ mb: 1.5 }}>Status</Typography>
-            <StatusControl draft={draft} onChange={(status) => save.mutate({ ...draft, status }, { onSuccess: () => notify(status === 'active' ? 'Form is live' : 'Form paused') })} />
+            <StatusControl draft={draft} onChange={(status) => statusChange.mutate(status)} busy={statusChange.isPending} error={statusChange.error instanceof Error ? statusChange.error.message : undefined} />
           </Paper>
           <Paper className="pp-form-step-card">
             <Typography variant="h3" sx={{ mb: 1.5 }}>Install</Typography>
             <InstallPanel draft={draft} />
           </Paper>
-          {draft.kind !== 'embedded' && (
-            <Paper className="pp-form-step-card">
-              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}><Typography variant="h3">Behaviour</Typography><Button size="small" component={Link} href={`/dashboard/forms/${id}/edit?step=behaviour`}>Edit behaviour</Button></Stack>
-              <dl className="pp-form-dl">{behaviourSummary(draft).map(([term, value]) => <div key={term}><dt>{term}</dt><dd>{value}</dd></div>)}</dl>
-            </Paper>
-          )}
+          <Paper className="pp-form-step-card">
+            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}><Typography variant="h3">How it is used</Typography><Button size="small" component={Link} href={`/dashboard/forms/${id}/edit?step=setup`}>Change</Button></Stack>
+            <dl className="pp-form-dl">{behaviourSummary(draft).map(([term, value]) => <div key={term}><dt>{term}</dt><dd>{value}</dd></div>)}</dl>
+          </Paper>
         </Stack>
         <Stack gap={2}>
           <Paper className="pp-form-step-card">

@@ -113,6 +113,9 @@ import EmptyState, { listEmpty } from "./EmptyState";
 import HomeCommandCenter from "./HomeCommandCenter";
 import PremiumWorkspaceTabs from "./PremiumWorkspaceTabs";
 
+const safeFormAudienceReturnTo = (value: string | null) =>
+  value && /^\/dashboard\/forms\/[^/?]+\/edit\?step=audience$/.test(value) ? value : null;
+
 export function StatCard({
   label,
   value,
@@ -691,7 +694,7 @@ export function UsersSection() {
       ? requestedTab
       : "users",
   );
-  const [createGroupOpen, setCreateGroupOpen] = useState(false);
+  const [createGroupOpen, setCreateGroupOpen] = useState(() => searchParams.get("createGroup") === "1");
   const [createSegmentOpen, setCreateSegmentOpen] = useState(false);
   const [segmentSdk, setSegmentSdk] = useState<"web" | "mobile">();
   // ?import=1 (from Max's "import my users" prompt) opens the import dialog directly.
@@ -771,7 +774,10 @@ export function UsersSection() {
         queryKey: ["projects", "audience-groups", active?.id],
       });
       setCreateGroupOpen(false);
-      router.push(`/dashboard/users/groups/${group.id}?tab=groups`);
+      queryClient.invalidateQueries({ queryKey: ["form-groups", active?.id] });
+      const returnTo = safeFormAudienceReturnTo(searchParams.get("returnTo"));
+      if (returnTo) router.push(`${returnTo}&newGroupId=${encodeURIComponent(group.id)}`);
+      else router.push(`/dashboard/users/groups/${group.id}?tab=groups`);
     },
   });
   const createSegment = useMutation({
@@ -1095,10 +1101,10 @@ export function UsersSection() {
               <Typography fontSize="var(--fs-12)" fontWeight={500}>
                 {row.name}
               </Typography>
-              <Chip label="DYNAMIC" size="small" />
+              <Chip label={row.rules ? "RULE-BASED" : "MANUAL"} size="small" />
             </Stack>
             <Typography color="text.secondary" fontSize="var(--fs-12)">
-              {row.description || "Dynamic audience group"}
+              {row.description || (row.rules ? "Members are added when they match your rules" : "Members are added when you add them")}
             </Typography>
           </Box>
         </Stack>
@@ -1579,7 +1585,11 @@ export function UsersSection() {
       <AudienceGroupCreateDialog
         open={createGroupOpen}
         onClose={() => {
-          if (!createGroup.isPending) setCreateGroupOpen(false);
+          if (createGroup.isPending) return;
+          setCreateGroupOpen(false);
+          const returnTo = safeFormAudienceReturnTo(searchParams.get("returnTo"));
+          if (returnTo) router.push(returnTo);
+          else if (searchParams.get("createGroup") === "1") router.replace("/dashboard/users?tab=groups", { scroll: false });
         }}
         onCreate={(name, description) =>
           createGroup.mutate({ name, description })
