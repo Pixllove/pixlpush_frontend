@@ -12678,6 +12678,184 @@ footer > div > div > div:first-child > p {
 .pp-account-menu .MuiDivider-root {
   margin: 6px 0 !important;
 }
+
+/* ---- Forms (components/dashboard/FormsWorkspace.tsx, FormCreateWorkspace.tsx) ---- */
+.forms-workspace,
+.form-create-workspace {
+  color: var(--pp-text);
+}
+.forms-workspace .MuiPaper-root,
+.form-create-workspace .MuiPaper-root {
+  border: 1px solid var(--pp-border) !important;
+  border-radius: var(--pp-r-card) !important;
+  background: var(--pp-surface) !important;
+  box-shadow: none !important;
+}
+.forms-workspace .forms-list-panel {
+  overflow: hidden;
+}
+.forms-workspace .form-row {
+  border-bottom: 1px solid var(--pp-border);
+  transition: background-color var(--pp-ease);
+}
+.forms-workspace .form-row:hover {
+  background: var(--pp-subtle);
+}
+.forms-workspace .forms-list-panel > .MuiStack-root:first-child {
+  border-bottom: 1px solid var(--pp-border);
+}
+.forms-workspace .forms-list-panel > .MuiStack-root:last-child {
+  border-top: 0;
+}
+.forms-workspace .MuiChip-root {
+  font-weight: 500;
+}
+.form-create-workspace .MuiCard-root {
+  border-radius: var(--pp-r-card);
+  box-shadow: none;
+}
+.form-create-workspace .MuiFormControlLabel-label {
+  color: inherit;
+}
+.form-editor-workspace {
+  color: var(--pp-text);
+}
+.form-editor-workspace .form-editor-topbar {
+  min-height: 56px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 16px;
+  color: var(--pp-surface);
+  background: var(--pp-plum);
+  border-bottom: 1px solid var(--pp-plum-line);
+}
+.form-editor-workspace .form-editor-topbar-start,
+.form-editor-workspace .form-editor-topbar-actions {
+  min-width: 0;
+  flex: 1 1 0;
+}
+.form-editor-workspace .form-editor-topbar-actions {
+  justify-content: flex-end;
+}
+.form-editor-workspace .form-editor-topbar-separator {
+  width: 1px;
+  height: 28px;
+  flex-shrink: 0;
+  background: var(--pp-plum-line);
+}
+.form-editor-workspace .form-editor-topbar .MuiButton-root {
+  min-height: 34px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.form-editor-workspace .form-editor-topbar .MuiButton-text {
+  color: var(--pp-border-strong);
+}
+.form-editor-workspace .form-editor-topbar .MuiButton-text:hover {
+  background: var(--pp-plum-soft);
+}
+.form-editor-workspace .form-editor-topbar .MuiButton-contained {
+  color: var(--pp-surface);
+  background: var(--pp-accent);
+}
+.form-editor-workspace .form-editor-topbar .MuiButton-contained:hover {
+  background: var(--pp-accent-hover);
+}
+.form-editor-workspace .form-editor-mode-tabs {
+  flex: 0 0 auto;
+  overflow: hidden;
+  border: 1px solid var(--pp-plum-line);
+  border-radius: 8px;
+  background: var(--pp-plum-soft);
+}
+.form-editor-workspace .form-editor-mode-tabs .MuiToggleButton-root {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 0;
+  color: var(--pp-text-3);
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: none;
+}
+.form-editor-workspace .form-editor-mode-tabs .MuiToggleButton-root:hover {
+  color: var(--pp-surface);
+  background: transparent;
+}
+.form-editor-workspace .form-editor-mode-tabs .MuiToggleButton-root.Mui-selected {
+  color: var(--pp-plum);
+  background: var(--pp-surface);
+}
+.form-editor-workspace .form-editor-mode-tabs .MuiToggleButton-root.Mui-selected:hover {
+  background: var(--pp-surface);
+}
+.form-editor-workspace .form-editor-element-label {
+  display: inline-block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.form-editor-workspace .MuiTabs-root {
+  width: 100%;
+  margin-bottom: 0;
+  border: 0;
+  border-bottom: 1px solid var(--pp-border);
+  border-radius: 0;
+  background: var(--pp-surface);
+}
+.form-editor-workspace .MuiTab-root {
+  min-height: 44px;
+}
+.form-editor-workspace .form-editor-settings-accordion {
+  margin: 6px 0 !important;
+  overflow: visible;
+  border: 1px solid var(--pp-border);
+  border-radius: var(--pp-r-card) !important;
+  background: var(--pp-surface);
+}
+.form-editor-workspace .form-editor-settings-option + .form-editor-settings-option {
+  border-top: 1px solid var(--pp-border);
+}
+.form-editor-workspace .form-editor-settings-option .MuiSwitch-root,
+.form-editor-workspace .form-editor-settings-panel .MuiSwitch-root {
+  flex-shrink: 0;
+}
+@media (max-width: 599px) {
+  .form-editor-workspace .form-editor-topbar {
+    gap: 8px;
+    padding: 6px 8px;
+  }
+  .form-editor-workspace .form-editor-topbar-separator,
+  .form-editor-workspace .form-editor-topbar-name {
+    display: none;
+  }
+  .form-editor-workspace .form-editor-topbar .MuiButton-root {
+    min-width: 34px;
+    padding: 0 8px;
+  }
+  .form-editor-workspace .form-editor-topbar .MuiButton-startIcon {
+    margin: 0;
+  }
+  .form-editor-workspace .form-editor-topbar-start .MuiButton-root {
+    font-size: 0;
+  }
+  .form-editor-workspace .form-editor-mode-tabs .MuiToggleButton-root {
+    padding: 0 8px;
+    font-size: 11px;
+  }
+  .form-editor-workspace .form-editor-topbar-actions .MuiButton:first-child {
+    font-size: 0;
+  }
+  .form-editor-workspace .form-editor-element-label {
+    display: none;
+  }
+  .form-editor-workspace .MuiButton-startIcon {
+    margin: 0;
+  }
+}
 .pp-account-menu .MuiMenuItem-root .MuiListItemIcon-root {
   min-width: 0;
   color: var(--pp-text-3);
