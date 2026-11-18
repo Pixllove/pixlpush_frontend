@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { AddRounded, ContentCopyRounded, DeleteOutlineRounded, DynamicFormOutlined, EditOutlined, MoreVertRounded, VisibilityOutlined } from '@mui/icons-material';
 import {
   Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, ListItemIcon, ListItemText, Menu, MenuItem,
-  Paper, Skeleton, Stack, Switch, TextField, Tooltip, Typography,
+  Chip, Paper, Skeleton, Stack, Switch, TextField, Tooltip, Typography,
 } from '@mui/material';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import DeleteConfirmDialog from '@/components/dashboard/DeleteConfirmDialog';
@@ -141,7 +141,7 @@ function FormRow({ form, projectId, notify, onChanged, selected, onSelect }: { f
         <Checkbox size="small" className="pp-forms-row-check" checked={selected} onChange={onSelect} inputProps={{ 'aria-label': `Select ${form.name}` }} />
       </Box>
       <Box className="pp-forms-row-main">
-        <StatusChip status={form.status} />
+        <Stack direction="row" gap={0.75} alignItems="center"><StatusChip status={form.status} />{form.heldByPixlPush && <Chip size="small" color="error" variant="outlined" label="Paused by PixlPush" />}</Stack>
         <Typography component={Link} href={`/dashboard/forms/${form.id}`} className="pp-forms-row-name" noWrap>{form.name}</Typography>
         <Typography className="pp-forms-row-date" color="text.secondary">
           {usageShort[form.behaviour.mode]} <span aria-hidden="true">·</span> Created {formatDate(form.createdAt)}
@@ -157,9 +157,9 @@ function FormRow({ form, projectId, notify, onChanged, selected, onSelect }: { f
         <Metric label="Views" value={form.stats.views.toLocaleString()} tone="info" />
         <Metric label="Conversion" value={conversion(form)} tone="success" />
       </Box>
-      <Tooltip title={!live && problems.length ? problems[0] : live ? 'Pause form' : 'Make form live'}>
+      <Tooltip title={form.heldByPixlPush ? 'PixlPush has paused this form. You can still edit it, but it can’t go live until our team releases it. Check your notifications for the reason.' : !live && problems.length ? problems[0] : live ? 'Pause form' : 'Make form live'}>
         <span className="pp-forms-row-switch">
-          <Switch checked={live} disabled={(!live && problems.length > 0) || changeStatus.isPending} inputProps={{ 'aria-label': `${form.name} is live` }}
+          <Switch checked={live} disabled={form.heldByPixlPush || (!live && problems.length > 0) || changeStatus.isPending} inputProps={{ 'aria-label': `${form.name} is live` }}
             onChange={(event) => changeStatus.mutate(event.target.checked ? 'active' : 'paused', { onSuccess: () => notify(event.target.checked ? 'Form is live' : 'Form paused') })} />
         </span>
       </Tooltip>
@@ -167,7 +167,7 @@ function FormRow({ form, projectId, notify, onChanged, selected, onSelect }: { f
       <Menu anchorEl={anchor} open={Boolean(anchor)} onClose={() => setAnchor(null)}>
         <MenuItem component={Link} href={editHref}><ListItemIcon><EditOutlined fontSize="small" /></ListItemIcon><ListItemText>Edit</ListItemText></MenuItem>
         <MenuItem onClick={() => { setName(form.name); setRenaming(true); setAnchor(null); }}><ListItemIcon><EditOutlined fontSize="small" /></ListItemIcon><ListItemText>Rename</ListItemText></MenuItem>
-        <MenuItem onClick={() => { duplicate.mutate(); setAnchor(null); }}><ListItemIcon><ContentCopyRounded fontSize="small" /></ListItemIcon><ListItemText>Duplicate</ListItemText></MenuItem>
+        <MenuItem disabled={form.heldByPixlPush} onClick={() => { duplicate.mutate(); setAnchor(null); }}><ListItemIcon><ContentCopyRounded fontSize="small" /></ListItemIcon><ListItemText>Duplicate</ListItemText></MenuItem>
         <Divider />
         <MenuItem onClick={() => { setDeleting(true); setAnchor(null); }} className="pp-menu-danger"><ListItemIcon><DeleteOutlineRounded fontSize="small" /></ListItemIcon><ListItemText>Delete</ListItemText></MenuItem>
       </Menu>

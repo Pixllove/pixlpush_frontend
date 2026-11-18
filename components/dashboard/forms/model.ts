@@ -178,6 +178,8 @@ export const formDraftSchema = z.object({
   success: successSchema,
   behaviour: behaviourSchema,
   stats: z.object({ views: z.number(), subscribers: z.number() }),
+  /** PixlPush staff put it on hold: it can be edited, but not turned on or duplicated until released. */
+  heldByPixlPush: z.boolean().default(false),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -268,7 +270,7 @@ export function defaultDraft(input: { name: string; kind: FormKind; groups?: str
       repeat: 'after', frequency: 1, frequencyUnit: 'months', schedule: 'now', startAt: '', endAt: '',
       pages: 'all', urls: '', strict: false, hideDesktop: false, hideTablet: false, hideMobile: false,
     },
-    stats: { views: 0, subscribers: 0 },
+    stats: { views: 0, subscribers: 0 }, heldByPixlPush: false,
     createdAt: now, updatedAt: now,
   };
 }

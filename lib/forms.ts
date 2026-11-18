@@ -20,6 +20,7 @@ type ApiForm = {
   embed: { scriptUrl?: string; snippet: string | null };
   createdAt: string;
   updatedAt: string;
+  adminLockedAt?: string | null;
 };
 
 type ApiList = { items: ApiForm[]; total: number; page: number; limit: number; counts: { types: Record<FormKind, number>; statuses: Record<'all' | FormStatus, number> } };
@@ -176,7 +177,7 @@ function modeOf(behavior: Record<string, unknown> | undefined): FormDraft['behav
 /** Server form → editor draft, always with its signup fields block. */
 function fromApi(form: ApiForm): FormDraft {
   const submitLabel = typeof form.content?.submitLabel === 'string' ? form.content.submitLabel : undefined;
-  return withFieldsBlock(readForm(form), submitLabel);
+  return { ...withFieldsBlock(readForm(form), submitLabel), heldByPixlPush: Boolean(form.adminLockedAt) };
 }
 
 function readForm(form: ApiForm): FormDraft {

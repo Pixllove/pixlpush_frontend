@@ -71,10 +71,11 @@ export function StatusControl({ draft, onChange, busy = false, error }: { draft:
       <FormControlLabel
         className="pp-form-switch"
         labelPlacement="start"
-        control={<Switch checked={live} disabled={busy || (!live && problems.length > 0)} onChange={(event) => onChange(event.target.checked ? 'active' : 'paused')} />}
+        control={<Switch checked={live} disabled={busy || draft.heldByPixlPush || (!live && problems.length > 0)} onChange={(event) => onChange(event.target.checked ? 'active' : 'paused')} />}
         label={<Box><Typography className="pp-form-switch-label">{live ? 'Form is live' : 'Form is not live'}</Typography><Typography className="pp-form-switch-text">{live ? 'It shows on your site and collects subscribers.' : draft.status === 'paused' ? 'Paused: visitors do not see it.' : 'Turn it on when you have installed the code.'}</Typography></Box>}
       />
-      {!live && problems.length > 0 && (
+      {draft.heldByPixlPush && <Alert severity="error">PixlPush has paused this form. You can still edit it, but it can’t go live until our team releases it. Check your notifications for the reason. Contact support if you have questions.</Alert>}
+      {!draft.heldByPixlPush && !live && problems.length > 0 && (
         <Alert severity="warning" icon={<ErrorOutlineRounded />}>
           <Typography fontSize="inherit" fontWeight={600}>Fix these before the form can go live:</Typography>
           <Box component="ul" sx={{ m: 0, pl: 2.5 }}>{problems.map((problem) => <li key={problem}>{problem}</li>)}</Box>
