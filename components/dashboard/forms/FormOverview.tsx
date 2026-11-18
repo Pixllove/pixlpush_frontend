@@ -27,7 +27,7 @@ export function behaviourSummary(draft: FormDraft): Array<[string, string]> {
     ['How it is used', usageLabel.auto],
     ['Shows', triggers || 'Never (no trigger)'],
     ['Shows again', b.repeat === 'always' ? 'On every visit until they sign up' : `${b.frequency} ${b.frequencyUnit} after it was closed`],
-    ['Schedule', b.schedule === 'now' ? 'As soon as it is live' : `${b.startAt.replace('T', ' ')} to ${b.endAt.replace('T', ' ')}`],
+    ['Schedule', b.schedule === 'now' ? 'As soon as it is live' : `${b.startAt.replace('T', ' ')} to ${b.endAt.replace('T', ' ')} (${b.timezone.replace(/_/g, ' ')})`],
     ['Pages', pages],
     ['Devices', devices.length ? `Hidden on ${devices.join(', ')}` : 'All devices'],
   ];

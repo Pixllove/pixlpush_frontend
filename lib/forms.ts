@@ -1,6 +1,12 @@
 import { authRequest } from '@/lib/auth/client';
 import { audienceGroupsApi } from '@/lib/projects/api';
-import { defaultDraft, formDraftSchema, makeId, withFieldsBlock, type FormDraft, type FormKind, type FormStatus } from '@/components/dashboard/forms/model';
+import { defaultDraft, formDraftSchema, localZone, makeId, utcToWall, wallToUtc, withFieldsBlock, type FormDraft, type FormKind, type FormStatus } from '@/components/dashboard/forms/model';
+
+/** A saved IANA zone if the browser knows it, else the visitor's own. Old forms have none: their times were entered locally. */
+const zoneOf = (zone: unknown) => {
+  if (typeof zone !== 'string' || !zone) return localZone();
+  try { new Intl.DateTimeFormat('en-US', { timeZone: zone }); return zone; } catch { return localZone(); }
+};
 
 /** The dashboard API response. The list endpoint omits the editor sections. */
 type ApiForm = {
@@ -149,7 +155,7 @@ function toApiSections(draft: FormDraft) {
       clickOn: false,
     },
     frequency: draft.behaviour.repeat === 'always' ? null : { amount: Math.max(1, Math.min(365, draft.behaviour.frequency)), unit: draft.behaviour.frequencyUnit },
-    schedule: { startsAt: draft.behaviour.schedule === 'range' && draft.behaviour.startAt ? new Date(draft.behaviour.startAt).toISOString() : null, endsAt: draft.behaviour.schedule === 'range' && draft.behaviour.endAt ? new Date(draft.behaviour.endAt).toISOString() : null },
+    schedule: { startsAt: draft.behaviour.schedule === 'range' && draft.behaviour.startAt ? wallToUtc(draft.behaviour.startAt, draft.behaviour.timezone) : null, endsAt: draft.behaviour.schedule === 'range' && draft.behaviour.endAt ? wallToUtc(draft.behaviour.endAt, draft.behaviour.timezone) : null, timezone: draft.behaviour.timezone },
     pages: { mode: draft.behaviour.pages === 'show' ? 'include' : draft.behaviour.pages === 'hide' ? 'exclude' : 'all', paths: draft.behaviour.urls.split('\n').map((value) => value.trim()).filter(Boolean).map((value) => { try { return value.startsWith('http') ? new URL(value).pathname : value.startsWith('/') ? value : `/${value}`; } catch { return value.startsWith('/') ? value : `/${value}`; } }).slice(0, 50), strict: draft.behaviour.strict },
     devices: { desktop: !draft.behaviour.hideDesktop, tablet: !draft.behaviour.hideTablet, mobile: !draft.behaviour.hideMobile },
   };
@@ -258,7 +264,7 @@ function readForm(form: ApiForm): FormDraft {
       mode: modeOf(behavior),
       repeat: behavior.frequency === null ? 'always' : 'after',
       frequency: Number(frequency.amount ?? seed.behaviour.frequency), frequencyUnit: frequency.unit ?? seed.behaviour.frequencyUnit,
-      schedule: schedule.startsAt || schedule.endsAt ? 'range' : 'now', startAt: typeof schedule.startsAt === 'string' ? schedule.startsAt.slice(0, 16) : '', endAt: typeof schedule.endsAt === 'string' ? schedule.endsAt.slice(0, 16) : '',
+      schedule: schedule.startsAt || schedule.endsAt ? 'range' : 'now', startAt: typeof schedule.startsAt === 'string' ? utcToWall(schedule.startsAt, zoneOf(schedule.timezone)) : '', endAt: typeof schedule.endsAt === 'string' ? utcToWall(schedule.endsAt, zoneOf(schedule.timezone)) : '', timezone: zoneOf(schedule.timezone),
       pages: pages.mode === 'include' ? 'show' : pages.mode === 'exclude' ? 'hide' : 'all', urls: Array.isArray(pages.paths) ? pages.paths.join('\n') : '', strict: Boolean(pages.strict),
       hideDesktop: devices.desktop === false, hideTablet: devices.tablet === false, hideMobile: devices.mobile === false,
     },

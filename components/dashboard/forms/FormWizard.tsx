@@ -8,25 +8,30 @@ import {
   IosShareRounded, PhoneIphoneOutlined, RadioButtonUncheckedRounded, TabletMacOutlined, TouchAppOutlined, ViewAgendaOutlined,
 } from '@mui/icons-material';
 import {
-  Alert, Avatar, Box, Button, Card, CardActionArea, Checkbox, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, FormGroup,
+  Alert, Autocomplete, Avatar, Box, Button, Card, CardActionArea, Checkbox, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, FormGroup,
   FormHelperText, LinearProgress, MenuItem, Paper, Skeleton, Snackbar, Stack, Switch, TextField, Typography,
 } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import dayjs from 'dayjs';
+import { alpha } from '@mui/material/styles';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import EmptyState, { listEmpty } from '@/components/dashboard/EmptyState';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
 import SearchField from '@/components/dashboard/SearchField';
 import { createForm, deleteFormImage, formsKeys, getForm, listGroups, saveForm, setFormStatus } from '@/lib/forms';
 import FormEditor, { EditorSkeleton, type SaveState } from './FormEditor';
-import { applyTemplate, behaviourErrors, defaultDraft, editorReducer, uploadsIn, isEditorStep, kindPlural, templatesFor, urlLines, type FormBehaviour, type FormDraft, type UsageMode } from './model';
+import { allZones, applyTemplate, behaviourErrors, zoneLabel, defaultDraft, editorReducer, uploadsIn, isEditorStep, kindPlural, templatesFor, urlLines, type FormBehaviour, type FormDraft, type UsageMode } from './model';
 import { FormThumbnail, InstallPanel, SaveStatus, StatusControl } from './shared';
 
 type Step = 'details' | 'audience' | 'design' | 'editor' | 'setup';
 
 const steps: Step[] = ['details', 'audience', 'design', 'editor', 'setup'];
-const stepLabel: Record<Step, string> = { details: 'Form name', audience: 'Subscriber groups', design: 'Template', editor: 'Design and settings', setup: 'How to use' };
+const stepLabel: Record<Step, string> = { details: 'Form name', audience: 'Audience groups', design: 'Template', editor: 'Design and settings', setup: 'How to use' };
 /** Links from older flows keep working. */
 const legacySteps: Record<string, Step> = { behaviour: 'setup' };
-/** Steps that need subscriber groups first. */
+/** Steps that need audience groups first. */
 const needsGroups: Step[] = ['design', 'editor', 'setup'];
 
 /* ---------- layout ---------- */
@@ -335,7 +340,7 @@ function WizardSteps({ id, projectId, initial }: { id: string; projectId: string
   );
 }
 
-/* ---------- step 2: subscriber groups ---------- */
+/* ---------- step 2: audience groups ---------- */
 
 function AudienceStep({ projectId, selected, onChange, onCreateGroup, creatingGroup }: { projectId: string; selected: string[]; onChange: (groups: string[]) => void; onCreateGroup: () => void; creatingGroup: boolean }) {
   const groups = useQuery({ queryKey: formsKeys.groupsFor(projectId), queryFn: () => listGroups(projectId) });
@@ -346,13 +351,13 @@ function AudienceStep({ projectId, selected, onChange, onCreateGroup, creatingGr
 
   return (
     <Stack gap={2.5}>
-      <StepHeading icon={<GroupsOutlined />} title="Subscriber groups" text="Everyone who signs up through this form joins the groups you choose."
+      <StepHeading icon={<GroupsOutlined />} title="Audience groups" text="Everyone who signs up through this form joins the groups you choose."
         action={<Button variant="outlined" startIcon={creatingGroup ? <CircularProgress size={16} /> : <AddRounded />} disabled={creatingGroup} onClick={onCreateGroup} sx={{ alignSelf: { xs: 'flex-start', sm: 'center' } }}>
           {all.length === 0 && groups.isSuccess ? 'Create your first group' : 'Create group'}
         </Button>} />
       {groups.isPending ? <Skeleton variant="rounded" height={180} /> : (
         groups.isError
-          ? <EmptyState size="compact" {...listEmpty({ noun: 'subscriber groups', error: 'Could not load subscriber groups', onRetry: () => groups.refetch() })} />
+          ? <EmptyState size="compact" {...listEmpty({ noun: 'audience groups', error: 'Could not load audience groups', onRetry: () => groups.refetch() })} />
           : all.length === 0
             ? <EmptyState size="compact" {...listEmpty({ noun: 'audience groups', description: 'Create a group to choose where signups are saved.' })} />
             : <Box>
@@ -604,18 +609,86 @@ function PopupRules({ value, onChange }: { value: FormBehaviour; onChange: (valu
         </TextField>
       </RuleRow>
 
-      <RuleRow label="Schedule" last>
-        <TextField select label="Active" value={value.schedule} onChange={(event) => set({ schedule: event.target.value as FormBehaviour['schedule'] })}>
-          <MenuItem value="now">Always, while the form is live</MenuItem>
-          <MenuItem value="range">Only between two dates</MenuItem>
-        </TextField>
-        {value.schedule === 'range' && (
-          <Stack direction={{ xs: 'column', sm: 'row' }} gap={1.5}>
-            <TextField fullWidth label="Starts" type="datetime-local" InputLabelProps={{ shrink: true }} value={value.startAt} onChange={(event) => set({ startAt: event.target.value })} error={Boolean(errors.startAt)} helperText={errors.startAt} />
-            <TextField fullWidth label="Ends" type="datetime-local" InputLabelProps={{ shrink: true }} value={value.endAt} onChange={(event) => set({ endAt: event.target.value })} error={Boolean(errors.endAt)} helperText={errors.endAt} />
-          </Stack>
-        )}
+      <RuleRow label="Schedule" help="Set when the pop-up is active, in advance." last>
+        <ScheduleFields value={value} errors={errors} set={set} />
       </RuleRow>
     </Paper>
+  );
+}
+
+/** Time zone the start and end are in, with the current time there so people can check. */
+function ZonePicker({ value, onChange }: { value: string; onChange: (zone: string) => void }) {
+  const zones = useMemo(() => allZones(), []);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer); }, []);
+  const clock = new Date(now).toLocaleTimeString(undefined, { timeZone: value, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  return (
+    <Autocomplete disableClearable options={zones.includes(value) ? zones : [value, ...zones]} value={value} onChange={(_, zone) => zone && onChange(zone)}
+      getOptionLabel={(zone) => `${zone.replace(/_/g, ' ')} (${zoneLabel(zone)})`}
+      slotProps={{
+        popper: { placement: 'bottom-start', modifiers: [{ name: 'flip', enabled: false }] },
+        paper: { elevation: 0, sx: { mt: 0.5, border: 1, borderColor: 'divider', borderRadius: 2 } },
+        listbox: { sx: { maxHeight: 300, p: 0.5, '& .MuiAutocomplete-option': { fontSize: 14, minHeight: 38, borderRadius: 1.5 }, '& .MuiAutocomplete-option[aria-selected="true"]': { color: 'primary.main', fontWeight: 600 } } },
+      }}
+      renderInput={(params) => <TextField {...params} label="Time zone" helperText={`Current time there: ${clock}`} />} />
+  );
+}
+
+const pad = (n: number) => String(n).padStart(2, '0');
+const hours = Array.from({ length: 24 }, (_, h) => pad(h));
+const minutes = Array.from({ length: 12 }, (_, m) => pad(m * 5));
+
+/** None / Specific time as selectable cards, then date + hour : minute rows and the time zone. */
+function ScheduleFields({ value, errors, set }: { value: FormBehaviour; errors: Partial<Record<keyof FormBehaviour, string>>; set: (patch: Partial<FormBehaviour>) => void }) {
+  const choices = [
+    { key: 'now', title: 'None', text: 'The pop-up is active as soon as the form is live.' },
+    { key: 'range', title: 'Specific time', text: 'Choose a start and end time.' },
+  ] as const;
+  return (
+    <>
+      <Box role="radiogroup" aria-label="Schedule" sx={{ border: 1, borderColor: 'divider', borderRadius: 2, overflow: 'hidden' }}>
+        {choices.map((choice, index) => {
+          const on = value.schedule === choice.key;
+          return (
+            <CardActionArea key={choice.key} role="radio" aria-checked={on} onClick={() => set({ schedule: choice.key })}
+              sx={(theme) => { const r = `${Number(theme.shape.borderRadius) * 2 - 1}px`; const last = index === choices.length - 1; return { borderRadius: `${index === 0 ? r : 0} ${index === 0 ? r : 0} ${last ? r : 0} ${last ? r : 0}`, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 1.5, px: 2, py: 1.5, borderTop: index ? 1 : 0, borderColor: on ? 'primary.main' : 'divider', outline: on ? `1px solid ${theme.palette.primary.main}` : 'none', outlineOffset: -1, bgcolor: on ? alpha(theme.palette.primary.main, 0.08) : 'transparent' }; }}>
+              {on ? <CheckCircleRounded color="primary" fontSize="small" /> : <RadioButtonUncheckedRounded fontSize="small" sx={{ color: 'text.disabled' }} />}
+              <Box>
+                <Typography fontWeight={600} variant="body2">{choice.title}</Typography>
+                <Typography variant="caption" color="text.secondary">{choice.text}</Typography>
+              </Box>
+            </CardActionArea>
+          );
+        })}
+      </Box>
+      {value.schedule === 'range' && (
+        <LocalizationProvider dateAdapter={AdapterDayjs}>
+          <DateTimeRow label="Date from" value={value.startAt} error={errors.startAt} onChange={(startAt) => set({ startAt })} />
+          <DateTimeRow label="Date to" value={value.endAt} error={errors.endAt} onChange={(endAt) => set({ endAt })} />
+          <ZonePicker value={value.timezone} onChange={(timezone) => set({ timezone })} />
+        </LocalizationProvider>
+      )}
+    </>
+  );
+}
+
+/** A date picker plus hour and minute selects, kept as one `YYYY-MM-DDTHH:mm` wall-clock string. */
+function DateTimeRow({ label, value, error, onChange }: { label: string; value: string; error?: string; onChange: (wall: string) => void }) {
+  const [date, time = '09:00'] = value ? value.split('T') : ['', '09:00'];
+  const [hour, minute] = time.split(':');
+  const put = (d: string, h: string, m: string) => onChange(d ? `${d}T${h}:${m}` : '');
+  const minuteOptions = minutes.includes(minute) ? minutes : [...minutes, minute].sort();
+  return (
+    <Stack direction="row" gap={1} alignItems="flex-start">
+      <DatePicker label={label} value={date ? dayjs(date) : null} format="YYYY-MM-DD" onChange={(next) => put(next?.isValid() ? next.format('YYYY-MM-DD') : '', hour, minute)}
+        slotProps={{ textField: { fullWidth: true, error: Boolean(error), helperText: error } }} sx={{ flex: 1 }} />
+      <TextField select label="Hour" value={hour} disabled={!date} onChange={(event) => put(date, event.target.value, minute)} sx={{ width: 92 }}>
+        {hours.map((h) => <MenuItem key={h} value={h}>{h}</MenuItem>)}
+      </TextField>
+      <Typography sx={{ pt: 2 }} aria-hidden>:</Typography>
+      <TextField select label="Min" value={minute} disabled={!date} onChange={(event) => put(date, hour, event.target.value)} sx={{ width: 92 }}>
+        {minuteOptions.map((m) => <MenuItem key={m} value={m}>{m}</MenuItem>)}
+      </TextField>
+    </Stack>
   );
 }
