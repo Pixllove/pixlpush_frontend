@@ -10,9 +10,17 @@ import { useCurrentUser } from "@/hooks/auth/use-current-user";
 import { useActiveProject } from "@/hooks/projects/use-active-project";
 import { accountGreetingName } from "@/lib/auth/display-name";
 import { aiApi, type AiAgentId, type AiAgentResult, type AiAssistantId, type AiBusinessContext, type AiBusinessContextUpdate, type AiChatRequest, type AiChatResponse, type AiCollaboration, type AiCollaborationHistory, type AiConversationMessage, type AiConversationPreview, type AiCreatedResource, type AiFlowId, type AiFlowDraftResponse, type AiHandoff, type AiInteractionMode, type AiSuggestedPrompt, type AiProjectContext, type AiResourceType, type AiOnboardingStatus, type AiInteraction, type AiInteractionAction, type AiInteractionResponse, type AiInteractionRequest } from "@/lib/projects/ai";
-import { audienceGroupsApi, emailApi, firebaseApi, journeysApi, lifecycleSegmentsApi, pushApi, sdkKeyApi } from "@/lib/projects/api";
+import { audienceGroupsApi, emailApi, firebaseApi, journeysApi, lifecycleSegmentsApi, onboardingApi, pushApi, sdkKeyApi } from "@/lib/projects/api";
 import { pushReadyOf } from "@/lib/onboarding";
 import type { AudienceGroup, LifecycleSegment } from "@/types/project";
+import { createSendingDomain, listSendingDomains } from "@/lib/sending-domains/api";
+import type { SendingDomain } from "@/types/sending-domain";
+import { domainFromEmail } from "@/components/dashboard/sending-domains/AddDomainDialog";
+import DomainAnalysisDialog from "@/components/dashboard/sending-domains/DomainAnalysisDialog";
+import DnsSetupDialog from "@/components/dashboard/sending-domains/DnsSetupDialog";
+import ApnsConnectDialog from "@/components/dashboard/ApnsConnectDialog";
+import FirebaseConnectDialog from "@/components/onboarding/FirebaseConnectDialog";
+import { SdkRequestDialog } from "@/components/onboarding/OnboardingStepExperience";
 import DeleteConfirmDialog from "@/components/dashboard/DeleteConfirmDialog";
 import CollaborationResultCard, { CollaborationTimeline, type CollaborationAgentProfile } from "@/components/dashboard/CollaborationResultCard";
 import OnboardingActionCard from "@/components/dashboard/OnboardingActionCard";
@@ -49,6 +57,10 @@ type GuidedFlow = { id: AiFlowId; title: string; subtitle: string; steps: Array<
 type FlowStep = GuidedFlow["steps"][number];
 type AnalysisType = "email" | "push" | "journey";
 type AnalysisPhase = "type" | "resource" | "period" | "confirm";
+type ChatDomainVerification =
+  | { kind: "analyze"; projectId: string; domain: SendingDomain; interactionId: string }
+  | { kind: "dns"; projectId: string; domainId: string; interactionId: string }
+  | null;
 
 const journeyChoiceExplanations: Record<string, string> = {
   "An event or action": "A single action a user takes in your product, such as closing the app, clicking a button, opening a screen, viewing a paywall, or completing a purchase. Events are tracked through the PixlPush SDK.",
@@ -1216,6 +1228,10 @@ export default function HomeCommandCenter() {
   const [analysisPeriod, setAnalysisPeriod] = useState<string | null>(null);
   const [selectedAgent, setSelectedAgent] = useState<string>("Max");
   const [collaborationHistoryOpen, setCollaborationHistoryOpen] = useState(false);
+  const [chatDomainVerification, setChatDomainVerification] = useState<ChatDomainVerification>(null);
+  const [chatFirebaseInteractionId, setChatFirebaseInteractionId] = useState<string | null>(null);
+  const [chatApnsInteractionId, setChatApnsInteractionId] = useState<string | null>(null);
+  const [chatSdkRequestOpen, setChatSdkRequestOpen] = useState(false);
   const [retryingTaskKey, setRetryingTaskKey] = useState<string | null>(null);
   const [responsePacing, setResponsePacing] = useState(false);
   const [thinkingLabel, setThinkingLabel] = useState("Thinking");
@@ -1465,7 +1481,7 @@ export default function HomeCommandCenter() {
         requestKey,
         step: interaction.step,
         ...(fields ? { values: fields } : {}),
-        ...(submitAction === "next" || submitAction === "submit" || submitAction === "preview" || submitAction === "approve" || submitAction === "edit" || submitAction === "analyze" || submitAction === "save_draft" ? { action: submitAction } : {}),
+        ...(submitAction === "next" || submitAction === "submit" || submitAction === "preview" || submitAction === "approve" || submitAction === "edit" || submitAction === "analyze" || submitAction === "save_draft" || submitAction === "defer" || submitAction === "skip" || submitAction === "skip_step" || submitAction === "resume" ? { action: submitAction } : {}),
       };
       const controller = new AbortController();
       try {
@@ -1480,6 +1496,7 @@ export default function HomeCommandCenter() {
     onSuccess: (response: AiInteractionResponse, input: InteractionMutationInput) => {
       setInteractionErrors((current) => { const next = { ...current }; delete next[input.interaction.interactionId]; return next; });
       const nextInteraction = response.interaction ?? input.interaction;
+      const hasStructuredOnboarding = nextInteraction.type === "onboarding";
       const responseData = nextInteraction.data ?? {};
       const enrichedInteraction: AiInteraction = {
         ...nextInteraction,
@@ -1496,7 +1513,10 @@ export default function HomeCommandCenter() {
         const updated = current.map((message) => message.interaction?.interactionId === input.interaction.interactionId || message.interaction?.interactionId === nextInteraction.interactionId
           ? { ...message, interaction: enrichedInteraction, createdResources: response.createdResources ?? message.createdResources }
           : message);
-        if (!response.message?.trim()) return updated;
+        // Onboarding progress is already represented by the structured card.
+        // Do not append the backend's legacy status/next-step paragraph as a
+        // second, stale text-only response beside the current step.
+        if (!response.message?.trim() || hasStructuredOnboarding) return updated;
         // The current message owns the interaction card. Append the returned
         // assistant text as a plain message so the card is not duplicated.
         return [...updated, { id: `assistant-interaction-${Date.now()}`, role: "assistant" as const, assistant: response.assistant ?? selectedAgent as AiAssistantId, text: response.message }];
@@ -1556,6 +1576,47 @@ export default function HomeCommandCenter() {
   const runInteractionAction = (action: InteractionActionKind, interaction: AiInteraction, fields?: Record<string, unknown>, submitAction?: AiInteractionAction) => {
     if (interactionMutation.isPending) return;
     interactionMutation.mutate({ action, interaction, requestKey: stableRequestKey(), fields, submitAction });
+  };
+
+  const refreshChatOnboardingInteraction = async (verificationProjectId: string, interactionId: string) => {
+    try {
+      const response = await aiApi.reloadInteraction(verificationProjectId, { interactionId, requestKey: stableRequestKey() });
+      if (response.interaction) {
+        setMessages((current) => current.map((message) => message.interaction?.interactionId === interactionId
+          ? { ...message, interaction: response.interaction }
+          : message));
+      }
+      void queryClient.invalidateQueries({ queryKey: ["projects", verificationProjectId, "ai", "context"] });
+      void queryClient.invalidateQueries({ queryKey: ["projects", verificationProjectId, "onboarding"] });
+    } catch (cause) {
+      setInteractionErrors((current) => ({ ...current, [interactionId]: apiMessage(cause, "The onboarding status could not be refreshed. Please reload the interaction." ) }));
+    }
+  };
+
+  const openChatDomainVerification = async (interaction: AiInteraction, values: { senderEmail: string; domain: string }) => {
+    if (!projectId) throw new Error("Select a project before verifying domain ownership.");
+    const senderEmail = values.senderEmail.trim().toLowerCase();
+    const senderDomain = domainFromEmail(senderEmail);
+    if (!senderDomain) throw new Error("Enter a valid sender email, for example info@yourproduct.com.");
+
+    const saved = await onboardingApi.update(projectId, { senderEmail, domain: senderDomain });
+    queryClient.setQueryData(["projects", projectId, "onboarding"], saved);
+    const existing = (await listSendingDomains(projectId)).find((item) => item.domain.trim().toLowerCase() === senderDomain);
+    if (existing?.status === "verified") {
+      await refreshChatOnboardingInteraction(projectId, interaction.interactionId);
+      return;
+    }
+    const sendingDomain = existing ?? await createSendingDomain(projectId, { senderEmail });
+    setChatDomainVerification({ kind: "analyze", projectId, domain: sendingDomain, interactionId: interaction.interactionId });
+  };
+
+  const refreshChatDomainState = () => {
+    if (!chatDomainVerification) return;
+    void Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["projects", "sending-domains", chatDomainVerification.projectId] }),
+      queryClient.invalidateQueries({ queryKey: ["projects", chatDomainVerification.projectId, "onboarding"] }),
+    ]);
+    void refreshChatOnboardingInteraction(chatDomainVerification.projectId, chatDomainVerification.interactionId);
   };
 
   const updateCollaborationApproval = (collaborationId: string, status: AiCollaboration["approvalStatus"]) => {
@@ -1721,7 +1782,7 @@ export default function HomeCommandCenter() {
   const firebaseSettingsQuery = useQuery({
     queryKey: ["projects", projectId, "firebase"],
     queryFn: () => firebaseApi.get(projectId!),
-    enabled: Boolean(projectId) && activeFlow?.id === "journey",
+    enabled: Boolean(projectId),
     staleTime: 30_000,
   });
   const pushReady = sdkIntegrated && pushReadyOf(firebaseSettingsQuery.data);
@@ -2524,8 +2585,8 @@ export default function HomeCommandCenter() {
                 />
               </>}
               {!message.error && message.agentResult && !message.collaboration && <CollaborationResultCard result={message.agentResult} profile={agentProfiles.find((profile) => profile.id === message.agentResult?.agentId) ?? { id: message.agentResult.agentId, role: "PixlPush specialist", avatar: "/assets/agent-avatar-max-v4.webp" }} />}
-              <Typography className="chat-response" role={message.error ? "alert" : undefined}>{message.text}</Typography>
-              {!message.error && message.interaction && <AiInteractionRenderer interaction={message.interaction} onSubmit={(fields, submitAction) => runInteractionAction("submit", message.interaction!, fields, submitAction)} onCancel={() => runInteractionAction("cancel", message.interaction!)} onRetry={() => runInteractionAction("retry", message.interaction!)} onReload={() => runInteractionAction("reload", message.interaction!)} onSecureAction={(action) => {
+              {!(message.interaction?.type === "onboarding") && <Typography className="chat-response" role={message.error ? "alert" : undefined}>{message.text}</Typography>}
+              {!message.error && message.interaction && <AiInteractionRenderer interaction={message.interaction} onSubmit={(fields, submitAction) => runInteractionAction("submit", message.interaction!, fields, submitAction)} onCancel={() => runInteractionAction("cancel", message.interaction!)} onRetry={() => runInteractionAction("retry", message.interaction!)} onReload={() => runInteractionAction("reload", message.interaction!)} onCheckLinks={message.interaction.type === "onboarding" && projectId ? (websiteUrl) => onboardingApi.appLinks(projectId, websiteUrl) : undefined} onVerifyDomain={message.interaction.type === "onboarding" && projectId ? (values) => openChatDomainVerification(message.interaction!, values) : undefined} onOpenFirebase={message.interaction.type === "onboarding" ? () => setChatFirebaseInteractionId(message.interaction!.interactionId) : undefined} onOpenApns={message.interaction.type === "onboarding" ? () => setChatApnsInteractionId(message.interaction!.interactionId) : undefined} onRequestSdk={message.interaction.type === "onboarding" ? () => setChatSdkRequestOpen(true) : undefined} onSendDeveloperInstructions={message.interaction.type === "onboarding" && projectId ? (input) => onboardingApi.sendSdkInstructions(projectId, input) : undefined} firebaseConnected={firebaseSettingsQuery.data?.status === "connected"} apnsConnected={firebaseSettingsQuery.data?.apns?.status === "connected"} onSecureAction={(action) => {
                 if (typeof window !== "undefined") window.sessionStorage.setItem("pixlpush:interaction-resume", JSON.stringify({ projectId, interactionId: message.interaction!.interactionId, conversationId }));
                 const href = action.href || "/dashboard/settings/firebase";
                 const separator = href.includes("?") ? "&" : "?";
@@ -2604,6 +2665,44 @@ export default function HomeCommandCenter() {
         </Stack>
       </DialogContent>
     </Dialog>
+    {chatFirebaseInteractionId && <FirebaseConnectDialog
+      open
+      onClose={() => setChatFirebaseInteractionId(null)}
+      projectId={projectId}
+      existing={firebaseSettingsQuery.data}
+      onConnected={() => {
+        const interactionId = chatFirebaseInteractionId;
+        setChatFirebaseInteractionId(null);
+        void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "firebase"] });
+        if (projectId && interactionId) void refreshChatOnboardingInteraction(projectId, interactionId);
+      }}
+    />}
+    {chatApnsInteractionId && <ApnsConnectDialog
+      open
+      onClose={() => setChatApnsInteractionId(null)}
+      projectId={projectId}
+      existing={firebaseSettingsQuery.data?.apns}
+      onConnected={() => {
+        const interactionId = chatApnsInteractionId;
+        setChatApnsInteractionId(null);
+        void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "firebase"] });
+        if (projectId && interactionId) void refreshChatOnboardingInteraction(projectId, interactionId);
+      }}
+    />}
+    <SdkRequestDialog open={chatSdkRequestOpen} onClose={() => setChatSdkRequestOpen(false)} projectId={projectId} />
+    {chatDomainVerification?.kind === "analyze" && <DomainAnalysisDialog
+      projectId={chatDomainVerification.projectId}
+      domain={chatDomainVerification.domain}
+      onClose={() => setChatDomainVerification(null)}
+      onChanged={refreshChatDomainState}
+      onManual={(domain) => setChatDomainVerification({ kind: "dns", projectId: chatDomainVerification.projectId, domainId: domain.id, interactionId: chatDomainVerification.interactionId })}
+    />}
+    {chatDomainVerification?.kind === "dns" && <DnsSetupDialog
+      projectId={chatDomainVerification.projectId}
+      domainId={chatDomainVerification.domainId}
+      onClose={() => setChatDomainVerification(null)}
+      onChanged={refreshChatDomainState}
+    />}
     <DeleteConfirmDialog
       open={Boolean(deleteTarget)}
       onClose={() => { if (!deleteConversationMutation.isPending) setDeleteTarget(null); }}

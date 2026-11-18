@@ -49,6 +49,105 @@ describe('AiInteractionRenderer', () => {
     expect(onSubmit).toHaveBeenCalledWith({ goal: 'Improve engagement' }, 'next');
   });
 
+  it('keeps Continue enabled for blank onboarding fields and dispatches defer without required values', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<AiInteractionRenderer interaction={interaction('onboarding', {
+      fields: [{ key: 'domain', label: 'Sending domain', type: 'text', required: true }],
+      actions: ['defer', 'submit', 'cancel'],
+      data: { completionPercentage: 40 },
+    })} onSubmit={onSubmit} />);
+
+    const continueButton = screen.getByRole('button', { name: 'Continue' });
+    expect(continueButton).toBeEnabled();
+    expect(screen.getByText('40%')).toBeInTheDocument();
+    await user.click(continueButton);
+
+    expect(onSubmit).toHaveBeenCalledWith({}, 'defer');
+    expect(screen.getByText('40%')).toBeInTheDocument();
+  });
+
+  it('renders the backend returned next onboarding step after a deferred step', () => {
+    const first = interaction('onboarding', {
+      title: 'Your products',
+      fields: [{ key: 'websiteUrl', label: 'Website URL', type: 'url' }],
+      actions: ['defer', 'submit'],
+      data: { currentStep: { kind: 'products', title: 'Your products' }, completionPercentage: 25 },
+    });
+    const next = {
+      ...first,
+      step: 4,
+      title: 'Complete onboarding: Domain',
+      fields: [{ key: 'domain', label: 'Sending domain', type: 'text' as const }],
+      data: { currentStep: { kind: 'domain', title: 'Domain' }, completionPercentage: 25, stepDeferred: true },
+    };
+    const { rerender } = render(<AiInteractionRenderer interaction={first} onSubmit={vi.fn()} />);
+    expect(screen.getByText('Your products')).toBeInTheDocument();
+
+    rerender(<AiInteractionRenderer interaction={next} onSubmit={vi.fn()} />);
+    expect(screen.getByText('Domain')).toBeInTheDocument();
+    expect(screen.queryByText('Your products')).not.toBeInTheDocument();
+    expect(screen.getByText('This step was deferred. You can complete it later from onboarding.')).toBeInTheDocument();
+    expect(screen.getByText('25%')).toBeInTheDocument();
+  });
+
+  it('shows the all-deferred resume state without showing completion', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<AiInteractionRenderer interaction={interaction('onboarding', {
+      status: 'deferred',
+      fields: [],
+      actions: ['resume'],
+      data: { onboarding: { allRemainingStepsDeferred: true, deferredSteps: ['domain'] }, completionPercentage: 25 },
+    })} onSubmit={onSubmit} />);
+
+    expect(screen.getByText('You can resume these steps later. Your onboarding progress still reflects only completed steps.')).toBeInTheDocument();
+    expect(screen.queryByText('Onboarding is complete. Your progress has been refreshed.')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Resume deferred steps' }));
+    expect(onSubmit).toHaveBeenCalledWith({}, 'resume');
+  });
+
+  it('shows Review deferred steps for an active onboarding step and resumes the backend-returned step', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    const active = interaction('onboarding', {
+      step: 4,
+      totalSteps: 5,
+      title: 'Complete onboarding: Domain',
+      fields: [{ key: 'domain', label: 'Sending domain', type: 'text', required: true }],
+      actions: ['resume', 'defer', 'submit'],
+      data: {
+        currentStep: { kind: 'domain', title: 'Domain' },
+        deferredSteps: [{ kind: 'products', status: 'deferred' }],
+        completionPercentage: 40,
+        values: { domain: 'example.com' },
+      },
+    });
+    const resumed = {
+      ...active,
+      step: 2,
+      title: 'Complete onboarding: Channels',
+      fields: [{ key: 'channels', label: 'Channels', type: 'choice' as const, required: true, options: ['email'] }],
+      actions: ['defer', 'submit'],
+      data: {
+        currentStep: { kind: 'channels', title: 'Channels' },
+        completionPercentage: 40,
+        values: { channels: ['email'] },
+      },
+    };
+
+    const { rerender } = render(<AiInteractionRenderer interaction={active} onSubmit={onSubmit} />);
+    expect(screen.getByRole('button', { name: 'Review deferred steps' })).toBeEnabled();
+    await user.click(screen.getByRole('button', { name: 'Review deferred steps' }));
+    expect(onSubmit).toHaveBeenCalledWith({}, 'resume');
+
+    rerender(<AiInteractionRenderer interaction={resumed} onSubmit={onSubmit} />);
+    expect(screen.getByText('Channels')).toBeInTheDocument();
+    expect(screen.queryByText('Domain')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled();
+    expect(screen.getByText('40%')).toBeInTheDocument();
+  });
+
   it('forwards save_draft exactly instead of converting it to submit', async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
@@ -130,6 +229,113 @@ describe('AiInteractionRenderer', () => {
     await user.click(screen.getByRole('button', { name: 'Open secure setup' }));
     expect(onSecureAction).toHaveBeenCalledWith({ label: 'Firebase credentials', href: '/dashboard/settings/firebase' });
     expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('renders the shared onboarding basics, products, and channel experience', async () => {
+    const user = userEvent.setup();
+    const onCheckLinks = vi.fn().mockResolvedValue({ androidAppUrl: 'https://play.google.com/store/apps/details?id=demo', iosAppUrl: 'https://apps.apple.com/app/demo/id1' });
+    const products = interaction('onboarding', {
+      title: 'Complete onboarding: Your products',
+      fields: [
+        { key: 'platforms', label: 'Products', type: 'choice', required: true, options: ['web', 'mobile'] },
+        { key: 'websiteUrl', label: 'Website URL', type: 'url' },
+        { key: 'androidAppUrl', label: 'Android app link', type: 'url' },
+        { key: 'iosAppUrl', label: 'iOS app link', type: 'url' },
+      ],
+      data: { currentStep: { kind: 'products', title: 'Your products' }, values: { platforms: ['mobile'], websiteUrl: 'example.com' } },
+      actions: ['defer', 'submit'],
+    });
+    const { rerender } = render(<AiInteractionRenderer interaction={products} onSubmit={vi.fn()} onCheckLinks={onCheckLinks} />);
+    expect(screen.getAllByText('Mobile App').length).toBeGreaterThan(0);
+    expect(screen.getByText('For apps available on iOS or Android.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Check links' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Check links' }));
+    expect(onCheckLinks).toHaveBeenCalledWith('https://example.com');
+    expect(await screen.findByText('Google Play')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Use Android link' })).toBeInTheDocument();
+
+    rerender(<AiInteractionRenderer interaction={interaction('onboarding', {
+      fields: [{ key: 'projectName', label: 'Project name', type: 'text', required: true }],
+      data: { currentStep: { kind: 'basics', title: 'Project basics' } },
+      actions: ['defer', 'submit'],
+    })} onSubmit={vi.fn()} />);
+    expect(screen.getByText('You can change this any time.')).toBeInTheDocument();
+
+    rerender(<AiInteractionRenderer interaction={interaction('onboarding', {
+      fields: [{ key: 'channels', label: 'Channels', type: 'choice', required: true, options: ['web-push', 'mobile-push', 'email', 'in-app'] }],
+      data: { currentStep: { kind: 'channels', title: 'Channels' }, values: { platforms: ['web'] } },
+      actions: ['defer', 'submit'],
+    })} onSubmit={vi.fn()} />);
+    expect(screen.getByText('Web push')).toBeInTheDocument();
+    expect(screen.queryByText('Mobile push')).not.toBeInTheDocument();
+    expect(screen.getByText('Email')).toBeInTheDocument();
+  });
+
+  it('renders Domain verification and defers a blank required Domain without native validation', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    const onVerifyDomain = vi.fn();
+    render(<AiInteractionRenderer interaction={interaction('onboarding', {
+      fields: [
+        { key: 'senderEmail', label: 'Sender email', type: 'text', required: true },
+        { key: 'domain', label: 'Sending domain', type: 'text', required: true },
+      ],
+      data: { currentStep: { kind: 'domain', title: 'Domain' } },
+      actions: ['defer', 'submit'],
+    })} onSubmit={onSubmit} onVerifyDomain={onVerifyDomain} />);
+
+    expect(screen.getByRole('button', { name: 'Verify ownership' })).toBeInTheDocument();
+    const continueButton = screen.getByRole('button', { name: 'Continue' });
+    expect(continueButton).toHaveAttribute('type', 'button');
+    await user.click(continueButton);
+    expect(onSubmit).toHaveBeenCalledWith({}, 'defer');
+    expect(onSubmit).not.toHaveBeenCalledWith(expect.anything(), 'submit');
+    expect(onVerifyDomain).not.toHaveBeenCalled();
+  });
+
+  it('derives the Domain value from sender email for save and ownership verification', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    const onVerifyDomain = vi.fn().mockResolvedValue(undefined);
+    render(<AiInteractionRenderer interaction={interaction('onboarding', {
+      fields: [{ key: 'senderEmail', label: 'Sender email', type: 'text', required: true }],
+      data: { currentStep: { kind: 'domain', title: 'Domain' } },
+      actions: ['defer', 'submit'],
+    })} onSubmit={onSubmit} onVerifyDomain={onVerifyDomain} />);
+
+    expect(screen.queryByRole('textbox', { name: 'Sending domain' })).not.toBeInTheDocument();
+    await user.type(screen.getByRole('textbox', { name: 'Sender email' }), 'info@example.com');
+    await user.click(screen.getByRole('button', { name: 'Verify ownership' }));
+    expect(onVerifyDomain).toHaveBeenCalledWith({ senderEmail: 'info@example.com', domain: 'example.com' });
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(onSubmit).toHaveBeenCalledWith({ senderEmail: 'info@example.com', domain: 'example.com' }, 'submit');
+  });
+
+  it('renders the shared Mobile Push, App SDK, and Web SDK experiences', () => {
+    const base = interaction('onboarding', { fields: [], actions: ['defer', 'submit'] });
+    const { rerender } = render(<AiInteractionRenderer interaction={{ ...base, data: { currentStep: { kind: 'mobile-push', title: 'Mobile push setup' } } }} onSubmit={vi.fn()} onOpenFirebase={vi.fn()} onOpenApns={vi.fn()} />);
+    expect(screen.getByTestId('onboarding-mobile-push-experience')).toBeInTheDocument();
+    expect(screen.getByText('Firebase Cloud Messaging (mobile apps)')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Connect Firebase with Max' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Connect Apple Push (APNs)' })).toBeInTheDocument();
+
+    rerender(<AiInteractionRenderer interaction={{ ...base, data: { currentStep: { kind: 'mobile-push', title: 'Mobile push setup' } } }} onSubmit={vi.fn()} onOpenFirebase={vi.fn()} onOpenApns={vi.fn()} firebaseConnected apnsConnected />);
+    expect(screen.getByRole('button', { name: 'Review Firebase with Max' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Review Apple Push (APNs)' })).toBeInTheDocument();
+
+    rerender(<AiInteractionRenderer interaction={{ ...base, data: { currentStep: { kind: 'app-sdk', title: 'App SDK' }, values: { projectName: 'Demo' } } }} onSubmit={vi.fn()} onRequestSdk={vi.fn()} onSendDeveloperInstructions={vi.fn()} />);
+    expect(screen.getByTestId('onboarding-app-sdk-experience')).toBeInTheDocument();
+    expect(screen.getByText('What technology is your app built with?')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copy AI Integration Prompt' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Request SDK' })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('developer@company.com')).toBeInTheDocument();
+    expect(screen.getByText(/Demo/)).toBeInTheDocument();
+
+    rerender(<AiInteractionRenderer interaction={{ ...base, data: { currentStep: { kind: 'web-sdk', title: 'Web SDK' } } }} onSubmit={vi.fn()} onSendDeveloperInstructions={vi.fn()} />);
+    expect(screen.getByTestId('onboarding-web-sdk-experience')).toBeInTheDocument();
+    expect(screen.getByText('Web SDK Integration')).toBeInTheDocument();
+    expect(screen.getByText('Web Push Integration')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'View Website integration guide' })).toBeInTheDocument();
   });
 
   it('renders failure and retry state from the backend interaction', async () => {

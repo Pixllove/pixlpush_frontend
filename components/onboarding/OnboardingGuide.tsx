@@ -57,7 +57,7 @@ export default function OnboardingGuide() {
   return <div className="dashboard-onboarding">
     <Paper className="guide-welcome" elevation={0}>
       <div><Typography className="guide-eyebrow">YOUR SETUP, AT A GLANCE</Typography><Typography variant="h4" fontWeight={750}>Onboarding Guide</Typography><Typography color="text.secondary" sx={{ mt: 1 }}>Pick up where you left off. Your progress is saved to this project.</Typography></div>
-      <Button href="/onboarding" variant="contained" endIcon={<ArrowForwardRounded />}>{displayState.completed.length ? 'Continue with Max' : 'Start with Max'}</Button>
+      <Button href="/onboarding" variant="contained" endIcon={<ArrowForwardRounded />}>{displayState.deferredSteps.length ? 'Resume deferred steps with Max' : displayState.completed.length ? 'Continue with Max' : 'Start with Max'}</Button>
       <div className="guide-project-label"><span>PROJECT</span><strong>{displayState.projectName || 'Not named yet'}</strong>{displayState.skipped && <Chip size="small" label="Paused" />}</div>
     </Paper>
     <Paper className="guide-progress-card" elevation={0}>
@@ -68,10 +68,11 @@ export default function OnboardingGuide() {
       <LinearProgress variant="determinate" value={percentage} className="onboarding-progress" />
       <div className="guide-timeline">{activeSteps.map(({ step: [title, detail, tag], kind, number }) => {
         const done = displayState.completed.includes(number);
-        return <article className={`guide-step${done ? ' completed' : ''}`} key={title}>
+        const deferred = displayState.deferredSteps.includes(kind);
+        return <article className={`guide-step${done ? ' completed' : ''}${deferred ? ' deferred' : ''}`} key={title}>
           <div className="guide-step-icon">{done ? <CheckCircleRounded/> : <span>{number}</span>}</div>
-          <div className="guide-step-copy"><div><Typography fontWeight={700}>{title}</Typography><Chip size="small" label={tag}/></div><Typography color="text.secondary" variant="body2">{detail}</Typography>{kind === 'basics' && displayState.projectName && <small>Current value: {displayState.projectName}</small>}{kind === 'products' && <small>{[displayState.websiteUrl, displayState.androidAppUrl, displayState.iosAppUrl].filter(Boolean).join(' · ') || 'No links added yet'}</small>}{kind === 'domain' && displayState.domain && <small>Domain: {displayState.domain}</small>}</div>
-          <div className="guide-step-status">{kind === 'mobile-push' && firebaseConnected ? <Chip size="small" color="success" label="Ready"/> : done ? <Chip size="small" color="success" label="Complete"/> : <Chip size="small" variant="outlined" label="To do"/>}</div>
+          <div className="guide-step-copy"><div><Typography fontWeight={700}>{title}</Typography><Chip size="small" label={tag}/></div><Typography color="text.secondary" variant="body2">{detail}</Typography>{deferred && <small>You can resume this step later.</small>}{kind === 'basics' && displayState.projectName && <small>Current value: {displayState.projectName}</small>}{kind === 'products' && <small>{[displayState.websiteUrl, displayState.androidAppUrl, displayState.iosAppUrl].filter(Boolean).join(' · ') || 'No links added yet'}</small>}{kind === 'domain' && displayState.domain && <small>Domain: {displayState.domain}</small>}</div>
+          <div className="guide-step-status">{kind === 'mobile-push' && firebaseConnected ? <Chip size="small" color="success" label="Ready"/> : done ? <Chip size="small" color="success" label="Complete"/> : deferred ? <Chip size="small" variant="outlined" label="Deferred"/> : <Chip size="small" variant="outlined" label="To do"/>}</div>
         </article>;
       })}</div>
       <div className="guide-note"><ReplayRounded fontSize="small"/><span>Domain and SDK steps are guidance. Firebase credentials are validated securely when you connect them from the onboarding flow.</span><Button size="small" href={displayState.platforms?.includes('web') ? '/dashboard/integrations/web/quickstart' : '/dashboard/integrations/react-native/quickstart'} endIcon={<OpenInNewRounded/>}>SDK guide</Button></div>

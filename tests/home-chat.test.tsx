@@ -171,6 +171,76 @@ describe('Home chat', () => {
     expect(await screen.findByText('I have prepared the recommendation for your review.')).toBeInTheDocument();
   }, 10_000);
 
+  it('dispatches onboarding defer and renders the backend returned next step without increasing progress', async () => {
+    const user = userEvent.setup();
+    const first = {
+      ...interaction('onboarding', [{ key: 'websiteUrl', label: 'Website URL', type: 'url', required: true, options: [] }]),
+      title: 'Your products',
+      actions: ['defer', 'submit', 'cancel'],
+      data: { currentStep: { kind: 'products', title: 'Your products' }, completionPercentage: 25 },
+    };
+    api.chat.mockResolvedValueOnce({ ...(reply('Continue onboarding.') as object), interaction: first } as never);
+    api.submitInteraction.mockResolvedValueOnce({
+      interaction: {
+        ...first,
+        step: 4,
+        title: 'Complete onboarding: Domain',
+        fields: [{ key: 'domain', label: 'Sending domain', type: 'text', required: true, options: [] }],
+        data: { currentStep: { kind: 'domain', title: 'Domain' }, completionPercentage: 25, stepDeferred: true },
+        actions: ['defer', 'submit', 'cancel'],
+      },
+    } as never);
+    render(<QueryClientProvider client={new QueryClient({ defaultOptions: { mutations: { retry: false } } })}><HomeCommandCenter /></QueryClientProvider>);
+
+    await user.type(screen.getByRole('textbox', { name: 'Message Max' }), 'Continue onboarding{Enter}');
+    await user.click(await screen.findByRole('button', { name: 'Continue' }, { timeout: 5_000 }));
+
+    await waitFor(() => expect(api.submitInteraction).toHaveBeenCalledWith('p1', expect.objectContaining({
+      interactionId: 'i-onboarding', step: 1, values: {}, action: 'defer',
+    }), expect.any(AbortSignal)));
+    expect(await screen.findByText('Domain')).toBeInTheDocument();
+    expect(screen.getByText('25%')).toBeInTheDocument();
+    expect(screen.queryByText('Your products')).not.toBeInTheDocument();
+  }, 10_000);
+
+  it('dispatches onboarding resume with empty values and replaces the card with the resumed backend step', async () => {
+    const user = userEvent.setup();
+    const first = {
+      ...interaction('onboarding', [{ key: 'domain', label: 'Sending domain', type: 'text', required: true, options: [] }]),
+      step: 4,
+      title: 'Complete onboarding: Domain',
+      actions: ['resume', 'defer', 'submit', 'cancel'],
+      data: {
+        currentStep: { kind: 'domain', title: 'Domain' },
+        deferredSteps: [{ kind: 'products', status: 'deferred' }],
+        completionPercentage: 40,
+        values: { domain: 'example.com' },
+      },
+    };
+    api.chat.mockResolvedValueOnce({ ...(reply('Review a deferred onboarding step.') as object), interaction: first } as never);
+    api.submitInteraction.mockResolvedValueOnce({
+      interaction: {
+        ...first,
+        step: 2,
+        title: 'Complete onboarding: Channels',
+        fields: [{ key: 'channels', label: 'Channels', type: 'choice', required: true, options: ['email'] }],
+        actions: ['defer', 'submit', 'cancel'],
+        data: { currentStep: { kind: 'channels', title: 'Channels' }, completionPercentage: 40, values: { channels: ['email'] } },
+      },
+    } as never);
+    render(<QueryClientProvider client={new QueryClient({ defaultOptions: { mutations: { retry: false } } })}><HomeCommandCenter /></QueryClientProvider>);
+
+    await user.type(screen.getByRole('textbox', { name: 'Message Max' }), 'Review deferred onboarding{Enter}');
+    await user.click(await screen.findByRole('button', { name: 'Review deferred steps' }, { timeout: 5_000 }));
+
+    await waitFor(() => expect(api.submitInteraction).toHaveBeenCalledWith('p1', expect.objectContaining({
+      interactionId: 'i-onboarding', step: 4, values: {}, action: 'resume',
+    }), expect.any(AbortSignal)));
+    expect(await screen.findByText('Channels')).toBeInTheDocument();
+    expect(screen.queryByText('Domain')).not.toBeInTheDocument();
+    expect(screen.getByText('40%')).toBeInTheDocument();
+  }, 10_000);
+
   it('uses a unique request key for each interaction step and advances the flow', async () => {
     const user = userEvent.setup();
     const first = { ...interaction('push_creation', [{ key: 'goal', label: 'Goal', type: 'text', required: true, options: [] }]), step: 1, totalSteps: 4, actions: ['next'] };

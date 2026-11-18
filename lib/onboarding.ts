@@ -10,13 +10,14 @@ export type OnboardingState = {
   senderEmail: string;
   domain: string;
   firebaseChecklist: number[];
+  deferredSteps: OnboardingStepKind[];
   currentStep: number;
   completed: number[];
   skipped: boolean;
 };
 
 export const initialOnboardingState: OnboardingState = {
-  projectName: '', platforms: ['mobile'], websiteUrl: '', androidAppUrl: '', iosAppUrl: '', channels: [], senderEmail: '', domain: '', firebaseChecklist: [], currentStep: 1, completed: [], skipped: false,
+  projectName: '', platforms: ['mobile'], websiteUrl: '', androidAppUrl: '', iosAppUrl: '', channels: [], senderEmail: '', domain: '', firebaseChecklist: [], deferredSteps: [], currentStep: 1, completed: [], skipped: false,
 };
 
 export type SdkSurface = 'mobile' | 'web';
@@ -34,6 +35,42 @@ export type OnboardingStep = {
   kind: OnboardingStepKind;
   title: string;
 };
+
+export type OnboardingUrlField = 'websiteUrl' | 'androidAppUrl' | 'iosAppUrl';
+
+/**
+ * Accept the URL forms people commonly paste into onboarding. The backend
+ * expects an absolute HTTP(S) URL, so bare domains are given an https scheme.
+ * Markdown links are reduced to their destination before normalization.
+ */
+export function normalizeOnboardingUrl(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  const markdown = trimmed.match(/^\s*\[[^\]]*\]\(([^)\s]+)\)\s*$/);
+  const candidate = (markdown?.[1] ?? trimmed).trim();
+  return /^https?:\/\//i.test(candidate) ? candidate : `https://${candidate}`;
+}
+
+export function onboardingUrlError(value: string, label = 'URL'): string | null {
+  if (!value.trim()) return null;
+  const normalized = normalizeOnboardingUrl(value);
+  try {
+    const parsed = new URL(normalized);
+    if (!['http:', 'https:'].includes(parsed.protocol) || !parsed.hostname) throw new Error();
+    return null;
+  } catch {
+    return `${label} must be a valid website or app-store link, for example https://example.com.`;
+  }
+}
+
+export function normalizeOnboardingUrls<T extends Pick<OnboardingState, OnboardingUrlField>>(value: T): T {
+  return {
+    ...value,
+    websiteUrl: normalizeOnboardingUrl(value.websiteUrl),
+    androidAppUrl: normalizeOnboardingUrl(value.androidAppUrl),
+    iosAppUrl: normalizeOnboardingUrl(value.iosAppUrl),
+  };
+}
 
 /** Legacy helper for callers that need the selected product surfaces. */
 export const sdkSurfacesOf = (platforms: ProjectPlatform[] | undefined): SdkSurface[] =>

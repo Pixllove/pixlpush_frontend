@@ -199,6 +199,7 @@ export type AiInteractionStatus =
   | "active"
   | "awaiting_input"
   | "awaiting_confirmation"
+  | "deferred"
   | "completed"
   | "cancelled"
   | "failed"
@@ -223,6 +224,10 @@ export type AiInteractionAction =
   | "edit"
   | "analyze"
   | "save_draft"
+  | "defer"
+  | "skip"
+  | "skip_step"
+  | "resume"
   | "cancel"
   | "retry"
   | (string & {});

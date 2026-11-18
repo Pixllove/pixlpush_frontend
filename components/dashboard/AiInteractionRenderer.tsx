@@ -1,9 +1,18 @@
 "use client";
 
-import { ArrowForwardRounded, CheckRounded, CloseRounded, LockRounded, ReplayRounded, RefreshRounded } from "@mui/icons-material";
+import { ArrowForwardRounded, CheckCircleRounded, CheckRounded, CloseRounded, LockRounded, ReplayRounded, RefreshRounded, SearchRounded, WarningAmberRounded } from "@mui/icons-material";
 import { Alert, Box, Button, ButtonBase, Checkbox, FormControlLabel, MenuItem, Select, Stack, TextField, Typography } from "@mui/material";
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import { normalizeOnboardingUrl, onboardingUrlError } from "@/lib/onboarding";
 import type { AiInteraction, AiInteractionAction, AiInteractionField } from "@/lib/projects/ai";
+import { domainFromEmail } from "@/components/dashboard/sending-domains/AddDomainDialog";
+import OnboardingCommonStep, { type CommonOnboardingStepKind } from "@/components/onboarding/OnboardingCommonStep";
+import OnboardingStepExperience, { type DeveloperInstructionsInput } from "@/components/onboarding/OnboardingStepExperience";
+import { channelOptions, platformOptions } from "@/components/onboarding/onboardingStepConfig";
+import { toggleProjectPlatform } from "@/lib/project-platforms";
+import type { ProjectPlatform } from "@/types/project";
+
+export type OnboardingLinkCheckResult = { androidAppUrl: string | null; iosAppUrl: string | null };
 
 type InteractionRendererProps = {
   interaction: AiInteraction;
@@ -12,6 +21,14 @@ type InteractionRendererProps = {
   onRetry?: () => void;
   onReload?: () => void;
   onSecureAction?: (action: { label: string; href?: string }) => void;
+  onCheckLinks?: (websiteUrl: string) => Promise<OnboardingLinkCheckResult>;
+  onVerifyDomain?: (values: { senderEmail: string; domain: string }) => Promise<void>;
+  onOpenFirebase?: () => void;
+  onOpenApns?: () => void;
+  onRequestSdk?: () => void;
+  onSendDeveloperInstructions?: (input: DeveloperInstructionsInput) => Promise<{ sent: boolean }>;
+  firebaseConnected?: boolean;
+  apnsConnected?: boolean;
   busy?: boolean;
   error?: string | null;
 };
@@ -27,6 +44,10 @@ function initialValue(field: AiInteractionField, data: Record<string, unknown>) 
 
 function recordValue(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function stringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.map(String) : [];
 }
 
 function currentStepFields(interaction: AiInteraction): AiInteractionField[] {
@@ -50,7 +71,8 @@ function backendValue(interaction: AiInteraction, field: AiInteractionField): { 
   const data = interaction.data ?? {};
   const submitted = recordValue(data.submittedValues);
   const returned = recordValue(data.values);
-  for (const source of [returned, submitted, data]) {
+  const onboarding = recordValue(data.onboarding);
+  for (const source of [returned, submitted, onboarding, data]) {
     if (Object.prototype.hasOwnProperty.call(source, field.key)) return { found: true, value: source[field.key] };
   }
   return { found: false };
@@ -61,8 +83,45 @@ function isPrimaryAction(action: AiInteractionAction) {
   return /submit|continue|confirm|approve|save|next/.test(value);
 }
 
+function isDeferAction(action: AiInteractionAction) {
+  return ["defer", "skip", "skip_step"].includes(action.toLowerCase());
+}
+
+function isResumeAction(action: AiInteractionAction) {
+  return ["resume", "review", "review_deferred", "review_deferred_steps"].includes(action.toLowerCase());
+}
+
+function actionLabel(action: AiInteractionAction) {
+  if (action === "preview") return "Preview";
+  if (action === "edit") return "Edit";
+  if (action === "next") return "Continue";
+  if (isDeferAction(action)) return "Continue";
+  return "Save";
+}
+
+function deferredStepsFrom(interaction: AiInteraction, onboardingData: Record<string, unknown>) {
+  const candidates = [interaction.data.deferredSteps, onboardingData.deferredSteps, interaction.data.deferred, onboardingData.deferred];
+  return candidates.find((value): value is unknown[] => Array.isArray(value)) ?? [];
+}
+
 function fieldIsSecure(field: AiInteractionField) {
   return field.type === "secure_upload" || field.sensitive || /credential|secret|service.?account|firebase/i.test(field.key);
+}
+
+function onboardingUrlLabel(key: string) {
+  return key === "websiteUrl" ? "Website URL" : key === "androidAppUrl" ? "Android app link" : "iOS app link";
+}
+
+function isOnboardingUrlField(field: AiInteractionField) {
+  return ["websiteUrl", "androidAppUrl", "iosAppUrl"].includes(field.key);
+}
+
+function onboardingProductsError(fields: AiInteractionField[], values: Record<string, unknown>, force = false) {
+  if (!force && !fields.some((field) => field.key === "platforms")) return null;
+  const platforms = Array.isArray(values.platforms) ? values.platforms.map(String) : [];
+  if (platforms.includes("web") && !String(values.websiteUrl ?? "").trim()) return "Add a website URL for the selected Website product.";
+  if (platforms.includes("mobile") && !String(values.androidAppUrl ?? "").trim() && !String(values.iosAppUrl ?? "").trim()) return "Add an Android or iOS app link for the selected Mobile App product.";
+  return null;
 }
 
 const structuredJsonKeys = new Set(["audience", "analysis", "steps", "delays", "branches", "exitCriteria", "successMetrics", "filters"]);
@@ -145,21 +204,29 @@ function QuietHoursControl({ value, onChange, disabled }: { value: unknown; onCh
   </Stack>;
 }
 
-function InteractionFieldControl({ field, value, onChange, disabled }: { field: AiInteractionField; value: unknown; onChange: (value: unknown) => void; disabled?: boolean }) {
+function InteractionFieldControl({ field, value, onChange, disabled, error, onBlur, allValues }: { field: AiInteractionField; value: unknown; onChange: (value: unknown) => void; disabled?: boolean; error?: string; onBlur?: () => void; allValues?: Record<string, unknown> }) {
   const type = field.type.toLowerCase();
   if (fieldIsSecure(field)) return <Box sx={{ p: 1.2, border: "1px solid rgba(89, 57, 111, .14)", borderRadius: 1.5, bgcolor: "rgba(89, 57, 111, .04)" }}><Stack direction="row" gap={1} alignItems="center"><LockRounded fontSize="small" color="action" /><Box><Typography fontSize="var(--fs-12)" fontWeight={700}>{field.label}</Typography><Typography fontSize="var(--fs-11)" color="text.secondary">This value is collected only in the protected PixlPush setup screen.</Typography></Box></Stack></Box>;
+  if (isOnboardingUrlField(field)) return <TextField fullWidth type="text" inputMode="url" label={field.label} value={String(value ?? "")} disabled={disabled} onChange={(event) => onChange(event.target.value)} onBlur={onBlur} required={field.required} error={Boolean(error)} helperText={error ?? "Enter example.com, www.example.com, a full http(s) URL, or a Markdown link."} />;
   if (field.key === "schedule") return <ScheduleControl value={value} onChange={onChange} disabled={disabled} />;
   if (field.key === "frequencyCap") return <FrequencyCapControl value={value} onChange={onChange} disabled={disabled} />;
   if (field.key === "quietHours") return <QuietHoursControl value={value} onChange={onChange} disabled={disabled} />;
   if (type === "json" && structuredJsonKeys.has(field.key)) return <StructuredJsonControl field={field} value={value} onChange={onChange} disabled={disabled} />;
   if (type === "checkbox" || type === "boolean") return <FormControlLabel control={<Checkbox checked={Boolean(value)} disabled={disabled} onChange={(event) => onChange(event.target.checked)} />} label={field.label} />;
+  if (field.key === "platforms" || field.key === "channels") {
+    const selected = Array.isArray(value) ? value.map(String) : value ? [String(value)] : [];
+    const options = field.key === "platforms"
+      ? platformOptions
+      : channelOptions.filter((option) => !option.platform || (Array.isArray(allValues?.platforms) && allValues.platforms.includes(option.platform)));
+    return <Box><Typography className="guided-flow-question">{field.label}{field.required ? " *" : ""}</Typography><Stack gap={.65}>{options.map((option) => { const isSelected = selected.includes(option.id); const Icon = option.icon; return <ButtonBase key={option.id} disabled={disabled} className={`guided-flow-choice ${isSelected ? "is-selected" : ""}`} onClick={() => onChange(isSelected ? selected.filter((item) => item !== option.id) : [...selected, option.id])}><span className="guided-choice-check">{isSelected && <CheckRounded />}</span><Icon fontSize="small" /><Box className="guided-choice-copy"><Typography>{option.title}</Typography><Typography fontSize="var(--fs-11)" color="text.secondary">{option.detail}</Typography></Box></ButtonBase>; })}</Stack></Box>;
+  }
   if (["select", "dropdown", "timezone"].includes(type)) return <TextField select={type !== "timezone"} fullWidth label={field.label} value={String(value ?? "")} disabled={disabled} onChange={(event) => onChange(event.target.value)} required={field.required}>{type !== "timezone" ? (field.options ?? []).map((option) => <MenuItem key={option} value={option}>{option}</MenuItem>) : null}</TextField>;
   if (["radio", "choice"].includes(type)) {
     const multiple = ["platforms", "channels"].includes(field.key);
     const selected = Array.isArray(value) ? value.map(String) : value ? [String(value)] : [];
     return <Box><Typography className="guided-flow-question">{field.label}{field.required ? " *" : ""}</Typography><Stack gap={.65}>{(field.options ?? []).map((option) => { const isSelected = selected.includes(option); return <ButtonBase key={option} disabled={disabled} className={`guided-flow-choice ${isSelected ? "is-selected" : ""}`} onClick={() => onChange(multiple ? isSelected ? selected.filter((item) => item !== option) : [...selected, option] : option)}><span className="guided-choice-check">{isSelected && <CheckRounded />}</span><Box className="guided-choice-copy"><Typography>{option}</Typography></Box></ButtonBase>; })}</Stack></Box>;
   }
-  return <TextField fullWidth multiline={type === "json" || type === "textarea" || type === "text_area"} minRows={type === "json" || type === "textarea" || type === "text_area" ? 3 : undefined} type={["date", "number", "url", "time"].includes(type) ? type : "text"} label={field.label} value={String(value ?? "")} disabled={disabled} onChange={(event) => onChange(event.target.value)} required={field.required} />;
+  return <TextField fullWidth multiline={type === "json" || type === "textarea" || type === "text_area"} minRows={type === "json" || type === "textarea" || type === "text_area" ? 3 : undefined} type={["date", "number", "url", "time"].includes(type) ? type : "text"} label={field.label} value={String(value ?? "")} disabled={disabled} onChange={(event) => onChange(event.target.value)} required={field.required} helperText={field.key === "projectName" ? "You can change this any time." : undefined} />;
 }
 
 function SafeInteractionData({ data }: { data: Record<string, unknown> }) {
@@ -186,17 +253,37 @@ function SafeInteractionData({ data }: { data: Record<string, unknown> }) {
   </Stack>;
 }
 
-function InteractionFormCard({ interaction, onSubmit, onCancel, onRetry, onReload, onSecureAction, busy, error, kind }: InteractionRendererProps & { kind: string }) {
+function InteractionFormCard({ interaction, onSubmit, onCancel, onRetry, onReload, onSecureAction, onCheckLinks, onVerifyDomain, onOpenFirebase, onOpenApns, onRequestSdk, onSendDeveloperInstructions, firebaseConnected, apnsConnected, busy, error, kind }: InteractionRendererProps & { kind: string }) {
   const [values, setValues] = useState<Record<string, unknown>>({});
+  const [urlErrors, setUrlErrors] = useState<Record<string, string>>({});
+  const [linkCheckState, setLinkCheckState] = useState<"idle" | "checking" | "found" | "not-found" | "error">("idle");
+  const [linkCheckError, setLinkCheckError] = useState("");
+  const [detectedLinks, setDetectedLinks] = useState<OnboardingLinkCheckResult>({ androidAppUrl: null, iosAppUrl: null });
+  const [domainVerificationBusy, setDomainVerificationBusy] = useState(false);
+  const [domainVerificationError, setDomainVerificationError] = useState("");
   const fields = useMemo(() => currentStepFields(interaction), [interaction]);
   useEffect(() => {
+    setUrlErrors({});
+    setLinkCheckState("idle");
+    setLinkCheckError("");
+    setDetectedLinks({ androidAppUrl: null, iosAppUrl: null });
+    setDomainVerificationError("");
     setValues((previous) => Object.fromEntries(fields.map((field) => {
       const returned = backendValue(interaction, field);
       return [field.key, returned.found ? returned.value : previous[field.key] ?? initialValue(field, interaction.data ?? {})];
     })));
   }, [fields, interaction]);
   const secureField = fields.find(fieldIsSecure);
-  const secureAction = secureField
+  const currentOnboardingKind = interaction.type === "onboarding"
+    ? recordValue(interaction.data?.currentStep).kind
+    : undefined;
+  const commonOnboardingKind = interaction.type === "onboarding" && ["basics", "products", "channels", "domain"].includes(String(currentOnboardingKind))
+    ? currentOnboardingKind as CommonOnboardingStepKind
+    : null;
+  const onboardingExperienceKind = interaction.type === "onboarding" && ["mobile-push", "app-sdk", "web-sdk"].includes(String(currentOnboardingKind))
+    ? currentOnboardingKind as "mobile-push" | "app-sdk" | "web-sdk"
+    : null;
+  const secureAction = secureField && (onboardingExperienceKind === "mobile-push" || (!onboardingExperienceKind && !commonOnboardingKind))
     ? {
         label: secureField.label,
         href: interaction.data.secureAction && typeof interaction.data.secureAction === "object"
@@ -205,13 +292,14 @@ function InteractionFormCard({ interaction, onSubmit, onCancel, onRetry, onReloa
       }
     : null;
   const terminal = ["completed", "cancelled", "failed", "expired"].includes(interaction.status);
+  const deferAction = interaction.type === "onboarding" ? interaction.actions.find(isDeferAction) : undefined;
   const primaryAction = interaction.type === "business_analysis"
     ? interaction.step === 2 && interaction.actions.includes("analyze")
       ? "analyze"
       : interaction.step >= 3 && interaction.actions.includes("approve")
         ? "approve"
         : interaction.actions.find((action) => action !== "save_draft" && isPrimaryAction(action)) ?? interaction.actions.find(isPrimaryAction)
-    : interaction.actions.find((action) => action !== "save_draft" && isPrimaryAction(action)) ?? interaction.actions.find(isPrimaryAction);
+    : interaction.actions.find((action) => action !== "save_draft" && action !== deferAction && isPrimaryAction(action)) ?? interaction.actions.find((action) => action !== deferAction && isPrimaryAction(action));
   const saveDraftAction = interaction.actions.includes("save_draft") ? "save_draft" : undefined;
   const submitLabel = interaction.type === "approval" && primaryAction === "approve"
     ? "Approve draft"
@@ -224,8 +312,14 @@ function InteractionFormCard({ interaction, onSubmit, onCancel, onRetry, onReloa
     : primaryAction?.replace(/^(next|submit|continue|save|edit)$/i, interaction.status === "awaiting_confirmation" ? "Confirm" : "Continue")
       .replace(/^confirm$/i, "Confirm")
       ?? (interaction.status === "awaiting_confirmation" ? "Confirm" : "Continue");
-  const submitAction = primaryAction;
-  const secondaryActions = interaction.actions.filter((action) => ["preview", "edit", "next", "submit", "analyze"].includes(action) && action !== submitAction);
+  // Onboarding uses the backend's explicit defer/skip action for Continue.
+  // Keep the normal submit/next action available as Save when the backend
+  // exposes both actions, so completing a step retains its validation path.
+  const onboardingSaveAction = deferAction
+    ? interaction.actions.find((action) => action === "submit") ?? interaction.actions.find((action) => action === "next")
+    : undefined;
+  const submitAction = deferAction ? undefined : primaryAction;
+  const secondaryActions = interaction.actions.filter((action) => ["preview", "edit", "next", "submit", "analyze"].includes(action) && action !== submitAction && action !== onboardingSaveAction && (!deferAction || !["next", "submit"].includes(action)));
   const missingRequired = useMemo(() => fields.some((field) => {
     const value = values[field.key];
     return Boolean(field.required && !fieldIsSecure(field) && (value === undefined || value === "" || (Array.isArray(value) && value.length === 0)));
@@ -248,29 +342,240 @@ function InteractionFormCard({ interaction, onSubmit, onCancel, onRetry, onReloa
     return null;
   }, [fields, values]);
   const controlsDisabled = Boolean(busy || terminal);
+  const onboardingData = interaction.type === "onboarding" ? recordValue(interaction.data?.onboarding) : {};
+  const interactionValues = interaction.type === "onboarding"
+    ? { ...onboardingData, ...recordValue(interaction.data?.values), ...values }
+    : values;
+  const productError = interaction.type === "onboarding" ? onboardingProductsError(fields, interactionValues, commonOnboardingKind === "products") : null;
+  const deferredSteps = interaction.type === "onboarding" ? deferredStepsFrom(interaction, onboardingData) : [];
+  const stepWasDeferred = interaction.type === "onboarding" && Boolean(
+    interaction.data.stepDeferred === true
+      || onboardingData.stepDeferred === true
+      || interaction.data.deferredStep === true
+      || onboardingData.deferredStep === true,
+  );
+  const allRemainingDeferred = interaction.type === "onboarding" && Boolean(
+    interaction.data.allRemainingStepsDeferred === true
+      || onboardingData.allRemainingStepsDeferred === true
+      || interaction.data.allDeferred === true
+      || onboardingData.allDeferred === true
+      || interaction.data.guidanceExhausted === true
+      || onboardingData.guidanceExhausted === true
+      || (deferredSteps.length > 0 && !interaction.data.currentStep && !onboardingData.currentStep),
+  );
+  const resumeAction = interaction.type === "onboarding" ? interaction.actions.find(isResumeAction) : undefined;
+  const currentOnboardingStep = interaction.type === "onboarding" ? recordValue(interaction.data?.currentStep) : {};
+  const isDomainStep = interaction.type === "onboarding"
+    && (currentOnboardingStep.kind === "domain" || fields.some((field) => field.key === "senderEmail") && fields.some((field) => field.key === "domain"));
+  const cardTitle = interaction.type === "onboarding" && typeof currentOnboardingStep.title === "string"
+    ? currentOnboardingStep.title
+    : interaction.title;
+  const completionPercentage = typeof interaction.data?.completionPercentage === "number"
+    ? interaction.data.completionPercentage
+    : typeof onboardingData.completionPercentage === "number"
+      ? onboardingData.completionPercentage
+      : null;
+
+  const updateField = (field: AiInteractionField, value: unknown) => {
+    setValues((current) => ({ ...current, [field.key]: value }));
+    if (isOnboardingUrlField(field)) setUrlErrors((current) => ({ ...current, [field.key]: "" }));
+    if (field.key === "senderEmail" || field.key === "domain") setDomainVerificationError("");
+    if (field.key === "websiteUrl") {
+      setLinkCheckState("idle");
+      setLinkCheckError("");
+      setDetectedLinks({ androidAppUrl: null, iosAppUrl: null });
+    }
+  };
+
+  const normalizeInteractionValues = (current: Record<string, unknown>) => {
+    const normalized = { ...current };
+    const nextErrors: Record<string, string> = {};
+    fields.filter(isOnboardingUrlField).forEach((field) => {
+      const value = String(current[field.key] ?? "");
+      const fieldError = onboardingUrlError(value, onboardingUrlLabel(field.key));
+      if (fieldError) nextErrors[field.key] = fieldError;
+      else normalized[field.key] = normalizeOnboardingUrl(value);
+    });
+    if (commonOnboardingKind === "domain") normalized.domain = domainFromEmail(String(current.senderEmail ?? "")) ?? "";
+    setUrlErrors(nextErrors);
+    setValues(normalized);
+    return { normalized, valid: Object.keys(nextErrors).length === 0 };
+  };
+
+  const submitInteraction = (action: AiInteractionAction) => {
+    if (isDeferAction(action) || isResumeAction(action)) {
+      onSubmit({}, action);
+      return;
+    }
+    const prepared = normalizeInteractionValues(values);
+    if (!prepared.valid) return;
+    if (interaction.type === "onboarding" && onboardingProductsError(fields, prepared.normalized)) return;
+    onSubmit(prepared.normalized, action);
+  };
+
+  const checkLinks = async () => {
+    if (!onCheckLinks) return;
+    const websiteUrl = String(values.websiteUrl ?? "");
+    const fieldError = onboardingUrlError(websiteUrl, "Website URL");
+    if (fieldError) {
+      setUrlErrors((current) => ({ ...current, websiteUrl: fieldError }));
+      setLinkCheckState("error");
+      setLinkCheckError(fieldError);
+      return;
+    }
+    const normalizedWebsiteUrl = normalizeOnboardingUrl(websiteUrl);
+    setValues((current) => ({ ...current, websiteUrl: normalizedWebsiteUrl }));
+    setLinkCheckState("checking");
+    setLinkCheckError("");
+    try {
+      const result = await onCheckLinks(normalizedWebsiteUrl);
+      setDetectedLinks(result);
+      setLinkCheckState(result.androidAppUrl || result.iosAppUrl ? "found" : "not-found");
+    } catch (cause) {
+      setDetectedLinks({ androidAppUrl: null, iosAppUrl: null });
+      setLinkCheckError(cause instanceof Error ? cause.message : "We couldn’t open that website. Check the URL and try again.");
+      setLinkCheckState("error");
+    }
+  };
+
+  const applyDetectedLink = (field: "androidAppUrl" | "iosAppUrl") => {
+    const value = detectedLinks[field];
+    if (!value) return;
+    setValues((current) => ({ ...current, [field]: value }));
+    setUrlErrors((current) => ({ ...current, [field]: "" }));
+  };
+
+  const verifyDomain = async () => {
+    if (!onVerifyDomain || !isDomainStep) return;
+    const senderEmail = String(values.senderEmail ?? "").trim();
+    const senderDomain = domainFromEmail(senderEmail);
+    if (!senderDomain) {
+      setDomainVerificationError("Enter a valid sender email, for example info@yourproduct.com.");
+      return;
+    }
+    setDomainVerificationBusy(true);
+    setDomainVerificationError("");
+    try {
+      await onVerifyDomain({ senderEmail, domain: senderDomain });
+    } catch (cause) {
+      setDomainVerificationError(cause instanceof Error ? cause.message : "The domain verification setup could not be started.");
+    } finally {
+      setDomainVerificationBusy(false);
+    }
+  };
 
   return <Box className="guided-flow-card ai-interaction-card" data-testid={`interaction-${kind}`}>
     <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap={1}>
-      <Box><Typography component="h2" className="guided-flow-title">{interaction.title}</Typography>{interaction.description ? <Typography className="guided-flow-subtitle">{interaction.description}</Typography> : null}</Box>
+      <Box><Typography component="h2" className="guided-flow-title">{cardTitle}</Typography>{interaction.description ? <Typography className="guided-flow-subtitle">{interaction.description}</Typography> : null}</Box>
       {interaction.status === "completed" ? <CheckRounded color="success" /> : null}
     </Stack>
     {interaction.totalSteps > 0 ? <Box sx={{ mt: 1.2 }} aria-label={`Step ${interaction.step} of ${interaction.totalSteps}`}><Typography fontSize="var(--fs-11)" color="text.secondary">Step {interaction.step} of {interaction.totalSteps}</Typography><Box sx={{ display: "flex", gap: .45, mt: .55 }}>{Array.from({ length: interaction.totalSteps }, (_, index) => <Box key={index} sx={{ height: 5, flex: 1, borderRadius: 2, bgcolor: index < interaction.step ? "primary.main" : "rgba(89, 57, 111, .12)" }} />)}</Box></Box> : null}
+    {interaction.type === "onboarding" && completionPercentage !== null ? <Box sx={{ mt: 1.1 }}><Stack direction="row" justifyContent="space-between" gap={1}><Typography fontSize="var(--fs-11)" color="text.secondary">Onboarding progress</Typography><Typography fontSize="var(--fs-11)" fontWeight={700}>{Math.round(Math.max(0, Math.min(100, completionPercentage)))}%</Typography></Stack><Box sx={{ height: 5, mt: .45, borderRadius: 2, bgcolor: "rgba(89, 57, 111, .12)", overflow: "hidden" }}><Box sx={{ width: `${Math.max(0, Math.min(100, completionPercentage))}%`, height: "100%", bgcolor: "success.main" }} /></Box></Box> : null}
     {error ? <Alert severity="error" sx={{ mt: 1.25 }} role="alert">{error}</Alert> : null}
     {interaction.status === "cancelled" ? <Alert severity="info" sx={{ mt: 1.25 }}>This interaction was cancelled. Its fields are no longer editable.</Alert> : null}
     {interaction.status === "expired" ? <Alert severity="warning" sx={{ mt: 1.25 }}>This interaction has expired. Reload it to get the current step.</Alert> : null}
+    {interaction.type === "onboarding" && interaction.status === "completed" ? <Alert severity="success" sx={{ mt: 1.25 }}>Onboarding is complete. Your progress has been refreshed.</Alert> : null}
+    {stepWasDeferred ? <Alert severity="info" sx={{ mt: 1.25 }}>This step was deferred. You can complete it later from onboarding.</Alert> : null}
+    {allRemainingDeferred ? <Alert severity="info" sx={{ mt: 1.25 }}>You can resume these steps later. Your onboarding progress still reflects only completed steps.</Alert> : null}
     {interaction.type === "approval" ? <Alert severity="info" sx={{ mt: 1.25 }}>Approval records your decision only. Sending, scheduling, publishing, or activation remains a separate action.</Alert> : null}
     {scheduleError ? <Alert severity="warning" sx={{ mt: 1.25 }}>{scheduleError}</Alert> : null}
     {structuredJsonError ? <Alert severity="error" sx={{ mt: 1.25 }}>Fix the invalid JSON in {structuredJsonError} before continuing.</Alert> : null}
-    {fields.length ? <Stack gap={1.2} sx={{ mt: 1.5 }}>{fields.map((field) => <InteractionFieldControl key={field.key} field={field} value={values[field.key]} disabled={controlsDisabled} onChange={(value) => setValues((current) => ({ ...current, [field.key]: value }))} />)}</Stack> : null}
+    {productError && !commonOnboardingKind ? <Alert severity="warning" sx={{ mt: 1.25 }}>{productError}</Alert> : null}
+    {commonOnboardingKind ? <Box sx={{ mt: 1.5 }}><OnboardingCommonStep
+      kind={commonOnboardingKind}
+      projectName={String(values.projectName ?? recordValue(interaction.data?.values).projectName ?? onboardingData.projectName ?? interaction.data.projectName ?? "")}
+      platforms={stringArray(values.platforms ?? recordValue(interaction.data?.values).platforms ?? onboardingData.platforms).filter((value): value is ProjectPlatform => value === "web" || value === "mobile")}
+      websiteUrl={String(values.websiteUrl ?? recordValue(interaction.data?.values).websiteUrl ?? onboardingData.websiteUrl ?? "")}
+      androidAppUrl={String(values.androidAppUrl ?? recordValue(interaction.data?.values).androidAppUrl ?? onboardingData.androidAppUrl ?? "")}
+      iosAppUrl={String(values.iosAppUrl ?? recordValue(interaction.data?.values).iosAppUrl ?? onboardingData.iosAppUrl ?? "")}
+      channels={stringArray(values.channels ?? recordValue(interaction.data?.values).channels ?? onboardingData.channels)}
+      senderEmail={String(values.senderEmail ?? recordValue(interaction.data?.values).senderEmail ?? onboardingData.senderEmail ?? "")}
+      urlErrors={urlErrors}
+      productsError={productError ?? ""}
+      linkCheckState={linkCheckState}
+      linkCheckError={linkCheckError}
+      detectedLinks={detectedLinks}
+      domainVerificationBusy={domainVerificationBusy}
+      domainVerificationError={domainVerificationError}
+      disabled={controlsDisabled}
+      onProjectNameChange={(value) => updateField({ key: "projectName", type: "text", label: "Project name" }, value)}
+      onPlatformToggle={(platform) => {
+        const currentPlatforms = stringArray(interactionValues.platforms) as ProjectPlatform[];
+        const nextPlatforms = toggleProjectPlatform(currentPlatforms, platform);
+        const nextChannels = stringArray(interactionValues.channels).filter((channel) => {
+          const option = channelOptions.find((item) => item.id === channel);
+          return !option?.platform || nextPlatforms.includes(option.platform);
+        });
+        setValues((current) => ({ ...current, platforms: nextPlatforms, channels: nextChannels }));
+      }}
+      onChannelToggle={(channel) => setValues((current) => {
+        const currentChannels = stringArray(interactionValues.channels);
+        return { ...current, channels: currentChannels.includes(channel) ? currentChannels.filter((item) => item !== channel) : [...currentChannels, channel] };
+      })}
+      onUrlChange={(field, value) => updateField({ key: field, type: "url", label: field }, value)}
+      onUrlBlur={(field) => {
+        const value = String(values[field] ?? "");
+        const fieldError = onboardingUrlError(value, onboardingUrlLabel(field));
+        setUrlErrors((current) => ({ ...current, [field]: fieldError || "" }));
+        if (!fieldError) setValues((current) => ({ ...current, [field]: normalizeOnboardingUrl(value) }));
+      }}
+      onCheckLinks={() => void checkLinks()}
+      onApplyDetectedLink={applyDetectedLink}
+      onSenderEmailChange={(value) => {
+        const domain = domainFromEmail(value) ?? "";
+        setValues((current) => ({ ...current, senderEmail: value, domain }));
+        setDomainVerificationError("");
+      }}
+      onVerifyDomain={() => void verifyDomain()}
+    /></Box> : null}
+    {fields.length && !onboardingExperienceKind && !commonOnboardingKind ? <Stack gap={1.2} sx={{ mt: 1.5 }}>{fields.map((field) => <Fragment key={field.key}>
+      <InteractionFieldControl field={field} value={values[field.key]} allValues={{ ...recordValue(interaction.data?.values), ...values }} disabled={controlsDisabled} error={urlErrors[field.key]} onBlur={() => {
+        if (!isOnboardingUrlField(field)) return;
+        const value = String(values[field.key] ?? "");
+        const fieldError = onboardingUrlError(value, onboardingUrlLabel(field.key));
+        setUrlErrors((current) => ({ ...current, [field.key]: fieldError || "" }));
+        if (!fieldError) setValues((current) => ({ ...current, [field.key]: normalizeOnboardingUrl(value) }));
+      }} onChange={(value) => updateField(field, value)} />
+      {isDomainStep && field.key === "domain" && onVerifyDomain ? <Stack gap={.75} alignItems="flex-start">
+        <Button variant="contained" onClick={() => void verifyDomain()} disabled={controlsDisabled || domainVerificationBusy}>
+          {domainVerificationBusy ? "Opening verification…" : "Verify ownership"}
+        </Button>
+        {domainVerificationError ? <Alert severity="error" role="alert">{domainVerificationError}</Alert> : null}
+    </Stack> : null}
+      {interaction.type === "onboarding" && field.key === "websiteUrl" && onCheckLinks ? <Box>
+        <Button variant="outlined" size="small" startIcon={linkCheckState === "checking" ? <RefreshRounded className="onboarding-scan-icon" /> : <SearchRounded />} onClick={() => void checkLinks()} disabled={controlsDisabled || !String(values.websiteUrl ?? "").trim() || linkCheckState === "checking"}>{linkCheckState === "checking" ? "Checking links…" : "Check links"}</Button>
+        {linkCheckState !== "idle" ? <Stack gap={.75} sx={{ mt: .8, p: 1, border: "1px solid", borderColor: linkCheckState === "error" ? "error.light" : linkCheckState === "found" ? "success.light" : "divider", borderRadius: 1.5 }} role="status">
+          <Stack direction="row" gap={.75} alignItems="flex-start"><Box sx={{ pt: .15 }}>{linkCheckState === "found" ? <CheckCircleRounded color="success" fontSize="small" /> : <WarningAmberRounded color={linkCheckState === "error" ? "error" : "warning"} fontSize="small" />}</Box><Box><Typography fontSize="var(--fs-12)" fontWeight={700}>{linkCheckState === "checking" ? "Looking for app-store links" : linkCheckState === "found" ? "App links found" : linkCheckState === "error" ? "Couldn’t check this website" : "No app links found"}</Typography><Typography fontSize="var(--fs-11)" color="text.secondary">{linkCheckState === "checking" ? "Reading your website for Google Play and App Store links." : linkCheckState === "found" ? "Review the detected links and choose which ones to apply." : linkCheckState === "error" ? `${linkCheckError} You can add the links manually below.` : "Your website does not link to Google Play or the App Store. Add the links manually below."}</Typography></Box></Stack>
+          {linkCheckState === "found" && <Stack gap={.8}>
+            {detectedLinks.androidAppUrl && <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "stretch", sm: "center" }} gap={1}><Box sx={{ minWidth: 0 }}><Typography fontSize="var(--fs-11)" color="text.secondary">Google Play</Typography><Typography fontSize="var(--fs-12)" sx={{ overflowWrap: "anywhere" }}>{detectedLinks.androidAppUrl}</Typography></Box><Button size="small" variant="outlined" onClick={() => applyDetectedLink("androidAppUrl")}>{String(values.androidAppUrl ?? "").trim() ? "Replace Android link" : "Use Android link"}</Button></Stack>}
+            {detectedLinks.iosAppUrl && <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "stretch", sm: "center" }} gap={1}><Box sx={{ minWidth: 0 }}><Typography fontSize="var(--fs-11)" color="text.secondary">Apple App Store</Typography><Typography fontSize="var(--fs-12)" sx={{ overflowWrap: "anywhere" }}>{detectedLinks.iosAppUrl}</Typography></Box><Button size="small" variant="outlined" onClick={() => applyDetectedLink("iosAppUrl")}>{String(values.iosAppUrl ?? "").trim() ? "Replace iOS link" : "Use iOS link"}</Button></Stack>}
+          </Stack>}
+        </Stack> : null}
+      </Box> : null}
+    </Fragment>)}</Stack> : null}
+    {onboardingExperienceKind ? <Box sx={{ mt: 1.5 }}><OnboardingStepExperience
+      kind={onboardingExperienceKind}
+      projectName={String(values.projectName ?? recordValue(interaction.data?.values).projectName ?? onboardingData.projectName ?? interaction.data.projectName ?? "")}
+      firebaseConnected={firebaseConnected ?? Boolean(recordValue(interaction.data.firebase).status === "connected" || interaction.data.firebaseConnected === true)}
+      apnsConnected={apnsConnected ?? Boolean(recordValue(interaction.data.apns).status === "connected" || interaction.data.apnsConnected === true)}
+      onFirebase={onOpenFirebase ?? (onSecureAction && secureAction ? () => onSecureAction(secureAction) : undefined)}
+      onApns={onOpenApns}
+      onRequestSdk={onRequestSdk}
+      onSendDeveloperInstructions={onSendDeveloperInstructions}
+      disabled={controlsDisabled}
+    /></Box> : null}
     <SafeInteractionData data={interaction.data ?? {}} />
     <Stack direction={{ xs: "column", sm: "row" }} justifyContent="flex-end" gap={.8} sx={{ mt: 1.6 }}>
       {onCancel && interaction.status !== "completed" && interaction.status !== "cancelled" ? <Button className="guided-flow-cancel" startIcon={<CloseRounded />} onClick={onCancel} disabled={controlsDisabled}>Cancel</Button> : null}
       {onReload && (interaction.status === "expired" || interaction.status === "failed") ? <Button variant="outlined" startIcon={<RefreshRounded />} onClick={onReload} disabled={busy}>Reload</Button> : null}
       {onRetry && (interaction.status === "failed" || interaction.status === "expired") ? <Button variant="outlined" startIcon={<ReplayRounded />} onClick={onRetry} disabled={busy}>{interaction.status === "expired" ? "Start again" : "Retry"}</Button> : null}
       {secureAction && onSecureAction ? <Button variant="outlined" startIcon={<LockRounded />} onClick={() => onSecureAction(secureAction)} disabled={controlsDisabled}>Open secure setup</Button> : null}
-      {secondaryActions.map((action) => <Button key={action} variant="outlined" onClick={() => onSubmit(values, action)} disabled={controlsDisabled}>{action === "preview" ? "Preview" : action === "edit" ? "Edit" : action === "next" ? "Continue" : "Save"}</Button>)}
-      {saveDraftAction && submitAction !== saveDraftAction ? <Button variant="outlined" onClick={() => onSubmit(values, saveDraftAction)} disabled={controlsDisabled || missingRequired || Boolean(scheduleError) || Boolean(structuredJsonError)}>{busy ? "Saving…" : "Save draft"}</Button> : null}
-      {!terminal && !secureAction && submitAction && <Button className="guided-flow-next" variant="contained" endIcon={<ArrowForwardRounded />} onClick={() => onSubmit(values, submitAction)} disabled={busy || missingRequired || Boolean(scheduleError) || Boolean(structuredJsonError)}>{busy ? "Saving…" : submitLabel}</Button>}
+      {resumeAction ? <Button type="button" variant="outlined" onClick={() => submitInteraction(resumeAction)} disabled={controlsDisabled}>{allRemainingDeferred ? "Resume deferred steps" : "Review deferred steps"}</Button> : null}
+      {onboardingSaveAction ? <Button type="button" variant="outlined" onClick={() => submitInteraction(onboardingSaveAction)} disabled={controlsDisabled || missingRequired || Boolean(scheduleError) || Boolean(structuredJsonError) || Boolean(productError)}>Save</Button> : null}
+      {secondaryActions.map((action) => <Button type="button" key={action} variant="outlined" onClick={() => submitInteraction(action)} disabled={controlsDisabled}>{actionLabel(action)}</Button>)}
+      {saveDraftAction && submitAction !== saveDraftAction ? <Button type="button" variant="outlined" onClick={() => submitInteraction(saveDraftAction)} disabled={controlsDisabled || missingRequired || Boolean(scheduleError) || Boolean(structuredJsonError)}>{busy ? "Saving…" : "Save draft"}</Button> : null}
+      {deferAction ? <Button type="button" className="guided-flow-next" variant="contained" endIcon={<ArrowForwardRounded />} onClick={() => submitInteraction(deferAction)} disabled={controlsDisabled}>{busy ? "Saving…" : "Continue"}</Button> : null}
+      {!terminal && !secureAction && submitAction && <Button type="button" className="guided-flow-next" variant="contained" endIcon={<ArrowForwardRounded />} onClick={() => submitInteraction(submitAction)} disabled={busy || missingRequired || Boolean(scheduleError) || Boolean(structuredJsonError) || Boolean(productError)}>{busy ? "Saving…" : submitLabel}</Button>}
       {interaction.status === "completed" ? <Typography fontSize="var(--fs-11)" color="success.main" sx={{ alignSelf: "center" }}>Saved by PixlPush.</Typography> : null}
     </Stack>
   </Box>;
