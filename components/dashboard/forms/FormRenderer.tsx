@@ -1,6 +1,7 @@
 'use client';
 /* eslint-disable @next/next/no-img-element -- this markup is exported to customer sites, where next/image does not exist */
 
+import DateField from './DateField';
 import { createContext, useContext, useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type ElementType, type ReactNode } from 'react';
 import { SOCIAL_ICON_PATHS } from '@/lib/social-icons';
 import type { Block, FormDraft, FormField } from './model';
@@ -116,7 +117,8 @@ export function FormCard(props: RenderProps) {
   const fullBleed = isFullBleed(draft);
   const fullscreen = d.popupType === 'fullscreen';
   const sideLayout = d.layout === 'leftSidebar' || d.layout === 'rightSidebar';
-  const side = d.layout === 'topSidebar' || (sideLayout && narrow) ? 'top' : d.layout === 'leftSidebar' ? 'left' : d.layout === 'rightSidebar' ? 'right' : null;
+  // Phones hide the side panel unless the form turns it on.
+  const side = narrow && !d.sidebarMobile && (sideLayout || d.layout === 'topSidebar') ? null : d.layout === 'topSidebar' || (sideLayout && narrow) ? 'top' : d.layout === 'leftSidebar' ? 'left' : d.layout === 'rightSidebar' ? 'right' : null;
   const boxed = d.layout === 'boxed';
   const editor = mode === 'editor';
 
@@ -188,6 +190,9 @@ const placeholder = (text: string): ReactNode => (
   <div style={{ padding: 18, border: '1px dashed #d9d3e1', borderRadius: 6, background: '#faf9fb', color: '#8a8195', fontSize: 13, textAlign: 'center' }}>{text}</div>
 );
 
+/** Outline buttons: no fill, a border and text in the button colour. */
+export const outline = (color: string): CSSProperties => ({ background: 'transparent', color, boxShadow: `inset 0 0 0 2px ${color}` });
+
 export const buttonStyle = (d: FormDraft['design'], fullWidth = true): CSSProperties => ({
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box', minHeight: 44, padding: '0 20px',
   width: fullWidth ? '100%' : 'auto', border: 0, borderRadius: d.buttonRadius, background: d.buttonBg, color: d.buttonText,
@@ -223,7 +228,7 @@ function BlockView({ block, draft, mode, narrow }: { block: Block; draft: FormDr
         </div>
       );
     case 'button': {
-      const style = { ...buttonStyle(d, block.fullWidth ?? true), ...(block.bg ? { background: block.bg } : {}), ...(block.textColor ? { color: block.textColor } : {}), ...(block.radius !== undefined ? { borderRadius: block.radius } : {}) };
+      const style = { ...buttonStyle(d, block.fullWidth ?? true), ...(block.bg ? { background: block.bg } : {}), ...(block.textColor ? { color: block.textColor } : {}), ...(block.radius !== undefined ? { borderRadius: block.radius } : {}), ...(block.size ? { fontSize: block.size } : {}), ...(block.variant === 'outline' ? outline(block.bg ?? d.buttonBg) : {}) };
       return (
         <div style={{ display: 'flex', justifyContent: justify(block.align) }}>
           {edit
@@ -273,8 +278,8 @@ function FieldsBlock({ block, draft, mode, narrow }: { block: Block; draft: Form
   const horizontal = d.display === 'horizontal' && !narrow;
   const lock = editor ? { readOnly: true, tabIndex: -1 } : {};
   const input: CSSProperties = { boxSizing: 'border-box', width: '100%', height: 44, padding: '0 12px', font: 'inherit', fontSize: 15, color: '#1e1429', background: d.inputBg, border: `1px solid ${d.inputBorder}`, borderRadius: d.inputRadius };
-  const labelStyle: CSSProperties = { display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 600, color: d.labelColor };
-  const check: CSSProperties = { display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13, color: d.textColor };
+  const labelStyle: CSSProperties = { display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 600, color: d.labelColor, textAlign: d.labelAlign };
+  const check: CSSProperties = { display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13, color: d.textColor, textAlign: 'left' };
   const inputId = (field: FormField) => `ppf-${draft.id}-${field.id}`;
   const edit = useContext(EditContext);
   const labelText = (field: FormField) => edit
@@ -291,6 +296,14 @@ function FieldsBlock({ block, draft, mode, narrow }: { block: Block; draft: Form
         </select>
       );
     }
+    if (field.type === 'textarea') {
+      return edit
+        ? <textarea id={common.id} aria-label={`${field.label} hint text`} title="Click and type to change the hint text" placeholder="Hint text (optional)" rows={3} value={field.placeholder}
+            onChange={(event) => edit.field(field.id, { placeholder: event.target.value }, `${field.id}.placeholder`)} style={{ ...input, height: 'auto', padding: '10px 12px', resize: 'vertical', color: '#8a8195' }} />
+        : <textarea {...common} rows={3} maxLength={2000} placeholder={field.placeholder} style={{ ...input, height: 'auto', padding: '10px 12px', resize: 'vertical' }} />;
+    }
+    // Date: Material calendar in the live preview; the editor shows the same box, export falls back to the browser's picker.
+    if (field.type === 'date' && mode !== 'export') return <DateField id={common.id} name={field.label} required={field.required} disabled={editor} placeholder={field.placeholder} style={input} accent={d.buttonBg} />;
     const type = field.type === 'phone' ? 'tel' : field.type === 'email' || field.type === 'number' || field.type === 'date' ? field.type : 'text';
     // Editor: type straight into the box to change its hint text.
     if (edit && field.type !== 'date') {
@@ -301,15 +314,19 @@ function FieldsBlock({ block, draft, mode, narrow }: { block: Block; draft: Form
   };
 
   const visible = draft.fields.filter((field) => field.type !== 'hidden');
-  const submit = edit
-    ? <div style={{ ...buttonStyle(d, !horizontal), whiteSpace: 'nowrap' }}><Editable value={block.label ?? ''} placeholder="Subscribe" style={{ display: 'inline-block' }} onChange={(label) => edit.block(block.id, { label }, `${block.id}.label`)} /></div>
-    : <button type="submit" tabIndex={editor ? -1 : undefined} style={{ ...buttonStyle(d, !horizontal), whiteSpace: 'nowrap' }}>{block.label || 'Subscribe'}</button>;
+  // Submit button: filled or outline, full width or aligned (a one-row layout always sits at the end of the row).
+  const full = !horizontal && d.buttonAlign === 'full';
+  const submitStyle: CSSProperties = { ...buttonStyle(d, full), whiteSpace: 'nowrap', fontSize: d.buttonSize, ...(d.buttonStyle === 'outline' ? outline(d.buttonBg) : null) };
+  const submitButton = edit
+    ? <div data-pp-part="submit" style={{ ...submitStyle, cursor: 'pointer' }}><Editable value={block.label ?? ''} placeholder="Subscribe" style={{ display: 'inline-block' }} onChange={(label) => edit.block(block.id, { label }, `${block.id}.label`)} /></div>
+    : <button type="submit" tabIndex={editor ? -1 : undefined} style={submitStyle}>{block.label || 'Subscribe'}</button>;
+  const submit = horizontal || full ? submitButton : <div style={{ display: 'flex', justifyContent: justify(d.buttonAlign) }}>{submitButton}</div>;
 
   return (
     <div style={{ display: 'grid', gap: 12 }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>
         {visible.map((field) => (
-          <div key={field.id} style={{ flex: horizontal ? '1 1 160px' : field.half && !narrow ? '1 1 calc(50% - 6px)' : '1 1 100%', minWidth: 0 }}>
+          <div key={field.id} style={{ flex: horizontal ? '1 1 160px' : '1 1 100%', minWidth: 0 }}>
             {field.type === 'checkbox'
               ? <label style={check}><input type="checkbox" name={field.label} required={field.required} disabled={editor} style={{ marginTop: 3 }} /><span>{labelText(field)}{field.required ? ' *' : ''}</span></label>
               : <>

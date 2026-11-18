@@ -7,17 +7,48 @@ import { uploadFormImage } from '@/lib/forms';
 
 /* Inspector primitives for the form editor. Every control has a visible label that is also its accessible name. */
 
+/** One eased scroll (ease-out, ~320 ms) of the panel that holds `node`, so its top sits right under the sticky tabs.
+    A new glide cancels the previous one; reduced-motion users get an instant jump. */
+let gliding = 0;
+function glideTo(node: HTMLElement | null) {
+  if (!node) return;
+  let scroller = node.parentElement;
+  while (scroller && !/(auto|scroll)/.test(getComputedStyle(scroller).overflowY)) scroller = scroller.parentElement;
+  if (!scroller) { node.scrollIntoView?.({ block: 'start' }); return; }
+  const tabs = scroller.querySelector<HTMLElement>('.pp-form-panel-tabs');
+  const edge = tabs ? tabs.getBoundingClientRect().bottom : scroller.getBoundingClientRect().top;
+  const from = scroller.scrollTop;
+  const to = Math.max(0, Math.min(from + node.getBoundingClientRect().top - edge, scroller.scrollHeight - scroller.clientHeight));
+  cancelAnimationFrame(gliding);
+  if (Math.abs(to - from) < 2) return;
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) { scroller.scrollTop = to; return; }
+  const box = scroller;
+  const start = performance.now();
+  const duration = Math.min(420, 220 + Math.abs(to - from) / 8);
+  const step = (now: number) => {
+    const t = Math.min(1, (now - start) / duration);
+    box.scrollTop = from + (to - from) * (1 - Math.pow(1 - t, 3));
+    if (t < 1) gliding = requestAnimationFrame(step);
+  };
+  gliding = requestAnimationFrame(step);
+}
+
 /** `active`: the block selected on the canvas — opened, highlighted and scrolled into view. */
 export function InspectorSection({ title, defaultExpanded = true, active = false, children }: { title: string; defaultExpanded?: boolean; active?: boolean; children: ReactNode }) {
   const [expanded, setExpanded] = useState(defaultExpanded || active);
   const ref = useRef<HTMLDivElement>(null);
+  // Clicking a block on the form: its section opens instantly (no height animation, so nothing shifts while
+  // scrolling), then the panel glides once so the section's top meets the bottom of the sticky tabs.
+  const [instant, setInstant] = useState(false);
   useEffect(() => {
     if (!active) return;
+    setInstant(true);
     setExpanded(true);
-    ref.current?.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
+    let frame = requestAnimationFrame(() => { frame = requestAnimationFrame(() => glideTo(ref.current)); });
+    return () => cancelAnimationFrame(frame);
   }, [active]);
   return (
-    <Accordion ref={ref} className={`pp-form-section${active ? ' is-active' : ''}`} expanded={expanded} onChange={(_, open) => setExpanded(open)} disableGutters elevation={0} square>
+    <Accordion ref={ref} className={`pp-form-section${active ? ' is-active' : ''}`} expanded={expanded} onChange={(_, open) => { setInstant(false); setExpanded(open); }} TransitionProps={instant ? { timeout: 0 } : undefined} disableGutters elevation={0} square>
       <AccordionSummary expandIcon={<ExpandMoreRounded />}><Typography className="pp-form-section-title">{title}</Typography></AccordionSummary>
       <AccordionDetails><Stack gap={2}>{children}</Stack></AccordionDetails>
     </Accordion>

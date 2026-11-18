@@ -9,7 +9,7 @@ import {
 } from '@mui/icons-material';
 import {
   Alert, Avatar, Box, Button, Card, CardActionArea, Checkbox, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, FormGroup,
-  FormHelperText, LinearProgress, MenuItem, Paper, Skeleton, Stack, Switch, TextField, Typography,
+  FormHelperText, LinearProgress, MenuItem, Paper, Skeleton, Snackbar, Stack, Switch, TextField, Typography,
 } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import EmptyState, { listEmpty } from '@/components/dashboard/EmptyState';
@@ -251,8 +251,10 @@ function WizardSteps({ id, projectId, initial }: { id: string; projectId: string
   };
 
   /** Saves first, so leaving a step never loses an edit. */
+  const lastAction = useRef<() => void>(() => undefined);
   const saveThen = async (go: () => void) => {
     if (busy.current) return;
+    lastAction.current = go;
     busy.current = true;
     setPending(true);
     setError(null);
@@ -278,7 +280,14 @@ function WizardSteps({ id, projectId, initial }: { id: string; projectId: string
       <>
         <FormEditor state={state} dispatch={dispatch} saveState={saveState} projectId={projectId} onBack={() => void saveThen(() => router.push('/dashboard/forms'))}
           onDone={() => void saveThen(() => goto('setup'))} />
-        {error && <Alert severity="error" sx={{ position: 'fixed', bottom: 16, left: 16, right: 16, zIndex: (theme) => theme.zIndex.modal + 2 }}>{error}</Alert>}
+        {/* Save failed: a toast with the reason, Retry (repeats what was being done) and close. Your edits stay in the editor. */}
+        <Snackbar open={Boolean(error)} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }} sx={{ zIndex: (theme) => theme.zIndex.modal + 2 }}
+          onClose={(_, reason) => { if (reason !== 'clickaway') setError(null); }}>
+          <Alert severity="error" variant="filled" sx={{ alignItems: 'center', boxShadow: 6, maxWidth: 520 }}
+            action={<><Button color="inherit" size="small" disabled={pending} onClick={() => void saveThen(lastAction.current)}>Retry</Button><Button color="inherit" size="small" onClick={() => setError(null)}>Dismiss</Button></>}>
+            <strong>Changes not saved.</strong> {error === 'Could not save your changes. Try again.' ? 'Check your connection and try again.' : error} Your edits are still here.
+          </Alert>
+        </Snackbar>
       </>
     );
   }

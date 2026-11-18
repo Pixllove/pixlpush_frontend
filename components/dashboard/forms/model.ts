@@ -8,7 +8,7 @@ import { z } from 'zod';
 export const formKinds = ['popup'] as const;
 export const formStatuses = ['draft', 'active', 'paused'] as const;
 export const blockTypes = ['heading', 'text', 'image', 'imageText', 'button', 'divider', 'countdown', 'social', 'list', 'video', 'code', 'fields'] as const;
-export const fieldTypes = ['email', 'text', 'phone', 'number', 'select', 'checkbox', 'date', 'hidden'] as const;
+export const fieldTypes = ['email', 'text', 'textarea', 'phone', 'number', 'select', 'checkbox', 'date', 'hidden'] as const;
 export const socialPlatforms = ['Facebook', 'Instagram', 'X', 'LinkedIn', 'YouTube'] as const;
 export const fonts = ['Inter', 'Manrope', 'Arial', 'Georgia', 'Courier New'] as const;
 
@@ -44,6 +44,8 @@ export const blockSchema = z.object({
   textColor: hex.optional(),
   radius: z.number().optional(),
   fullWidth: z.boolean().optional(),
+  /** Button: filled or outline. */
+  variant: z.enum(['filled', 'outline']).optional(),
   thickness: z.number().optional(),
   spacing: z.number().optional(),
   endsAt: z.string().optional(),
@@ -105,6 +107,14 @@ export const designSchema = z.object({
   buttonBg: hex,
   buttonText: hex,
   buttonRadius: z.number(),
+  /** The signup form's submit button. */
+  buttonAlign: z.enum(['left', 'center', 'right', 'full']).default('full'),
+  buttonStyle: z.enum(['filled', 'outline']).default('filled'),
+  buttonSize: z.number().default(15),
+  /** Labels above fields line up left by default, like the inputs. */
+  labelAlign: z.enum(['left', 'center', 'right']).default('left'),
+  /** Side panel image on phones. Off by default: on a small screen it pushes the form down. */
+  sidebarMobile: z.boolean().default(false),
   showClose: z.boolean(),
   closeColor: hex,
 });
@@ -206,7 +216,7 @@ export function defaultDesign(kind: FormKind): FormDesign {
     backdropColor: '#1b1025', backdropOpacity: 40,
     font: 'Inter', headingColor: '#1e1429', textColor: '#5b5266', labelColor: '#1e1429',
     inputBg: '#ffffff', inputBorder: '#d9d3e1', inputRadius: 6,
-    buttonBg: '#5517b8', buttonText: '#ffffff', buttonRadius: 6,
+    buttonBg: '#5517b8', buttonText: '#ffffff', buttonRadius: 6, buttonAlign: 'full', buttonStyle: 'filled', buttonSize: 15, labelAlign: 'left', sidebarMobile: false,
     showClose: true, closeColor: '#5b5266',
   };
 }
@@ -234,7 +244,7 @@ export const blockLabel: Record<BlockType, string> = {
 export const makeBlock = (type: BlockType, props: Partial<Block> = {}): Block => ({ id: makeId(), type, ...structuredClone(blockDefaults[type]), ...props });
 
 export const fieldTypeLabel: Record<FieldType, string> = {
-  email: 'Email', text: 'Text', phone: 'Phone', number: 'Number', select: 'Dropdown', checkbox: 'Checkbox', date: 'Date', hidden: 'Hidden',
+  email: 'Email', text: 'Text', textarea: 'Long text', phone: 'Phone', number: 'Number', select: 'Dropdown', checkbox: 'Checkbox', date: 'Date', hidden: 'Hidden',
 };
 
 export const makeField = (type: FieldType, props: Partial<FormField> = {}): FormField => ({

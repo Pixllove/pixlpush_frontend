@@ -5,13 +5,13 @@ import {
   ArrowBackRounded, ArrowDownwardRounded, ArrowDropDownCircleOutlined, ArrowForwardRounded, CheckBoxOutlined, EventOutlined, NumbersRounded, PaletteOutlined, PhoneOutlined, ShortTextRounded, ArrowUpwardRounded, CheckRounded, CloseRounded, CodeRounded, ContentCopyRounded, DeleteOutlineRounded,
   DesktopWindowsOutlined, DragIndicatorRounded, FormatListBulletedRounded, HorizontalRuleRounded, ImageOutlined, InputRounded, NotesRounded,
   PhoneIphoneOutlined, RedoRounded, ShareOutlined, SmartButtonOutlined, SmartDisplayOutlined, TabletMacOutlined, TimerOutlined, TitleRounded,
-  TuneRounded, UndoRounded, ViewQuiltOutlined, VisibilityOutlined, WidgetsOutlined,
-} from '@mui/icons-material';
+  TuneRounded, UndoRounded, ViewQuiltOutlined, VisibilityOutlined, WidgetsOutlined } from '@mui/icons-material';
 import { Box, Button, Dialog, Drawer, IconButton, Skeleton, Stack, Tab, Tabs, ToggleButton, ToggleButtonGroup, Tooltip, Typography, useMediaQuery } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { FormStage, type InlineEdit } from './FormRenderer';
 import { SaveStatus } from './shared';
-import { BlockInspector, BlockSections, FieldsDesign, FormSettings, StylePanel, SuccessInspector, type Update } from './inspectors';
+import BlockToolbar from './BlockToolbar';
+import { BlockSections, FieldsDesign, FieldsSettings, FormSettings, StylePanel, SuccessInspector, type Update } from './inspectors';
 import { blockLabel, blockTypes, duplicateBlock, insertBlock, makeBlock, makeField, moveBlock, removeBlock, updateBlock, updateField, withFieldsBlock, type Block, type BlockType, type EditorAction, type EditorState, type FieldType, type FormDraft } from './model';
 
 export type SaveState = 'saved' | 'saving' | 'error';
@@ -33,6 +33,7 @@ const paletteFields: Array<{ type: FieldType; label: string; icon: ReactNode }> 
   { type: 'number', label: 'Number', icon: <NumbersRounded /> },
   { type: 'select', label: 'Dropdown', icon: <ArrowDropDownCircleOutlined /> },
   { type: 'checkbox', label: 'Checkbox', icon: <CheckBoxOutlined /> },
+  { type: 'textarea', label: 'Long text', icon: <NotesRounded /> },
   { type: 'date', label: 'Date', icon: <EventOutlined /> },
 ];
 const isTyping = (target: EventTarget | null) => target instanceof HTMLElement && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
@@ -51,6 +52,8 @@ export default function FormEditor({ state, dispatch, saveState, onBack, onDone,
   const desktop = useMediaQuery(theme.breakpoints.up('md'));
   const draft = state.draft;
   const [selected, setSelected] = useState<string | null>(null);
+  // A part inside the selected block that has its own tools (the signup form's submit button).
+  const [part, setPart] = useState<string | null>(null);
   const [view, setView] = useState<'form' | 'success'>('form');
   const [device, setDevice] = useState<Device>('desktop');
   const [tab, setTab] = useState<'design' | 'settings'>('design');
@@ -63,7 +66,8 @@ export default function FormEditor({ state, dispatch, saveState, onBack, onDone,
 
   const select = (id: string | null) => {
     setSelected(id);
-    if (id) setTab('settings');
+    // Every block, signup fields included, is edited in Design.
+    if (id) setTab('design');
     if (id && !desktop) setDrawer('right');
   };
 
@@ -72,7 +76,7 @@ export default function FormEditor({ state, dispatch, saveState, onBack, onDone,
     update((current) => insertBlock(current, block, afterId));
     setView('form');
     setSelected(block.id);
-    setTab('settings');
+    setTab('design');
     setDrawer(null);
   };
 
@@ -82,7 +86,7 @@ export default function FormEditor({ state, dispatch, saveState, onBack, onDone,
     const fieldsBlock = draft.blocks.find((block) => block.type === 'fields');
     setView('form');
     setSelected(fieldsBlock?.id ?? null);
-    setTab('settings');
+    setTab('design');
     if (!desktop) setDrawer('right');
     else setDrawer(null);
   };
@@ -166,7 +170,7 @@ export default function FormEditor({ state, dispatch, saveState, onBack, onDone,
         onDragLeave={() => setDrop(null)}
         onDrop={(event) => onDrop(event, block)}
         onDragEnd={() => setDrop(null)}
-        onClick={(event) => { event.stopPropagation(); select(block.id); }}
+        onClick={(event) => { event.stopPropagation(); setPart((event.target as HTMLElement).closest('[data-pp-part]')?.getAttribute('data-pp-part') ?? null); select(block.id); }}
         onKeyDown={(event) => {
           if (event.target !== event.currentTarget) return;
           if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); select(block.id); }
@@ -174,10 +178,11 @@ export default function FormEditor({ state, dispatch, saveState, onBack, onDone,
           if (event.altKey && event.key === 'ArrowDown') { event.preventDefault(); move(block.id, 1); }
         }}
       >
-        <span className="pp-form-block-bar" onClick={(event) => event.stopPropagation()}>
+        <span className={`pp-form-block-bar${active && part === 'submit' ? ' is-below' : ''}`} onClick={(event) => event.stopPropagation()}>
         <span className="pp-form-block-chip" aria-hidden draggable onDragStart={(event) => { event.dataTransfer.setData('text/plain', block.id); event.dataTransfer.effectAllowed = 'move'; }}><DragIndicatorRounded />{blockLabel[block.type]}</span>
         {active && (
           <span className="pp-form-block-tools">
+            <BlockToolbar block={block} part={part} draft={draft} update={update} openPanel={(next) => { setTab(next); if (!desktop) setDrawer('right'); }} />
             <Tooltip title="Move up (Alt+↑)"><span><IconButton aria-label="Move block up" disabled={index === 0} onClick={() => move(block.id, -1)}><ArrowUpwardRounded /></IconButton></span></Tooltip>
             <Tooltip title="Move down (Alt+↓)"><span><IconButton aria-label="Move block down" disabled={index === draft.blocks.length - 1} onClick={() => move(block.id, 1)}><ArrowDownwardRounded /></IconButton></span></Tooltip>
             {block.type !== 'fields' && <Tooltip title="Duplicate"><IconButton aria-label="Duplicate block" onClick={() => { const result = duplicateBlock(draft, block.id); update(() => result.draft); setSelected(result.id ?? null); }}><ContentCopyRounded /></IconButton></Tooltip>}
@@ -220,12 +225,9 @@ export default function FormEditor({ state, dispatch, saveState, onBack, onDone,
     </Box>
   );
 
-  // Both tabs follow the selection: a block shows only its own design or settings; nothing selected shows the whole form.
-  const editingBlock = view === 'form' ? selectedBlock ?? null : null;
-  // Design tab only: a selected block shows just its own style. Settings always shows the whole form.
-  const blockBody = editingBlock && (editingBlock.type === 'fields'
-    ? <FieldsDesign draft={draft} update={update} />
-    : <BlockInspector block={editingBlock} draft={draft} update={update} projectId={projectId} part="design" />);
+  // Both tabs always show the whole form; the clicked block's section opens, scrolls into view and is highlighted.
+  const activeId = view === 'form' ? selectedBlock?.id ?? null : null;
+  const fieldsBlock = draft.blocks.find((block) => block.type === 'fields');
   const rightPanel = (
     <Box className="pp-form-panel pp-form-sidebar" component="aside" aria-label="Design and settings">
       <Box className="pp-form-panel-tabs">
@@ -241,19 +243,19 @@ export default function FormEditor({ state, dispatch, saveState, onBack, onDone,
           <Tab value="settings" label="Settings" icon={<TuneRounded />} iconPosition="start" />
         </Tabs>
       </Box>
-      {/* Settings is always the whole form; a selected block just opens and highlights its own section. */}
-      {editingBlock && tab === 'design' ? (
+      {tab === 'design' ? (
         <>
-          <Stack direction="row" alignItems="center" justifyContent="space-between" className="pp-form-panel-head">
-            <Box sx={{ minWidth: 0 }}>
-              <Typography className="pp-form-panel-title">{blockLabel[editingBlock.type]}</Typography>
-              <Typography className="pp-form-hint">How it looks.</Typography>
-            </Box>
-            <Button size="small" startIcon={<ArrowBackRounded />} onClick={() => setSelected(null)} sx={{ flexShrink: 0, whiteSpace: "nowrap" }}>Whole form</Button>
-          </Stack>
-          {blockBody}
+          <Box className="pp-form-panel-head">
+            <Typography className="pp-form-panel-title">Design</Typography>
+            <Typography className="pp-form-hint">How the form looks, and the content of each block. Click anything on the form to jump to it.</Typography>
+          </Box>
+          <StylePanel draft={draft} update={update} projectId={projectId} />
+          {/* Signup form: clicking the button highlights the button section, clicking anywhere else the fields. */}
+          {fieldsBlock && <FieldsSettings block={fieldsBlock} draft={draft} update={update} active={fieldsBlock.id === activeId && part !== 'submit'} />}
+          {fieldsBlock && <FieldsDesign draft={draft} update={update} active={fieldsBlock.id === activeId && part === 'submit' ? 'submit' : null} />}
+          <BlockSections draft={draft} update={update} projectId={projectId} activeId={activeId} />
         </>
-      ) : view === 'success' && tab === 'settings' ? (
+      ) : view === 'success' ? (
         <>
           <Box className="pp-form-panel-head">
             <Typography className="pp-form-panel-title">Success message</Typography>
@@ -261,21 +263,13 @@ export default function FormEditor({ state, dispatch, saveState, onBack, onDone,
           </Box>
           <Box sx={{ p: 2 }}><SuccessInspector draft={draft} update={update} /></Box>
         </>
-      ) : tab === 'design' ? (
-        <>
-          <Box className="pp-form-panel-head">
-            <Typography className="pp-form-panel-title">Form design</Typography>
-            <Typography className="pp-form-hint">How the whole form looks. Select a block to style just that block.</Typography>
-          </Box>
-          <StylePanel draft={draft} update={update} projectId={projectId} />
-        </>
       ) : (
         <>
           <Box className="pp-form-panel-head">
-            <Typography className="pp-form-panel-title">Form settings</Typography>
-            <Typography className="pp-form-hint">Who signs up, what they fill in and what happens next. Click any text on the form to change it.</Typography>
+            <Typography className="pp-form-panel-title">Settings</Typography>
+            <Typography className="pp-form-hint">Name, what happens after sign-up, consent and tagging.</Typography>
           </Box>
-          <FormSettings draft={draft} update={update} activeId={editingBlock?.id} blockSections={<BlockSections draft={draft} update={update} projectId={projectId} activeId={editingBlock?.id} />} />
+          <FormSettings draft={draft} update={update} />
         </>
       )}
     </Box>

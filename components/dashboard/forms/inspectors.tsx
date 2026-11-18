@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { AddRounded, ArrowDownwardRounded, ArrowUpwardRounded, DeleteOutlineRounded, EditOutlined, LockOutlined } from '@mui/icons-material';
 import { Alert, Box, Button, IconButton, Menu, MenuItem, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import CodeEditor from './CodeEditor';
@@ -97,6 +97,7 @@ export function StylePanel({ draft, update, projectId }: { draft: FormDraft; upd
           <>
             <NumberSlider label={d.layout === 'topSidebar' ? 'Panel height' : 'Panel width'} unit="%" min={20} max={60} value={d.sidebarWidth} onChange={set('sidebarWidth')} />
             <ImageField label="Side panel image" value={d.sidebarImage} projectId={projectId} onChange={set('sidebarImage')} />
+            <SettingSwitch label="Show on phones" description="Off: phones show just the form, so it fits the small screen. On: the panel moves above the form." checked={d.sidebarMobile} onChange={set('sidebarMobile')} />
             {d.sidebarImage && (
               <>
                 <Segmented label="How the image fills the panel" value={d.sidebarFit} onChange={set('sidebarFit')} options={[{ value: 'fill', label: 'Fill' }, { value: 'fit', label: 'Fit' }]} />
@@ -210,6 +211,8 @@ export function BlockInspector({ block, draft, update, projectId, part, bare = f
         </>
       ) : (
         <>
+          <Segmented label="Style" value={block.variant ?? 'filled'} onChange={(variant) => set({ variant })} options={[{ value: 'filled', label: 'Filled' }, { value: 'outline', label: 'Outline' }]} />
+          <NumberSlider label="Text size" unit="px" min={11} max={24} value={block.size ?? 15} onChange={(size) => set({ size }, 'size')} />
           <SettingSwitch label="Full width" checked={block.fullWidth ?? true} onChange={(fullWidth) => set({ fullWidth })} />
           {!(block.fullWidth ?? true) && <Segmented label="Alignment" value={block.align ?? 'left'} onChange={(align) => set({ align })} options={alignOptions} />}
           <ColorField label="Button colour" value={colorOr(block.bg, d.buttonBg)} onChange={(bg) => set({ bg }, 'bg')} />
@@ -279,16 +282,17 @@ export function BlockInspector({ block, draft, update, projectId, part, bare = f
   );
 }
 
-/** Every content block on the form, in order, with its content and style, so nothing needs a click on the canvas. */
+/** Every content block, in order: what it says and how it looks. The block clicked on the form opens and is highlighted. */
 export function BlockSections({ draft, update, projectId, activeId }: { draft: FormDraft; update: Update; projectId: string; activeId?: string | null }) {
   const blocks = draft.blocks.filter((block) => block.type !== 'fields');
-  const repeated = (type: Block['type']) => blocks.filter((block) => block.type === type).length > 1;
+  const count = (type: Block['type']) => blocks.filter((block) => block.type === type);
   return (
     <>
       {blocks.map((block) => {
-        const title = repeated(block.type) ? `${blockLabel[block.type]} ${blocks.filter((item) => item.type === block.type).indexOf(block) + 1}` : blockLabel[block.type];
+        const same = count(block.type);
+        const title = same.length > 1 ? `${blockLabel[block.type]} ${same.indexOf(block) + 1}` : blockLabel[block.type];
         return (
-          <InspectorSection key={block.id} title={title} active={block.id === activeId}>
+          <InspectorSection key={block.id} title={title} active={block.id === activeId} defaultExpanded={false}>
             <BlockInspector block={block} draft={draft} update={update} projectId={projectId} part="settings" bare />
             <BlockInspector block={block} draft={draft} update={update} projectId={projectId} part="design" bare />
           </InspectorSection>
@@ -300,6 +304,19 @@ export function BlockSections({ draft, update, projectId, activeId }: { draft: F
 
 /* ---------- signup fields ---------- */
 
+/** What each field type checks when someone signs up (the server checks the same). */
+const fieldTypeHelp: Record<FormField['type'], string> = {
+  email: 'Must be a valid email address.',
+  text: 'One line of text, up to 500 characters.',
+  textarea: 'Several lines, for messages or comments (up to 2,000 characters).',
+  phone: 'Opens the phone keypad on mobiles.',
+  number: 'Only numbers are accepted.',
+  select: 'People pick one of your options.',
+  checkbox: 'A single tick box, for example “I agree”.',
+  date: 'People pick a date from a calendar. Saved as YYYY-MM-DD.',
+  hidden: 'Not shown. Saves the value below on every subscriber.',
+};
+
 /** Settings for the signup fields: which inputs there are. Their text and the button text are typed on the form. */
 export function FieldsSettings({ block, draft, update, active = false }: { block: Block; draft: FormDraft; update: Update; active?: boolean }) {
   const [editing, setEditing] = useState<string | null>(null);
@@ -308,8 +325,8 @@ export function FieldsSettings({ block, draft, update, active = false }: { block
 
   return (
     <Box>
-      <InspectorSection title="Signup fields" active={active}>
-        <Typography className="pp-form-hint">What people fill in. Add more here or from <strong>Form fields</strong> in the Elements panel.</Typography>
+      <InspectorSection title="What people fill in" active={active}>
+        <Typography className="pp-form-hint">The details you ask for. Email is always included. Use <strong>Add field</strong> to ask for more, like a name or phone number.</Typography>
         <Stack gap={0.5}>
           {draft.fields.map((field, index) => (
             <Box key={field.id} className="pp-form-field-row">
@@ -327,6 +344,15 @@ export function FieldsSettings({ block, draft, update, active = false }: { block
               </Stack>
               {editing === field.id && (
                 <Stack gap={1.5} sx={{ pt: 1.5 }}>
+                  {field.type !== 'email' && (
+                    <TextField select label="Field type" value={field.type} helperText={fieldTypeHelp[field.type]}
+                      onChange={(event) => {
+                        const type = event.target.value as FormField['type'];
+                        setField(field, { type, ...(type === 'select' && field.options.length === 0 ? { options: ['Option 1', 'Option 2'] } : {}) });
+                      }}>
+                      {fieldTypes.filter((type) => type !== 'email').map((type) => <MenuItem key={type} value={type}>{fieldTypeLabel[type]}</MenuItem>)}
+                    </TextField>
+                  )}
                   {/* Labels and hint text are typed on the form itself; only what can't be seen there is edited here. */}
                   {(field.type === 'hidden' || (!draft.options.labelsAbove && field.type !== 'checkbox')) && <TextField label="Label" helperText={field.type === 'hidden' ? undefined : 'Labels are hidden on this form, so name the field here.'} value={field.label} onChange={(event) => setField(field, { label: event.target.value }, 'label')} />}
                   {field.type === 'hidden'
@@ -336,7 +362,6 @@ export function FieldsSettings({ block, draft, update, active = false }: { block
                       : field.type !== 'checkbox' && field.type !== 'date' && <Typography className="pp-form-hint">Click the field on the form to change its label or hint text.</Typography>}
                   {field.type === 'select' && <StringList label="Option" items={field.options} addLabel="Add option" onChange={(options) => setField(field, { options }, 'options')} />}
                   {field.type !== 'hidden' && <SettingSwitch label="Required" description={field.type === 'email' ? 'Email is always required.' : undefined} checked={field.required} onChange={(required) => field.type !== 'email' && setField(field, { required })} />}
-                  {field.type !== 'hidden' && <SettingSwitch label="Half width" description="Sits next to another half-width field." checked={field.half} onChange={(half) => setField(field, { half })} />}
                 </Stack>
               )}
             </Box>
@@ -359,26 +384,33 @@ export function FieldsSettings({ block, draft, update, active = false }: { block
 }
 
 /** Design for the signup fields: layout, labels and the input and button colours. */
-export function FieldsDesign({ draft, update }: { draft: FormDraft; update: Update }) {
+export function FieldsDesign({ draft, update, active }: { draft: FormDraft; update: Update; active?: 'inputs' | 'submit' | null }) {
   const d = draft.design;
   const set = <K extends keyof FormDesign>(key: K) => (value: FormDesign[K]) => update((current) => ({ ...current, design: { ...current.design, [key]: value } }), `design.${key}`);
+  const hint = (text: string) => <Typography className="pp-form-hint">{text}</Typography>;
   return (
     <Box>
-      <InspectorSection title="Layout">
-        <Segmented label="Field layout" value={d.display} onChange={set('display')} options={[{ value: 'stacked', label: 'Stacked' }, { value: 'horizontal', label: 'In one row' }]} />
-        <SettingSwitch label="Labels above fields" description="Otherwise the label is shown as placeholder text." checked={draft.options.labelsAbove} onChange={(labelsAbove) => update((current) => ({ ...current, options: { ...current.options, labelsAbove } }))} />
+      <InspectorSection title="Input boxes" active={active === 'inputs'}>
+        {hint('The boxes people type their details into. Tip: click a box on the form to change its label or hint text.')}
+        <Segmented label="Arrange boxes" value={d.display} onChange={set('display')} options={[{ value: 'stacked', label: 'One under another' }, { value: 'horizontal', label: 'Side by side' }]} />
+        <SettingSwitch label="Show a title above each box" description="Off: the title shows inside the empty box instead." checked={draft.options.labelsAbove} onChange={(labelsAbove) => update((current) => ({ ...current, options: { ...current.options, labelsAbove } }))} />
+        {draft.options.labelsAbove && <Segmented label="Title position" value={d.labelAlign} onChange={set('labelAlign')} options={alignOptions} />}
+        {draft.options.labelsAbove && <ColorField label="Title colour" value={d.labelColor} onChange={set('labelColor')} />}
+        <ColorField label="Box colour" value={d.inputBg} onChange={set('inputBg')} />
+        <ColorField label="Box outline colour" value={d.inputBorder} onChange={set('inputBorder')} />
+        <NumberSlider label="Rounded corners" unit="px" min={0} max={24} value={d.inputRadius} onChange={set('inputRadius')} />
       </InspectorSection>
-      <InspectorSection title="Fields">
-        <ColorField label="Field background" value={d.inputBg} onChange={set('inputBg')} />
-        <ColorField label="Field border" value={d.inputBorder} onChange={set('inputBorder')} />
-        <ColorField label="Field label colour" value={d.labelColor} onChange={set('labelColor')} />
-        <NumberSlider label="Field corners" unit="px" min={0} max={24} value={d.inputRadius} onChange={set('inputRadius')} />
-      </InspectorSection>
-      <InspectorSection title="Submit button">
-        <ColorField label="Button colour" value={d.buttonBg} onChange={set('buttonBg')} />
-        <ColorField label="Button text colour" value={d.buttonText} onChange={set('buttonText')} />
-        <NumberSlider label="Button corners" unit="px" min={0} max={24} value={d.buttonRadius} onChange={set('buttonRadius')} />
-        <ContrastWarning pairs={[['Button text', d.buttonText, d.buttonBg]]} />
+      <InspectorSection title="Sign-up button" active={active === 'submit'}>
+        {hint('The button people click to join. Tip: click it on the form to change its text or style it right there.')}
+        <Segmented label="Look" value={d.buttonStyle} onChange={set('buttonStyle')} options={[{ value: 'filled', label: 'Solid colour' }, { value: 'outline', label: 'Outline only' }]} />
+        {d.display !== 'horizontal'
+          ? <Segmented label="Width and position" value={d.buttonAlign} onChange={set('buttonAlign')} options={[{ value: 'full', label: 'Full width' }, { value: 'left', label: 'Left' }, { value: 'center', label: 'Centre' }, { value: 'right', label: 'Right' }]} />
+          : hint('The boxes are side by side, so the button sits at the end of the row.')}
+        <ColorField label={d.buttonStyle === 'outline' ? 'Outline and text colour' : 'Button colour'} value={d.buttonBg} onChange={set('buttonBg')} />
+        {d.buttonStyle !== 'outline' && <ColorField label="Text colour" value={d.buttonText} onChange={set('buttonText')} />}
+        <NumberSlider label="Text size" unit="px" min={11} max={24} value={d.buttonSize} onChange={set('buttonSize')} />
+        <NumberSlider label="Rounded corners" unit="px" min={0} max={24} value={d.buttonRadius} onChange={set('buttonRadius')} />
+        {d.buttonStyle !== 'outline' && <ContrastWarning pairs={[['Button text', d.buttonText, d.buttonBg]]} />}
       </InspectorSection>
     </Box>
   );
@@ -386,18 +418,15 @@ export function FieldsDesign({ draft, update }: { draft: FormDraft; update: Upda
 
 /* ---------- Settings tab: everything about the form, always visible ---------- */
 
-export function FormSettings({ draft, update, blockSections, activeId }: { draft: FormDraft; update: Update; blockSections?: ReactNode; activeId?: string | null }) {
+export function FormSettings({ draft, update }: { draft: FormDraft; update: Update }) {
   const o = draft.options;
   const set = <K extends keyof FormDraft['options']>(key: K, value: FormDraft['options'][K], typing?: string) => update((current) => ({ ...current, options: { ...current.options, [key]: value } }), typing && `options.${typing}`);
-  const fieldsBlock = draft.blocks.find((block) => block.type === 'fields');
   return (
     <Box>
-      {blockSections}
       <InspectorSection title="Name">
         <TextField label="Form name" value={draft.name} error={!draft.name.trim()} helperText={draft.name.trim() ? 'Only your team sees this name.' : 'Enter a name for the form.'}
           onChange={(event) => update((current) => ({ ...current, name: event.target.value }), 'name')} />
       </InspectorSection>
-      {fieldsBlock && <FieldsSettings block={fieldsBlock} draft={draft} update={update} active={fieldsBlock.id === activeId} />}
       <InspectorSection title="After someone signs up">
         <SuccessInspector draft={draft} update={update} />
       </InspectorSection>
