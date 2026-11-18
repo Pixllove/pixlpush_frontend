@@ -338,8 +338,8 @@ export function CodeFrame({ html, editor }: { html: string; editor: boolean }) {
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
   }, [key]);
-  const doc = `<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;font:14px/1.5 system-ui,sans-serif}</style></head><body>${html}<script>(function(){function s(){parent.postMessage({ppfFrame:${JSON.stringify(key)},height:document.documentElement.scrollHeight},'*')}new ResizeObserver(s).observe(document.documentElement);addEventListener('load',s);s()})()</script></body></html>`;
-  return <iframe title="Custom code" sandbox="allow-scripts" srcDoc={doc} style={{ display: 'block', width: '100%', height, border: 0, pointerEvents: editor ? 'none' : undefined }} />;
+  const doc = `<!doctype html><html><head><meta charset="utf-8"><base target="_blank"><style>html,body{margin:0;overflow:hidden}body{display:flow-root;font:14px/1.5 system-ui,sans-serif}</style></head><body>${html}<script>(function(){function s(){parent.postMessage({ppfFrame:${JSON.stringify(key)},height:document.documentElement.scrollHeight},'*')}new ResizeObserver(s).observe(document.body);addEventListener('load',s);s()})()</script></body></html>`;
+  return <iframe title="Custom code" scrolling="no" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads" srcDoc={doc} style={{ display: 'block', width: '100%', height, border: 0, pointerEvents: editor ? 'none' : undefined }} />;
 }
 
 /* ---------- success ---------- */

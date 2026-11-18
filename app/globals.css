@@ -21665,3 +21665,23 @@ button[aria-expanded="true"] {
   color: var(--pp-text-3);
   opacity: 0.35;
 }
+
+/* CodeMirror custom-code editor: CM owns scrolling and wraps long lines (no sideways scroll). */
+.pp-code-scroll:has(.pp-cm) { overflow: hidden; display: flex; flex-direction: column; }
+.pp-code-scroll.is-compact .pp-cm { max-height: 240px; }
+.pp-cm { flex: 1; min-height: 0; height: 100%; }
+.pp-cm .cm-editor { height: 100%; background: var(--pp-plum); }
+.pp-cm .cm-gutters { background: var(--pp-plum); border-right: 1px solid var(--pp-plum-line); }
+.pp-cm .cm-editor.cm-focused { outline: none; }
+.pp-cm .cm-tooltip-autocomplete > ul { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; max-height: 260px; }
+
+/* Code toolbar + status: one line at any width; the file name and hint shrink instead of overlapping. */
+.pp-code-bar { flex-wrap: nowrap; min-width: 0; }
+.pp-code-bar > * { flex-shrink: 0; }
+.pp-code-bar-title { flex-shrink: 1 !important; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pp-code-status { flex-wrap: nowrap; white-space: nowrap; min-width: 0; }
+.pp-code-status > span { flex-shrink: 0; }
+.pp-code-status > .pp-code-hint { flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 700px) { .pp-code-hint { display: none; } }
+
+.pp-code-open-cta.MuiButton-root { margin-top: 12px; border-radius: 10px; text-transform: none; font-weight: 600; box-shadow: none; }
