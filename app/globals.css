@@ -21685,3 +21685,11 @@ button[aria-expanded="true"] {
 @media (max-width: 700px) { .pp-code-hint { display: none; } }
 
 .pp-code-open-cta.MuiButton-root { margin-top: 12px; border-radius: 10px; text-transform: none; font-weight: 600; box-shadow: none; }
+
+/* Phones and tablets use overlay scrollbars: keep the screen scrollable but don't draw a bar
+   that eats width and pokes out of the rounded screen. Desktop keeps a thin one. */
+.pp-device.is-mobile .pp-device-screen,
+.pp-device.is-tablet .pp-device-screen { scrollbar-width: none; overscroll-behavior: contain; }
+.pp-device.is-mobile .pp-device-screen::-webkit-scrollbar,
+.pp-device.is-tablet .pp-device-screen::-webkit-scrollbar { display: none; }
+.pp-device.is-desktop .pp-device-screen { scrollbar-width: thin; scrollbar-gutter: auto; }

@@ -56,7 +56,7 @@ export function FormStage(props: RenderProps) {
   let justify = 'center';
   let align = 'center';
   let backdrop = true;
-  let padding: number | string = 24;
+  let padding: number | string = props.narrow ? 12 : 24; // phones: popups sit close to the screen edge
   if (d.popupType === 'slidein') {
     backdrop = false; align = 'flex-end'; justify = d.slidePosition === 'left' ? 'flex-start' : 'flex-end';
   } else if (d.popupType === 'bar') {
@@ -338,7 +338,7 @@ export function CodeFrame({ html, editor }: { html: string; editor: boolean }) {
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
   }, [key]);
-  const doc = `<!doctype html><html><head><meta charset="utf-8"><base target="_blank"><style>html,body{margin:0;overflow:hidden}body{display:flow-root;font:14px/1.5 system-ui,sans-serif}</style></head><body>${html}<script>(function(){function s(){parent.postMessage({ppfFrame:${JSON.stringify(key)},height:document.documentElement.scrollHeight},'*')}new ResizeObserver(s).observe(document.body);addEventListener('load',s);s()})()</script></body></html>`;
+  const doc = `<!doctype html><html><head><meta charset="utf-8"><base target="_blank"><style>html,body{margin:0;overflow:hidden}body{display:flow-root;font:14px/1.5 system-ui,sans-serif}</style></head><body>${html}<script>(function(){function s(){parent.postMessage({ppfFrame:${JSON.stringify(key)},height:document.body.scrollHeight},'*')}new ResizeObserver(s).observe(document.body);addEventListener('load',s);s()})()</script></body></html>`;
   return <iframe title="Custom code" scrolling="no" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads" srcDoc={doc} style={{ display: 'block', width: '100%', height, border: 0, pointerEvents: editor ? 'none' : undefined }} />;
 }
 
