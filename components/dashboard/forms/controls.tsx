@@ -7,9 +7,17 @@ import { uploadFormImage } from '@/lib/forms';
 
 /* Inspector primitives for the form editor. Every control has a visible label that is also its accessible name. */
 
-export function InspectorSection({ title, defaultExpanded = true, children }: { title: string; defaultExpanded?: boolean; children: ReactNode }) {
+/** `active`: the block selected on the canvas — opened, highlighted and scrolled into view. */
+export function InspectorSection({ title, defaultExpanded = true, active = false, children }: { title: string; defaultExpanded?: boolean; active?: boolean; children: ReactNode }) {
+  const [expanded, setExpanded] = useState(defaultExpanded || active);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!active) return;
+    setExpanded(true);
+    ref.current?.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
+  }, [active]);
   return (
-    <Accordion className="pp-form-section" defaultExpanded={defaultExpanded} disableGutters elevation={0} square>
+    <Accordion ref={ref} className={`pp-form-section${active ? ' is-active' : ''}`} expanded={expanded} onChange={(_, open) => setExpanded(open)} disableGutters elevation={0} square>
       <AccordionSummary expandIcon={<ExpandMoreRounded />}><Typography className="pp-form-section-title">{title}</Typography></AccordionSummary>
       <AccordionDetails><Stack gap={2}>{children}</Stack></AccordionDetails>
     </Accordion>

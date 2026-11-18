@@ -9,10 +9,10 @@ import {
 } from '@mui/icons-material';
 import { Box, Button, Dialog, Drawer, IconButton, Skeleton, Stack, Tab, Tabs, ToggleButton, ToggleButtonGroup, Tooltip, Typography, useMediaQuery } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import { FormStage } from './FormRenderer';
+import { FormStage, type InlineEdit } from './FormRenderer';
 import { SaveStatus } from './shared';
-import { BlockInspector, BlockSections, FieldsDesign, FieldsSettings, FormSettings, StylePanel, SuccessInspector, type Update } from './inspectors';
-import { blockLabel, blockTypes, duplicateBlock, insertBlock, makeBlock, makeField, moveBlock, removeBlock, withFieldsBlock, type Block, type BlockType, type EditorAction, type EditorState, type FieldType, type FormDraft } from './model';
+import { BlockInspector, BlockSections, FieldsDesign, FormSettings, StylePanel, SuccessInspector, type Update } from './inspectors';
+import { blockLabel, blockTypes, duplicateBlock, insertBlock, makeBlock, makeField, moveBlock, removeBlock, updateBlock, updateField, withFieldsBlock, type Block, type BlockType, type EditorAction, type EditorState, type FieldType, type FormDraft } from './model';
 
 export type SaveState = 'saved' | 'saving' | 'error';
 type Device = 'desktop' | 'tablet' | 'mobile';
@@ -144,6 +144,12 @@ export default function FormEditor({ state, dispatch, saveState, onBack, onDone,
     update((current) => moveBlock(current, id, to));
   };
 
+  // Typing on the canvas: same undo grouping as the sidebar (one history step per field being typed in).
+  const inlineEdit: InlineEdit = {
+    block: (id, patch, key) => update((current) => updateBlock(current, id, patch), key),
+    field: (id, patch, key) => update((current) => updateField(current, id, patch), key),
+  };
+
   const wrap = (block: Block, node: ReactNode) => {
     const active = selected === block.id;
     const index = draft.blocks.indexOf(block);
@@ -154,7 +160,7 @@ export default function FormEditor({ state, dispatch, saveState, onBack, onDone,
         tabIndex={0}
         aria-label={`${blockLabel[block.type]} block`}
         aria-pressed={active}
-        draggable
+        draggable={!active}
         onDragStart={(event) => { event.dataTransfer.setData('text/plain', block.id); event.dataTransfer.effectAllowed = 'move'; }}
         onDragOver={(event) => onDragOver(event, block)}
         onDragLeave={() => setDrop(null)}
@@ -168,15 +174,17 @@ export default function FormEditor({ state, dispatch, saveState, onBack, onDone,
           if (event.altKey && event.key === 'ArrowDown') { event.preventDefault(); move(block.id, 1); }
         }}
       >
-        <span className="pp-form-block-chip" aria-hidden><DragIndicatorRounded />{blockLabel[block.type]}</span>
+        <span className="pp-form-block-bar" onClick={(event) => event.stopPropagation()}>
+        <span className="pp-form-block-chip" aria-hidden draggable onDragStart={(event) => { event.dataTransfer.setData('text/plain', block.id); event.dataTransfer.effectAllowed = 'move'; }}><DragIndicatorRounded />{blockLabel[block.type]}</span>
         {active && (
-          <span className="pp-form-block-tools" onClick={(event) => event.stopPropagation()}>
+          <span className="pp-form-block-tools">
             <Tooltip title="Move up (Alt+↑)"><span><IconButton aria-label="Move block up" disabled={index === 0} onClick={() => move(block.id, -1)}><ArrowUpwardRounded /></IconButton></span></Tooltip>
             <Tooltip title="Move down (Alt+↓)"><span><IconButton aria-label="Move block down" disabled={index === draft.blocks.length - 1} onClick={() => move(block.id, 1)}><ArrowDownwardRounded /></IconButton></span></Tooltip>
             {block.type !== 'fields' && <Tooltip title="Duplicate"><IconButton aria-label="Duplicate block" onClick={() => { const result = duplicateBlock(draft, block.id); update(() => result.draft); setSelected(result.id ?? null); }}><ContentCopyRounded /></IconButton></Tooltip>}
             {block.type !== 'fields' && <Tooltip title="Delete (Del)"><IconButton aria-label="Delete block" onClick={() => remove(block.id)}><DeleteOutlineRounded /></IconButton></Tooltip>}
           </span>
         )}
+        </span>
         {node}
       </div>
     );
@@ -214,16 +222,10 @@ export default function FormEditor({ state, dispatch, saveState, onBack, onDone,
 
   // Both tabs follow the selection: a block shows only its own design or settings; nothing selected shows the whole form.
   const editingBlock = view === 'form' ? selectedBlock ?? null : null;
+  // Design tab only: a selected block shows just its own style. Settings always shows the whole form.
   const blockBody = editingBlock && (editingBlock.type === 'fields'
-    ? (tab === 'design' ? <FieldsDesign draft={draft} update={update} /> : <FieldsSettings block={editingBlock} draft={draft} update={update} />)
-    : tab === 'design'
-      ? <BlockInspector block={editingBlock} draft={draft} update={update} projectId={projectId} part="design" />
-      // Settings is the one place to edit a block completely: its content, then its alignment, size, weight and colours.
-      : <>
-          <BlockInspector block={editingBlock} draft={draft} update={update} projectId={projectId} part="settings" />
-          <Typography className="pp-form-section-title" sx={{ px: 2, pt: 1 }}>Style</Typography>
-          <BlockInspector block={editingBlock} draft={draft} update={update} projectId={projectId} part="design" />
-        </>);
+    ? <FieldsDesign draft={draft} update={update} />
+    : <BlockInspector block={editingBlock} draft={draft} update={update} projectId={projectId} part="design" />);
   const rightPanel = (
     <Box className="pp-form-panel pp-form-sidebar" component="aside" aria-label="Design and settings">
       <Box className="pp-form-panel-tabs">
@@ -239,12 +241,13 @@ export default function FormEditor({ state, dispatch, saveState, onBack, onDone,
           <Tab value="settings" label="Settings" icon={<TuneRounded />} iconPosition="start" />
         </Tabs>
       </Box>
-      {editingBlock ? (
+      {/* Settings is always the whole form; a selected block just opens and highlights its own section. */}
+      {editingBlock && tab === 'design' ? (
         <>
           <Stack direction="row" alignItems="center" justifyContent="space-between" className="pp-form-panel-head">
             <Box sx={{ minWidth: 0 }}>
               <Typography className="pp-form-panel-title">{blockLabel[editingBlock.type]}</Typography>
-              <Typography className="pp-form-hint">{tab === 'design' ? 'How it looks.' : 'What it says and does.'}</Typography>
+              <Typography className="pp-form-hint">How it looks.</Typography>
             </Box>
             <Button size="small" startIcon={<ArrowBackRounded />} onClick={() => setSelected(null)} sx={{ flexShrink: 0, whiteSpace: "nowrap" }}>Whole form</Button>
           </Stack>
@@ -270,9 +273,9 @@ export default function FormEditor({ state, dispatch, saveState, onBack, onDone,
         <>
           <Box className="pp-form-panel-head">
             <Typography className="pp-form-panel-title">Form settings</Typography>
-            <Typography className="pp-form-hint">Who signs up, what they fill in and what happens next. Select a block to edit its content.</Typography>
+            <Typography className="pp-form-hint">Who signs up, what they fill in and what happens next. Click any text on the form to change it.</Typography>
           </Box>
-          <FormSettings draft={draft} update={update} blockSections={<BlockSections draft={draft} update={update} projectId={projectId} />} />
+          <FormSettings draft={draft} update={update} activeId={editingBlock?.id} blockSections={<BlockSections draft={draft} update={update} projectId={projectId} activeId={editingBlock?.id} />} />
         </>
       )}
     </Box>
@@ -329,7 +332,7 @@ export default function FormEditor({ state, dispatch, saveState, onBack, onDone,
         {desktop && leftPanel}
         <Box className="pp-form-canvas" onClick={() => setSelected(null)}>
           <DeviceFrame device={desktop ? device : 'mobile'}>
-            <FormStage draft={draft} view={view} mode="editor" narrow={!desktop || device === 'mobile'} wrap={view === 'form' ? wrap : undefined} />
+            <FormStage draft={draft} view={view} mode="editor" narrow={!desktop || device === 'mobile'} wrap={view === 'form' ? wrap : undefined} edit={view === 'form' ? inlineEdit : undefined} />
           </DeviceFrame>
         </Box>
         {desktop && rightPanel}

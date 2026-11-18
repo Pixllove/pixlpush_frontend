@@ -172,7 +172,7 @@ export function BlockInspector({ block, draft, update, projectId, part, bare = f
 
       {(block.type === 'heading' || block.type === 'text') && (
         <>
-          {settings && <TextField label={block.type === 'heading' ? 'Heading' : 'Text'} multiline={block.type === 'text'} rows={block.type === 'text' ? 5 : undefined} value={block.text ?? ''} onChange={(event) => set({ text: event.target.value }, 'text')} />}
+          {settings && !bare && <Typography className="pp-form-hint">Click the text on the form to change it.</Typography>}
           {!settings && <>
           <Segmented label="Alignment" value={block.align ?? 'left'} onChange={(align) => set({ align })} options={alignOptions} />
           <NumberSlider label="Size" unit="px" min={11} max={48} value={block.size ?? (block.type === 'heading' ? 24 : 15)} onChange={(size) => set({ size }, 'size')} />
@@ -188,7 +188,7 @@ export function BlockInspector({ block, draft, update, projectId, part, bare = f
           <ImageField label="Image" value={block.src ?? ''} projectId={projectId} onChange={(src) => set({ src })} />
           <TextField label="Alt text" helperText="Describes the image for screen readers." value={block.alt ?? ''} onChange={(event) => set({ alt: event.target.value }, 'alt')} />
           {block.type === 'image' && <TextField label="Link (optional)" placeholder="https://" value={block.href ?? ''} onChange={(event) => set({ href: event.target.value }, 'href')} />}
-          {block.type === 'imageText' && <TextField label="Text" multiline rows={4} value={block.text ?? ''} onChange={(event) => set({ text: event.target.value }, 'text')} />}
+          {block.type === 'imageText' && <Typography className="pp-form-hint">Click the text on the form to change it.</Typography>}
         </>
       ) : block.type === 'image' ? (
         <>
@@ -204,7 +204,7 @@ export function BlockInspector({ block, draft, update, projectId, part, bare = f
 
       {block.type === 'button' && (settings ? (
         <>
-          <TextField label="Button text" value={block.label ?? ''} onChange={(event) => set({ label: event.target.value }, 'label')} />
+          <Typography className="pp-form-hint">Click the button on the form to change its text.</Typography>
           <Segmented label="When clicked" value={block.action ?? 'url'} onChange={(action) => set({ action })} options={[{ value: 'url', label: 'Open a link' }, { value: 'submit', label: 'Submit the form' }]} />
           {block.action !== 'submit' && <TextField label="Link" placeholder="https://" value={block.href ?? ''} onChange={(event) => set({ href: event.target.value }, 'href')} />}
         </>
@@ -280,7 +280,7 @@ export function BlockInspector({ block, draft, update, projectId, part, bare = f
 }
 
 /** Every content block on the form, in order, with its content and style, so nothing needs a click on the canvas. */
-export function BlockSections({ draft, update, projectId }: { draft: FormDraft; update: Update; projectId: string }) {
+export function BlockSections({ draft, update, projectId, activeId }: { draft: FormDraft; update: Update; projectId: string; activeId?: string | null }) {
   const blocks = draft.blocks.filter((block) => block.type !== 'fields');
   const repeated = (type: Block['type']) => blocks.filter((block) => block.type === type).length > 1;
   return (
@@ -288,7 +288,7 @@ export function BlockSections({ draft, update, projectId }: { draft: FormDraft; 
       {blocks.map((block) => {
         const title = repeated(block.type) ? `${blockLabel[block.type]} ${blocks.filter((item) => item.type === block.type).indexOf(block) + 1}` : blockLabel[block.type];
         return (
-          <InspectorSection key={block.id} title={title}>
+          <InspectorSection key={block.id} title={title} active={block.id === activeId}>
             <BlockInspector block={block} draft={draft} update={update} projectId={projectId} part="settings" bare />
             <BlockInspector block={block} draft={draft} update={update} projectId={projectId} part="design" bare />
           </InspectorSection>
@@ -300,15 +300,15 @@ export function BlockSections({ draft, update, projectId }: { draft: FormDraft; 
 
 /* ---------- signup fields ---------- */
 
-/** Settings for the signup fields: which inputs there are and what the button says. */
-export function FieldsSettings({ block, draft, update }: { block: Block; draft: FormDraft; update: Update }) {
+/** Settings for the signup fields: which inputs there are. Their text and the button text are typed on the form. */
+export function FieldsSettings({ block, draft, update, active = false }: { block: Block; draft: FormDraft; update: Update; active?: boolean }) {
   const [editing, setEditing] = useState<string | null>(null);
   const [menu, setMenu] = useState<HTMLElement | null>(null);
   const setField = (field: FormField, patch: Partial<FormField>, key?: string) => update((current) => updateField(current, field.id, patch), key && `${field.id}.${key}`);
 
   return (
     <Box>
-      <InspectorSection title="Signup fields">
+      <InspectorSection title="Signup fields" active={active}>
         <Typography className="pp-form-hint">What people fill in. Add more here or from <strong>Form fields</strong> in the Elements panel.</Typography>
         <Stack gap={0.5}>
           {draft.fields.map((field, index) => (
@@ -327,10 +327,13 @@ export function FieldsSettings({ block, draft, update }: { block: Block; draft: 
               </Stack>
               {editing === field.id && (
                 <Stack gap={1.5} sx={{ pt: 1.5 }}>
-                  <TextField label="Label" value={field.label} onChange={(event) => setField(field, { label: event.target.value }, 'label')} />
+                  {/* Labels and hint text are typed on the form itself; only what can't be seen there is edited here. */}
+                  {(field.type === 'hidden' || (!draft.options.labelsAbove && field.type !== 'checkbox')) && <TextField label="Label" helperText={field.type === 'hidden' ? undefined : 'Labels are hidden on this form, so name the field here.'} value={field.label} onChange={(event) => setField(field, { label: event.target.value }, 'label')} />}
                   {field.type === 'hidden'
                     ? <TextField label="Value" value={field.value} onChange={(event) => setField(field, { value: event.target.value }, 'value')} helperText="Saved on every subscriber from this form." />
-                    : field.type !== 'checkbox' && <TextField label="Placeholder" value={field.placeholder} onChange={(event) => setField(field, { placeholder: event.target.value }, 'placeholder')} />}
+                    : field.type === 'select'
+                      ? <TextField label="Placeholder" value={field.placeholder} onChange={(event) => setField(field, { placeholder: event.target.value }, 'placeholder')} />
+                      : field.type !== 'checkbox' && field.type !== 'date' && <Typography className="pp-form-hint">Click the field on the form to change its label or hint text.</Typography>}
                   {field.type === 'select' && <StringList label="Option" items={field.options} addLabel="Add option" onChange={(options) => setField(field, { options }, 'options')} />}
                   {field.type !== 'hidden' && <SettingSwitch label="Required" description={field.type === 'email' ? 'Email is always required.' : undefined} checked={field.required} onChange={(required) => field.type !== 'email' && setField(field, { required })} />}
                   {field.type !== 'hidden' && <SettingSwitch label="Half width" description="Sits next to another half-width field." checked={field.half} onChange={(half) => setField(field, { half })} />}
@@ -350,9 +353,6 @@ export function FieldsSettings({ block, draft, update }: { block: Block; draft: 
             }}>{fieldTypeLabel[type]}</MenuItem>
           ))}
         </Menu>
-      </InspectorSection>
-      <InspectorSection title="Submit button">
-        <TextField label="Button text" value={block.label ?? ''} onChange={(event) => update((current) => updateBlock(current, block.id, { label: event.target.value }), `${block.id}.label`)} />
       </InspectorSection>
     </Box>
   );
@@ -386,7 +386,7 @@ export function FieldsDesign({ draft, update }: { draft: FormDraft; update: Upda
 
 /* ---------- Settings tab: everything about the form, always visible ---------- */
 
-export function FormSettings({ draft, update, blockSections }: { draft: FormDraft; update: Update; blockSections?: ReactNode }) {
+export function FormSettings({ draft, update, blockSections, activeId }: { draft: FormDraft; update: Update; blockSections?: ReactNode; activeId?: string | null }) {
   const o = draft.options;
   const set = <K extends keyof FormDraft['options']>(key: K, value: FormDraft['options'][K], typing?: string) => update((current) => ({ ...current, options: { ...current.options, [key]: value } }), typing && `options.${typing}`);
   const fieldsBlock = draft.blocks.find((block) => block.type === 'fields');
@@ -397,7 +397,7 @@ export function FormSettings({ draft, update, blockSections }: { draft: FormDraf
         <TextField label="Form name" value={draft.name} error={!draft.name.trim()} helperText={draft.name.trim() ? 'Only your team sees this name.' : 'Enter a name for the form.'}
           onChange={(event) => update((current) => ({ ...current, name: event.target.value }), 'name')} />
       </InspectorSection>
-      {fieldsBlock && <FieldsSettings block={fieldsBlock} draft={draft} update={update} />}
+      {fieldsBlock && <FieldsSettings block={fieldsBlock} draft={draft} update={update} active={fieldsBlock.id === activeId} />}
       <InspectorSection title="After someone signs up">
         <SuccessInspector draft={draft} update={update} />
       </InspectorSection>

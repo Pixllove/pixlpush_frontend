@@ -1,7 +1,7 @@
 'use client';
 /* eslint-disable @next/next/no-img-element -- this markup is exported to customer sites, where next/image does not exist */
 
-import { useEffect, useId, useState, type CSSProperties, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type ElementType, type ReactNode } from 'react';
 import { SOCIAL_ICON_PATHS } from '@/lib/social-icons';
 import type { Block, FormDraft, FormField } from './model';
 
@@ -22,7 +22,46 @@ export type RenderProps = {
   wrap?: (block: Block, node: ReactNode) => ReactNode;
   onSubmit?: () => void;
   onClose?: () => void;
+  /** Editor only: change text by typing on the canvas (headings, text, button labels, field labels and placeholders). */
+  edit?: InlineEdit;
 };
+
+export type InlineEdit = {
+  block: (id: string, patch: Partial<Block>, key: string) => void;
+  field: (id: string, patch: Partial<FormField>, key: string) => void;
+};
+const EditContext = createContext<InlineEdit | null>(null);
+
+/**
+ * Text you change by clicking it and typing. Uncontrolled while focused (React never rewrites it
+ * under the caret); undo/redo and other edits sync in when it isn't focused.
+ */
+function Editable({ value, onChange, as: Tag = 'span', multiline = false, placeholder = 'Type here', style }: { value: string; onChange: (value: string) => void; as?: ElementType; multiline?: boolean; placeholder?: string; style?: CSSProperties }) {
+  const ref = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (el && document.activeElement !== el && el.innerText !== value) el.innerText = value;
+  }, [value]);
+  return (
+    <Tag
+      ref={ref}
+      className="pp-inline-edit"
+      contentEditable="plaintext-only"
+      suppressContentEditableWarning
+      role="textbox"
+      aria-multiline={multiline}
+      aria-label={placeholder}
+      data-placeholder={placeholder}
+      spellCheck
+      style={style}
+      onInput={(event: React.FormEvent<HTMLElement>) => onChange(event.currentTarget.innerText.replace(/\n$/, ''))}
+      onKeyDown={(event: React.KeyboardEvent<HTMLElement>) => {
+        if ((event.key === 'Enter' && !multiline) || event.key === 'Escape') { event.preventDefault(); event.currentTarget.blur(); }
+      }}
+      onDragStart={(event: React.DragEvent) => event.preventDefault()}
+    />
+  );
+}
 
 const fontStack: Record<FormDraft['design']['font'], string> = {
   Inter: 'Inter, system-ui, sans-serif',
@@ -71,7 +110,8 @@ export function FormStage(props: RenderProps) {
   );
 }
 
-export function FormCard({ draft, view = 'form', mode = 'editor', narrow = false, wrap, onSubmit, onClose }: RenderProps) {
+export function FormCard(props: RenderProps) {
+  const { draft, view = 'form', mode = 'editor', narrow = false, wrap, onSubmit, onClose } = props;
   const d = draft.design;
   const fullBleed = isFullBleed(draft);
   const fullscreen = d.popupType === 'fullscreen';
@@ -84,7 +124,8 @@ export function FormCard({ draft, view = 'form', mode = 'editor', narrow = false
     position: 'relative', boxSizing: 'border-box', width: fullBleed ? '100%' : d.width, maxWidth: '100%',
     minHeight: fullscreen ? '100%' : undefined, display: 'flex',
     flexDirection: side === 'left' ? 'row' : side === 'right' ? 'row-reverse' : 'column',
-    overflow: 'hidden', borderRadius: fullBleed ? 0 : d.radius,
+    // The editor lets block toolbars stick out of the card; corners are rounded on the side image instead.
+    overflow: editor ? 'visible' : 'hidden', borderRadius: fullBleed ? 0 : d.radius,
     background: boxed ? d.sidebarColor : d.transparent ? 'transparent' : d.background,
     backgroundImage: d.backgroundImage && !boxed ? `url("${d.backgroundImage}")` : undefined,
     backgroundSize: bgSize(d.backgroundFit, d.backgroundZoom), backgroundRepeat: d.backgroundFit === 'tile' ? 'repeat' : 'no-repeat', backgroundPosition: focusPosition(d.backgroundX, d.backgroundY),
@@ -100,9 +141,10 @@ export function FormCard({ draft, view = 'form', mode = 'editor', narrow = false
   const inner: CSSProperties = fullBleed ? { width: '100%', maxWidth: d.width, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 14 } : { display: 'contents' };
 
   return (
+    <EditContext.Provider value={editor ? props.edit ?? null : null}>
     <div style={card} data-pixlpush-card="">
       {side && (
-        <div aria-hidden style={{ position: 'relative', overflow: 'hidden', flex: side === 'top' ? `0 0 ${Math.round((d.sidebarWidth / 100) * 320)}px` : `0 0 ${d.sidebarWidth}%`, minHeight: 140, background: d.sidebarColor }}>
+        <div aria-hidden style={{ position: 'relative', overflow: 'hidden', borderRadius: fullBleed ? 0 : side === 'top' ? `${d.radius}px ${d.radius}px 0 0` : side === 'left' ? `${d.radius}px 0 0 ${d.radius}px` : `0 ${d.radius}px ${d.radius}px 0`, flex: side === 'top' ? `0 0 ${Math.round((d.sidebarWidth / 100) * 320)}px` : `0 0 ${d.sidebarWidth}%`, minHeight: 140, background: d.sidebarColor }}>
           {d.sidebarImage && <img src={d.sidebarImage} alt="" aria-hidden style={{
             position: 'absolute', inset: 0, width: '100%', height: '100%',
             objectFit: d.sidebarFit === 'fit' ? 'contain' : 'cover',
@@ -136,6 +178,7 @@ export function FormCard({ draft, view = 'form', mode = 'editor', narrow = false
         </button>
       )}
     </div>
+    </EditContext.Provider>
   );
 }
 
@@ -156,13 +199,17 @@ const justify = (align?: string) => (align === 'center' ? 'center' : align === '
 function BlockView({ block, draft, mode, narrow }: { block: Block; draft: FormDraft; mode: RenderMode; narrow: boolean }) {
   const d = draft.design;
   const editor = mode === 'editor';
+  const edit = useContext(EditContext);
+  const text = (value: string | undefined, key: 'text' | 'label', placeholder: string, multiline = false, display = 'block') => edit
+    ? <Editable value={value ?? ''} multiline={multiline} placeholder={placeholder} style={{ display }} onChange={(next) => edit.block(block.id, { [key]: next }, `${block.id}.${key}`)} />
+    : value;
   const linkProps = editor ? { tabIndex: -1, onClick: (event: { preventDefault: () => void }) => event.preventDefault() } : { target: '_blank', rel: 'noopener noreferrer' };
 
   switch (block.type) {
     case 'heading':
-      return <h2 style={{ margin: 0, fontSize: block.size ?? 24, fontWeight: block.weight ?? 700, lineHeight: 1.25, color: block.color ?? d.headingColor, textAlign: block.align }}>{block.text}</h2>;
+      return <h2 style={{ margin: 0, fontSize: block.size ?? 24, fontWeight: block.weight ?? 700, lineHeight: 1.25, color: block.color ?? d.headingColor, textAlign: block.align }}>{text(block.text, 'text', 'Add a heading')}</h2>;
     case 'text':
-      return <p style={{ margin: 0, fontSize: block.size ?? 15, fontWeight: block.weight ?? 400, color: block.color ?? d.textColor, textAlign: block.align, whiteSpace: 'pre-line' }}>{block.text}</p>;
+      return <p style={{ margin: 0, fontSize: block.size ?? 15, fontWeight: block.weight ?? 400, color: block.color ?? d.textColor, textAlign: block.align, whiteSpace: 'pre-line' }}>{text(block.text, 'text', 'Add some text', true)}</p>;
     case 'image': {
       if (!block.src) return editor ? placeholder('Image: upload one in the settings panel') : null;
       const img = <img src={block.src} alt={block.alt ?? ''} style={{ display: 'block', width: `${block.width ?? 100}%`, maxWidth: '100%', height: 'auto', borderRadius: 6 }} />;
@@ -172,14 +219,16 @@ function BlockView({ block, draft, mode, narrow }: { block: Block; draft: FormDr
       return (
         <div style={{ display: 'flex', flexDirection: narrow ? 'column' : block.side === 'right' ? 'row-reverse' : 'row', gap: 16, alignItems: narrow ? 'stretch' : 'center' }}>
           <div style={{ flex: '0 0 40%' }}>{block.src ? <img src={block.src} alt={block.alt ?? ''} style={{ display: 'block', width: '100%', height: 'auto', borderRadius: 6 }} /> : editor ? placeholder('Add an image') : null}</div>
-          <p style={{ margin: 0, flex: 1, color: block.color ?? d.textColor, whiteSpace: 'pre-line' }}>{block.text}</p>
+          <p style={{ margin: 0, flex: 1, color: block.color ?? d.textColor, whiteSpace: 'pre-line' }}>{text(block.text, 'text', 'Add some text', true)}</p>
         </div>
       );
     case 'button': {
       const style = { ...buttonStyle(d, block.fullWidth ?? true), ...(block.bg ? { background: block.bg } : {}), ...(block.textColor ? { color: block.textColor } : {}), ...(block.radius !== undefined ? { borderRadius: block.radius } : {}) };
       return (
         <div style={{ display: 'flex', justifyContent: justify(block.align) }}>
-          {block.action === 'submit'
+          {edit
+            ? <div style={style}>{text(block.label, 'label', 'Button text', false, 'inline-block')}</div>
+            : block.action === 'submit'
             ? <button type="submit" tabIndex={editor ? -1 : undefined} style={style}>{block.label}</button>
             : <a href={block.href} {...linkProps} style={style}>{block.label}</a>}
         </div>
@@ -227,6 +276,10 @@ function FieldsBlock({ block, draft, mode, narrow }: { block: Block; draft: Form
   const labelStyle: CSSProperties = { display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 600, color: d.labelColor };
   const check: CSSProperties = { display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13, color: d.textColor };
   const inputId = (field: FormField) => `ppf-${draft.id}-${field.id}`;
+  const edit = useContext(EditContext);
+  const labelText = (field: FormField) => edit
+    ? <Editable value={field.label} placeholder="Field label" onChange={(label) => edit.field(field.id, { label }, `${field.id}.label`)} />
+    : field.label;
 
   const control = (field: FormField) => {
     const common = { id: inputId(field), name: field.label, required: field.required, 'aria-label': o.labelsAbove ? undefined : field.label, ...lock };
@@ -239,11 +292,18 @@ function FieldsBlock({ block, draft, mode, narrow }: { block: Block; draft: Form
       );
     }
     const type = field.type === 'phone' ? 'tel' : field.type === 'email' || field.type === 'number' || field.type === 'date' ? field.type : 'text';
+    // Editor: type straight into the box to change its hint text.
+    if (edit && field.type !== 'date') {
+      return <input id={common.id} type="text" aria-label={`${field.label} hint text`} title="Click and type to change the hint text" placeholder="Hint text (optional)" value={field.placeholder}
+        onChange={(event) => edit.field(field.id, { placeholder: event.target.value }, `${field.id}.placeholder`)} style={{ ...input, color: '#8a8195', cursor: 'text' }} />;
+    }
     return <input {...common} type={type} placeholder={field.placeholder} autoComplete={field.type === 'email' ? 'email' : undefined} style={input} />;
   };
 
   const visible = draft.fields.filter((field) => field.type !== 'hidden');
-  const submit = <button type="submit" tabIndex={editor ? -1 : undefined} style={{ ...buttonStyle(d, !horizontal), whiteSpace: 'nowrap' }}>{block.label || 'Subscribe'}</button>;
+  const submit = edit
+    ? <div style={{ ...buttonStyle(d, !horizontal), whiteSpace: 'nowrap' }}><Editable value={block.label ?? ''} placeholder="Subscribe" style={{ display: 'inline-block' }} onChange={(label) => edit.block(block.id, { label }, `${block.id}.label`)} /></div>
+    : <button type="submit" tabIndex={editor ? -1 : undefined} style={{ ...buttonStyle(d, !horizontal), whiteSpace: 'nowrap' }}>{block.label || 'Subscribe'}</button>;
 
   return (
     <div style={{ display: 'grid', gap: 12 }}>
@@ -251,9 +311,9 @@ function FieldsBlock({ block, draft, mode, narrow }: { block: Block; draft: Form
         {visible.map((field) => (
           <div key={field.id} style={{ flex: horizontal ? '1 1 160px' : field.half && !narrow ? '1 1 calc(50% - 6px)' : '1 1 100%', minWidth: 0 }}>
             {field.type === 'checkbox'
-              ? <label style={check}><input type="checkbox" name={field.label} required={field.required} disabled={editor} style={{ marginTop: 3 }} /><span>{field.label}{field.required ? ' *' : ''}</span></label>
+              ? <label style={check}><input type="checkbox" name={field.label} required={field.required} disabled={editor} style={{ marginTop: 3 }} /><span>{labelText(field)}{field.required ? ' *' : ''}</span></label>
               : <>
-                  {o.labelsAbove && <label htmlFor={inputId(field)} style={labelStyle}>{field.label}{field.required ? ' *' : ''}</label>}
+                  {o.labelsAbove && <label htmlFor={inputId(field)} style={labelStyle}>{labelText(field)}{field.required ? ' *' : ''}</label>}
                   {control(field)}
                 </>}
           </div>

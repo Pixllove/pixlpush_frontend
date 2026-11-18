@@ -21693,3 +21693,21 @@ button[aria-expanded="true"] {
 .pp-device.is-mobile .pp-device-screen::-webkit-scrollbar,
 .pp-device.is-tablet .pp-device-screen::-webkit-scrollbar { display: none; }
 .pp-device.is-desktop .pp-device-screen { scrollbar-width: thin; scrollbar-gutter: auto; }
+
+/* Click-to-edit text on the editor canvas. */
+.pp-inline-edit { outline: none; cursor: text; min-width: 1ch; border-radius: 3px; }
+.pp-inline-edit:hover { box-shadow: 0 0 0 2px var(--pp-accent-line); }
+.pp-inline-edit:focus { box-shadow: 0 0 0 2px var(--pp-accent); background: rgba(91, 33, 182, 0.04); }
+.pp-inline-edit:empty::before { content: attr(data-placeholder); opacity: 0.45; pointer-events: none; }
+
+/* Block label + tools: one bar sitting above the block's top-left corner, so it never covers
+   the block's own text or the form's close button. */
+.pp-form-block-bar { position: absolute; z-index: 3; bottom: calc(100% + 6px); left: -4px; display: flex; align-items: center; gap: 4px; pointer-events: none; }
+.pp-form-block-bar > * { pointer-events: auto; }
+.pp-form-block-bar .pp-form-block-chip { position: static; height: 26px; line-height: 26px; padding: 0 8px 0 4px; border-radius: 6px; }
+.pp-form-block-bar .pp-form-block-tools { position: static; }
+.pp-form-block.is-selected { outline-offset: 3px; }
+.pp-form-block.is-selected, .pp-form-block:hover { z-index: 2; }
+
+/* The settings section for the block selected on the canvas. */
+.pp-form-section.is-active { box-shadow: inset 3px 0 0 var(--pp-accent); background: color-mix(in srgb, var(--pp-accent) 4%, transparent); scroll-margin-top: 8px; }
