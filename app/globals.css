@@ -18973,9 +18973,9 @@ body {
   border-radius: 0;
   color: #6d6478;
   text-transform: none;
-  font-size: 14px;
-  line-height: 20px;
-  font-weight: 500;
+  font-size: 18px;
+  line-height: 22px;
+  font-weight: 700;
   white-space: nowrap;
   transition: color 0.18s ease;
 }
@@ -18984,7 +18984,7 @@ body {
 }
 .premium-workspace-tabs .MuiTab-root.Mui-selected {
   color: var(--pp-text);
-  font-weight: 600;
+  font-weight: 800;
 }
 .premium-workspace-tabs .MuiTab-iconWrapper {
   color: #746a80;
