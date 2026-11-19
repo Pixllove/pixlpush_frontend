@@ -251,8 +251,9 @@ describe('AiInteractionRenderer', () => {
     expect(screen.getByRole('button', { name: 'Check links' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Check links' }));
     expect(onCheckLinks).toHaveBeenCalledWith('https://example.com');
-    expect(await screen.findByText('Google Play')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Use Android link' })).toBeInTheDocument();
+    expect(await screen.findByRole('textbox', { name: 'Android app link' })).toHaveValue('https://play.google.com/store/apps/details?id=demo');
+    expect(screen.getByRole('textbox', { name: 'iOS app link' })).toHaveValue('https://apps.apple.com/app/demo/id1');
+    expect(screen.getByText('Found links were added to empty fields; your existing links were kept.')).toBeInTheDocument();
 
     rerender(<AiInteractionRenderer interaction={interaction('onboarding', {
       fields: [{ key: 'projectName', label: 'Project name', type: 'text', required: true }],
@@ -269,6 +270,32 @@ describe('AiInteractionRenderer', () => {
     expect(screen.getByText('Web push')).toBeInTheDocument();
     expect(screen.queryByText('Mobile push')).not.toBeInTheDocument();
     expect(screen.getByText('Email')).toBeInTheDocument();
+  });
+
+  it('keeps manually entered store links when the website scan finds replacements', async () => {
+    const user = userEvent.setup();
+    const onCheckLinks = vi.fn().mockResolvedValue({
+      androidAppUrl: 'https://play.google.com/store/apps/details?id=detected',
+      iosAppUrl: 'https://apps.apple.com/app/detected/id2',
+    });
+    render(<AiInteractionRenderer interaction={interaction('onboarding', {
+      fields: [
+        { key: 'platforms', label: 'Products', type: 'choice', required: true, options: ['web', 'mobile'] },
+        { key: 'websiteUrl', label: 'Website URL', type: 'url' },
+        { key: 'androidAppUrl', label: 'Android app link', type: 'url' },
+        { key: 'iosAppUrl', label: 'iOS app link', type: 'url' },
+      ],
+      data: { currentStep: { kind: 'products', title: 'Your products' }, values: {
+        platforms: ['mobile'],
+        websiteUrl: 'example.com',
+        androidAppUrl: 'https://play.google.com/store/apps/details?id=manual',
+      } },
+      actions: ['defer', 'submit'],
+    })} onSubmit={vi.fn()} onCheckLinks={onCheckLinks} />);
+
+    await user.click(screen.getByRole('button', { name: 'Check links' }));
+    expect(await screen.findByRole('textbox', { name: 'Android app link' })).toHaveValue('https://play.google.com/store/apps/details?id=manual');
+    expect(screen.getByRole('textbox', { name: 'iOS app link' })).toHaveValue('https://apps.apple.com/app/detected/id2');
   });
 
   it('renders Domain verification and defers a blank required Domain without native validation', async () => {

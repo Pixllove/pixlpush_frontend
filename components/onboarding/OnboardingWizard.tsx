@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
@@ -26,7 +26,7 @@ import { domainFromEmail } from '@/components/dashboard/sending-domains/AddDomai
 import DomainAnalysisDialog from '@/components/dashboard/sending-domains/DomainAnalysisDialog';
 import DnsSetupDialog from '@/components/dashboard/sending-domains/DnsSetupDialog';
 import { channelOptions, onboardingHeadingByKind, onboardingPromptByKind } from './onboardingStepConfig';
-import OnboardingCommonStep from './OnboardingCommonStep';
+import OnboardingCommonStep, { type WebsiteCheckState } from './OnboardingCommonStep';
 import OnboardingStepExperience, { SdkRequestDialog } from './OnboardingStepExperience';
 
 /** Progress saved before push was split into web and mobile stores 'push': expand it to the selected product types. */
@@ -51,6 +51,7 @@ export default function OnboardingWizard() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const createdProjectEntry = searchParams.get('source') === 'project-created';
+  const resumeRequested = searchParams.get('resume') === '1';
   const queryClient = useQueryClient();
   const { active: activeProject, projects, isPending: projectsPending, selectProject } = useActiveProject();
   const projectsQuery = useQuery({
@@ -67,6 +68,9 @@ export default function OnboardingWizard() {
   const [appLinkScanError, setAppLinkScanError] = useState('');
   const [detectedAppLinks, setDetectedAppLinks] = useState<{ androidAppUrl: string | null; iosAppUrl: string | null }>({ androidAppUrl: null, iosAppUrl: null });
   const [urlErrors, setUrlErrors] = useState<Partial<Record<OnboardingUrlField, string>>>({});
+  const [websiteCheckState, setWebsiteCheckState] = useState<WebsiteCheckState>('idle');
+  const [websiteCheckMessage, setWebsiteCheckMessage] = useState('');
+  const [verifiedWebsiteUrl, setVerifiedWebsiteUrl] = useState('');
   const [productsError, setProductsError] = useState('');
   const [productsSaving, setProductsSaving] = useState(false);
   const [domainVerificationBusy, setDomainVerificationBusy] = useState(false);
@@ -75,6 +79,15 @@ export default function OnboardingWizard() {
   const [domainDialog, setDomainDialog] = useState<
     { kind: 'none' } | { kind: 'analyze'; domain: SendingDomain } | { kind: 'dns'; domainId: string }
   >({ kind: 'none' });
+  const reportSaveError = useCallback((cause: unknown, fallback: string) => {
+    const message = (cause as ApiError).message || fallback;
+    if (/website url must point to a public website/i.test(message)) {
+      setUrlErrors((previous) => ({ ...previous, websiteUrl: message }));
+      setSaveError('');
+      return;
+    }
+    setSaveError(message);
+  }, []);
   const hydratedProject = useRef<string | null>(null);
   const localUserChange = useRef(false);
   const savedProgress = useRef('');
@@ -82,11 +95,13 @@ export default function OnboardingWizard() {
   // so use the first accessible Project while Redux restores its selection.
   const selectedProject = activeProject ?? projects[0] ?? projectsQuery.data?.[0];
   const projectId = selectedProject?.id;
+  const resumeProgress = projectId ? queryClient.getQueryData<OnboardingState>(['projects', projectId, 'onboarding']) : undefined;
   const progressQuery = useQuery({
     queryKey: ['projects', projectId, 'onboarding'],
     queryFn: () => onboardingApi.get(projectId!),
     enabled: Boolean(projectId),
     staleTime: 30_000,
+    initialData: resumeRequested ? resumeProgress : undefined,
   });
   const firebaseQuery = useQuery({
     queryKey: ['projects', projectId, 'firebase'],
@@ -150,10 +165,10 @@ export default function OnboardingWizard() {
           queryClient.setQueryData(['projects', projectId, 'onboarding'], saved);
           setSaveError('');
         })
-        .catch((cause: ApiError) => setSaveError(cause.message || 'Could not save onboarding progress.'));
+        .catch((cause: ApiError) => reportSaveError(cause, 'Could not save onboarding progress.'));
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [projectId, progressQuery.isFetching, progressQuery.isSuccess, queryClient, state]);
+  }, [projectId, progressQuery.isFetching, progressQuery.isSuccess, queryClient, reportSaveError, state]);
 
   const steps = onboardingStepsOf(state.platforms, state.channels);
   const stepCount = steps.length;
@@ -249,6 +264,10 @@ export default function OnboardingWizard() {
       setProductsError(missingWebsite ? 'Add a website URL for the selected Website product.' : missingMobileLink ? 'Add an Android or iOS app link for the selected Mobile App product.' : '');
       setState(currentState);
       if (Object.keys(nextUrlErrors).length || missingWebsite || missingMobileLink) return;
+      if (currentState.platforms.includes('web') && currentState.websiteUrl.trim() && verifiedWebsiteUrl !== currentState.websiteUrl) {
+        const check = await verifyWebsiteDomain(currentState.websiteUrl);
+        if (check === 'not_found') return;
+      }
     }
     const completed = new Set(currentState.completed);
     if (stepIsCompleteFor(currentState, currentStep)) completed.add(currentStep);
@@ -284,7 +303,7 @@ export default function OnboardingWizard() {
           setState({ ...authoritative, currentStep: nextStep });
         }
       } catch (cause) {
-        setSaveError((cause as ApiError).message || 'Could not save your product links.');
+        reportSaveError(cause, 'Could not save your product links.');
       } finally {
         setProductsSaving(false);
       }
@@ -320,13 +339,45 @@ export default function OnboardingWizard() {
     setAppLinkScanState('checking');
     setAppLinkScanError('');
     try {
+      // Keep onboarding on its dedicated endpoint. It uses the same backend
+      // detector as Business Analysis while preserving the onboarding API
+      // contract and its project-scoped route.
       const links = await onboardingApi.appLinks(scanProjectId, raw);
       setDetectedAppLinks(links);
+      const filledFields: Partial<OnboardingState> = {};
+      if (!state.androidAppUrl.trim() && links.androidAppUrl) filledFields.androidAppUrl = links.androidAppUrl;
+      if (!state.iosAppUrl.trim() && links.iosAppUrl) filledFields.iosAppUrl = links.iosAppUrl;
+      if (Object.keys(filledFields).length) patch(filledFields);
       setAppLinkScanState(links.androidAppUrl || links.iosAppUrl ? 'found' : 'not-found');
     } catch (cause) {
       setDetectedAppLinks({ androidAppUrl: null, iosAppUrl: null });
       setAppLinkScanError((cause as ApiError).message || 'We couldn’t open that website.');
       setAppLinkScanState('error');
+    }
+  };
+  const verifyWebsiteDomain = async (value: string): Promise<WebsiteCheckState> => {
+    const raw = normalizeOnboardingUrl(value);
+    const validationError = onboardingUrlError(raw, 'Website URL');
+    if (!raw || validationError) return 'unknown';
+    setWebsiteCheckState('checking');
+    setWebsiteCheckMessage('');
+    try {
+      const response = await fetch('/api/onboarding/website-check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: raw }),
+      });
+      const result = await response.json() as { status?: WebsiteCheckState; message?: string };
+      const status = result.status === 'valid' || result.status === 'not_found' ? result.status : 'unknown';
+      setWebsiteCheckState(status);
+      setWebsiteCheckMessage(result.message ?? 'We could not verify the domain right now.');
+      setVerifiedWebsiteUrl(status === 'valid' ? raw : '');
+      return status;
+    } catch {
+      setWebsiteCheckState('unknown');
+      setWebsiteCheckMessage('We could not verify the domain right now.');
+      setVerifiedWebsiteUrl('');
+      return 'unknown';
     }
   };
   const closeDomainDialog = () => {
@@ -360,6 +411,9 @@ export default function OnboardingWizard() {
     setAppLinkScanError('');
     setDetectedAppLinks({ androidAppUrl: null, iosAppUrl: null });
     setUrlErrors((previous) => ({ ...previous, websiteUrl: '' }));
+    setWebsiteCheckState('idle');
+    setWebsiteCheckMessage('');
+    setVerifiedWebsiteUrl('');
     setProductsError('');
     patch({ websiteUrl: value });
   };
@@ -385,13 +439,18 @@ export default function OnboardingWizard() {
       await authApi.skipOnboarding();
       await queryClient.invalidateQueries({ queryKey: authKeys.currentUser() });
     } catch (cause) {
-      setSaveError((cause as ApiError).message || 'Could not save your onboarding preference.');
+      reportSaveError(cause, 'Could not save your onboarding preference.');
       return;
     }
     router.push('/dashboard/onboarding');
   };
   const togglePlatform = (id: ProjectPlatform) => {
     localUserChange.current = true;
+    if (id === 'mobile' && state.platforms.includes('mobile')) {
+      setAppLinkScanState('idle');
+      setAppLinkScanError('');
+      setDetectedAppLinks({ androidAppUrl: null, iosAppUrl: null });
+    }
     setState((previous) => {
       const platforms = toggleProjectPlatform(previous.platforms, id);
       if (platforms === previous.platforms) return previous;
@@ -438,7 +497,7 @@ export default function OnboardingWizard() {
       savedProgress.current = JSON.stringify(payload);
       return created.id;
     } catch (cause) {
-      setSaveError((cause as ApiError).message || 'Could not create or update the Project.');
+      reportSaveError(cause, 'Could not create or update the Project.');
       return null;
     }
   };
@@ -453,16 +512,10 @@ export default function OnboardingWizard() {
   return (
     <Box className="onboarding-shell">
       <Container maxWidth="lg" className="onboarding-container">
-        <header className="onboarding-topbar">
-          <a className="onboarding-brand" href="/" aria-label="PixlPush home">
-            <Image className="onboarding-brand-logo" src="/assets/logo-dark-text.png" alt="PixlPush" width={174} height={43} priority />
-          </a>
-        </header>
-
         <Box className="onboarding-progress-area" style={{ '--onboarding-step-count': stepCount } as CSSProperties}>
           <Stack direction="row" justifyContent="space-between" alignItems="end" mb={1.5}>
-            <Box><Typography className="onboarding-eyebrow">YOUR PIXLPUSH SETUP</Typography><Typography variant="h6" fontWeight={700}>A strong foundation, one step at a time</Typography></Box>
-          <Typography variant="body2" color="text.secondary">{completedCount} of {stepCount} complete</Typography>
+            <Box />
+            <Typography variant="body2" color="text.secondary">{completedCount} of {stepCount} complete</Typography>
           </Stack>
           <LinearProgress
             variant="determinate"
@@ -485,10 +538,10 @@ export default function OnboardingWizard() {
 
         <div className="onboarding-workspace">
           <Paper elevation={0} className="onboarding-chat">
-            <div className="onboarding-chat-head"><span className="max-avatar"><Image src="/assets/agent-avatar-max-v4.webp" alt="Max" width={52} height={52} /></span><span><strong>Max</strong><small>PIXLPUSH ONBOARDING GUIDE</small></span><Chip size="small" label="Ready to help" className="max-online" /></div>
+            <div className="onboarding-chat-head"><span className="max-avatar"><Image src="/assets/agent-avatar-max-v4.webp" alt="Max" width={52} height={52} /></span><span><strong>Max</strong><small>PIXLPUSH ONBOARDING GUIDE</small></span><Typography className="onboarding-chat-step-label">{questionEyebrow}</Typography></div>
               <div key={currentStep} className={`onboarding-chat-body onboarding-step-panel ${stepDirection}`}>
               {!isSdkStep && <div className="max-message"><AutoAwesomeRounded fontSize="small" /><p>{prompt}</p></div>}
-              <div className="onboarding-question"><Typography className="onboarding-eyebrow">{questionEyebrow}</Typography><Typography variant="h4" className="onboarding-question-title">{heading}</Typography>
+              <div className="onboarding-question"><Typography variant="h4" className="onboarding-question-title">{heading}</Typography>
                 {currentStep <= 3 && <OnboardingCommonStep
                   kind={activeStep.kind as 'basics' | 'products' | 'channels'}
                   projectName={state.projectName}
@@ -499,6 +552,8 @@ export default function OnboardingWizard() {
                   channels={state.channels}
                   senderEmail={state.senderEmail}
                   urlErrors={urlErrors}
+                  websiteCheckState={websiteCheckState}
+                  websiteCheckMessage={websiteCheckMessage}
                   productsError={productsError}
                   linkCheckState={appLinkScanState}
                   linkCheckError={appLinkScanError}
@@ -513,6 +568,7 @@ export default function OnboardingWizard() {
                     const error = onboardingUrlError(state[field], field === 'websiteUrl' ? 'Website URL' : field === 'androidAppUrl' ? 'Android app link' : 'iOS app link');
                     setUrlErrors((previous) => ({ ...previous, [field]: error || '' }));
                     if (!error) patch({ [field]: normalizeOnboardingUrl(state[field]) } as Partial<OnboardingState>);
+                    if (field === 'websiteUrl' && !error && state.websiteUrl.trim()) void verifyWebsiteDomain(state.websiteUrl);
                   }}
                   onCheckLinks={() => void checkForAppLinks()}
                   onApplyDetectedLink={applyDetectedAppLink}
@@ -539,7 +595,7 @@ export default function OnboardingWizard() {
                 />}
               </div>
             </div>
-            <div className="onboarding-chat-footer">{saveError && <Alert severity="error" sx={{ mb: 1.5 }}>{saveError}</Alert>}<Typography variant="caption">Your progress is saved to this project. You can return from the Onboarding Guide on any device.</Typography><div className="onboarding-footer-actions">{currentStep > 1 && <Button variant="contained" className="onboarding-back-button" onClick={previous} startIcon={<ArrowBackRounded />} disabled={productsSaving}>Back</Button>}<Button variant="contained" disabled={!canContinue || productsSaving} onClick={() => void next()} endIcon={<ArrowForwardRounded />}>{productsSaving ? 'Saving…' : currentStep === stepCount ? 'Finish setup' : 'Continue'}</Button></div></div>
+            <div className="onboarding-chat-footer">{saveError && !/Website URL must point to a public website/i.test(saveError) && <Alert severity="error" sx={{ mb: 1.5 }}>{saveError}</Alert>}<Typography variant="caption">Your progress is saved to this project. You can return from the Onboarding Guide on any device.</Typography><div className="onboarding-footer-actions">{currentStep > 1 && <Button variant="contained" className="onboarding-back-button" onClick={previous} startIcon={<ArrowBackRounded />} disabled={productsSaving}>Back</Button>}<Button variant="contained" disabled={!canContinue || productsSaving} onClick={() => void next()} endIcon={<ArrowForwardRounded />}>{productsSaving ? 'Saving…' : currentStep === stepCount ? 'Finish setup' : 'Continue'}</Button></div></div>
           </Paper>
           <aside className="onboarding-side-note"><div className="onboarding-orbit"><span><Image className="onboarding-orbit-logo" src="/assets/favicon.webp" alt="PixlPush" width={52} height={52} /></span><i/><b/></div><Typography variant="h6">A little setup now.<br/>A clearer picture later.</Typography><Typography color="text.secondary">Max will keep your place so you can pause and pick up whenever you’re ready.</Typography><Button onClick={() => void skip()} variant="outlined" className="onboarding-side-skip">Skip setup <ArrowForwardRounded fontSize="small" /></Button></aside>
         </div>

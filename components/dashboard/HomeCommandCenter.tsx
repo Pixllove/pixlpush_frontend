@@ -11,7 +11,7 @@ import { useActiveProject } from "@/hooks/projects/use-active-project";
 import { accountGreetingName } from "@/lib/auth/display-name";
 import { aiApi, type AiAgentId, type AiAgentResult, type AiAssistantId, type AiBusinessContext, type AiBusinessContextUpdate, type AiChatRequest, type AiChatResponse, type AiCollaboration, type AiCollaborationHistory, type AiConversationMessage, type AiConversationPreview, type AiCreatedResource, type AiFlowId, type AiFlowDraftResponse, type AiHandoff, type AiInteractionMode, type AiSuggestedPrompt, type AiProjectContext, type AiResourceType, type AiOnboardingStatus, type AiInteraction, type AiInteractionAction, type AiInteractionResponse, type AiInteractionRequest } from "@/lib/projects/ai";
 import { audienceGroupsApi, emailApi, firebaseApi, journeysApi, lifecycleSegmentsApi, onboardingApi, pushApi, sdkKeyApi } from "@/lib/projects/api";
-import { pushReadyOf } from "@/lib/onboarding";
+import { normalizeOnboardingUrl, onboardingStepsOf, pushReadyOf } from "@/lib/onboarding";
 import type { AudienceGroup, LifecycleSegment } from "@/types/project";
 import { createSendingDomain, listSendingDomains } from "@/lib/sending-domains/api";
 import type { SendingDomain } from "@/types/sending-domain";
@@ -49,6 +49,7 @@ type ChatMessage = {
   to?: string;
   nextActions?: string[];
   onboarding?: AiOnboardingStatus;
+  continueOnboarding?: boolean;
   interaction?: AiInteraction | null;
 };
 type AiChatResponseWithHandoffState = AiChatResponse & { handoffCompleted?: boolean };
@@ -610,15 +611,16 @@ function BusinessContextCard({
   };
 
   const checkWebsiteLinks = async () => {
-    if (!websiteUrl.trim()) return;
+    const url = normalizeOnboardingUrl(websiteUrl);
+    if (!url) return;
     setError(null);
     setLinkCheckMessage(null);
     setCheckingLinks(true);
     try {
-      const detected = await onDetectLinks(websiteUrl.trim());
-      setWebsiteUrl(detected.websiteUrl || websiteUrl.trim());
-      setAppStoreUrl(detected.appStoreUrl ?? "");
-      setGooglePlayUrl(detected.googlePlayUrl ?? "");
+      const detected = await onDetectLinks(url);
+      setWebsiteUrl(detected.websiteUrl || url);
+      setAppStoreUrl((current) => current.trim() ? current : detected.appStoreUrl ?? "");
+      setGooglePlayUrl((current) => current.trim() ? current : detected.googlePlayUrl ?? "");
       setLinkCheckMessage(detected.appStoreUrl || detected.googlePlayUrl ? "App links found and added." : "No App Store or Google Play links were found. You can add them manually.");
     } catch (cause) {
       setError(apiMessage(cause, "I couldn’t check the website links. You can add the app links manually."));
@@ -989,6 +991,10 @@ function isOnboardingPrompt(value: string) {
   return /\b(?:onboarding|setup|set up|integration|integrate|sdk|firebase|sender domain|senders? domain|next steps|missing steps)\b/i.test(value);
 }
 
+function isNextStepsPrompt(value: string) {
+  return /\b(?:what are )?(?:my )?next steps\b/i.test(value);
+}
+
 function collaborationModeFor(prompt: string, assistant: AiAgentId): AiInteractionMode {
   // Max-led optimization is the backend's consultation workflow. A customer
   // who explicitly picked Ben, Nova, or Anna stays in direct mode.
@@ -1204,6 +1210,7 @@ export default function HomeCommandCenter() {
   const [context, setContext] = useState<"recent" | "insight" | "handoff">("recent");
   const [contextOpen, setContextOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyPreferenceSet, setHistoryPreferenceSet] = useState(false);
   const [pinOverrides, setPinOverrides] = useState<Record<string, string | null>>({});
   // The fixed sidebar starts right under the dashboard top bar, whatever height it has on this screen.
   useEffect(() => {
@@ -1317,7 +1324,7 @@ export default function HomeCommandCenter() {
   const onboardingQuery = useQuery({
     queryKey: ["projects", projectId, "onboarding"],
     queryFn: () => onboardingApi.get(projectId!),
-    enabled: Boolean(projectId) && (activeFlow?.id === "journey" || businessAnalysisFlowOpen),
+    enabled: Boolean(projectId),
     staleTime: 30_000,
   });
 
@@ -1447,7 +1454,7 @@ export default function HomeCommandCenter() {
         const handoffMessage = responseMode === "handoff" && response.handoff
           ? { id: `handoff-${Date.now()}`, role: "assistant" as const, assistant: input.assistant ?? selectedAgent as AiAssistantId, mode: "handoff" as const, text: `${input.assistant ?? selectedAgent} handed this request to ${response.handoff.name}. ${response.handoff.reason ?? "They will continue with the relevant context."}` }
           : null;
-        const assistantMessage: ChatMessage = { id: `assistant-${Date.now()}`, role: "assistant", assistant: response.assistant, mode: responseMode, text: response.message, suggestedFlow, createdResources, nextActions: response.nextActions ?? [], ...(response.interaction ? { interaction: response.interaction } : {}), ...(response.handoff ? { handoff: response.handoff } : {}), ...(response.collaboration ? { collaboration: response.collaboration } : {}), ...(response.agentResult ? { agentResult: response.agentResult } : {}), requestKey: input.requestKey, ...(input.requestedAgent ? { requestedAgent: input.requestedAgent } : {}), ...(input.resourceType ? { resourceType: input.resourceType } : {}), ...(input.resourceId ? { resourceId: input.resourceId } : {}), ...(input.from ? { from: input.from } : {}), ...(input.to ? { to: input.to } : {}) };
+        const assistantMessage: ChatMessage = { id: `assistant-${Date.now()}`, role: "assistant", assistant: response.assistant, mode: responseMode, text: response.message, suggestedFlow, createdResources, nextActions: response.nextActions ?? [], ...(isNextStepsPrompt(input.prompt) && !response.interaction ? { continueOnboarding: true } : {}), ...(response.interaction ? { interaction: response.interaction } : {}), ...(response.handoff ? { handoff: response.handoff } : {}), ...(response.collaboration ? { collaboration: response.collaboration } : {}), ...(response.agentResult ? { agentResult: response.agentResult } : {}), requestKey: input.requestKey, ...(input.requestedAgent ? { requestedAgent: input.requestedAgent } : {}), ...(input.resourceType ? { resourceType: input.resourceType } : {}), ...(input.resourceId ? { resourceId: input.resourceId } : {}), ...(input.from ? { from: input.from } : {}), ...(input.to ? { to: input.to } : {}) };
         setMessages((current) => response.cancelled
           ? current.some((message) => message.text === "Generation stopped.") ? current : [...current, { id: `assistant-stopped-${Date.now()}`, role: "assistant", text: response.message }]
           : [...current, ...(handoffMessage ? [handoffMessage] : []), assistantMessage]);
@@ -1492,6 +1499,10 @@ export default function HomeCommandCenter() {
     requestKey: string;
     fields?: Record<string, unknown>;
     submitAction?: AiInteractionAction;
+  };
+
+  const continueOnboarding = () => {
+    if (typeof window !== "undefined") window.location.assign("/onboarding?resume=1");
   };
   const [interactionErrors, setInteractionErrors] = useState<Record<string, string>>({});
   const interactionMutation = useMutation({
@@ -1795,6 +1806,19 @@ export default function HomeCommandCenter() {
     || savedBusinessContext.businessDescription?.trim()
     || savedBusinessContext.websiteUrl?.trim()
   ));
+  const contextOnboardingIncomplete = aiContext?.onboarding
+    ? aiContext.onboarding.status === "not_started" || aiContext.onboarding.status === "in_progress"
+    : false;
+  const persistedOnboardingIncomplete = onboardingQuery.data
+    ? onboardingQuery.data.completed.length < onboardingStepsOf(onboardingQuery.data.platforms, onboardingQuery.data.channels).length
+    : contextOnboardingIncomplete;
+  const shouldShowStageOnePrompts = persistedOnboardingIncomplete;
+  // The API can return generic growth prompts while onboarding is still in
+  // progress. Keep the stage-one prompts visible until onboarding is complete,
+  // regardless of whether the Conversations side panel is open.
+  const homePrompts = shouldShowStageOnePrompts
+    ? fallbackPrompts
+    : aiContext?.suggestions?.prompts ?? fallbackPrompts;
 
   useEffect(() => {
     if (activeFlow?.id !== "journey" || !flowReady || flowConfirming || businessContextLoading) return;
@@ -2141,12 +2165,16 @@ export default function HomeCommandCenter() {
       const loadedMessages = conversation.messages
         .filter((message) => message.role === "user" || message.role === "assistant")
         .map(persistedMessageToChatMessage);
+      const withOnboardingActions = loadedMessages.map((message, index) => {
+        if (message.role !== "assistant" || message.interaction || !isNextStepsPrompt(loadedMessages[index - 1]?.text ?? "")) return message;
+        return { ...message, continueOnboarding: true };
+      });
       // Approval/cancellation changes are persisted on the collaboration, so
       // reload the normalized collaboration DTOs and overlay them on the
       // message timeline instead of trusting stale message metadata.
       const collaborations = await aiApi.collaborations(projectId, id).catch(() => [] as AiCollaborationHistory[]);
       const byId = new Map(collaborations.map((item) => [item.id, item]));
-      setMessages(loadedMessages.map((message) => {
+      setMessages(withOnboardingActions.map((message) => {
         const collaborationId = message.collaboration?.id;
         const normalized = collaborationId ? byId.get(collaborationId) : undefined;
         return normalized ? { ...message, mode: normalized.mode, collaboration: normalized } : message;
@@ -2184,6 +2212,11 @@ export default function HomeCommandCenter() {
 
   /** Suggested prompts act: links open the page, flows start the guided creation, the rest ask Max. */
   const runPrompt = (prompt: AiSuggestedPrompt) => {
+    // The recent-conversations panel may be open by default on Home, but it
+    // must close before a prompt opens a chat or guided flow.
+    setHistoryOpen(false);
+    setHistoryPreferenceSet(true);
+    setConversationSearch("");
     if (prompt.action === "link" && /onboard/i.test(prompt.label)) sendMessage(prompt.label);
     else if (prompt.action === "link") router.push(prompt.href);
     else if (prompt.action === "flow") startFlow(prompt.flow, prompt.prompt);
@@ -2497,6 +2530,11 @@ export default function HomeCommandCenter() {
   ).values()).sort((a, b) => Number(Boolean(b.pinnedAt)) - Number(Boolean(a.pinnedAt))
     || (a.pinnedAt && b.pinnedAt ? new Date(b.pinnedAt).getTime() - new Date(a.pinnedAt).getTime() : 0)
     || new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  useEffect(() => {
+    if (historyPreferenceSet || contextQuery.isPending || !recentConversations.length) return;
+    setHistoryOpen(true);
+    setHistoryPreferenceSet(true);
+  }, [contextQuery.isPending, historyPreferenceSet, recentConversations.length]);
   const conversationListLoading = contextQuery.isPending || Boolean(deferredConversationSearch && conversationSearchQuery.isPending);
   const conversationSearchError = deferredConversationSearch && conversationSearchQuery.isError
     ? apiMessage(conversationSearchQuery.error, "Search is temporarily unavailable. Showing recent conversations.")
@@ -2505,6 +2543,7 @@ export default function HomeCommandCenter() {
   const toggleRecentHistory = () => {
     const nextOpen = !historyOpen;
     setHistoryOpen(nextOpen);
+    setHistoryPreferenceSet(true);
     setContext("recent");
     setContextError(null);
     if (!nextOpen) setConversationSearch("");
@@ -2613,30 +2652,27 @@ export default function HomeCommandCenter() {
   <Box className="home-experience">
     <Box className="home-backdrop" aria-hidden><span className="home-backdrop-mosaic" /></Box>
     {messages.length === 0 ? <Box className="home-hero">
+      {!historyOpen && recentConversations.length > 0 && <Button className="home-recent-link home-hero-history-link" startIcon={<HistoryRounded />} onClick={toggleRecentHistory}>Recent conversations</Button>}
       <MaxMark />
       <Typography component="h1" className="home-hero-title" suppressHydrationWarning>{greeting()}{firstName && <>, <span>{firstName}</span></>}.</Typography>
       <Typography className="home-hero-subtitle">Let’s make your next growth move.</Typography>
 
       {composer()}
-      <Typography className="home-disclaimer">AI can make mistakes. Check important growth decisions.</Typography>
 
       <Stack direction="row" justifyContent="center" gap={1} flexWrap="wrap" className="home-prompt-row">
-        {(aiContext?.suggestions?.prompts ?? fallbackPrompts).map((prompt) => {
+        {homePrompts.map((prompt) => {
           const Icon = promptIcon(prompt);
           return <Button key={prompt.label} className="home-prompt" startIcon={<Icon />} onClick={() => runPrompt(prompt)}>{prompt.label}</Button>;
         })}
       </Stack>
 
-      {!historyOpen && <Button className="home-recent-link" startIcon={<HistoryRounded />} onClick={toggleRecentHistory}>Recent conversations</Button>}
-
-
       <Stack className="home-feature-intro" alignItems="center" gap={.5}>
         <Typography>What would you like Max to create for you?</Typography>
-        <span>Choose a starting point and I’ll guide you through the details, then shape it into a ready-to-review draft.</span>
       </Stack>
       <Box className="home-feature-row">
         {shortcuts.map(([Icon, title, description, flowId]) => <Button key={title} className="home-feature-card" onClick={() => startFlow(flowId)}><Box className="home-feature-icon"><Icon /></Box><Box className="home-feature-copy"><Typography>{title}</Typography><span>{description}</span></Box><ArrowForwardRounded className="home-feature-arrow" /></Button>)}
       </Box>
+      <Typography className="home-disclaimer">AI can make mistakes. Check important growth decisions.</Typography>
 
     </Box> : <Box className={`chat-experience${!isGuidedFlowStep && !analysisPhase && !journeyBusy ? " is-standard-chat" : ""}`}>
       <Stack direction="row" justifyContent="space-between" className="chat-topbar">
@@ -2710,6 +2746,7 @@ export default function HomeCommandCenter() {
                 router.push(`${href}${separator}interactionId=${encodeURIComponent(message.interaction!.interactionId)}`);
               }} busy={interactionMutation.isPending} error={interactionErrors[message.interaction.interactionId] ?? null} />}
               {!message.error && !message.interaction && message.onboarding && <OnboardingActionCard onboarding={message.onboarding} nextActions={message.nextActions} catalogActions={aiContext?.catalog?.nextActions} />}
+              {!message.error && message.continueOnboarding && onboardingQuery.data && onboardingQuery.data.completed.length < onboardingStepsOf(onboardingQuery.data.platforms, onboardingQuery.data.channels).length && <Button variant="contained" size="small" endIcon={<ArrowForwardRounded />} onClick={continueOnboarding} sx={{ mt: 1.25, textTransform: "none" }}>Continue with onboarding</Button>}
               {!message.error && message.suggestedFlow && <CreationOptions
                 flow={message.suggestedFlow}
                 onStart={() => startFlow(message.suggestedFlow!, lastUserIndex >= 0 ? messages[lastUserIndex].text : undefined)}

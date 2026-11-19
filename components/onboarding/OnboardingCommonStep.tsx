@@ -9,6 +9,7 @@ import { channelOptions, platformOptions } from './onboardingStepConfig';
 export type CommonOnboardingStepKind = 'basics' | 'products' | 'channels' | 'domain';
 export type CommonOnboardingLinkCheckState = 'idle' | 'checking' | 'found' | 'not-found' | 'error';
 export type DetectedOnboardingLinks = { androidAppUrl: string | null; iosAppUrl: string | null };
+export type WebsiteCheckState = 'idle' | 'checking' | 'valid' | 'not_found' | 'unknown';
 
 type Props = {
   kind: CommonOnboardingStepKind;
@@ -20,6 +21,8 @@ type Props = {
   channels?: string[];
   senderEmail?: string;
   urlErrors?: Partial<Record<OnboardingUrlField, string>>;
+  websiteCheckState?: WebsiteCheckState;
+  websiteCheckMessage?: string;
   productsError?: string;
   linkCheckState?: CommonOnboardingLinkCheckState;
   linkCheckError?: string;
@@ -48,6 +51,8 @@ export default function OnboardingCommonStep({
   channels = [],
   senderEmail = '',
   urlErrors = {},
+  websiteCheckState = 'idle',
+  websiteCheckMessage = '',
   productsError = '',
   linkCheckState = 'idle',
   linkCheckError = '',
@@ -81,30 +86,33 @@ export default function OnboardingCommonStep({
   </Stack>;
 
   const hasMobile = platforms.includes('mobile');
+  const hasUnappliedDetectedLinks = Boolean(
+    (detectedLinks.androidAppUrl && detectedLinks.androidAppUrl !== androidAppUrl.trim())
+    || (detectedLinks.iosAppUrl && detectedLinks.iosAppUrl !== iosAppUrl.trim()),
+  );
   const appLinkHelper = (error: string | undefined, fallback: string) => error || fallback;
   return <div className="onboarding-product-links">
     <div className="onboarding-product-section-heading"><span className="onboarding-product-section-icon"><AutoAwesomeRounded /></span><span><strong>What types of products do you have?</strong><small>Select Website, Mobile App, or both. You can update this anytime in Project Settings.</small></span></div>
     <div className="onboarding-product-options">{platformOptions.map(({ id, title, detail, icon: Icon }) => <button key={id} type="button" role="checkbox" aria-checked={platforms.includes(id)} className={`onboarding-channel${platforms.includes(id) ? ' selected' : ''}`} onClick={() => onPlatformToggle?.(id)} disabled={disabled}><span className="onboarding-channel-icon"><Icon /></span><span><strong>{title}</strong><small>{detail}</small></span>{platforms.includes(id) && <CheckRounded className="onboarding-channel-check" />}</button>)}</div>
     {platforms.length > 0 && <>
       <div className="onboarding-product-section-heading"><span className="onboarding-product-section-icon"><LanguageRounded /></span><span><strong>Website</strong><small>Add the link to your existing website.</small></span></div>
-      <TextField fullWidth label="Website URL" placeholder="https://yourproduct.com" value={websiteUrl} disabled={disabled} error={Boolean(urlErrors.websiteUrl)} helperText={appLinkHelper(urlErrors.websiteUrl, 'You can enter example.com, www.example.com, or a full http(s) URL.')} onChange={(event) => onUrlChange?.('websiteUrl', event.target.value)} onBlur={() => onUrlBlur?.('websiteUrl')} />
+      <TextField fullWidth label="Website URL" placeholder="https://yourproduct.com" value={websiteUrl} disabled={disabled} error={Boolean(urlErrors.websiteUrl) || websiteCheckState === 'not_found'} helperText={urlErrors.websiteUrl || (websiteCheckState === 'checking' ? 'Checking that this domain exists…' : websiteCheckState === 'valid' ? '✓ Domain found.' : websiteCheckState === 'not_found' ? websiteCheckMessage : websiteCheckState === 'unknown' ? websiteCheckMessage : 'You can enter example.com, www.example.com, or a full http(s) URL.')} FormHelperTextProps={websiteCheckState === 'valid' && !urlErrors.websiteUrl ? { sx: { color: '#24805d !important', fontWeight: 600 } } : undefined} onChange={(event) => onUrlChange?.('websiteUrl', event.target.value)} onBlur={() => onUrlBlur?.('websiteUrl')} />
     </>}
     {hasMobile && onCheckLinks && <Button type="button" className="onboarding-scan-button" variant="outlined" disabled={disabled || !websiteUrl.trim() || linkCheckState === 'checking'} onClick={onCheckLinks} startIcon={linkCheckState === 'checking' ? <AutoAwesomeRounded className="onboarding-scan-icon" /> : <SearchRounded />}>
       {linkCheckState === 'checking' ? 'Checking links…' : 'Check links'}
     </Button>}
     {hasMobile && linkCheckState !== 'idle' && <div className={`onboarding-link-scan ${linkCheckState}`} role="status">
       {linkCheckState === 'found' ? <CheckCircleRounded /> : <WarningAmberRounded />}
-      <span><strong>{linkCheckState === 'checking' ? 'Looking for app-store links' : linkCheckState === 'found' ? 'App links found' : linkCheckState === 'error' ? 'Couldn’t check this website' : 'No app links found'}</strong><small>{linkCheckState === 'checking' ? 'Reading your website for Google Play and App Store links.' : linkCheckState === 'found' ? 'Review the detected links below and choose which ones to apply.' : linkCheckState === 'error' ? `${linkCheckError} You can add the links manually below.` : 'Your website doesn’t link to Google Play or the App Store. Add the links manually below.'}</small></span>
+      <span><strong>{linkCheckState === 'checking' ? 'Checking for app-store links…' : linkCheckState === 'found' ? 'App links found' : linkCheckState === 'error' ? 'Couldn’t scan for app links' : 'No app links found'}</strong><small>{linkCheckState === 'checking' ? 'Looking for Google Play and App Store links on your website.' : linkCheckState === 'found' ? 'Found links were added to empty fields. Your existing links were kept.' : linkCheckState === 'error' ? linkCheckError || 'This scan could not read the website. That does not mean the website is invalid; some sites block automated scans. You can still continue and add app links manually.' : 'The scan completed, but did not find Google Play or App Store links. You can add them manually below.'}</small></span>
     </div>}
-    {hasMobile && linkCheckState === 'found' && <Stack gap={1} className="onboarding-detected-links">
-      {detectedLinks.androidAppUrl && <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }} gap={1}><Box sx={{ minWidth: 0 }}><Typography variant="caption" color="text.secondary">Google Play</Typography><Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>{detectedLinks.androidAppUrl}</Typography></Box><Button type="button" size="small" variant="outlined" onClick={() => onApplyDetectedLink?.('androidAppUrl')}>{androidAppUrl.trim() ? 'Replace Android link' : 'Use Android link'}</Button></Stack>}
-      {detectedLinks.iosAppUrl && <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }} gap={1}><Box sx={{ minWidth: 0 }}><Typography variant="caption" color="text.secondary">Apple App Store</Typography><Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>{detectedLinks.iosAppUrl}</Typography></Box><Button type="button" size="small" variant="outlined" onClick={() => onApplyDetectedLink?.('iosAppUrl')}>{iosAppUrl.trim() ? 'Replace iOS link' : 'Use iOS link'}</Button></Stack>}
+    {hasMobile && linkCheckState === 'found' && hasUnappliedDetectedLinks && <Stack gap={1} className="onboarding-detected-links">
+      {detectedLinks.androidAppUrl && detectedLinks.androidAppUrl !== androidAppUrl.trim() && <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }} gap={1}><Box sx={{ minWidth: 0 }}><Typography variant="caption" color="text.secondary">Google Play</Typography><Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>{detectedLinks.androidAppUrl}</Typography></Box><Button type="button" size="small" variant="outlined" onClick={() => onApplyDetectedLink?.('androidAppUrl')}>{androidAppUrl.trim() ? 'Replace Android link' : 'Use Android link'}</Button></Stack>}
+      {detectedLinks.iosAppUrl && detectedLinks.iosAppUrl !== iosAppUrl.trim() && <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }} gap={1}><Box sx={{ minWidth: 0 }}><Typography variant="caption" color="text.secondary">Apple App Store</Typography><Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>{detectedLinks.iosAppUrl}</Typography></Box><Button type="button" size="small" variant="outlined" onClick={() => onApplyDetectedLink?.('iosAppUrl')}>{iosAppUrl.trim() ? 'Replace iOS link' : 'Use iOS link'}</Button></Stack>}
     </Stack>}
     {hasMobile && <>
       <div className="onboarding-product-section-heading app-links-heading"><span className="onboarding-product-section-icon"><PhoneIphoneRounded /></span><span><strong>Mobile App</strong><small>Add your existing app store links.</small></span></div>
       <div className="onboarding-app-link-grid"><TextField fullWidth label="Android App URL" placeholder="Google Play Store URL" value={androidAppUrl} disabled={disabled} error={Boolean(urlErrors.androidAppUrl)} helperText={appLinkHelper(urlErrors.androidAppUrl, 'Paste a store URL or a Markdown link.')} onChange={(event) => onUrlChange?.('androidAppUrl', event.target.value)} onBlur={() => onUrlBlur?.('androidAppUrl')} /><TextField fullWidth label="iOS App URL" placeholder="Apple App Store URL" value={iosAppUrl} disabled={disabled} error={Boolean(urlErrors.iosAppUrl)} helperText={appLinkHelper(urlErrors.iosAppUrl, 'Paste a store URL or a Markdown link.')} onChange={(event) => onUrlChange?.('iosAppUrl', event.target.value)} onBlur={() => onUrlBlur?.('iosAppUrl')} /></div>
     </>}
     {productsError && <Alert severity="warning" sx={{ mt: 1 }}>{productsError}</Alert>}
-    {platforms.length > 0 && <Typography variant="body2" color="text.secondary">We’ll use these links to personalize your setup and guide you through the relevant next steps.</Typography>}
   </div>;
 }
