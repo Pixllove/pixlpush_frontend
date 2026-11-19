@@ -144,7 +144,7 @@ function FormRow({ form, projectId, notify, onChanged, selected, onSelect }: { f
         <Stack direction="row" gap={0.75} alignItems="center"><StatusChip status={form.status} />{form.heldByPixlPush && <Chip size="small" color="error" variant="outlined" label="Paused by PixlPush" />}</Stack>
         <Typography component={Link} href={`/dashboard/forms/${form.id}`} className="pp-forms-row-name" noWrap>{form.name}</Typography>
         <Typography className="pp-forms-row-date" color="text.secondary">
-          {usageShort[form.behaviour.mode]} <span aria-hidden="true">·</span> Created {formatDate(form.createdAt)}
+          {form.behaviour.modes.map((m) => usageShort[m]).join(', ')} <span aria-hidden="true">·</span> Created {formatDate(form.createdAt)}
         </Typography>
         <Stack direction="row" gap={1} sx={{ mt: 1.5 }} alignItems="center" flexWrap="wrap">
           <Button size="small" variant="contained" disableElevation className="pp-forms-overview-button" component={Link} href={`/dashboard/forms/${form.id}`}>Overview</Button>

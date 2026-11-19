@@ -89,7 +89,7 @@ import {
   userStatsApi,
   usersApi,
 } from "@/lib/projects/api";
-import type { UserListStatus } from "@/lib/projects/api";
+import type { UserListFilter } from "@/lib/projects/api";
 import type { AudienceGroup, EndUser, LifecycleSegment } from "@/types/project";
 import type {
   EmailCampaign,
@@ -108,7 +108,6 @@ import UserImportDialog from "./UserImportDialog";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
 import { Toast } from "@/components/auth/AuthFeedback";
 import SearchField from "./SearchField";
-import UserStatusChip from "./UserStatusChip";
 import EmptyState, { listEmpty } from "./EmptyState";
 import HomeCommandCenter from "./HomeCommandCenter";
 import PremiumWorkspaceTabs from "./PremiumWorkspaceTabs";
@@ -706,7 +705,7 @@ export function UsersSection() {
   const [groupSearch, setGroupSearch] = useState("");
   // What the server was last asked for: set once the user pauses typing, not on every key.
   const [appliedUserSearch, setAppliedUserSearch] = useState("");
-  const [userStatus, setUserStatus] = useState<UserListStatus>("all");
+  const [userFilter, setUserFilter] = useState<UserListFilter>("all");
   const selectedProject = useSelector(
     (state: RootState) => state.ui.selectedProject,
   );
@@ -719,13 +718,13 @@ export function UsersSection() {
       "users",
       active?.id,
       appliedUserSearch,
-      userStatus,
+      userFilter,
       userCursors[userCursors.length - 1],
     ],
     queryFn: () =>
       usersApi.list(active!.id, {
         search: appliedUserSearch,
-        status: userStatus,
+        filter: userFilter,
         limit: 100,
         cursor: userCursors[userCursors.length - 1],
       }),
@@ -803,7 +802,7 @@ export function UsersSection() {
       router.push(`/dashboard/users/segments/${segment.id}?tab=segments`);
     },
   });
-  useEffect(() => setUserCursors([]), [appliedUserSearch, userStatus, active?.id]);
+  useEffect(() => setUserCursors([]), [appliedUserSearch, userFilter, active?.id]);
   useEffect(() => {
     if (
       requestedTab === "users" ||
@@ -831,16 +830,9 @@ export function UsersSection() {
     refetchInterval: tab === "users" ? 60_000 : false,
   });
   const stats = statsQuery.data;
-  // Reachable also counts anonymous visitors who allowed push (a browser after logout or deletion).
-  const reachableAnon = stats?.reachableAnonymous ?? 0;
-  const reachablePeople = (stats?.reachable ?? 0) - reachableAnon;
-  const reachRate = !stats
-    ? ""
-    : reachableAnon
-      ? `${reachablePeople.toLocaleString()} ${reachablePeople === 1 ? "user" : "users"} + ${reachableAnon.toLocaleString()} anonymous ${reachableAnon === 1 ? "visitor" : "visitors"} with push`
-      : stats.total
-        ? `${Math.min(100, (stats.reachable / stats.total) * 100).toFixed(1)}% of users`
-        : "No users yet";
+  const reachRate = stats?.total
+    ? `${Math.min(100, (stats.reachable / stats.total) * 100).toFixed(1)}% of users`
+    : "No users yet";
   const eventsTrend = !stats
     ? ""
     : stats.eventsYesterday
@@ -851,8 +843,7 @@ export function UsersSection() {
       id: "users" as const,
       label: "All users",
       icon: PeopleAltRounded,
-      // Same rows as the "All users" list: people, deleted accounts included.
-      count: stats ? (stats.total + (stats.deleted ?? 0)).toLocaleString() : "—",
+      count: stats ? stats.total.toLocaleString() : "—",
     },
     {
       id: "segments" as const,
@@ -911,7 +902,6 @@ export function UsersSection() {
           className="user-table-link"
           role="link"
           tabIndex={0}
-          onClick={() => router.push(`/dashboard/users/${row.id}?tab=users`)}
           onKeyDown={(event) => {
             if (event.key === "Enter" || event.key === " ")
               router.push(`/dashboard/users/${row.id}?tab=users`);
@@ -921,15 +911,10 @@ export function UsersSection() {
             {row.externalUserId || row.id}
           </Typography>
           <Typography color="text.secondary" fontSize="var(--fs-12)">
-            {row.name || (row.status === "anonymous" ? "Anonymous visitor" : "Identified user")}
+            {row.name || "Identified user"}
           </Typography>
         </Box>
       ),
-    },
-    {
-      key: "status",
-      label: "Status",
-      render: (row) => <UserStatusChip status={row.status} />,
     },
     {
       key: "lifecycleSegment",
@@ -1187,10 +1172,7 @@ export function UsersSection() {
                 icon={GroupsRounded}
                 label="Identified users"
                 value={stats ? stats.total.toLocaleString() : "—"}
-                trend={[
-                  stats?.deleted ? `${stats.deleted.toLocaleString()} deleted` : null,
-                  stats?.anonymous ? `${stats.anonymous.toLocaleString()} anonymous ${stats.anonymous === 1 ? "visitor" : "visitors"} not counted` : null,
-                ].filter(Boolean).join(" · ") || "People logged in or imported"}
+                trend="All users in this project"
               />
             </Grid>
             <Grid item xs={12} sm={4}>
@@ -1256,8 +1238,8 @@ export function UsersSection() {
               />
               <Select
                 size="small"
-                value={userStatus}
-                onChange={(event) => setUserStatus(event.target.value as UserListStatus)}
+                value={userFilter}
+                onChange={(event) => setUserFilter(event.target.value as UserListFilter)}
                 className="filter-select"
                 startAdornment={
                   <InputAdornment position="start">
@@ -1266,10 +1248,10 @@ export function UsersSection() {
                 }
               >
                 <MenuItem value="all">All users</MenuItem>
-                <MenuItem value="active">Active</MenuItem>
-                <MenuItem value="logged_out">Logged out</MenuItem>
-                <MenuItem value="deleted">Deleted accounts</MenuItem>
-                <MenuItem value="anonymous">Anonymous visitors</MenuItem>
+                <MenuItem value="email-subscribed">Email subscribed</MenuItem>
+                <MenuItem value="email-unsubscribed">Email unsubscribed</MenuItem>
+                <MenuItem value="push-enabled">Push enabled</MenuItem>
+                <MenuItem value="unreachable">Unreachable users</MenuItem>
               </Select>
             </Stack>
             {usersQuery.isError ? (
@@ -1285,6 +1267,7 @@ export function UsersSection() {
               <ReusableDataTable
                 columns={userColumns}
                 rows={users}
+                onRowClick={(row) => router.push(`/dashboard/users/${row.id}?tab=users`)}
                 totalCount={users.length}
                 noun="users"
                 empty={listEmpty({

@@ -66,7 +66,7 @@ export function StylePanel({ draft, update, projectId }: { draft: FormDraft; upd
   return (
     <Box>
       <InspectorSection title="Type and position">
-        {draft.behaviour.mode === 'inline' ? (
+        {draft.behaviour.modes.every((m) => m === 'inline') ? (
           <Typography className="pp-form-hint">This form sits inside your page (chosen in “How to use”), so pop-up type and overlay don’t apply.</Typography>
         ) : (
           <>
@@ -384,7 +384,7 @@ export function FieldsSettings({ block, draft, update, active = false }: { block
 }
 
 /** Design for the signup fields: layout, labels and the input and button colours. */
-export function FieldsDesign({ draft, update, active }: { draft: FormDraft; update: Update; active?: 'inputs' | 'submit' | null }) {
+export function FieldsDesign({ draft, update, active, onMode }: { draft: FormDraft; update: Update; active?: 'inputs' | 'submit' | null; onMode?: (mode: FormDraft['success']['mode']) => void }) {
   const d = draft.design;
   const set = <K extends keyof FormDesign>(key: K) => (value: FormDesign[K]) => update((current) => ({ ...current, design: { ...current.design, [key]: value } }), `design.${key}`);
   const hint = (text: string) => <Typography className="pp-form-hint">{text}</Typography>;
@@ -402,6 +402,7 @@ export function FieldsDesign({ draft, update, active }: { draft: FormDraft; upda
       </InspectorSection>
       <InspectorSection title="Sign-up button" active={active === 'submit'}>
         {hint('The button people click to join. Tip: click it on the form to change its text or style it right there.')}
+        <AfterSubscribe draft={draft} update={update} onMode={onMode} />
         <Segmented label="Look" value={d.buttonStyle} onChange={set('buttonStyle')} options={[{ value: 'filled', label: 'Solid colour' }, { value: 'outline', label: 'Outline only' }]} />
         {d.display !== 'horizontal'
           ? <Segmented label="Width and position" value={d.buttonAlign} onChange={set('buttonAlign')} options={[{ value: 'full', label: 'Full width' }, { value: 'left', label: 'Left' }, { value: 'center', label: 'Centre' }, { value: 'right', label: 'Right' }]} />
@@ -427,9 +428,6 @@ export function FormSettings({ draft, update }: { draft: FormDraft; update: Upda
         <TextField label="Form name" value={draft.name} error={!draft.name.trim()} helperText={draft.name.trim() ? 'Only your team sees this name.' : 'Enter a name for the form.'}
           onChange={(event) => update((current) => ({ ...current, name: event.target.value }), 'name')} />
       </InspectorSection>
-      <InspectorSection title="After someone signs up">
-        <SuccessInspector draft={draft} update={update} />
-      </InspectorSection>
       <InspectorSection title="Consent and privacy">
         <SettingSwitch label="Privacy policy link" description="Shows a line with a link to your privacy policy." checked={o.privacy.on} onChange={(on) => set('privacy', { ...o.privacy, on })}>
           <TextField label="Text before the link" value={o.privacy.text} onChange={(event) => set('privacy', { ...o.privacy, text: event.target.value }, 'privacy.text')} />
@@ -454,24 +452,64 @@ export function FormSettings({ draft, update }: { draft: FormDraft; update: Upda
 
 /* ---------- success ---------- */
 
-export function SuccessInspector({ draft, update }: { draft: FormDraft; update: Update }) {
+/** What clicking Subscribe does: show the success message, or send people to a page. Shown on the button and on Success. */
+function AfterSubscribe({ draft, update, onMode }: { draft: FormDraft; update: Update; onMode?: (mode: FormDraft['success']['mode']) => void }) {
   const s = draft.success;
-  const errors = successErrors(s);
   const set = (patch: Partial<FormDraft['success']>, key?: string) => update((current) => ({ ...current, success: { ...current.success, ...patch } }), key && `success.${key}`);
+  // Only complain once they have typed something: an empty "https://" is just the starting point.
+  const error = successErrors(s).redirectUrl;
+  return (
+    <>
+      <Segmented label="After someone subscribes" value={s.mode} onChange={(mode) => { set({ mode, chosen: true }); onMode?.(mode); }} options={[{ value: 'message', label: 'Show message' }, { value: 'redirect', label: 'Redirect' }]} />
+      {s.mode === 'redirect'
+        ? <TextField label="Page to send people to" placeholder="https://example.com/thank-you" value={s.redirectUrl === 'https://' ? '' : s.redirectUrl} error={Boolean(error)} helperText={error ?? 'People go here after joining. Leave it blank to show your success page instead.'} onChange={(event) => set({ redirectUrl: event.target.value.trim() }, 'redirectUrl')} />
+        : hint('People will see your success page after joining. Edit its content under Design or click the preview.')}
+    </>
+  );
+}
+
+const hint = (text: string) => <Typography className="pp-form-hint">{text}</Typography>;
+
+export function SuccessInspector({ draft, update, onMode }: { draft: FormDraft; update: Update; onMode?: (mode: FormDraft['success']['mode']) => void }) {
   return (
     <Stack gap={2}>
-      <Segmented label="What happens next" value={s.mode} onChange={(mode) => set({ mode })} options={[{ value: 'message', label: 'Show a message' }, { value: 'redirect', label: 'Go to a page' }]} />
-      {s.mode === 'redirect' ? (
-        <TextField label="Page address" placeholder="https://example.com/thanks" value={s.redirectUrl} error={Boolean(errors.redirectUrl)} helperText={errors.redirectUrl} onChange={(event) => set({ redirectUrl: event.target.value }, 'redirectUrl')} />
-      ) : (
-        <>
-          <TextField label="Heading" value={s.heading} onChange={(event) => set({ heading: event.target.value }, 'heading')} />
-          <TextField label="Message" multiline rows={3} value={s.text} onChange={(event) => set({ text: event.target.value }, 'text')} />
-          <TextField label="Discount code (optional)" value={s.coupon} onChange={(event) => set({ coupon: event.target.value.toUpperCase() }, 'coupon')} helperText="Shown in a box people can copy." />
-          <TextField label="Button text (optional)" value={s.buttonLabel} onChange={(event) => set({ buttonLabel: event.target.value }, 'buttonLabel')} />
-          {s.buttonLabel.trim() && <TextField label="Button link" placeholder="https://" value={s.buttonUrl} error={Boolean(errors.buttonUrl)} helperText={errors.buttonUrl} onChange={(event) => set({ buttonUrl: event.target.value }, 'buttonUrl')} />}
-        </>
-      )}
+      <AfterSubscribe draft={draft} update={update} onMode={onMode} />
     </Stack>
+  );
+}
+
+/** Controls only for the success page. The optional image reuses the image already chosen for the form. */
+export function SuccessDesignInspector({ draft, update }: { draft: FormDraft; update: Update }) {
+  const s = draft.success;
+  const set = <K extends keyof FormDraft['success']>(key: K, value: FormDraft['success'][K]) => update((current) => ({ ...current, success: { ...current.success, [key]: value } }), `success.${String(key)}`);
+  const buttonError = successErrors(s).buttonUrl;
+  if (s.mode === 'redirect') {
+    return <Typography className="pp-form-hint">Your success page is hidden while “Redirect” is selected. Choose “Show message” under Settings to design it.</Typography>;
+  }
+  return (
+    <Box>
+      <InspectorSection title="Message content">
+        <Typography className="pp-form-hint">Edit the text here or click it in the preview.</Typography>
+        <TextField label="Heading" value={s.heading} onChange={(event) => set('heading', event.target.value)} />
+        <TextField label="Message" multiline rows={3} value={s.text} onChange={(event) => set('text', event.target.value)} />
+        <TextField label="Discount code (optional)" value={s.coupon} onChange={(event) => set('coupon', event.target.value.toUpperCase())} helperText="Shown in a box people can copy." />
+        <TextField label="Button text (optional)" value={s.buttonLabel} onChange={(event) => set('buttonLabel', event.target.value)} />
+        {s.buttonLabel.trim() && <TextField label="Button link" placeholder="https://" value={s.buttonUrl} error={Boolean(buttonError)} helperText={buttonError ?? 'Where this button takes people.'} onChange={(event) => set('buttonUrl', event.target.value)} />}
+      </InspectorSection>
+      <InspectorSection title="Layout and image" defaultExpanded={false}>
+        <NumberSlider label="Success page width" unit="px" min={280} max={960} step={10} value={s.width ?? draft.design.width} onChange={(width) => set('width', width)} />
+        <SettingSwitch label="Show close button" description="Let people close the popup from this page." checked={s.showClose ?? draft.design.showClose} onChange={(showClose) => set('showClose', showClose)} />
+        <SettingSwitch label="Show image on success page" description={draft.design.sidebarImage ? 'Uses the image chosen in Form → Design.' : 'Add an image in Form → Design first, then choose whether it appears here.'} checked={s.showImage} onChange={(showImage) => set('showImage', showImage)} />
+      </InspectorSection>
+      <InspectorSection title="Colours" defaultExpanded={false}>
+        <ColorField label="Background colour" value={s.background ?? draft.design.background} onChange={(background) => set('background', background)} />
+        <ColorField label="Heading colour" value={s.headingColor ?? draft.design.headingColor} onChange={(headingColor) => set('headingColor', headingColor)} />
+        <ColorField label="Message colour" value={s.textColor ?? draft.design.textColor} onChange={(textColor) => set('textColor', textColor)} />
+        {s.buttonLabel.trim() && <>
+          <ColorField label="Button colour" value={s.buttonColor ?? draft.design.buttonBg} onChange={(buttonColor) => set('buttonColor', buttonColor)} />
+          <ColorField label="Button text colour" value={s.buttonText ?? draft.design.buttonText} onChange={(buttonText) => set('buttonText', buttonText)} />
+        </>}
+      </InspectorSection>
+    </Box>
   );
 }

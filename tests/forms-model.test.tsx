@@ -71,16 +71,18 @@ describe('validation', () => {
     expect(behaviourErrors({ ...b, hideDesktop: true, hideTablet: true, hideMobile: true })).toHaveProperty('hideMobile');
     // "Every visit" needs no wait; click and inline forms have no triggers to check.
     expect(behaviourErrors({ ...b, repeat: 'always', frequency: Number.NaN })).toEqual({});
-    expect(behaviourErrors({ ...b, mode: 'click', delayOn: false })).toEqual({});
-    expect(behaviourErrors({ ...b, mode: 'inline', delayOn: false, pages: 'show', urls: '' })).toEqual({});
+    expect(behaviourErrors({ ...b, modes: ['click'], delayOn: false })).toEqual({});
+    expect(behaviourErrors({ ...b, modes: ['inline'], delayOn: false, pages: 'show', urls: '' })).toEqual({});
   });
 
   it('checks success links and blocks publishing until problems are fixed', () => {
-    const d = draft();
+    // New forms redirect by default; an empty link is allowed (the message shows until one is added).
+    expect(publishProblems(draft())).toEqual([]);
+    const d = { ...draft(), success: { ...draft().success, mode: 'message' as const } };
     expect(successErrors({ ...d.success, mode: 'redirect', redirectUrl: 'example' })).toHaveProperty('redirectUrl');
     expect(successErrors({ ...d.success, mode: 'redirect', redirectUrl: 'https://example.com/thanks' })).toEqual({});
     expect(publishProblems(d)).toEqual([]);
-    expect(publishProblems({ ...d, groups: [] })).toContain('Choose at least one subscriber group.');
+    expect(publishProblems({ ...d, groups: [] })).toContain('Choose at least one audience group.');
     expect(publishProblems(insertBlock(d, makeBlock('countdown'), null))[0]).toMatch(/Countdown/);
     expect(publishProblems({ ...d, options: { ...d.options, privacy: { ...d.options.privacy, on: true, url: 'https://' } } })).toContain('Add a complete privacy policy web address.');
   });
@@ -130,12 +132,18 @@ describe('export', () => {
     const auto = installSnippets(d)!;
     expect(auto).toHaveLength(1);
     expect(auto[0].code).toBe('<script src="https://api.example.com/forms/v1/embed.js" data-pixlpush-form="pf_abcdefghijkl" async></script>');
-    const click = installSnippets({ ...d, behaviour: { ...d.behaviour, mode: 'click' } })!.map((s) => s.code);
+    const click = installSnippets({ ...d, behaviour: { ...d.behaviour, modes: ['click'] } })!.map((s) => s.code);
     expect(click[0]).not.toContain('data-pixlpush-form');
     expect(click[1]).toBe('<button type="button" data-pixlpush-open="pf_abcdefghijkl">Subscribe</button>');
-    const inline = installSnippets({ ...d, behaviour: { ...d.behaviour, mode: 'inline' } })!.map((s) => s.code);
-    expect(inline[0]).toBe('<div data-pixlpush-form="pf_abcdefghijkl"></div>');
-    expect(inline[1]).toContain('embed.js');
+    const inline = installSnippets({ ...d, behaviour: { ...d.behaviour, modes: ['inline'] } })!.map((s) => s.code);
+    expect(inline[0]).toContain('embed.js');
+    expect(inline[1]).toBe('<div data-pixlpush-form="pf_abcdefghijkl"></div>');
+    // All three at once: one script (with the key, for the pop-up), the button and the box.
+    const all = installSnippets({ ...d, behaviour: { ...d.behaviour, modes: ['auto', 'click', 'inline'] } })!.map((s) => s.code);
+    expect(all).toHaveLength(3);
+    expect(all[0]).toContain('data-pixlpush-form="pf_abcdefghijkl"');
+    expect(all[1]).toContain('data-pixlpush-open');
+    expect(all[2]).toContain('<div');
   });
 });
 

@@ -771,15 +771,18 @@ export const auditApi = {
 
 /** all = every person, deleted accounts included; anonymous = visitors nobody logged in on. */
 export type UserListStatus = "all" | "active" | "logged_out" | "deleted" | "anonymous";
+/** The Users page filter. */
+export type UserListFilter = "all" | "email-subscribed" | "email-unsubscribed" | "push-enabled" | "unreachable";
 
 export const usersApi = {
   list: (
     projectId: string,
-    params?: { search?: string; limit?: number; cursor?: string | null; status?: UserListStatus },
+    params?: { search?: string; limit?: number; cursor?: string | null; status?: UserListStatus; filter?: UserListFilter },
   ) => {
     const query = new URLSearchParams();
     if (params?.search) query.set("search", params.search);
     if (params?.status && params.status !== "all") query.set("status", params.status);
+    if (params?.filter && params.filter !== "all") query.set("filter", params.filter);
     query.set("limit", String(params?.limit ?? 100));
     if (params?.cursor) query.set("cursor", params.cursor);
     return authRequest<UsersPage>(

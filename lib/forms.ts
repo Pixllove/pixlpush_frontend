@@ -147,7 +147,7 @@ function toApiSections(draft: FormDraft) {
     shadow: draft.design.shadow,
   };
   const behavior = {
-    mode: draft.behaviour.mode,
+    mode: draft.behaviour.modes[0], modes: draft.behaviour.modes,
     trigger: {
       delaySeconds: draft.behaviour.delayOn ? Math.min(600, Math.max(0, draft.behaviour.delay)) : null,
       scrollPercent: draft.behaviour.scrollOn && [25, 50, 75].includes(draft.behaviour.scroll) ? draft.behaviour.scroll : null,
@@ -169,6 +169,16 @@ function toApiSections(draft: FormDraft) {
         blocks: [{ id: 'success-heading', type: 'heading', text: clip(draft.success.heading, 200) }, { id: 'success-text', type: 'text', text: clip(draft.success.text, 2000) }].filter((block) => block.text),
         coupon: clip(draft.success.coupon, 40),
         button: { label: clip(draft.success.buttonLabel, 60), url: safeHttpUrl(draft.success.buttonUrl) },
+        design: {
+          width: draft.success.width,
+          showClose: draft.success.showClose,
+          showImage: draft.success.showImage,
+          background: draft.success.background,
+          headingColor: draft.success.headingColor,
+          textColor: draft.success.textColor,
+          buttonColor: draft.success.buttonColor,
+          buttonText: draft.success.buttonText,
+        },
       },
       editorState: draft,
     },
@@ -178,17 +188,25 @@ function toApiSections(draft: FormDraft) {
   };
 }
 
-/** The server's usage mode; forms saved before modes existed open on click if that was their only trigger. */
-function modeOf(behavior: Record<string, unknown> | undefined): FormDraft['behaviour']['mode'] {
-  if (behavior?.mode === 'click' || behavior?.mode === 'inline' || behavior?.mode === 'auto') return behavior.mode;
+type Modes = FormDraft['behaviour']['modes'];
+const isMode = (value: unknown): value is Modes[number] => value === 'click' || value === 'inline' || value === 'auto';
+
+/** The server's usage modes. Older forms have one `mode`; older still open on click if that was their only trigger. */
+function modesOf(behavior: Record<string, unknown> | undefined): Modes {
+  const list = Array.isArray(behavior?.modes) ? behavior.modes.filter(isMode) : [];
+  if (list.length) return [...new Set(list)];
+  if (isMode(behavior?.mode)) return [behavior.mode];
   const trigger = (behavior?.trigger ?? {}) as Record<string, unknown>;
-  return trigger.clickOn && trigger.delaySeconds == null && trigger.scrollPercent == null && !trigger.exitIntent ? 'click' : 'auto';
+  return [trigger.clickOn && trigger.delaySeconds == null && trigger.scrollPercent == null && !trigger.exitIntent ? 'click' : 'auto'];
 }
 
 /** Server form → editor draft, always with its signup fields block. */
 function fromApi(form: ApiForm): FormDraft {
   const submitLabel = typeof form.content?.submitLabel === 'string' ? form.content.submitLabel : undefined;
-  return { ...withFieldsBlock(readForm(form), submitLabel), heldByPixlPush: Boolean(form.adminLockedAt) };
+  const draft = withFieldsBlock(readForm(form), submitLabel);
+  // Forms open on Redirect unless the owner chose "Show message" themselves.
+  const success = draft.success.chosen ? draft.success : { ...draft.success, mode: 'redirect' as const };
+  return { ...draft, success, heldByPixlPush: Boolean(form.adminLockedAt) };
 }
 
 function readForm(form: ApiForm): FormDraft {
@@ -196,7 +214,7 @@ function readForm(form: ApiForm): FormDraft {
   const parsed = formDraftSchema.safeParse(snapshot);
   if (parsed.success) return formDraftSchema.parse({
     ...parsed.data,
-    behaviour: form.behavior ? { ...parsed.data.behaviour, mode: modeOf(form.behavior) } : parsed.data.behaviour,
+    behaviour: form.behavior ? { ...parsed.data.behaviour, modes: modesOf(form.behavior) } : parsed.data.behaviour,
     scriptUrl: form.embed?.scriptUrl,
     options: { ...parsed.data.options, recaptcha: false, doubleOptIn: false, permissions: { ...parsed.data.options.permissions, on: false }, interests: { ...parsed.data.options.interests, on: false } },
     id: form.id, name: form.name, kind: form.type, status: form.status,
@@ -234,7 +252,8 @@ function readForm(form: ApiForm): FormDraft {
     const key = String(field.key ?? 'field_custom');
     return [{ id: key.replace(/^field_/, ''), type: type as 'text' | 'textarea' | 'phone' | 'number' | 'select' | 'checkbox' | 'date', label: String(field.label ?? 'Your answer'), placeholder: String(field.placeholder ?? ''), required: Boolean(field.required), half: false, options: Array.isArray(field.options) ? field.options.map(String) : [], value: '' }];
   }) : [];
-  const success = content.success && typeof content.success === 'object' ? content.success as { blocks?: Array<Record<string, unknown>>; coupon?: string; button?: { label?: string; url?: string | null } } : {};
+  const success = content.success && typeof content.success === 'object' ? content.success as { blocks?: Array<Record<string, unknown>>; coupon?: string; button?: { label?: string; url?: string | null }; design?: Record<string, unknown> } : {};
+  const successDesign = success.design ?? {};
   const successBlocks = success.blocks ?? [];
   const successHeading = successBlocks.find((block) => block.type === 'heading')?.text;
   const successText = successBlocks.find((block) => block.type === 'text')?.text;
@@ -255,13 +274,24 @@ function readForm(form: ApiForm): FormDraft {
       ...(name.enabled ? [{ ...seed.fields[0], id: makeId(), type: 'text', label: String(name.label ?? 'Name'), placeholder: String(name.placeholder ?? 'Your name'), required: Boolean(name.required) }] : []),
       ...custom,
     ],
-    success: { ...seed.success, heading: String(successHeading ?? seed.success.heading), text: String(successText ?? seed.success.text), coupon: String(success.coupon ?? ''), buttonLabel: String(success.button?.label ?? ''), buttonUrl: String(success.button?.url ?? 'https://'), mode: settings.successRedirectUrl ? 'redirect' : 'message', redirectUrl: String(settings.successRedirectUrl ?? '') },
+    success: {
+      ...seed.success,
+      heading: String(successHeading ?? seed.success.heading), text: String(successText ?? seed.success.text), coupon: String(success.coupon ?? ''), buttonLabel: String(success.button?.label ?? ''), buttonUrl: String(success.button?.url ?? 'https://'), mode: settings.successRedirectUrl ? 'redirect' : 'message', redirectUrl: String(settings.successRedirectUrl ?? ''),
+      showImage: typeof successDesign.showImage === 'boolean' ? successDesign.showImage : seed.success.showImage,
+      width: typeof successDesign.width === 'number' ? successDesign.width : undefined,
+      showClose: typeof successDesign.showClose === 'boolean' ? successDesign.showClose : undefined,
+      background: typeof successDesign.background === 'string' ? successDesign.background : undefined,
+      headingColor: typeof successDesign.headingColor === 'string' ? successDesign.headingColor : undefined,
+      textColor: typeof successDesign.textColor === 'string' ? successDesign.textColor : undefined,
+      buttonColor: typeof successDesign.buttonColor === 'string' ? successDesign.buttonColor : undefined,
+      buttonText: typeof successDesign.buttonText === 'string' ? successDesign.buttonText : undefined,
+    },
     options: { ...seed.options, privacy: { ...seed.options.privacy, on: Boolean(privacy.enabled), text: String(privacy.text ?? seed.options.privacy.text), url: String(privacy.url ?? seed.options.privacy.url) }, consent: { ...seed.options.consent, on: Boolean(consent.enabled), text: String(consent.text ?? seed.options.consent.text) } },
     behaviour: {
       ...seed.behaviour,
       delayOn: trigger.delaySeconds != null, delay: Number(trigger.delaySeconds ?? seed.behaviour.delay),
       scrollOn: trigger.scrollPercent != null, scroll: Number(trigger.scrollPercent ?? seed.behaviour.scroll), exitOn: Boolean(trigger.exitIntent),
-      mode: modeOf(behavior),
+      modes: modesOf(behavior),
       repeat: behavior.frequency === null ? 'always' : 'after',
       frequency: Number(frequency.amount ?? seed.behaviour.frequency), frequencyUnit: frequency.unit ?? seed.behaviour.frequencyUnit,
       schedule: schedule.startsAt || schedule.endsAt ? 'range' : 'now', startAt: typeof schedule.startsAt === 'string' ? utcToWall(schedule.startsAt, zoneOf(schedule.timezone)) : '', endAt: typeof schedule.endsAt === 'string' ? utcToWall(schedule.endsAt, zoneOf(schedule.timezone)) : '', timezone: zoneOf(schedule.timezone),

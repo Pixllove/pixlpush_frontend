@@ -13659,6 +13659,7 @@ footer > div > div > div:first-child > p {
   display: flex;
   flex-direction: column;
   background: var(--pp-canvas) !important;
+  border-radius: 0 !important;
 }
 .pp-form-topbar {
   display: flex;
@@ -14141,6 +14142,9 @@ footer > div > div > div:first-child > p {
 }
 .pp-form-segmented .MuiToggleButton-root {
   gap: 6px;
+  white-space: normal;
+  line-height: 1.25;
+  text-align: center;
   min-width: 0;
   padding-left: 4px;
   padding-right: 4px;

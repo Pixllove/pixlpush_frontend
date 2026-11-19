@@ -134,20 +134,32 @@ export const optionsSchema = z.object({
 
 export const successSchema = z.object({
   mode: z.enum(['message', 'redirect']),
+  /** Show the form's existing side image alongside the success message. */
+  showImage: z.boolean().default(true),
+  /** Success page style can differ from the signup form. Missing values inherit the form style. */
+  width: z.number().optional(),
+  showClose: z.boolean().optional(),
+  background: hex.optional(),
+  headingColor: hex.optional(),
+  textColor: hex.optional(),
+  buttonColor: hex.optional(),
+  buttonText: hex.optional(),
   heading: z.string(),
   text: z.string(),
   buttonLabel: z.string(),
   buttonUrl: z.string(),
   coupon: z.string(),
   redirectUrl: z.string(),
+  /** The owner picked message/redirect themselves; until then forms open on Redirect. */
+  chosen: z.boolean().default(false),
 });
 
 export const usageModes = ['click', 'auto', 'inline'] as const;
 export type UsageMode = (typeof usageModes)[number];
 
 export const behaviourSchema = z.object({
-  /** How the website uses the form: opens on click, pops up by itself, or sits in a spot on the page. */
-  mode: z.enum(usageModes).default('auto'),
+  /** Ways the website uses the form, any mix: opens on click, pops up by itself, sits in a spot on the page. */
+  modes: z.array(z.enum(usageModes)).min(1).default(['auto']),
   delayOn: z.boolean(),
   delay: z.number(),
   scrollOn: z.boolean(),
@@ -276,9 +288,9 @@ export function defaultDraft(input: { name: string; kind: FormKind; groups?: str
       recaptcha: false,
       doubleOptIn: false,
     },
-    success: { mode: 'message', heading: 'Thank you!', text: 'You have successfully joined our subscriber list.', buttonLabel: '', buttonUrl: 'https://', coupon: '', redirectUrl: 'https://' },
+    success: { mode: 'redirect', showImage: true, heading: 'Thank you!', text: 'You have successfully joined our subscriber list.', buttonLabel: '', buttonUrl: 'https://', coupon: '', redirectUrl: 'https://', chosen: false },
     behaviour: {
-      mode: 'auto', delayOn: true, delay: 5, scrollOn: false, scroll: 50, exitOn: false,
+      modes: ['auto'], delayOn: true, delay: 5, scrollOn: false, scroll: 50, exitOn: false,
       repeat: 'after', frequency: 1, frequencyUnit: 'months', schedule: 'now', startAt: '', endAt: '', timezone: localZone(),
       pages: 'all', urls: '', strict: false, hideDesktop: false, hideTablet: false, hideMobile: false,
     },
@@ -513,7 +525,7 @@ export const urlLines = (value: string) => value.split('\n').map((line) => line.
 /** Only an automatic pop-up has triggers, pages, devices and repeats; click and inline forms just show. */
 export function behaviourErrors(b: FormBehaviour): Partial<Record<keyof FormBehaviour | 'trigger', string>> {
   const errors: Partial<Record<keyof FormBehaviour | 'trigger', string>> = {};
-  if (b.mode !== 'auto') return errors;
+  if (!b.modes.includes('auto')) return errors;
   if (!b.delayOn && !b.scrollOn && !b.exitOn) errors.trigger = 'Choose at least one way to show the form.';
   if (b.delayOn && !(Number.isInteger(b.delay) && b.delay >= 0 && b.delay <= 600)) errors.delay = 'Enter 0 to 600 seconds.';
   if (b.repeat === 'after' && !(Number.isInteger(b.frequency) && b.frequency >= 1 && b.frequency <= 365)) errors.frequency = 'Enter a whole number from 1 to 365.';
@@ -528,9 +540,12 @@ export function behaviourErrors(b: FormBehaviour): Partial<Record<keyof FormBeha
   return errors;
 }
 
+export const redirectTyped = (url: string) => url.trim() !== '' && url.trim() !== 'https://';
+
 export function successErrors(s: FormSuccess): Partial<Record<keyof FormSuccess, string>> {
   const errors: Partial<Record<keyof FormSuccess, string>> = {};
-  if (s.mode === 'redirect' && !isHttpUrl(s.redirectUrl)) errors.redirectUrl = 'Enter a full address, for example https://example.com/thanks.';
+  // An empty link is fine: the live form shows the success message until one is added.
+  if (s.mode === 'redirect' && redirectTyped(s.redirectUrl) && !isHttpUrl(s.redirectUrl)) errors.redirectUrl = 'Enter a full address, for example https://example.com/thanks.';
   if (s.mode === 'message' && s.buttonLabel.trim() && !isHttpUrl(s.buttonUrl)) errors.buttonUrl = 'Enter a full https:// address for the button.';
   return errors;
 }
@@ -572,18 +587,13 @@ export type Snippet = { title: string; help: string; code: string };
 export function installSnippets(draft: FormDraft): Snippet[] | null {
   if (!draft.publicKey || !draft.scriptUrl) return null;
   const key = draft.publicKey;
-  const mode = draft.behaviour.mode;
-  const script = `<script src="${draft.scriptUrl}"${mode === 'auto' ? ` data-pixlpush-form="${key}"` : ''} async></script>`;
-  const scriptStep = { title: 'Add the script', help: 'Paste it just before the closing </body> tag on every page where the form is used. Most website builders call this "custom code" or "footer code".', code: script };
-  if (mode === 'click') return [
-    scriptStep,
-    { title: 'Add the button', help: 'Paste it where the button should appear. Or add data-pixlpush-open="' + key + '" to a button or link you already have.', code: `<button type="button" data-pixlpush-open="${key}">Subscribe</button>` },
+  const modes = draft.behaviour.modes;
+  const script = `<script src="${draft.scriptUrl}"${modes.includes('auto') ? ` data-pixlpush-form="${key}"` : ''} async></script>`;
+  return [
+    { title: 'Add the script', help: 'Paste it once, just before the closing </body> tag on every page where the form is used. Most website builders call this "custom code" or "footer code".', code: script },
+    ...(modes.includes('click') ? [{ title: 'Add the button', help: 'Paste it where the button should appear. Or add data-pixlpush-open="' + key + '" to a button or link you already have.', code: `<button type="button" data-pixlpush-open="${key}">Subscribe</button>` }] : []),
+    ...(modes.includes('inline') ? [{ title: 'Add the form box', help: 'Paste it where the form should sit on the page, for example in your footer or sidebar.', code: `<div data-pixlpush-form="${key}"></div>` }] : []),
   ];
-  if (mode === 'inline') return [
-    { title: 'Add the form box', help: 'Paste it where the form should appear on the page, for example in your footer or sidebar.', code: `<div data-pixlpush-form="${key}"></div>` },
-    scriptStep,
-  ];
-  return [scriptStep];
 }
 
 /* ---------- colour ---------- */

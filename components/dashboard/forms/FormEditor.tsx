@@ -11,7 +11,7 @@ import { useTheme } from '@mui/material/styles';
 import { FormStage, type InlineEdit } from './FormRenderer';
 import { SaveStatus } from './shared';
 import BlockToolbar from './BlockToolbar';
-import { BlockSections, FieldsDesign, FieldsSettings, FormSettings, StylePanel, SuccessInspector, type Update } from './inspectors';
+import { BlockSections, FieldsDesign, FieldsSettings, FormSettings, StylePanel, SuccessDesignInspector, SuccessInspector, type Update } from './inspectors';
 import { blockLabel, blockTypes, duplicateBlock, insertBlock, makeBlock, makeField, moveBlock, removeBlock, updateBlock, updateField, withFieldsBlock, type Block, type BlockType, type EditorAction, type EditorState, type FieldType, type FormDraft } from './model';
 
 export type SaveState = 'saved' | 'saving' | 'error';
@@ -55,6 +55,19 @@ export default function FormEditor({ state, dispatch, saveState, onBack, onDone,
   // A part inside the selected block that has its own tools (the signup form's submit button).
   const [part, setPart] = useState<string | null>(null);
   const [view, setView] = useState<'form' | 'success'>('form');
+  // Take people to the place where they can finish the choice they just made.
+  const followMode = (mode: FormDraft['success']['mode']) => {
+    if (mode === 'message') {
+      setView('success');
+      setSelected(null);
+      setTab('design');
+      return;
+    }
+    setView('form');
+    setTab('design');
+    setSelected(draft.blocks.find((block) => block.type === 'fields')?.id ?? null);
+    setPart('submit');
+  };
   const [device, setDevice] = useState<Device>('desktop');
   const [tab, setTab] = useState<'design' | 'settings'>('design');
   const [drawer, setDrawer] = useState<'left' | 'right' | null>(null);
@@ -152,6 +165,7 @@ export default function FormEditor({ state, dispatch, saveState, onBack, onDone,
   const inlineEdit: InlineEdit = {
     block: (id, patch, key) => update((current) => updateBlock(current, id, patch), key),
     field: (id, patch, key) => update((current) => updateField(current, id, patch), key),
+    success: (patch, key) => update((current) => ({ ...current, success: { ...current.success, ...patch } }), key),
   };
 
   const wrap = (block: Block, node: ReactNode) => {
@@ -224,6 +238,14 @@ export default function FormEditor({ state, dispatch, saveState, onBack, onDone,
       {elements}
     </Box>
   );
+  const successPanel = (
+    <Box className="pp-form-panel" component="aside" aria-label="Success page">
+      <Box className="pp-form-panel-head">
+        <Typography className="pp-form-panel-title">Success page</Typography>
+        <Typography className="pp-form-hint">Click the thank-you message in the preview to edit its words.</Typography>
+      </Box>
+    </Box>
+  );
 
   // Both tabs always show the whole form; the clicked block's section opens, scrolls into view and is highlighted.
   const activeId = view === 'form' ? selectedBlock?.id ?? null : null;
@@ -243,7 +265,23 @@ export default function FormEditor({ state, dispatch, saveState, onBack, onDone,
           <Tab value="settings" label="Settings" icon={<TuneRounded />} iconPosition="start" />
         </Tabs>
       </Box>
-      {tab === 'design' ? (
+      {view === 'success' ? tab === 'design' ? (
+        <>
+          <Box className="pp-form-panel-head">
+            <Typography className="pp-form-panel-title">Success page design</Typography>
+            <Typography className="pp-form-hint">Choose what appears with your thank-you message. Click the preview to edit its words.</Typography>
+          </Box>
+          <SuccessDesignInspector draft={draft} update={update} />
+        </>
+      ) : (
+        <>
+          <Box className="pp-form-panel-head">
+            <Typography className="pp-form-panel-title">After sign-up</Typography>
+            <Typography className="pp-form-hint">Choose what people see after they join.</Typography>
+          </Box>
+          <Box sx={{ p: 2 }}><SuccessInspector draft={draft} update={update} onMode={followMode} /></Box>
+        </>
+      ) : tab === 'design' ? (
         <>
           <Box className="pp-form-panel-head">
             <Typography className="pp-form-panel-title">Design</Typography>
@@ -252,22 +290,14 @@ export default function FormEditor({ state, dispatch, saveState, onBack, onDone,
           <StylePanel draft={draft} update={update} projectId={projectId} />
           {/* Signup form: clicking the button highlights the button section, clicking anywhere else the fields. */}
           {fieldsBlock && <FieldsSettings block={fieldsBlock} draft={draft} update={update} active={fieldsBlock.id === activeId && part !== 'submit'} />}
-          {fieldsBlock && <FieldsDesign draft={draft} update={update} active={fieldsBlock.id === activeId && part === 'submit' ? 'submit' : null} />}
+          {fieldsBlock && <FieldsDesign draft={draft} update={update} onMode={followMode} active={fieldsBlock.id === activeId && part === 'submit' ? 'submit' : null} />}
           <BlockSections draft={draft} update={update} projectId={projectId} activeId={activeId} />
-        </>
-      ) : view === 'success' ? (
-        <>
-          <Box className="pp-form-panel-head">
-            <Typography className="pp-form-panel-title">Success message</Typography>
-            <Typography className="pp-form-hint">What people see after they sign up.</Typography>
-          </Box>
-          <Box sx={{ p: 2 }}><SuccessInspector draft={draft} update={update} /></Box>
         </>
       ) : (
         <>
           <Box className="pp-form-panel-head">
             <Typography className="pp-form-panel-title">Settings</Typography>
-            <Typography className="pp-form-hint">Name, what happens after sign-up, consent and tagging.</Typography>
+            <Typography className="pp-form-hint">Your form name, privacy choices and subscriber tags.</Typography>
           </Box>
           <FormSettings draft={draft} update={update} />
         </>
@@ -287,7 +317,7 @@ export default function FormEditor({ state, dispatch, saveState, onBack, onDone,
           </Box>
         </Stack>
         <Stack direction="row" alignItems="center" gap={1.5} className="pp-form-topbar-centre">
-          <ToggleButtonGroup size="small" exclusive value={view} onChange={(_, value) => { if (!value) return; setView(value); if (value === 'success') setTab('settings'); }} aria-label="Editing">
+          <ToggleButtonGroup size="small" exclusive value={view} onChange={(_, value) => { if (!value) return; setView(value); setSelected(null); setPart(null); if (value === 'success') setTab('design'); }} aria-label="Editing">
             <ToggleButton value="form">Form</ToggleButton>
             <ToggleButton value="success">Success</ToggleButton>
           </ToggleButtonGroup>
@@ -316,17 +346,17 @@ export default function FormEditor({ state, dispatch, saveState, onBack, onDone,
 
       {!desktop && (
         <Stack direction="row" gap={1} className="pp-form-mobilebar">
-          <Button variant="outlined" size="small" startIcon={<WidgetsOutlined />} onClick={() => setDrawer('left')}>Add element</Button>
+          {view === 'form' && <Button variant="outlined" size="small" startIcon={<WidgetsOutlined />} onClick={() => setDrawer('left')}>Add element</Button>}
           <Button variant="outlined" size="small" startIcon={<TuneRounded />} onClick={() => setDrawer('right')}>Design and settings</Button>
           <Button variant="outlined" size="small" startIcon={<VisibilityOutlined />} onClick={() => setPreview(true)}>Preview</Button>
         </Stack>
       )}
 
       <Box className="pp-form-workspace">
-        {desktop && leftPanel}
+        {desktop && (view === 'form' ? leftPanel : successPanel)}
         <Box className="pp-form-canvas" onClick={() => setSelected(null)}>
           <DeviceFrame device={desktop ? device : 'mobile'}>
-            <FormStage draft={draft} view={view} mode="editor" narrow={!desktop || device === 'mobile'} wrap={view === 'form' ? wrap : undefined} edit={view === 'form' ? inlineEdit : undefined} />
+            <FormStage draft={draft} view={view} mode="editor" narrow={!desktop || device === 'mobile'} wrap={view === 'form' ? wrap : undefined} edit={inlineEdit} />
           </DeviceFrame>
         </Box>
         {desktop && rightPanel}
@@ -335,7 +365,7 @@ export default function FormEditor({ state, dispatch, saveState, onBack, onDone,
       {!desktop && (
         <Drawer anchor="bottom" open={drawer !== null} onClose={() => setDrawer(null)} PaperProps={{ className: 'pp-form-drawer' }} sx={{ zIndex: (theme) => theme.zIndex.modal + 1 }}>
           <Stack direction="row" justifyContent="flex-end" sx={{ px: 1, pt: 1 }}><IconButton aria-label="Close panel" onClick={() => setDrawer(null)}><CloseRounded /></IconButton></Stack>
-          {drawer === 'left' ? leftPanel : rightPanel}
+          {drawer === 'left' && view === 'form' ? leftPanel : rightPanel}
         </Drawer>
       )}
 

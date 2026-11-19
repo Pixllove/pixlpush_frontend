@@ -1,37 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ContentCopyRounded, DeleteOutlineRounded, EditOutlined, VisibilityOutlined } from '@mui/icons-material';
 import { Box, Button, Paper, Skeleton, Stack, Typography } from '@mui/material';
+import { PopupRules, UsagePicker } from './FormWizard';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import DeleteConfirmDialog from '@/components/dashboard/DeleteConfirmDialog';
 import EmptyState from '@/components/dashboard/EmptyState';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
-import { deleteForm, duplicateForm, formsKeys, getForm, getFormAnalytics, listGroups, setFormStatus } from '@/lib/forms';
+import { deleteForm, duplicateForm, formsKeys, getForm, getFormAnalytics, listGroups, saveForm, setFormStatus } from '@/lib/forms';
 import { FormPreview } from './FormEditor';
 import { conversion, formatDate } from './FormsList';
-import { kindLabel, templates, urlLines, type FormDraft } from './model';
+import { behaviourErrors, kindLabel, templates, type FormBehaviour, type FormDraft } from './model';
 import { FormThumbnail, InstallPanel, StatusChip, StatusControl, useNotice } from './shared';
-
-const usageLabel = { click: 'Opens when someone clicks a button', auto: 'Pops up on its own', inline: 'Embedded in a spot on the page' } as const;
-
-export function behaviourSummary(draft: FormDraft): Array<[string, string]> {
-  const b = draft.behaviour;
-  if (b.mode !== 'auto') return [['How it is used', usageLabel[b.mode]]];
-  const triggers = [b.delayOn && `after ${b.delay}s`, b.scrollOn && `at ${b.scroll}% scroll`, b.exitOn && 'when leaving'].filter(Boolean).join(', ');
-  const devices = [b.hideDesktop && 'desktop', b.hideTablet && 'tablet', b.hideMobile && 'mobile'].filter(Boolean);
-  const pages = b.pages === 'all' ? 'Every page' : `${b.pages === 'hide' ? 'All pages except' : 'Only'} ${urlLines(b.urls).length} page${urlLines(b.urls).length === 1 ? '' : 's'}${b.strict ? ' (exact match)' : ''}`;
-  return [
-    ['How it is used', usageLabel.auto],
-    ['Shows', triggers || 'Never (no trigger)'],
-    ['Shows again', b.repeat === 'always' ? 'On every visit until they sign up' : `${b.frequency} ${b.frequencyUnit} after it was closed`],
-    ['Schedule', b.schedule === 'now' ? 'As soon as it is live' : `${b.startAt.replace('T', ' ')} to ${b.endAt.replace('T', ' ')} (${b.timezone.replace(/_/g, ' ')})`],
-    ['Pages', pages],
-    ['Devices', devices.length ? `Hidden on ${devices.join(', ')}` : 'All devices'],
-  ];
-}
 
 export default function FormOverview({ id }: { id: string }) {
   const { active } = useActiveProject();
@@ -46,11 +29,24 @@ export default function FormOverview({ id }: { id: string }) {
   const [notice, notify] = useNotice();
   const statusChange = useMutation({ mutationFn: (status: FormDraft['status']) => setFormStatus(id, status, projectId!), onSuccess: (saved) => { client.setQueryData(formsKeys.one(projectId!, id), saved); void client.invalidateQueries({ queryKey: formsKeys.all }); notify(saved.status === 'active' ? 'Form is live' : 'Form paused'); } });
   const duplicate = useMutation({ mutationFn: () => duplicateForm(id, projectId!), onSuccess: (copy) => { void client.invalidateQueries({ queryKey: formsKeys.all }); router.push(`/dashboard/forms/${copy.id}`); } });
+  // "How it is used" edits save on their own, shortly after the last change, once nothing in them is invalid.
+  const [behaviour, setBehaviour] = useState<FormBehaviour | null>(null);
+  const saveTimer = useRef<ReturnType<typeof setTimeout>>();
+  const saveBehaviour = useMutation({
+    mutationFn: (next: FormBehaviour) => saveForm({ ...form.data!, behaviour: next }, projectId!),
+    onSuccess: (saved) => { client.setQueryData(formsKeys.one(projectId!, id), saved); void client.invalidateQueries({ queryKey: formsKeys.all }); notify('Changes saved'); },
+  });
+  useEffect(() => () => clearTimeout(saveTimer.current), []);
+  const changeBehaviour = (next: FormBehaviour) => {
+    setBehaviour(next);
+    clearTimeout(saveTimer.current);
+    if (Object.keys(behaviourErrors(next)).length === 0) saveTimer.current = setTimeout(() => saveBehaviour.mutate(next), 700);
+  };
   const remove = useMutation({ mutationFn: () => deleteForm(id, projectId!), onSuccess: () => { void client.invalidateQueries({ queryKey: formsKeys.all }); router.push('/dashboard/forms'); } });
 
   if (form.isError) return <EmptyState tone="error" title="This form could not be opened" description={(form.error as Error).message} action={{ label: 'Back to forms', href: '/dashboard/forms' }} />;
   if (!form.data) return <Box className="pp-form-wizard"><Skeleton height={48} width={280} /><Skeleton variant="rounded" height={320} sx={{ mt: 2 }} /></Box>;
-  const draft = form.data;
+  const draft = behaviour ? { ...form.data, behaviour } : form.data;
   const groupNames = draft.groups.map((groupId) => groups.data?.find((group) => group.id === groupId)?.name).filter(Boolean).join(', ') || 'None';
   const details: Array<[string, string]> = [
     ['Type', kindLabel[draft.kind]],
@@ -86,12 +82,24 @@ export default function FormOverview({ id }: { id: string }) {
             <StatusControl draft={draft} onChange={(status) => statusChange.mutate(status)} busy={statusChange.isPending} error={statusChange.error instanceof Error ? statusChange.error.message : undefined} />
           </Paper>
           <Paper className="pp-form-step-card">
-            <Typography variant="h3" sx={{ mb: 1.5 }}>Install</Typography>
-            <InstallPanel draft={draft} />
+            <Stack direction="row" justifyContent="space-between" alignItems="baseline" gap={2} sx={{ mb: 0.5 }}>
+              <Typography variant="h3">How it is used</Typography>
+              <Typography variant="body2" color={saveBehaviour.isError ? 'error' : 'text.secondary'} aria-live="polite">
+                {saveBehaviour.isPending ? 'Saving…' : saveBehaviour.isError ? 'Could not save. Change anything to try again.' : ''}
+              </Typography>
+            </Stack>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Pick one or more. Changes save on their own and the install code updates to match.</Typography>
+            <UsagePicker value={draft.behaviour} onChange={changeBehaviour} />
+            {draft.behaviour.modes.includes('auto') && (
+              <Box sx={{ mt: 2.5 }}>
+                <Typography fontWeight={600} sx={{ mb: 1 }}>Pop-up behaviour</Typography>
+                <PopupRules value={draft.behaviour} onChange={changeBehaviour} />
+              </Box>
+            )}
           </Paper>
           <Paper className="pp-form-step-card">
-            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}><Typography variant="h3">How it is used</Typography><Button size="small" component={Link} href={`/dashboard/forms/${id}/edit?step=setup`}>Change</Button></Stack>
-            <dl className="pp-form-dl">{behaviourSummary(draft).map(([term, value]) => <div key={term}><dt>{term}</dt><dd>{value}</dd></div>)}</dl>
+            <Typography variant="h3" sx={{ mb: 1.5 }}>Install</Typography>
+            <InstallPanel draft={draft} />
           </Paper>
         </Stack>
         <Stack gap={2}>

@@ -30,6 +30,7 @@ export type RenderProps = {
 export type InlineEdit = {
   block: (id: string, patch: Partial<Block>, key: string) => void;
   field: (id: string, patch: Partial<FormField>, key: string) => void;
+  success: (patch: Partial<FormDraft['success']>, key: string) => void;
 };
 const EditContext = createContext<InlineEdit | null>(null);
 
@@ -116,20 +117,25 @@ export function FormCard(props: RenderProps) {
   const d = draft.design;
   const fullBleed = isFullBleed(draft);
   const fullscreen = d.popupType === 'fullscreen';
+  const successWidth = view === 'success' ? draft.success.width ?? d.width : d.width;
+  const successBackground = view === 'success' ? draft.success.background ?? d.background : d.background;
   const sideLayout = d.layout === 'leftSidebar' || d.layout === 'rightSidebar';
+  const showSuccessImage = view === 'success' && draft.success.mode === 'message' && draft.success.showImage && Boolean(d.sidebarImage);
   // Phones hide the side panel unless the form turns it on.
-  const side = narrow && !d.sidebarMobile && (sideLayout || d.layout === 'topSidebar') ? null : d.layout === 'topSidebar' || (sideLayout && narrow) ? 'top' : d.layout === 'leftSidebar' ? 'left' : d.layout === 'rightSidebar' ? 'right' : null;
+  const configuredSide = narrow && !d.sidebarMobile && (sideLayout || d.layout === 'topSidebar') ? null : d.layout === 'topSidebar' || (sideLayout && narrow) ? 'top' : d.layout === 'leftSidebar' ? 'left' : d.layout === 'rightSidebar' ? 'right' : null;
+  const side = view === 'success' ? (showSuccessImage ? configuredSide ?? 'left' : null) : configuredSide;
   const boxed = d.layout === 'boxed';
+  const cardBackground = view === 'success' ? successBackground : boxed ? d.sidebarColor : d.transparent ? 'transparent' : d.background;
   const editor = mode === 'editor';
 
   const card: CSSProperties = {
-    position: 'relative', boxSizing: 'border-box', width: fullBleed ? '100%' : d.width, maxWidth: '100%',
+    position: 'relative', boxSizing: 'border-box', width: fullBleed ? '100%' : successWidth, maxWidth: '100%',
     minHeight: fullscreen ? '100%' : undefined, display: 'flex',
     flexDirection: side === 'left' ? 'row' : side === 'right' ? 'row-reverse' : 'column',
     // The editor lets block toolbars stick out of the card; corners are rounded on the side image instead.
     overflow: editor ? 'visible' : 'hidden', borderRadius: fullBleed ? 0 : d.radius,
-    background: boxed ? d.sidebarColor : d.transparent ? 'transparent' : d.background,
-    backgroundImage: d.backgroundImage && !boxed ? `url("${d.backgroundImage}")` : undefined,
+    background: cardBackground,
+    backgroundImage: view !== 'success' && d.backgroundImage && !boxed ? `url("${d.backgroundImage}")` : undefined,
     backgroundSize: bgSize(d.backgroundFit, d.backgroundZoom), backgroundRepeat: d.backgroundFit === 'tile' ? 'repeat' : 'no-repeat', backgroundPosition: focusPosition(d.backgroundX, d.backgroundY),
     border: d.layout === 'border' ? `8px solid ${d.sidebarColor}` : undefined,
     boxShadow: d.shadow ? '0 24px 60px rgba(27, 16, 37, 0.18)' : 'none',
@@ -138,9 +144,10 @@ export function FormCard(props: RenderProps) {
   const body: CSSProperties = {
     flex: 1, minWidth: 0, boxSizing: 'border-box', display: 'flex', flexDirection: 'column', justifyContent: fullscreen ? 'center' : undefined,
     gap: 14, padding: fullBleed && !fullscreen ? '16px 24px' : narrow ? 24 : 32,
-    ...(boxed ? { margin: 16, background: d.transparent ? 'transparent' : d.background, borderRadius: Math.max(d.radius - 4, 4) } : {}),
+    ...(boxed ? { margin: 16, background: view === 'success' ? successBackground : d.transparent ? 'transparent' : d.background, borderRadius: Math.max(d.radius - 4, 4) } : {}),
   };
-  const inner: CSSProperties = fullBleed ? { width: '100%', maxWidth: d.width, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 14 } : { display: 'contents' };
+  const inner: CSSProperties = fullBleed ? { width: '100%', maxWidth: successWidth, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 14 } : { display: 'contents' };
+  const showClose = view === 'success' ? draft.success.showClose ?? d.showClose : d.showClose;
 
   return (
     <EditContext.Provider value={editor ? props.edit ?? null : null}>
@@ -173,7 +180,7 @@ export function FormCard(props: RenderProps) {
               })}
         </div>
       </form>
-      {d.showClose && (
+      {showClose && (
         <button type="button" aria-label="Close" tabIndex={editor ? -1 : undefined} onClick={onClose} data-pixlpush-close=""
           style={{ position: 'absolute', top: 8, right: 8, width: 32, height: 32, border: 0, borderRadius: 16, background: 'transparent', color: d.closeColor, fontSize: 22, lineHeight: '32px', cursor: 'pointer' }}>
           ×
@@ -424,15 +431,32 @@ export function CodeFrame({ html, editor }: { html: string; editor: boolean }) {
 function SuccessView({ draft, mode }: { draft: FormDraft; mode: RenderMode }) {
   const d = draft.design;
   const s = draft.success;
+  const headingColor = s.headingColor ?? d.headingColor;
+  const textColor = s.textColor ?? d.textColor;
+  const buttonColor = s.buttonColor ?? d.buttonBg;
+  const edit = useContext(EditContext);
   if (s.mode === 'redirect') {
-    return mode === 'export' ? null : <p style={{ margin: 0, color: d.textColor, textAlign: 'center' }}>New subscribers are sent to <strong style={{ wordBreak: 'break-all' }}>{s.redirectUrl}</strong></p>;
+    return mode === 'export' ? null : (
+      <div style={{ display: 'grid', gap: 8, textAlign: 'center', color: textColor }}>
+        <strong style={{ color: headingColor, fontSize: 18 }}>After someone subscribes</strong>
+        {s.redirectUrl && s.redirectUrl !== 'https://'
+          ? <><span>People will go to this page:</span><strong style={{ wordBreak: 'break-all', color: buttonColor }}>{s.redirectUrl}</strong></>
+          : <span>Add a page address in Settings. Until then, people will see your success page.</span>}
+      </div>
+    );
   }
   return (
     <div style={{ display: 'grid', gap: 12, textAlign: 'center' }}>
-      <h2 style={{ margin: 0, fontSize: 24, color: d.headingColor }}>{s.heading}</h2>
-      {s.text && <p style={{ margin: 0, color: d.textColor, whiteSpace: 'pre-line' }}>{s.text}</p>}
-      {s.coupon && <div style={{ padding: '10px 16px', border: `2px dashed ${d.buttonBg}`, borderRadius: 6, fontSize: 20, fontWeight: 700, letterSpacing: '.08em', color: d.headingColor, fontFamily: 'monospace' }}>{s.coupon}</div>}
-      {s.buttonLabel.trim() && <a href={s.buttonUrl} {...(mode === 'editor' ? { tabIndex: -1 } : { target: '_blank', rel: 'noopener noreferrer' })} style={buttonStyle(d)}>{s.buttonLabel}</a>}
+      <h2 style={{ margin: 0, fontSize: 24, color: headingColor }}>
+        {edit ? <Editable value={s.heading} placeholder="Heading" onChange={(heading) => edit.success({ heading }, 'success.heading')} /> : s.heading}
+      </h2>
+      {edit
+        ? <p style={{ margin: 0, color: textColor, whiteSpace: 'pre-line' }}><Editable value={s.text} multiline placeholder="Add a message" onChange={(text) => edit.success({ text }, 'success.text')} /></p>
+        : s.text && <p style={{ margin: 0, color: textColor, whiteSpace: 'pre-line' }}>{s.text}</p>}
+      {s.coupon && <div style={{ padding: '10px 16px', border: `2px dashed ${buttonColor}`, borderRadius: 6, fontSize: 20, fontWeight: 700, letterSpacing: '.08em', color: headingColor, fontFamily: 'monospace' }}>{s.coupon}</div>}
+      {edit && s.buttonLabel.trim()
+        ? <span style={{ ...buttonStyle(d), background: buttonColor, color: s.buttonText ?? d.buttonText }}><Editable value={s.buttonLabel} placeholder="Button text" onChange={(buttonLabel) => edit.success({ buttonLabel }, 'success.buttonLabel')} /></span>
+        : s.buttonLabel.trim() && <a href={s.buttonUrl} {...(mode === 'editor' ? { tabIndex: -1 } : { target: '_blank', rel: 'noopener noreferrer' })} style={{ ...buttonStyle(d), background: buttonColor, color: s.buttonText ?? d.buttonText }}>{s.buttonLabel}</a>}
     </div>
   );
 }

@@ -465,40 +465,53 @@ const usageOptions: Array<{ value: UsageMode; title: string; text: string; icon:
   { value: 'inline', title: 'Embed in a fixed spot', text: 'The form sits inside your page where you place it, like the footer or sidebar.', icon: <ViewAgendaOutlined /> },
 ];
 
-function UsageStep({ draft, onChange, onStatus, statusBusy, statusError }: {
+/** Pick any mix of ways to show the form; at least one stays on. Shared by the wizard and the form overview. */
+export function UsagePicker({ value, onChange }: { value: FormBehaviour; onChange: (value: FormBehaviour) => void }) {
+  const toggle = (mode: UsageMode) => {
+    const on = value.modes.includes(mode);
+    if (on && value.modes.length === 1) return;
+    onChange({ ...value, modes: on ? value.modes.filter((m) => m !== mode) : usageOptions.map((o) => o.value).filter((m) => m === mode || value.modes.includes(m)) });
+  };
+  return (
+    <Box role="group" aria-label="How the form appears" sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' }, gap: 1.5 }}>
+      {usageOptions.map((option) => {
+        const on = value.modes.includes(option.value);
+        const only = on && value.modes.length === 1;
+        return (
+          <Card key={option.value} variant="outlined" sx={{ borderColor: on ? 'primary.main' : undefined, boxShadow: on ? (theme) => `0 0 0 1px ${theme.palette.primary.main}` : 'none', bgcolor: on ? 'var(--pp-accent-soft)' : undefined }}>
+            <CardActionArea role="checkbox" aria-checked={on} aria-disabled={only} title={only ? 'Keep at least one way to show the form' : undefined} onClick={() => toggle(option.value)} sx={{ height: '100%', p: 2, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 1.5 }}>
+              <span className="pp-form-usage-icon" aria-hidden>{option.icon}</span>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography fontWeight={600}>{option.title}</Typography>
+                <Typography variant="body2" color="text.secondary">{option.text}</Typography>
+              </Box>
+              <Checkbox checked={on} tabIndex={-1} disableRipple size="small" sx={{ p: 0 }} inputProps={{ 'aria-hidden': true }} />
+            </CardActionArea>
+          </Card>
+        );
+      })}
+    </Box>
+  );
+}
+
+export function UsageStep({ draft, onChange, onStatus, statusBusy, statusError }: {
   draft: FormDraft; onChange: (value: FormBehaviour) => void; onStatus: (status: FormDraft['status']) => void; statusBusy: boolean; statusError?: string;
 }) {
-  const mode = draft.behaviour.mode;
+  const modes = draft.behaviour.modes;
   let step = 1;
   return (
     <Stack gap={4.5}>
-      <Section number={step++} title="How should the form appear?" description="Pick one. You can change it any time; the code below updates to match.">
-        <Box role="radiogroup" aria-label="How the form appears" sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' }, gap: 1.5 }}>
-          {usageOptions.map((option) => {
-            const on = mode === option.value;
-            return (
-              <Card key={option.value} variant="outlined" sx={{ borderColor: on ? 'primary.main' : undefined, boxShadow: on ? (theme) => `0 0 0 1px ${theme.palette.primary.main}` : 'none', bgcolor: on ? 'var(--pp-accent-soft)' : undefined }}>
-                <CardActionArea role="radio" aria-checked={on} onClick={() => onChange({ ...draft.behaviour, mode: option.value })} sx={{ height: '100%', p: 2, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 1.5 }}>
-                  <span className="pp-form-usage-icon" aria-hidden>{option.icon}</span>
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography fontWeight={600}>{option.title}</Typography>
-                    <Typography variant="body2" color="text.secondary">{option.text}</Typography>
-                  </Box>
-                  {on ? <CheckCircleRounded color="primary" fontSize="small" /> : <RadioButtonUncheckedRounded fontSize="small" sx={{ color: 'text.disabled' }} />}
-                </CardActionArea>
-              </Card>
-            );
-          })}
-        </Box>
+      <Section number={step++} title="How should the form appear?" description="Pick one or more. You can change it any time; the code below updates to match.">
+        <UsagePicker value={draft.behaviour} onChange={onChange} />
       </Section>
 
-      {mode === 'auto' && (
+      {modes.includes('auto') && (
         <Section number={step++} title="Pop-up behaviour" description="When it appears, on which pages and devices, and how often.">
           <PopupRules value={draft.behaviour} onChange={onChange} />
         </Section>
       )}
 
-      <Section number={step++} title="Add it to your website" description={mode === 'click' ? 'Two small pieces: the script and the button.' : mode === 'inline' ? 'Two small pieces: the box where it shows and the script.' : 'One line of code is all you need.'}>
+      <Section number={step++} title="Add it to your website" description={modes.length === 1 && modes[0] === 'auto' ? 'One line of code is all you need.' : 'Copy each piece below. The script goes on once; the rest goes where you want the form.'}>
         <InstallPanel draft={draft} />
       </Section>
 
@@ -544,7 +557,7 @@ const triggerOf = (b: FormBehaviour): Trigger => (b.exitOn ? 'exit' : b.scrollOn
 const repeatPresets: Array<[string, string]> = [['always', 'On every visit, until they sign up'], ['after:1:days', 'After 1 day'], ['after:1:weeks', 'After 1 week'], ['after:1:months', 'After 1 month'], ['after:3:months', 'After 3 months']];
 
 /** The rules of an automatic pop-up, one simple choice each. */
-function PopupRules({ value, onChange }: { value: FormBehaviour; onChange: (value: FormBehaviour) => void }) {
+export function PopupRules({ value, onChange }: { value: FormBehaviour; onChange: (value: FormBehaviour) => void }) {
   const errors = behaviourErrors(value);
   const set = (patch: Partial<FormBehaviour>) => onChange({ ...value, ...patch });
   const int = (text: string) => (text === '' ? Number.NaN : Number(text));
