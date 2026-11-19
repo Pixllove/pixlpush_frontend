@@ -25,6 +25,7 @@ import DeleteConfirmDialog from "@/components/dashboard/DeleteConfirmDialog";
 import CollaborationResultCard, { CollaborationTimeline, type CollaborationAgentProfile } from "@/components/dashboard/CollaborationResultCard";
 import OnboardingActionCard from "@/components/dashboard/OnboardingActionCard";
 import AiInteractionRenderer from "@/components/dashboard/AiInteractionRenderer";
+import AudienceGroupAiFlow from "@/components/dashboard/AudienceGroupAiFlow";
 
 /** `flow` marks a guided-flow turn (it is re-run, not edited); `error` an answer that never arrived, so nothing was stored for it. */
 type ChatMessage = {
@@ -512,6 +513,7 @@ function BusinessAnalysisPulse() {
 
 function BusinessContextCard({
   context,
+  existingAppLinks,
   loading,
   saving,
   onUpdate,
@@ -522,6 +524,8 @@ function BusinessContextCard({
   completeLabel = "Continue to journey",
 }: {
   context: AiBusinessContext;
+  /** App links saved during project onboarding, mapped to the business-context store names. */
+  existingAppLinks?: { appStoreUrl?: string | null; googlePlayUrl?: string | null };
   loading: boolean;
   saving: boolean;
   onUpdate: (input: AiBusinessContextUpdate) => Promise<AiBusinessContext>;
@@ -542,10 +546,23 @@ function BusinessContextCard({
   const [linkCheckMessage, setLinkCheckMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const initialized = useRef(false);
+  const onboardingAppStoreUrl = existingAppLinks?.appStoreUrl?.trim() ?? "";
+  const onboardingGooglePlayUrl = existingAppLinks?.googlePlayUrl?.trim() ?? "";
+  const hasExistingAppLinks = Boolean(onboardingAppStoreUrl || onboardingGooglePlayUrl || draft.appStoreUrl?.trim() || draft.googlePlayUrl?.trim());
 
   useEffect(() => {
     if (loading || initialized.current) return;
-    const initial = { ...emptyBusinessContext, ...context };
+    const contextAppStoreUrl = context.appStoreUrl?.trim() ?? "";
+    const contextGooglePlayUrl = context.googlePlayUrl?.trim() ?? "";
+    const initial = {
+      ...emptyBusinessContext,
+      ...context,
+      appStoreUrl: contextAppStoreUrl || onboardingAppStoreUrl || null,
+      googlePlayUrl: contextGooglePlayUrl || onboardingGooglePlayUrl || null,
+      hasMobileApp: contextAppStoreUrl || contextGooglePlayUrl || onboardingAppStoreUrl || onboardingGooglePlayUrl
+        ? true
+        : context.hasMobileApp,
+    };
     initialized.current = true;
     setDraft(initial);
     setDescription(initial.businessDescription ?? "");
@@ -554,7 +571,7 @@ function BusinessContextCard({
     setGooglePlayUrl(initial.googlePlayUrl ?? "");
     setAppListingUrl(initial.appStoreUrl ?? initial.googlePlayUrl ?? "");
     setPhase(firstBusinessContextPhase(initial));
-  }, [context, loading]);
+  }, [context, loading, onboardingAppStoreUrl, onboardingGooglePlayUrl]);
 
   const applyUpdate = async (input: AiBusinessContextUpdate) => {
     setError(null);
@@ -571,7 +588,10 @@ function BusinessContextCard({
   const saveDescriptionAndContinue = async () => {
     try {
       await applyUpdate({ businessDescription: description.trim() || null });
-      setPhase("app-choice");
+      // Onboarding already collected the public store URL(s). Do not ask Nova
+      // for the same information again; projects without those links still get
+      // the app question and listing step.
+      setPhase(hasExistingAppLinks ? "review" : "app-choice");
     } catch (cause) {
       setError(apiMessage(cause, "I couldn’t save that business description. Please try again."));
     }
@@ -1213,6 +1233,8 @@ export default function HomeCommandCenter() {
   const [lastDraft, setLastDraft] = useState<DraftInput | null>(null);
   const [openingFlow, setOpeningFlow] = useState(false);
   const [activeFlow, setActiveFlow] = useState<GuidedFlow | null>(null);
+  const [audienceGroupFlowOpen, setAudienceGroupFlowOpen] = useState(false);
+  const [businessAnalysisFlowOpen, setBusinessAnalysisFlowOpen] = useState(false);
   const [flowReady, setFlowReady] = useState(false);
   const [flowStep, setFlowStep] = useState(0);
   const [flowAnswers, setFlowAnswers] = useState<Record<number, string>>({});
@@ -1292,6 +1314,12 @@ export default function HomeCommandCenter() {
     enabled: Boolean(projectId),
     staleTime: 30_000,
   });
+  const onboardingQuery = useQuery({
+    queryKey: ["projects", projectId, "onboarding"],
+    queryFn: () => onboardingApi.get(projectId!),
+    enabled: Boolean(projectId) && (activeFlow?.id === "journey" || businessAnalysisFlowOpen),
+    staleTime: 30_000,
+  });
 
   const audienceGroupsQuery = useQuery({
     queryKey: ["projects", projectId, "audience-groups"],
@@ -1326,7 +1354,7 @@ export default function HomeCommandCenter() {
   const sdkKeysQuery = useQuery({
     queryKey: ["projects", projectId, "sdk-keys"],
     queryFn: () => sdkKeyApi.list(projectId!),
-    enabled: Boolean(projectId) && activeFlow?.id === "journey",
+    enabled: Boolean(projectId) && (activeFlow?.id === "journey" || audienceGroupFlowOpen),
     staleTime: 30_000,
   });
 
@@ -1748,11 +1776,12 @@ export default function HomeCommandCenter() {
   const pushAnalysisItems = (pushCampaignsQuery.data?.items ?? []).map((item) => ({ id: item.id, name: item.name }));
   const journeyAnalysisItems = (journeysQuery.data?.items ?? []).map((item) => ({ id: item.id, name: item.name }));
   const isBusinessContextStep = activeFlow?.id === "journey" && flowReady && !flowConfirming && !businessContextComplete;
-  const isGuidedFlowStep = Boolean(activeFlow && flowReady && !flowConfirming);
+  const isBusinessContextCardOpen = isBusinessContextStep || businessAnalysisFlowOpen;
+  const isGuidedFlowStep = audienceGroupFlowOpen || businessAnalysisFlowOpen || Boolean(activeFlow && flowReady && !flowConfirming);
   const aiContext = contextQuery.data;
   const contextBusinessData = aiContext?.businessContext;
   const directBusinessData = businessContextQuery.data;
-  const businessContextLoading = contextQuery.isLoading || businessContextQuery.isLoading;
+  const businessContextLoading = contextQuery.isLoading || businessContextQuery.isLoading || onboardingQuery.isLoading;
   const hasBusinessData = (value?: AiBusinessContext | null) => Boolean(value && (
     value.businessAnalysisConfirmedAt
     || value.businessAnalysis
@@ -1818,6 +1847,8 @@ export default function HomeCommandCenter() {
     setMessages([]);
     setConversationId(undefined);
     setActiveFlow(null);
+    setAudienceGroupFlowOpen(false);
+    setBusinessAnalysisFlowOpen(false);
     setFlowReady(false);
     setFlowAnswers({});
     setFlowStep(0);
@@ -2005,6 +2036,8 @@ export default function HomeCommandCenter() {
     setEditing(null);
     setLastDraft(null);
     setActiveFlow(null);
+    setAudienceGroupFlowOpen(false);
+    setBusinessAnalysisFlowOpen(false);
     setFlowReady(false);
     setFlowAnswers({});
     setFlowStep(0);
@@ -2067,6 +2100,26 @@ export default function HomeCommandCenter() {
 
   const startAnalysisRequest = (prompt?: string) => beginAnalysisFlow(prompt);
 
+  /** Opens the same Nova business-context card used before journey creation. */
+  const startBusinessAnalysisFlow = (prompt = "Get a business analysis for my product") => {
+    if (!projectId || thinking) return;
+    const openingResponse = "Hi, I’m Nova. I’ll review your product and business context, then prepare an analysis for you to review and confirm.";
+    selectAgentDirect("Nova");
+    setMessages([
+      { id: `user-business-analysis-${Date.now()}`, role: "user", assistant: "Nova", flow: true, text: prompt },
+      { id: `assistant-business-analysis-${Date.now()}`, role: "assistant", assistant: "Nova", flow: true, text: openingResponse },
+    ]);
+    setConversationId(undefined);
+    setActiveFlow(null);
+    setAudienceGroupFlowOpen(false);
+    setBusinessAnalysisFlowOpen(true);
+    setFlowReady(false);
+    setFlowConfirming(false);
+    setBusinessContext(savedBusinessContext ?? emptyBusinessContext);
+    setBusinessContextComplete(false);
+    businessContextHydratedRef.current = false;
+  };
+
   const startBenAnalysis = () => {
     if (!analysisType || !analysisResource || !analysisPeriod) return;
     const typeLabel = analysisType === "email" ? "email campaign" : analysisType === "push" ? "push campaign" : "journey";
@@ -2103,6 +2156,8 @@ export default function HomeCommandCenter() {
       setEditing(null);
       setLastDraft(null);
       setActiveFlow(null);
+      setAudienceGroupFlowOpen(false);
+      setBusinessAnalysisFlowOpen(false);
       setFlowReady(false);
       setFlowAnswers({});
       setFlowStep(0);
@@ -2132,10 +2187,46 @@ export default function HomeCommandCenter() {
     if (prompt.action === "link" && /onboard/i.test(prompt.label)) sendMessage(prompt.label);
     else if (prompt.action === "link") router.push(prompt.href);
     else if (prompt.action === "flow") startFlow(prompt.flow, prompt.prompt);
+    else if (/business analysis/i.test(prompt.label)) startBusinessAnalysisFlow(prompt.label);
     else sendMessage(prompt.label);
   };
 
   const startFlow = (flowId: string, prompt?: string, approved = false) => {
+    if (flowId === "audience-group") {
+      if (!projectId || thinking) return;
+      const openingPrompt = prompt || "I want to create an audience group. Help me define the exact users and rules for this project.";
+      const openingResponse = "I’ll help you build a project-aware audience group from the conditions available in this project.";
+      selectAgentDirect("Max");
+      setMessages([
+        { id: `user-${Date.now()}`, role: "user", flow: true, text: openingPrompt },
+      ]);
+      setActiveFlow(null);
+      setFlowReady(false);
+      setFlowConfirming(false);
+      setAudienceGroupFlowOpen(true);
+      setOpeningFlow(true);
+      const openingRequest = ++openingRequestRef.current;
+      void aiApi.createConversation(projectId, {
+        assistant: "Max",
+        title: conversationTitle(openingPrompt, "New audience group"),
+        flowId: "audience-group",
+        opening: { prompt: openingPrompt, response: openingResponse },
+      }).then((conversation) => {
+        if (openingRequest !== openingRequestRef.current) {
+          void aiApi.cancelConversation(projectId, conversation.id);
+          return;
+        }
+        setConversationId(conversation.id);
+        setMessages((current) => [...current, { id: `assistant-${Date.now()}`, role: "assistant", text: openingResponse, flow: true }]);
+        setOpeningFlow(false);
+        void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "ai", "context"] });
+      }).catch((error) => {
+        setMessages((current) => [...current, { id: `assistant-error-${Date.now()}`, role: "assistant", text: apiMessage(error, "The audience group setup could not be started. Please try again."), flow: true, error: true }]);
+        setAudienceGroupFlowOpen(false);
+        setOpeningFlow(false);
+      });
+      return;
+    }
     const backendDefinition = aiContext?.catalog?.flowDefinitions?.find((item) => item.id === flowId);
     const flow = backendDefinition
       ? {
@@ -2253,6 +2344,21 @@ export default function HomeCommandCenter() {
     }]);
   };
 
+  const completeBusinessAnalysis = (updated: AiBusinessContext) => {
+    setBusinessContext(updated);
+    setBusinessAnalysisFlowOpen(false);
+    selectAgentDirect("Nova");
+    void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "ai", "business-context"] });
+    void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "ai", "context"] });
+    setMessages((current) => [...current, {
+      id: `assistant-business-analysis-complete-${Date.now()}`,
+      role: "assistant",
+      assistant: "Nova",
+      text: "Your business analysis is ready and saved. Nova will use this product context when preparing future campaigns and journeys.",
+      flow: true,
+    }]);
+  };
+
   const advanceFlow = (skip = false) => {
     if (!activeFlow) return;
     void skip;
@@ -2322,6 +2428,17 @@ export default function HomeCommandCenter() {
     setJourneyRecommendation(null);
     setBusinessContextComplete(false);
     setMessages((current) => [...current, { id: `assistant-${Date.now()}`, role: "assistant", text: "No problem — I paused that setup. You can start it again whenever you’re ready.", flow: true }]);
+  };
+
+  const cancelBusinessAnalysisFlow = () => {
+    setBusinessAnalysisFlowOpen(false);
+    setBusinessContext(emptyBusinessContext);
+    setMessages((current) => [...current, { id: `assistant-${Date.now()}`, role: "assistant", assistant: "Nova", text: "No problem — I paused the business analysis. You can start it again whenever you’re ready.", flow: true }]);
+  };
+
+  const cancelAudienceGroupFlow = () => {
+    setAudienceGroupFlowOpen(false);
+    setMessages((current) => [...current, { id: `assistant-${Date.now()}`, role: "assistant", text: "No problem — I paused that audience group setup. You can start it again whenever you’re ready.", flow: true }]);
   };
 
   const composer = (className = "home-composer") => <Box className={`ai-composer ${className}`}>
@@ -2608,7 +2725,11 @@ export default function HomeCommandCenter() {
           </Stack>;
         })}
         {thinking && !journeyBusy && <Stack direction="row" gap={1.5} alignItems="center" className="chat-thinking" role="status" aria-live="polite"><Box className="chat-agent-mark is-thinking"><Image src={agentAvatar} alt={`${selectedAgent} avatar`} width={38} height={38} /></Box><Box className="chat-thinking-copy"><Typography>{thinkingLabel}<span className="thinking-dots">…</span></Typography><Box className="thinking-bars" aria-hidden><span /><span /><span /></Box></Box></Stack>}
-        {isBusinessContextStep && !businessContextLoading && <BusinessContextCard key={`business-context-${conversationId ?? "new"}`} context={businessContext} loading={businessContextLoading} saving={businessContextSaving} onUpdate={updateBusinessContext} onAnalyze={analyzeBusinessContext} onDetectLinks={detectBusinessContextLinks} onComplete={completeBusinessContext} onCancel={cancelFlow} />}
+        {isBusinessContextCardOpen && <BusinessContextCard key={`business-context-${conversationId ?? "new"}`} context={businessContext} existingAppLinks={{ appStoreUrl: onboardingQuery.data?.iosAppUrl, googlePlayUrl: onboardingQuery.data?.androidAppUrl }} loading={businessContextLoading} saving={businessContextSaving} onUpdate={updateBusinessContext} onAnalyze={analyzeBusinessContext} onDetectLinks={detectBusinessContextLinks} onComplete={businessAnalysisFlowOpen ? completeBusinessAnalysis : completeBusinessContext} onCancel={businessAnalysisFlowOpen ? cancelBusinessAnalysisFlow : cancelFlow} completeLabel={businessAnalysisFlowOpen ? "Save business analysis" : "Continue to journey"} />}
+        {audienceGroupFlowOpen && projectId && <AudienceGroupAiFlow projectId={projectId} sdkIntegrated={sdkIntegrated} trackedEvents={[...knownEventNames]} onCancel={cancelAudienceGroupFlow} onCreated={() => {
+          void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "audience-groups"] });
+          void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "ai", "context"] });
+        }} />}
         {analysisPhase && <AnalysisRequestCard phase={analysisPhase} selectedType={analysisType} selectedResourceId={analysisResource?.id ?? null} selectedResourceName={analysisResource?.name ?? null} selectedPeriod={analysisPeriod} emailItems={emailAnalysisItems} pushItems={pushAnalysisItems} journeyItems={journeyAnalysisItems} onType={(type) => { setAnalysisType(type); setAnalysisResource(null); setAnalysisPeriod(null); setAnalysisPhase("resource"); setMessages((current) => [...current, { id: `assistant-ben-scope-${Date.now()}`, role: "assistant", assistant: "Ben", text: `Which concrete ${type === "email" ? "email campaign" : type === "push" ? "push campaign" : "journey"} should I analyze?` }]); }} onResource={(id, name) => { setAnalysisResource({ id, name }); setAnalysisPhase("period"); setMessages((current) => [...current, { id: `assistant-ben-period-${Date.now()}`, role: "assistant", assistant: "Ben", text: "Which time period should I use?" }]); }} onPeriod={(period) => { setAnalysisPeriod(period); setAnalysisPhase("confirm"); }} onConfirm={startBenAnalysis} onBack={() => setAnalysisPhase(analysisPhase === "confirm" ? "period" : analysisPhase === "period" ? "resource" : "type")} onCancel={() => { setAnalysisPhase(null); setMessages((current) => [...current, { id: `assistant-ben-cancel-${Date.now()}`, role: "assistant", assistant: "Ben", text: "No problem. I won’t run an analysis until you ask again." }]); }} />}
         {activeFlow && flowReady && !flowConfirming && (activeFlow.id !== "journey" || businessContextComplete) && <GuidedFlowCard flow={activeFlow} steps={visibleFlowSteps} step={flowStep} answers={flowAnswers} onSelect={(value) => setFlowAnswers((current) => ({ ...current, [flowStep]: value }))} onNext={() => advanceFlow()} onBack={() => setFlowStep((current) => Math.max(0, current - 1))} onSkip={() => advanceFlow(true)} onCancel={cancelFlow} onContinueWithoutAudience={continueJourneyWithoutAudience} sdkIntegrated={sdkIntegrated} paywallEventsReady={paywallEventsReady} eventActionReady={eventActionReady} pushReady={pushReady} pushUnavailableReason={pushUnavailableReason} purposeRecommendation={purposeRecommendation} />}
         {journeyBusy && <JourneyGenerationOverlay phase={draftMutation.isPending ? "creation" : "recommendation"} />}

@@ -10,36 +10,18 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { audienceGroupsApi } from '@/lib/projects/api';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
 import type { AudienceGroupSchema } from '@/types/project';
+import { makeBlock, makeRule, toBackendRules, type Block, type Rule } from './audienceGroupRules';
 import SearchField from './SearchField';
 import { formatUserDateTime } from '@/lib/timezone';
 
-type Rule = { id: number; filter: string; operator: string; value: string };
-type Block = { id: number; rules: Rule[] };
 const filters = ['Email', 'Email Action', 'Last Emailed', 'Push Notification', 'Push Notification Action', 'Last Push Notification', 'Current Lifecycle Segment', 'Historical Lifecycle Segment', 'Journey Automation', 'Audience Group', 'Country', 'Account Status', 'User Type', 'Created Date'];
 const operators: Record<string, string[]> = { 'Email Action': ['Sent', 'Opened', 'Not opened', 'Clicked', 'Not clicked'], 'Push Notification Action': ['Sent', 'Clicked', 'Not clicked'], Country: ['Is', 'Is not'], 'User Type': ['Is', 'Is not'], 'Account Status': ['Is', 'Is not'], 'Current Lifecycle Segment': ['Is', 'Is not'], 'Historical Lifecycle Segment': ['Is', 'Is not'], 'Audience Group': ['Is', 'Is not'], 'Journey Automation': ['Is', 'Is not'], Email: ['Is available', 'Is not available'], 'Push Notification': ['Is available', 'Is not available'], 'Last Emailed': ['In the last', 'More than'], 'Last Push Notification': ['In the last', 'More than'], 'Created Date': ['Is', 'Before', 'After'] };
 const values: Record<string, string[]> = { Country: ['Canada', 'United States', 'United Kingdom', 'Australia', 'Germany'], 'User Type': ['Premium', 'Free', 'Trial'], 'Account Status': ['Active', 'Unconfirmed', 'Deleted'], 'Current Lifecycle Segment': ['New users', 'Onboarding complete', 'Paid customers', 'At-risk / inactive'], 'Audience Group': ['At-risk customers', 'Premium subscribers', 'New users · 7 days'], 'Email Action': ['Sent', 'Opened', 'Not opened', 'Clicked', 'Not clicked'], 'Push Notification Action': ['Sent', 'Clicked', 'Not clicked'] };
-
-const makeRule = (id: number): Rule => ({ id, filter: '', operator: '', value: '' });
-const makeBlock = (id: number, ruleId: number): Block => ({ id, rules: [makeRule(ruleId)] });
 
 const backendField: Record<string, string> = { Email: 'email', 'Current Lifecycle Segment': 'lifecycleSegmentId', Country: 'country', Region: 'region', 'Preferred Language': 'preferredLanguage', Platform: 'platform', 'Push Enabled': 'pushEnabled', 'Email Available': 'emailAvailable', 'Last Active': 'lastActiveAt' };
 const backendOperator: Record<string, string> = { Is: 'equals', 'Is not': 'not_equals', Contains: 'contains', 'Is available': 'exists', 'Is not available': 'not_exists', 'In the last': 'within_days', More: 'greater_than', 'More than': 'not_within_days' };
 const uiField: Record<string, string> = Object.fromEntries(Object.entries(backendField).map(([label, field]) => [field, label]));
 const uiOperator: Record<string, string> = Object.fromEntries(Object.entries(backendOperator).map(([label, operator]) => [operator, label]));
-function toBackendCondition(rule: Rule, schema?: AudienceGroupSchema) {
-  const field = schema?.fields.find(item => item.key === rule.filter || item.label === rule.filter);
-  const condition = field?.conditions.find(item => item.key === rule.operator || item.label === rule.operator);
-  const value = rule.value.trim();
-  const parsedValue = condition?.value.multiple ? value.split(',').map(item => item.trim()).filter(Boolean) : value;
-  return { field: field?.key ?? backendField[rule.filter] ?? rule.filter, operator: condition?.key ?? backendOperator[rule.operator] ?? rule.operator, ...(value ? { value: parsedValue } : {}) };
-}
-function toBackendRules(blocks: Block[], schema?: AudienceGroupSchema) {
-  const blockRules = (block: Block) => block.rules.filter(rule => rule.filter && rule.operator).map(rule => toBackendCondition(rule, schema));
-  if (!blocks.length) return { operator: 'AND' as const, conditions: [] };
-  return blocks.length > 1
-    ? { operator: 'OR' as const, conditions: blocks.map(block => ({ operator: 'AND' as const, conditions: blockRules(block) })) }
-    : { operator: 'AND' as const, conditions: blockRules(blocks[0]) };
-}
 
 export default function AudienceGroupWorkspace({ groupId }: { groupId: string }) {
   const router = useRouter();

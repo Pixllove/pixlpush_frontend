@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
 import {
@@ -49,6 +49,8 @@ function remapCompletedSteps(state: OnboardingState, platforms: ProjectPlatform[
 
 export default function OnboardingWizard() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const createdProjectEntry = searchParams.get('source') === 'project-created';
   const queryClient = useQueryClient();
   const { active: activeProject, projects, isPending: projectsPending, selectProject } = useActiveProject();
   const projectsQuery = useQuery({
@@ -104,16 +106,20 @@ export default function OnboardingWizard() {
     hydratedProject.current = projectId;
     if (localUserChange.current) return;
     if (progressQuery.data) {
+      const persisted = progressQuery.data;
+      const persistedSteps = onboardingStepsOf(persisted.platforms, persisted.channels);
       setState((previous) => ({
         ...previous,
-        ...progressQuery.data,
-        channels: splitLegacyPush(progressQuery.data.channels, progressQuery.data.platforms),
-        projectName: progressQuery.data.projectName || selectedProject?.name || previous.projectName,
+        ...persisted,
+        currentStep: createdProjectEntry ? Math.min(2, persistedSteps.length) : persisted.currentStep,
+        channels: splitLegacyPush(persisted.channels, persisted.platforms),
+        projectName: persisted.projectName || selectedProject?.name || previous.projectName,
       }));
+      if (createdProjectEntry) router.replace('/onboarding');
     } else if (selectedProject?.name) {
       setState((previous) => ({ ...previous, projectName: selectedProject.name }));
     }
-  }, [projectId, progressQuery.data, progressQuery.isFetching, progressQuery.isSuccess, selectedProject?.name]);
+  }, [createdProjectEntry, projectId, progressQuery.data, progressQuery.isFetching, progressQuery.isSuccess, router, selectedProject?.name]);
 
   const progressPayload = (value: OnboardingState): Partial<Omit<OnboardingState, 'projectName'>> => {
     const normalized = normalizeOnboardingUrls(value);
@@ -154,6 +160,18 @@ export default function OnboardingWizard() {
   // Clamped: changing product/channel selections can remove later steps.
   const currentStep = Math.min(stepCount, Math.max(1, state.currentStep));
   const activeStep = steps[currentStep - 1];
+
+  // Each step can be much taller than the viewport (especially the SDK steps).
+  // Reset the document scroll after the new step has rendered so Continue,
+  // Back, and direct step navigation always start at the top of the step.
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [currentStep]);
+
   const firebaseConnected = firebaseQuery.data?.status === 'connected';
   const hasMobile = state.platforms.includes('mobile');
   const isSdkStep = activeStep.kind === 'app-sdk' || activeStep.kind === 'web-sdk';

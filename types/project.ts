@@ -421,6 +421,7 @@ export interface AudienceGroupSchemaField {
   label: string;
   category?: string;
   operators: string[];
+  property?: { required?: boolean; options?: AudienceGroupSchemaOption[] };
   conditions: AudienceGroupSchemaCondition[];
 }
 export interface AudienceGroupSchema {

@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowForwardRounded, AutoAwesomeRounded, CloseRounded, ContentCopyRounded, LanguageRounded, LockRounded, MailOutlineRounded, OpenInNewRounded } from '@mui/icons-material';
+import { ArrowForwardRounded, AutoAwesomeRounded, CloseRounded, ContentCopyRounded, LanguageRounded, MailOutlineRounded, OpenInNewRounded } from '@mui/icons-material';
 import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { mobileSdkOptions, sdkPromptFor, type SdkId, websitePromptFor, websiteSdkOption } from './onboardingStepConfig';
@@ -76,7 +76,7 @@ export default function OnboardingStepExperience({
 
   if (kind === 'mobile-push') return <Stack gap={2} data-testid="onboarding-mobile-push-experience">
     <Paper elevation={0} className="onboarding-guidance"><strong>Firebase Cloud Messaging (mobile apps)</strong><span>Upload the Firebase service-account JSON used by this Project. PixlPush validates it with Google before encrypting and storing it.</span><small>Never paste credentials into chat or your app. The file is sent only to the authenticated backend.</small></Paper>
-    {onFirebase ? <Button variant="contained" onClick={onFirebase} startIcon={<LockRounded />} disabled={disabled}>{firebaseConnected ? 'Review Firebase with Max' : 'Connect Firebase with Max'}</Button> : null}
+    {onFirebase ? <Button variant="contained" onClick={onFirebase} disabled={disabled}>{firebaseConnected ? 'Review Firebase' : 'Connect Firebase'}</Button> : null}
     {firebaseConnected && <Alert severity="success">Firebase is connected for this Project.</Alert>}
     <Paper elevation={0} className="onboarding-guidance"><strong>iOS app without Firebase?</strong><span>Send through Apple Push (APNs) directly with the .p8 key from your Apple Developer account. Android apps still need Firebase.</span></Paper>
     {onApns ? <Button variant="outlined" onClick={onApns} disabled={disabled}>{apnsConnected ? 'Review Apple Push (APNs)' : 'Connect Apple Push (APNs)'}</Button> : null}

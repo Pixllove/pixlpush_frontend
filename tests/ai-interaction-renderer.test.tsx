@@ -316,11 +316,11 @@ describe('AiInteractionRenderer', () => {
     const { rerender } = render(<AiInteractionRenderer interaction={{ ...base, data: { currentStep: { kind: 'mobile-push', title: 'Mobile push setup' } } }} onSubmit={vi.fn()} onOpenFirebase={vi.fn()} onOpenApns={vi.fn()} />);
     expect(screen.getByTestId('onboarding-mobile-push-experience')).toBeInTheDocument();
     expect(screen.getByText('Firebase Cloud Messaging (mobile apps)')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Connect Firebase with Max' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Connect Firebase' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Connect Apple Push (APNs)' })).toBeInTheDocument();
 
     rerender(<AiInteractionRenderer interaction={{ ...base, data: { currentStep: { kind: 'mobile-push', title: 'Mobile push setup' } } }} onSubmit={vi.fn()} onOpenFirebase={vi.fn()} onOpenApns={vi.fn()} firebaseConnected apnsConnected />);
-    expect(screen.getByRole('button', { name: 'Review Firebase with Max' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Review Firebase' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Review Apple Push (APNs)' })).toBeInTheDocument();
 
     rerender(<AiInteractionRenderer interaction={{ ...base, data: { currentStep: { kind: 'app-sdk', title: 'App SDK' }, values: { projectName: 'Demo' } } }} onSubmit={vi.fn()} onRequestSdk={vi.fn()} onSendDeveloperInstructions={vi.fn()} />);

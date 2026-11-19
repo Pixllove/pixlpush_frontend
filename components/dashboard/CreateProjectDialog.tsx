@@ -8,12 +8,13 @@ import { useCreateProject } from '@/hooks/projects/use-projects';
 import { authApi } from '@/lib/auth/api';
 import SubmitButton from '@/components/auth/SubmitButton';
 import type { ApiError } from '@/types/auth';
+import type { Project } from '@/types/project';
 
 /**
  * Creates a Project and selects it. The caller becomes its owner, so the
  * new Project is immediately the one the dashboard is looking at.
  */
-export default function CreateProjectDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+export default function CreateProjectDialog({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated?: (project: Project) => void }) {
   const dispatch = useDispatch();
   const createProject = useCreateProject();
   const [name, setName] = useState('');
@@ -36,6 +37,7 @@ export default function CreateProjectDialog({ open, onClose }: { open: boolean; 
       await authApi.setActiveProject(project.id);
       dispatch(setSelectedProject(project.id));
       close();
+      onCreated?.(project);
     } catch (cause) {
       setError((cause as ApiError).message ?? 'Could not create the project. Please try again.');
     }

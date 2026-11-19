@@ -393,7 +393,11 @@ export default function DashboardFrame({
         </Box>
       </Box>
     </Box>
-    <CreateProjectDialog open={createOpen} onClose={() => setCreateOpen(false)} />
+    <CreateProjectDialog
+      open={createOpen}
+      onClose={() => setCreateOpen(false)}
+      onCreated={() => router.replace('/onboarding?source=project-created')}
+    />
     <SupportChatWidget
       showLauncher={false}
       isOpen={supportOpen}
