@@ -110,6 +110,7 @@ export function incompleteRuleCount(blocks: Block[], schema?: AudienceGroupSchem
 export function readableRule(rule: Rule, schema?: AudienceGroupSchema) {
   const field = schema?.fields.find(item => item.key === rule.filter || item.label === rule.filter);
   const condition = field?.conditions.find(item => item.key === rule.operator || item.label === rule.operator);
+  if ((field?.key ?? rule.filter) === 'lastNotified') return `Exclude users notified in the last ${rule.value.trim()} days`;
   const optionLabel = (value: string) => condition?.value.options?.find(option => option.key === value)?.label ?? value;
   const values = rule.value.split(',').map(item => item.trim()).filter(Boolean).map(optionLabel).join(', ');
   return `${field?.label ?? rule.filter} ${condition?.label ?? rule.operator}${values ? ` ${values}` : ''}${rule.property ? ` (${rule.property})` : ''}`;

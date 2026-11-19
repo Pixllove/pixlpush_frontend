@@ -20,6 +20,7 @@ const schema = {
       { key: 'performed_in_last_30', label: 'Performed in the last 30 days', value: { type: 'text', options: [{ key: 'checkout_started', label: 'Checkout started' }] } },
     ] },
     { key: 'emailAction', label: 'Email Action', category: 'email', operators: ['opened'], conditions: [{ key: 'opened', label: 'Opened', value: { type: 'text', options: [{ key: 'campaign_a', label: 'Campaign A' }] } }] },
+    { key: 'lastNotified', label: 'Last Notified', category: 'account', operators: ['exclude_in_last_days'], conditions: [{ key: 'exclude_in_last_days', label: 'Exclude users notified in the last X days', value: { type: 'integer', required: true, min: 1, unit: 'days' } }] },
     { key: 'country', label: 'Country', category: 'location', operators: ['equals'], conditions: [{ key: 'equals', label: 'Is', value: { type: 'text', options: [{ key: 'pk', label: 'Pakistan' }] } }] },
     { key: 'customProperty', label: 'Custom property', category: 'custom', operators: ['equals'], property: { required: true, options: [{ key: 'plan', label: 'Plan' }] }, conditions: [{ key: 'equals', label: 'Is', value: { type: 'text', options: [{ key: 'pro', label: 'Pro' }] } }] },
     { key: 'optIn', label: 'Email opt-in', category: 'consent', operators: ['is'], conditions: [{ key: 'is', label: 'Is', value: { type: 'text', options: [{ key: 'true', label: 'Yes' }] } }] },
@@ -109,6 +110,30 @@ describe('project-aware audience group chat flow', () => {
     await user.type(screen.getByRole('textbox', { name: 'Group name' }), 'Email-ready users');
     await user.click(screen.getByRole('button', { name: 'Create audience group' }));
     await waitFor(() => expect(api.create).toHaveBeenCalledWith('p1', expect.objectContaining({ rules: { operator: 'AND', conditions: [{ field: 'email', operator: 'available' }] } })));
+  });
+
+  it('renders Last Notified as a fixed sentence with positive whole-number validation', async () => {
+    const user = userEvent.setup();
+    renderFlow();
+    await user.click(await screen.findByText('Group users by profile details'));
+    await user.click(screen.getByRole('button', { name: /Reachability & engagement/ }));
+    await user.click(screen.getByRole('button', { name: 'Add condition' }));
+    await user.click(screen.getAllByRole('combobox')[0]);
+    await user.click(screen.getByRole('option', { name: 'Last Notified' }));
+
+    expect(screen.getByText('Exclude users notified in the last')).toBeInTheDocument();
+    expect(screen.getByText('days')).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Condition operator' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Review rules' })).toBeDisabled();
+
+    const days = screen.getByRole('spinbutton', { name: 'Last Notified days' });
+    await user.type(days, '0');
+    expect(screen.getByRole('button', { name: 'Review rules' })).toBeDisabled();
+    await user.clear(days);
+    await user.type(days, '7');
+    expect(screen.getByRole('button', { name: 'Review rules' })).toBeEnabled();
+    await user.click(screen.getByRole('button', { name: 'Review rules' }));
+    expect(screen.getByText(/Exclude users notified in the last 7 days/)).toBeInTheDocument();
   });
 
   it('requires a schema-backed custom property before accepting its value', async () => {

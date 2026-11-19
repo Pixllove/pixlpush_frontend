@@ -40,6 +40,7 @@ const profileCategories: Array<{ id: ProfileCategory; label: string }> = [
 function fieldHasData(field: AudienceGroupSchemaField | undefined) {
   if (!field) return false;
   if (field.key === 'customProperty') return Boolean(field.property?.options?.length && field.conditions.length);
+  if (field.key === 'lastNotified') return field.conditions.some(condition => condition.value.type === 'integer' && condition.value.min === 1);
   return field.conditions.some(condition => condition.value.type === 'none' || Boolean(condition.value.options?.length) || condition.value.freeText === true);
 }
 
@@ -53,30 +54,30 @@ function fieldLabel(field: AudienceGroupSchemaField) {
 
 function fieldsForCategory(schema: AudienceGroupSchema, category: ProfileCategory) {
   const categories: Record<Exclude<ProfileCategory, 'other'>, string[]> = {
-    reachability: ['email', 'emailAction', 'lastEmailed', 'fcmToken', 'apnsToken', 'webPush', 'pushNotification', 'pushNotificationAction', 'lastPushNotification'],
+    reachability: ['email', 'emailAction', 'lastEmailed', 'lastNotified', 'fcmToken', 'apnsToken', 'webPush', 'pushNotification', 'pushNotificationAction', 'lastPushNotification'],
     product: ['currentLifecycleSegment', 'historicalLifecycleSegment', 'journeyAutomation', 'audienceGroup', 'performedEvent'],
     profile: ['country', 'region', 'language', 'platform'],
-    account: ['lastActive', 'userImport', 'accountStatus', 'userType', 'createdDate'],
+    account: ['userImport', 'accountStatus', 'userType', 'createdDate'],
     custom: ['customProperty'],
   };
-  return schema.fields.filter(field => categories[category as Exclude<ProfileCategory, 'other'>]?.includes(field.key));
+  return schema.fields.filter(field => !field.deprecated && categories[category as Exclude<ProfileCategory, 'other'>]?.includes(field.key));
 }
 
 function ruleFields(schema: AudienceGroupSchema, goal: Goal, branch: string, profileCategory: ProfileCategory | null) {
-  const fields = schema.fields.filter(fieldHasData);
+  const fields = schema.fields.filter(field => !field.deprecated && fieldHasData(field));
   if (goal === 'event') return fields.filter(field => field.key === 'performedEvent');
   if (goal === 'behavior') {
     const keys = branch === 'events' ? ['performedEvent'] : branch === 'lifecycle' ? ['currentLifecycleSegment', 'historicalLifecycleSegment'] : ['journeyAutomation'];
     return fields.filter(field => keys.includes(field.key));
   }
   if (goal === 'campaign') {
-    const activity = ['emailAction', 'lastEmailed', 'pushNotificationAction', 'lastPushNotification'];
+    const activity = ['emailAction', 'lastEmailed', 'lastNotified', 'pushNotificationAction', 'lastPushNotification'];
     if (branch === 'specific') return fields.filter(field => /campaign/i.test(`${field.key} ${field.label}`) && optionHas(field, /campaign/i));
     return fields.filter(field => activity.includes(field.key));
   }
   if (goal === 'profile' && profileCategory && profileCategory !== 'other') return fieldsForCategory(schema, profileCategory).filter(fieldHasData);
   if (goal === 'reactivation') {
-    const keys = ['email', 'emailAction', 'lastEmailed', 'fcmToken', 'apnsToken', 'webPush', 'pushNotification', 'pushNotificationAction', 'lastPushNotification', 'performedEvent', 'lastActive', 'accountStatus'];
+    const keys = ['email', 'emailAction', 'lastEmailed', 'lastNotified', 'fcmToken', 'apnsToken', 'webPush', 'pushNotification', 'pushNotificationAction', 'lastPushNotification', 'performedEvent', 'accountStatus'];
     const consent = fields.filter(field => /consent|opt.?in/i.test(`${field.key} ${field.label}`));
     return fields.filter(field => keys.includes(field.key) || consent.includes(field));
   }
@@ -91,14 +92,14 @@ function fieldsForOther(schema: AudienceGroupSchema, description: string) {
   const text = description.toLowerCase();
   const hints = [
     { words: ['event', 'action', 'purchase', 'checkout'], keys: ['performedEvent'] },
-    { words: ['email', 'opened', 'clicked', 'campaign'], keys: ['email', 'emailAction', 'lastEmailed'] },
-    { words: ['push', 'notification'], keys: ['fcmToken', 'apnsToken', 'webPush', 'pushNotification', 'pushNotificationAction', 'lastPushNotification'] },
+    { words: ['email', 'opened', 'clicked', 'campaign'], keys: ['email', 'emailAction', 'lastEmailed', 'lastNotified'] },
+    { words: ['push', 'notification'], keys: ['fcmToken', 'apnsToken', 'webPush', 'pushNotification', 'pushNotificationAction', 'lastPushNotification', 'lastNotified'] },
     { words: ['country', 'location', 'language', 'platform'], keys: ['country', 'region', 'language', 'platform'] },
     { words: ['journey'], keys: ['journeyAutomation'] },
     { words: ['segment', 'lifecycle'], keys: ['currentLifecycleSegment', 'historicalLifecycleSegment'] },
   ];
   const keys = new Set(hints.filter(hint => hint.words.some(word => text.includes(word))).flatMap(hint => hint.keys));
-  const candidates = schema.fields.filter(fieldHasData);
+  const candidates = schema.fields.filter(field => !field.deprecated && fieldHasData(field));
   return keys.size ? candidates.filter(field => keys.has(field.key)) : candidates;
 }
 
@@ -107,7 +108,7 @@ function RuleEditor({ schema, fields, blocks, onChange }: { schema: AudienceGrou
   const maxConditions = schema.limits.maxConditions || 10;
   const updateRule = (blockId: number, ruleId: number, key: keyof Rule, value: string) => onChange(blocks.map(block => block.id !== blockId ? block : {
     ...block,
-    rules: block.rules.map(rule => rule.id !== ruleId ? rule : { ...rule, [key]: value, ...(key === 'filter' ? { operator: '', value: '', property: '' } : key === 'operator' ? { value: '' } : {}) }),
+    rules: block.rules.map(rule => rule.id !== ruleId ? rule : { ...rule, [key]: value, ...(key === 'filter' ? { operator: value === 'lastNotified' ? 'exclude_in_last_days' : '', value: '', property: '' } : key === 'operator' ? { value: '' } : {}) }),
   }));
   const addAnd = (blockId: number) => {
     if (conditionCount >= maxConditions) return;
@@ -141,9 +142,14 @@ function RuleRow({ rule, schema, fields, onChange, onRemove }: { rule: Rule; sch
   const valueType = condition?.value.type;
   const selected = condition?.value.multiple ? rule.value.split(',').map(value => value.trim()).filter(Boolean) : rule.value;
   const hasCustomProperty = field?.key === 'customProperty';
+  const isLastNotified = field?.key === 'lastNotified';
   const complete = isRuleComplete(rule, schema);
   const incomplete = !complete;
-  const incompleteMessage = !ruleHasInput(rule) ? 'Choose a field, or remove this incomplete condition.' : 'Choose an operator and a required value, or remove this incomplete condition.';
+  const incompleteMessage = !ruleHasInput(rule)
+    ? 'Choose a field, or remove this incomplete condition.'
+    : isLastNotified
+      ? 'Enter a positive whole number of days for Last Notified.'
+      : 'Choose an operator and a required value, or remove this incomplete condition.';
   return <Stack direction={{ xs: 'column', md: 'row' }} gap={1} alignItems={{ md: 'center' }} sx={{ width: '100%', flexWrap: { md: 'wrap' } }}>
     <Select size="small" displayEmpty value={rule.filter} inputProps={{ 'aria-label': 'Condition field' }} onChange={event => onChange('filter', String(event.target.value))} sx={{ minWidth: { md: 190 }, flex: 1 }}>
       <MenuItem value="">Choose a field</MenuItem>
@@ -153,11 +159,11 @@ function RuleRow({ rule, schema, fields, onChange, onRemove }: { rule: Rule; sch
       <MenuItem value="">Choose a property</MenuItem>
       {(field?.property?.options ?? []).map(option => <MenuItem key={option.key} value={option.key}>{option.label}</MenuItem>)}
     </Select>}
-    {field && <Select size="small" displayEmpty value={rule.operator} inputProps={{ 'aria-label': 'Condition operator' }} onChange={event => onChange('operator', String(event.target.value))} disabled={hasCustomProperty && !rule.property} sx={{ minWidth: { md: 180 }, flex: 1 }}>
+    {field && !isLastNotified && <Select size="small" displayEmpty value={rule.operator} inputProps={{ 'aria-label': 'Condition operator' }} onChange={event => onChange('operator', String(event.target.value))} disabled={hasCustomProperty && !rule.property} sx={{ minWidth: { md: 180 }, flex: 1 }}>
       <MenuItem value="">Choose an operator</MenuItem>
       {field.conditions.map(item => <MenuItem key={item.key} value={item.key}>{item.label}</MenuItem>)}
     </Select>}
-    {condition && valueType !== 'none' && (options.length ? <Select size="small" displayEmpty multiple={Boolean(condition.value.multiple)} value={selected} inputProps={{ 'aria-label': 'Condition value' }} onChange={event => {
+    {isLastNotified ? <Stack direction="row" alignItems="center" gap={0.7} sx={{ flex: 1, minWidth: 0, flexWrap: 'wrap' }}><Typography component="span" whiteSpace="nowrap">Exclude users notified in the last</Typography><TextField size="small" type="number" inputProps={{ min: 1, step: 1, inputMode: 'numeric', 'aria-label': 'Last Notified days' }} value={rule.value} onChange={event => onChange('value', event.target.value)} error={Boolean(rule.value) && !/^[1-9]\d*$/.test(rule.value.trim())} /><Typography component="span">days</Typography></Stack> : condition && valueType !== 'none' && (options.length ? <Select size="small" displayEmpty multiple={Boolean(condition.value.multiple)} value={selected} inputProps={{ 'aria-label': 'Condition value' }} onChange={event => {
       const value = Array.isArray(event.target.value) ? event.target.value : [event.target.value];
       onChange('value', value.map(String).join(','));
     }} renderValue={value => (Array.isArray(value) ? value : [value]).map(item => options.find(option => option.key === item)?.label ?? item).join(', ')} sx={{ minWidth: { md: 190 }, flex: 1 }}>
@@ -170,7 +176,7 @@ function RuleRow({ rule, schema, fields, onChange, onRemove }: { rule: Rule; sch
 }
 
 export default function AudienceGroupAiFlow({ projectId, sdkIntegrated, trackedEvents, onCancel, onCreated }: Props) {
-  const schemaQuery = useQuery({ queryKey: ['projects', projectId, 'audience-groups', 'schema'], queryFn: () => audienceGroupsApi.schema(projectId), staleTime: 30_000 });
+  const schemaQuery = useQuery({ queryKey: ['projects', projectId, 'audience-groups', 'schema', 'users-audience-groups'], queryFn: () => audienceGroupsApi.schema(projectId, { surface: 'users-audience-groups' }), staleTime: 30_000 });
   const [goal, setGoal] = useState<Goal | null>(null);
   const [branch, setBranch] = useState('');
   const [profileCategory, setProfileCategory] = useState<ProfileCategory | null>(null);
