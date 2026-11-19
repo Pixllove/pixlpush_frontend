@@ -772,7 +772,16 @@ export const auditApi = {
 /** all = every person, deleted accounts included; anonymous = visitors nobody logged in on. */
 export type UserListStatus = "all" | "active" | "logged_out" | "deleted" | "anonymous";
 /** The Users page filter. */
-export type UserListFilter = "all" | "email-subscribed" | "email-unsubscribed" | "push-enabled" | "unreachable";
+export type UserListFilter =
+  | "all"
+  | "email-subscribed"
+  | "email-unsubscribed"
+  | "email-bounced"
+  | "email-spam"
+  | "push-enabled"
+  | "push-unavailable"
+  | "billable"
+  | "unreachable";
 
 export const usersApi = {
   list: (

@@ -1201,18 +1201,52 @@ export function UsersSection() {
           </Grid>
           <Card className="saas-card data-panel">
             <Stack
-              direction={{ xs: "column", md: "row" }}
+              direction={{ xs: "column", lg: "row" }}
               justifyContent="space-between"
-              alignItems={{ md: "center" }}
+              alignItems={{ lg: "center" }}
               gap={2}
             >
-              <Box>
-                <Typography variant="h3">All users</Typography>
-                <Typography color="text.secondary" fontSize="var(--fs-12)">
-                  Search and inspect identified people in {projectName}.
-                </Typography>
-              </Box>
-              <Stack direction={{ xs: "column", sm: "row" }} gap={1}>
+              <Stack direction={{ xs: "column", sm: "row" }} alignItems={{ sm: "center" }} gap={1.5} sx={{ flexShrink: 0 }}>
+                <Typography variant="h3" sx={{ whiteSpace: "nowrap" }}>All users</Typography>
+                <Select
+                  size="small"
+                  value={userFilter}
+                  onChange={(event) => setUserFilter(event.target.value as UserListFilter)}
+                  className="filter-select"
+                  startAdornment={
+                    <InputAdornment position="start">
+                      <FilterListRounded fontSize="small" />
+                    </InputAdornment>
+                  }
+                >
+                  <MenuItem value="all">All users</MenuItem>
+                  <MenuItem value="email-subscribed">Email subscribed</MenuItem>
+                  <MenuItem value="email-unsubscribed">Email unsubscribed</MenuItem>
+                  <MenuItem value="email-bounced">Email bounced</MenuItem>
+                  <MenuItem value="email-spam">Email spam complaints</MenuItem>
+                  <MenuItem value="push-enabled">Push enabled</MenuItem>
+                  <MenuItem value="push-unavailable">Push unavailable</MenuItem>
+                  <MenuItem value="billable">Billable users</MenuItem>
+                  <MenuItem value="unreachable">Unreachable users</MenuItem>
+                </Select>
+              </Stack>
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                alignItems={{ sm: "center" }}
+                flexWrap={{ sm: "wrap", lg: "nowrap" }}
+                justifyContent={{ lg: "flex-end" }}
+                gap={1}
+                sx={{
+                  "& .MuiButton-root": { whiteSpace: "nowrap", flexShrink: 0 },
+                  "& > :first-of-type": { minWidth: { sm: 300 }, flex: { sm: "1 1 300px" } },
+                }}
+              >
+                <SearchField
+                  value={userSearch}
+                  onChange={setUserSearch}
+                  onSearch={setAppliedUserSearch}
+                  placeholder="Search by user ID, email or country"
+                />
                 <Button
                   variant="contained"
                   startIcon={<FileUploadRounded />}
@@ -1231,35 +1265,6 @@ export function UsersSection() {
                   Export
                 </Button>
               </Stack>
-            </Stack>
-            <Stack
-              direction={{ xs: "column", sm: "row" }}
-              gap={1.2}
-              className="data-toolbar"
-            >
-              <SearchField
-                value={userSearch}
-                onChange={setUserSearch}
-                onSearch={setAppliedUserSearch}
-                placeholder="Search by user ID, email or country"
-              />
-              <Select
-                size="small"
-                value={userFilter}
-                onChange={(event) => setUserFilter(event.target.value as UserListFilter)}
-                className="filter-select"
-                startAdornment={
-                  <InputAdornment position="start">
-                    <FilterListRounded fontSize="small" />
-                  </InputAdornment>
-                }
-              >
-                <MenuItem value="all">All users</MenuItem>
-                <MenuItem value="email-subscribed">Email subscribed</MenuItem>
-                <MenuItem value="email-unsubscribed">Email unsubscribed</MenuItem>
-                <MenuItem value="push-enabled">Push enabled</MenuItem>
-                <MenuItem value="unreachable">Unreachable users</MenuItem>
-              </Select>
             </Stack>
             {usersQuery.isError ? (
               <EmptyState
