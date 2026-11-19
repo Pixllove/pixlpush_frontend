@@ -152,9 +152,13 @@ export function UsersPageDescription() {
   const searchParams = useSearchParams();
   const tab = searchParams.get("tab");
 
-  if (tab === "segments" || tab === "groups") return null;
-
-  return "Manage your users, review lifecycle segments and activity, or group users into targeted audience groups.";
+  // Hidden, not removed, on the other tabs so the page keeps its height and does not jump on tab switch.
+  const hidden = tab === "segments" || tab === "groups";
+  return (
+    <span style={{ visibility: hidden ? "hidden" : undefined }} aria-hidden={hidden || undefined}>
+      Manage your users, review lifecycle segments and activity, or group users into targeted audience groups.
+    </span>
+  );
 }
 
 export function OverviewSection() {
@@ -1213,6 +1217,18 @@ export function UsersSection() {
                   value={userFilter}
                   onChange={(event) => setUserFilter(event.target.value as UserListFilter)}
                   className="filter-select"
+                  MenuProps={{
+                    slotProps: {
+                      paper: {
+                        sx: {
+                          maxHeight: "min(480px, 70vh)",
+                          scrollbarWidth: "thin",
+                          "&::-webkit-scrollbar": { width: 6 },
+                          "&::-webkit-scrollbar-thumb": { borderRadius: 3, bgcolor: "divider" },
+                        },
+                      },
+                    },
+                  }}
                   startAdornment={
                     <InputAdornment position="start">
                       <FilterListRounded fontSize="small" />
@@ -1238,7 +1254,7 @@ export function UsersSection() {
                 gap={1}
                 sx={{
                   "& .MuiButton-root": { whiteSpace: "nowrap", flexShrink: 0 },
-                  "& > :first-of-type": { minWidth: { sm: 300 }, flex: { sm: "1 1 300px" } },
+                  "& > :not(.MuiButton-root)": { minWidth: { sm: 320 }, flex: { sm: "1 1 320px" }, maxWidth: { lg: 380 } },
                 }}
               >
                 <SearchField
