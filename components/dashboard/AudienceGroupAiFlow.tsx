@@ -1,12 +1,12 @@
 'use client';
 
 import { AddRounded, ArrowBackRounded, ArrowForwardRounded, CloseRounded, ReplayRounded } from '@mui/icons-material';
-import { Alert, Box, Button, ButtonBase, Card, CircularProgress, Divider, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, ButtonBase, Card, CircularProgress, Divider, ListSubheader, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { audienceGroupsApi } from '@/lib/projects/api';
 import type { AudienceGroup, AudienceGroupSchema, AudienceGroupSchemaField } from '@/types/project';
-import { incompleteRuleCount, isRuleComplete, makeBlock, makeRule, readableRule, ruleHasInput, toBackendRules, validRuleCount, type Block, type Rule } from './audienceGroupRules';
+import { groupAudienceFields, incompleteRuleCount, isRuleComplete, makeBlock, makeRule, readableRule, ruleHasInput, toBackendRules, validRuleCount, type Block, type Rule } from './audienceGroupRules';
 
 type Goal = 'behavior' | 'campaign' | 'event' | 'profile' | 'reactivation' | 'other';
 type ProfileCategory = 'reachability' | 'product' | 'profile' | 'account' | 'custom' | 'other';
@@ -143,6 +143,7 @@ function RuleRow({ rule, schema, fields, onChange, onRemove }: { rule: Rule; sch
   const selected = condition?.value.multiple ? rule.value.split(',').map(value => value.trim()).filter(Boolean) : rule.value;
   const hasCustomProperty = field?.key === 'customProperty';
   const isLastNotified = field?.key === 'lastNotified';
+  const groupedFields = groupAudienceFields(fields);
   const complete = isRuleComplete(rule, schema);
   const incomplete = !complete;
   const incompleteMessage = !ruleHasInput(rule)
@@ -153,7 +154,7 @@ function RuleRow({ rule, schema, fields, onChange, onRemove }: { rule: Rule; sch
   return <Stack direction={{ xs: 'column', md: 'row' }} gap={1} alignItems={{ md: 'center' }} sx={{ width: '100%', flexWrap: { md: 'wrap' } }}>
     <Select size="small" displayEmpty value={rule.filter} inputProps={{ 'aria-label': 'Condition field' }} onChange={event => onChange('filter', String(event.target.value))} sx={{ minWidth: { md: 190 }, flex: 1 }}>
       <MenuItem value="">Choose a field</MenuItem>
-      {fields.map(item => <MenuItem key={item.key} value={item.key}>{fieldLabel(item)}</MenuItem>)}
+      {groupedFields.flatMap(group => [<ListSubheader key={`${group.label}-header`} disableSticky sx={{ px: 1.5, py: 0.6, lineHeight: 1.5, fontWeight: 700, color: 'text.primary' }}>{group.label}</ListSubheader>, ...group.fields.map(item => <MenuItem key={item.key} value={item.key} sx={{ pl: 3 }}>{fieldLabel(item)}</MenuItem>)])}
     </Select>
     {hasCustomProperty && <Select size="small" displayEmpty value={rule.property ?? ''} inputProps={{ 'aria-label': 'Custom property' }} onChange={event => onChange('property', String(event.target.value))} sx={{ minWidth: { md: 180 }, flex: 1 }}>
       <MenuItem value="">Choose a property</MenuItem>

@@ -1523,7 +1523,7 @@ export function UsersSection() {
             <Box>
               <Typography variant="h3">Audience groups</Typography>
               <Typography color="text.secondary" fontSize="var(--fs-12)">
-                Dynamic targeting groups for campaigns and journey automations.
+              Organize users into dynamic audience groups using lifecycle segments, user data, and conditions for targeted campaigns and Journey Automations.
               </Typography>
             </Box>
             <Button

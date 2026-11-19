@@ -1,10 +1,33 @@
 import type { AudienceGroupSchema } from '@/types/project';
+import type { AudienceGroupSchemaField } from '@/types/project';
 
 export type Rule = { id: number; filter: string; operator: string; value: string; property?: string };
 export type Block = { id: number; rules: Rule[] };
 
 export const makeRule = (id: number): Rule => ({ id, filter: '', operator: '', value: '' });
 export const makeBlock = (id: number, ruleId: number): Block => ({ id, rules: [makeRule(ruleId)] });
+
+export const audienceFieldCategoryOrder = [
+  'Reachability & engagement',
+  'Product & lifecycle',
+  'Profile & location',
+  'Account & history',
+  'Custom properties',
+] as const;
+
+function audienceFieldCategory(field: AudienceGroupSchemaField) {
+  if (field.key === 'lastNotified' || field.category === 'consent' || field.category === 'email' || field.category === 'push') return 'Reachability & engagement';
+  if (field.category === 'event' || field.category === 'lifecycle' || field.category === 'journey' || field.category === 'group') return 'Product & lifecycle';
+  if (field.category === 'location' || field.category === 'device') return 'Profile & location';
+  if (field.category === 'custom') return 'Custom properties';
+  return 'Account & history';
+}
+
+export function groupAudienceFields(fields: AudienceGroupSchemaField[]) {
+  return audienceFieldCategoryOrder
+    .map(label => ({ label, fields: fields.filter(field => audienceFieldCategory(field) === label) }))
+    .filter(group => group.fields.length > 0);
+}
 
 const legacyField: Record<string, string> = {
   Email: 'email',

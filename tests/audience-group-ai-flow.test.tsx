@@ -92,6 +92,7 @@ describe('project-aware audience group chat flow', () => {
     await user.click(await screen.findByText('Group users by profile details'));
     await user.click(screen.getByRole('button', { name: /Reachability & engagement/ }));
     expect(screen.getByText('Conditions for Reachability & engagement')).toBeInTheDocument();
+    expect(screen.getByText('Reachability & engagement')).toBeInTheDocument();
     expect(screen.getByText('Selected goal: Group users by profile details')).toBeInTheDocument();
     expect(screen.getByText('No conditions selected yet')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Add condition' }));
