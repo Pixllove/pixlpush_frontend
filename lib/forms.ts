@@ -1,6 +1,12 @@
 import { authRequest } from '@/lib/auth/client';
 import { audienceGroupsApi } from '@/lib/projects/api';
-import { defaultDraft, formDraftSchema, makeId, withFieldsBlock, type FormDraft, type FormKind, type FormStatus } from '@/components/dashboard/forms/model';
+import { defaultDraft, formDraftSchema, localZone, makeId, utcToWall, wallToUtc, withFieldsBlock, type FormDraft, type FormKind, type FormStatus } from '@/components/dashboard/forms/model';
+
+/** A saved IANA zone if the browser knows it, else the visitor's own. Old forms have none: their times were entered locally. */
+const zoneOf = (zone: unknown) => {
+  if (typeof zone !== 'string' || !zone) return localZone();
+  try { new Intl.DateTimeFormat('en-US', { timeZone: zone }); return zone; } catch { return localZone(); }
+};
 
 /** The dashboard API response. The list endpoint omits the editor sections. */
 type ApiForm = {
@@ -78,7 +84,7 @@ function toApiSections(draft: FormDraft) {
   const name = draft.fields.find((field) => field.type === 'text' && /name/i.test(field.label));
   const customFields = draft.fields.filter((field) => field.type !== 'email' && field !== name && field.type !== 'hidden').map((field) => ({
     key: `field_${field.id.toLowerCase().replace(/[^a-z0-9_]/g, '_').slice(0, 32)}`,
-    type: field.type as 'text' | 'phone' | 'number' | 'select' | 'checkbox' | 'date',
+    type: field.type as 'text' | 'textarea' | 'phone' | 'number' | 'select' | 'checkbox' | 'date',
     label: clip(field.label, 60) || 'Your answer', placeholder: clip(field.placeholder, 100), required: field.required,
     options: field.type === 'select' ? field.options.map((option) => clip(option, 100)).filter(Boolean).slice(0, 30) : [],
   }));
@@ -116,6 +122,11 @@ function toApiSections(draft: FormDraft) {
     accentColor: draft.design.buttonBg,
     buttonTextColor: draft.design.buttonText,
     buttonRadius: Math.max(0, Math.min(24, Math.round(draft.design.buttonRadius))),
+    buttonAlign: draft.design.buttonAlign,
+    buttonStyle: draft.design.buttonStyle,
+    labelAlign: draft.design.labelAlign,
+    sidebarMobile: draft.design.sidebarMobile,
+    buttonSize: Math.max(11, Math.min(24, Math.round(draft.design.buttonSize))),
     inputBackgroundColor: draft.design.inputBg,
     inputBorderColor: draft.design.inputBorder,
     inputRadius: Math.max(0, Math.min(24, Math.round(draft.design.inputRadius))),
@@ -144,7 +155,7 @@ function toApiSections(draft: FormDraft) {
       clickOn: false,
     },
     frequency: draft.behaviour.repeat === 'always' ? null : { amount: Math.max(1, Math.min(365, draft.behaviour.frequency)), unit: draft.behaviour.frequencyUnit },
-    schedule: { startsAt: draft.behaviour.schedule === 'range' && draft.behaviour.startAt ? new Date(draft.behaviour.startAt).toISOString() : null, endsAt: draft.behaviour.schedule === 'range' && draft.behaviour.endAt ? new Date(draft.behaviour.endAt).toISOString() : null },
+    schedule: { startsAt: draft.behaviour.schedule === 'range' && draft.behaviour.startAt ? wallToUtc(draft.behaviour.startAt, draft.behaviour.timezone) : null, endsAt: draft.behaviour.schedule === 'range' && draft.behaviour.endAt ? wallToUtc(draft.behaviour.endAt, draft.behaviour.timezone) : null, timezone: draft.behaviour.timezone },
     pages: { mode: draft.behaviour.pages === 'show' ? 'include' : draft.behaviour.pages === 'hide' ? 'exclude' : 'all', paths: draft.behaviour.urls.split('\n').map((value) => value.trim()).filter(Boolean).map((value) => { try { return value.startsWith('http') ? new URL(value).pathname : value.startsWith('/') ? value : `/${value}`; } catch { return value.startsWith('/') ? value : `/${value}`; } }).slice(0, 50), strict: draft.behaviour.strict },
     devices: { desktop: !draft.behaviour.hideDesktop, tablet: !draft.behaviour.hideTablet, mobile: !draft.behaviour.hideMobile },
   };
@@ -219,9 +230,9 @@ function readForm(form: ApiForm): FormDraft {
     if (!item || typeof item !== 'object') return [];
     const field = item as Record<string, unknown>;
     const type = field.type;
-    if (!['text', 'phone', 'number', 'select', 'checkbox', 'date'].includes(String(type))) return [];
+    if (!['text', 'textarea', 'phone', 'number', 'select', 'checkbox', 'date'].includes(String(type))) return [];
     const key = String(field.key ?? 'field_custom');
-    return [{ id: key.replace(/^field_/, ''), type: type as 'text' | 'phone' | 'number' | 'select' | 'checkbox' | 'date', label: String(field.label ?? 'Your answer'), placeholder: String(field.placeholder ?? ''), required: Boolean(field.required), half: false, options: Array.isArray(field.options) ? field.options.map(String) : [], value: '' }];
+    return [{ id: key.replace(/^field_/, ''), type: type as 'text' | 'textarea' | 'phone' | 'number' | 'select' | 'checkbox' | 'date', label: String(field.label ?? 'Your answer'), placeholder: String(field.placeholder ?? ''), required: Boolean(field.required), half: false, options: Array.isArray(field.options) ? field.options.map(String) : [], value: '' }];
   }) : [];
   const success = content.success && typeof content.success === 'object' ? content.success as { blocks?: Array<Record<string, unknown>>; coupon?: string; button?: { label?: string; url?: string | null } } : {};
   const successBlocks = success.blocks ?? [];
@@ -253,7 +264,7 @@ function readForm(form: ApiForm): FormDraft {
       mode: modeOf(behavior),
       repeat: behavior.frequency === null ? 'always' : 'after',
       frequency: Number(frequency.amount ?? seed.behaviour.frequency), frequencyUnit: frequency.unit ?? seed.behaviour.frequencyUnit,
-      schedule: schedule.startsAt || schedule.endsAt ? 'range' : 'now', startAt: typeof schedule.startsAt === 'string' ? schedule.startsAt.slice(0, 16) : '', endAt: typeof schedule.endsAt === 'string' ? schedule.endsAt.slice(0, 16) : '',
+      schedule: schedule.startsAt || schedule.endsAt ? 'range' : 'now', startAt: typeof schedule.startsAt === 'string' ? utcToWall(schedule.startsAt, zoneOf(schedule.timezone)) : '', endAt: typeof schedule.endsAt === 'string' ? utcToWall(schedule.endsAt, zoneOf(schedule.timezone)) : '', timezone: zoneOf(schedule.timezone),
       pages: pages.mode === 'include' ? 'show' : pages.mode === 'exclude' ? 'hide' : 'all', urls: Array.isArray(pages.paths) ? pages.paths.join('\n') : '', strict: Boolean(pages.strict),
       hideDesktop: devices.desktop === false, hideTablet: devices.tablet === false, hideMobile: devices.mobile === false,
     },
@@ -270,7 +281,7 @@ function defaultApiDraft(form: ApiForm): FormDraft {
   return {
     ...seed,
     id: form.id, status: form.status, template: form.templateKey ?? seed.template,
-    design: { ...seed.design, popupType, barPosition: placement === 'bottom_bar' ? 'bottom' : 'top', slidePosition: placement === 'bottom_left' ? 'left' : 'right', layout: String(design.editorLayout ?? (design.layout === 'split' ? 'leftSidebar' : 'plain')) as FormDraft['design']['layout'], display: String(design.display ?? seed.design.display) as FormDraft['design']['display'], align: String(design.align ?? seed.design.align) as FormDraft['design']['align'], width: Number(design.width ?? seed.design.width), background: String(design.backgroundColor ?? seed.design.background), transparent: Boolean(design.transparent ?? seed.design.transparent), backgroundImage: String(design.backgroundImage ?? ''), backgroundFit: String(design.backgroundFit ?? seed.design.backgroundFit) as FormDraft['design']['backgroundFit'], backgroundX: Number(design.backgroundX ?? seed.design.backgroundX), backgroundY: Number(design.backgroundY ?? seed.design.backgroundY), backgroundZoom: Number(design.backgroundZoom ?? seed.design.backgroundZoom), textColor: String(design.textColor ?? seed.design.textColor), headingColor: String(design.headingColor ?? seed.design.headingColor), labelColor: String(design.labelColor ?? seed.design.labelColor), buttonBg: String(design.accentColor ?? seed.design.buttonBg), buttonText: String(design.buttonTextColor ?? seed.design.buttonText), buttonRadius: Number(design.buttonRadius ?? seed.design.buttonRadius), inputBg: String(design.inputBackgroundColor ?? seed.design.inputBg), inputBorder: String(design.inputBorderColor ?? seed.design.inputBorder), inputRadius: Number(design.inputRadius ?? seed.design.inputRadius), font: String(design.font ?? seed.design.font) as FormDraft['design']['font'], sidebarColor: String(design.sidebarColor ?? seed.design.sidebarColor), sidebarImage: String(design.sidebarImage ?? design.imageUrl ?? ''), sidebarFit: String(design.sidebarFit ?? seed.design.sidebarFit) as FormDraft['design']['sidebarFit'], sidebarX: Number(design.sidebarX ?? seed.design.sidebarX), sidebarY: Number(design.sidebarY ?? seed.design.sidebarY), sidebarWidth: Number(design.sidebarWidth ?? seed.design.sidebarWidth), sidebarZoom: Number(design.sidebarZoom ?? seed.design.sidebarZoom), backdropColor: String(design.backdropColor ?? seed.design.backdropColor), backdropOpacity: Number(design.backdropOpacity ?? seed.design.backdropOpacity), showClose: Boolean(design.showClose ?? seed.design.showClose), closeColor: String(design.closeColor ?? seed.design.closeColor), radius: design.rounded === false ? 0 : seed.design.radius, shadow: design.shadow !== false },
+    design: { ...seed.design, popupType, barPosition: placement === 'bottom_bar' ? 'bottom' : 'top', slidePosition: placement === 'bottom_left' ? 'left' : 'right', layout: String(design.editorLayout ?? (design.layout === 'split' ? 'leftSidebar' : 'plain')) as FormDraft['design']['layout'], display: String(design.display ?? seed.design.display) as FormDraft['design']['display'], align: String(design.align ?? seed.design.align) as FormDraft['design']['align'], width: Number(design.width ?? seed.design.width), background: String(design.backgroundColor ?? seed.design.background), transparent: Boolean(design.transparent ?? seed.design.transparent), backgroundImage: String(design.backgroundImage ?? ''), backgroundFit: String(design.backgroundFit ?? seed.design.backgroundFit) as FormDraft['design']['backgroundFit'], backgroundX: Number(design.backgroundX ?? seed.design.backgroundX), backgroundY: Number(design.backgroundY ?? seed.design.backgroundY), backgroundZoom: Number(design.backgroundZoom ?? seed.design.backgroundZoom), textColor: String(design.textColor ?? seed.design.textColor), headingColor: String(design.headingColor ?? seed.design.headingColor), labelColor: String(design.labelColor ?? seed.design.labelColor), buttonBg: String(design.accentColor ?? seed.design.buttonBg), buttonText: String(design.buttonTextColor ?? seed.design.buttonText), buttonRadius: Number(design.buttonRadius ?? seed.design.buttonRadius), buttonAlign: (['left', 'center', 'right', 'full'].includes(String(design.buttonAlign)) ? design.buttonAlign : 'full') as FormDraft['design']['buttonAlign'], buttonStyle: design.buttonStyle === 'outline' ? 'outline' : 'filled', buttonSize: Number(design.buttonSize ?? 15), sidebarMobile: design.sidebarMobile === true, labelAlign: (design.labelAlign === 'center' || design.labelAlign === 'right' ? design.labelAlign : 'left') as FormDraft['design']['labelAlign'], inputBg: String(design.inputBackgroundColor ?? seed.design.inputBg), inputBorder: String(design.inputBorderColor ?? seed.design.inputBorder), inputRadius: Number(design.inputRadius ?? seed.design.inputRadius), font: String(design.font ?? seed.design.font) as FormDraft['design']['font'], sidebarColor: String(design.sidebarColor ?? seed.design.sidebarColor), sidebarImage: String(design.sidebarImage ?? design.imageUrl ?? ''), sidebarFit: String(design.sidebarFit ?? seed.design.sidebarFit) as FormDraft['design']['sidebarFit'], sidebarX: Number(design.sidebarX ?? seed.design.sidebarX), sidebarY: Number(design.sidebarY ?? seed.design.sidebarY), sidebarWidth: Number(design.sidebarWidth ?? seed.design.sidebarWidth), sidebarZoom: Number(design.sidebarZoom ?? seed.design.sidebarZoom), backdropColor: String(design.backdropColor ?? seed.design.backdropColor), backdropOpacity: Number(design.backdropOpacity ?? seed.design.backdropOpacity), showClose: Boolean(design.showClose ?? seed.design.showClose), closeColor: String(design.closeColor ?? seed.design.closeColor), radius: design.rounded === false ? 0 : seed.design.radius, shadow: design.shadow !== false },
     stats: { views: form.metrics?.views ?? 0, subscribers: form.metrics?.subscribers ?? 0 },
     createdAt: form.createdAt || seed.createdAt, updatedAt: form.updatedAt || seed.updatedAt,
   };

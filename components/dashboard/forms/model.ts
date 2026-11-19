@@ -8,7 +8,7 @@ import { z } from 'zod';
 export const formKinds = ['popup'] as const;
 export const formStatuses = ['draft', 'active', 'paused'] as const;
 export const blockTypes = ['heading', 'text', 'image', 'imageText', 'button', 'divider', 'countdown', 'social', 'list', 'video', 'code', 'fields'] as const;
-export const fieldTypes = ['email', 'text', 'phone', 'number', 'select', 'checkbox', 'date', 'hidden'] as const;
+export const fieldTypes = ['email', 'text', 'textarea', 'phone', 'number', 'select', 'checkbox', 'date', 'hidden'] as const;
 export const socialPlatforms = ['Facebook', 'Instagram', 'X', 'LinkedIn', 'YouTube'] as const;
 export const fonts = ['Inter', 'Manrope', 'Arial', 'Georgia', 'Courier New'] as const;
 
@@ -44,6 +44,8 @@ export const blockSchema = z.object({
   textColor: hex.optional(),
   radius: z.number().optional(),
   fullWidth: z.boolean().optional(),
+  /** Button: filled or outline. */
+  variant: z.enum(['filled', 'outline']).optional(),
   thickness: z.number().optional(),
   spacing: z.number().optional(),
   endsAt: z.string().optional(),
@@ -105,6 +107,14 @@ export const designSchema = z.object({
   buttonBg: hex,
   buttonText: hex,
   buttonRadius: z.number(),
+  /** The signup form's submit button. */
+  buttonAlign: z.enum(['left', 'center', 'right', 'full']).default('full'),
+  buttonStyle: z.enum(['filled', 'outline']).default('filled'),
+  buttonSize: z.number().default(15),
+  /** Labels above fields line up left by default, like the inputs. */
+  labelAlign: z.enum(['left', 'center', 'right']).default('left'),
+  /** Side panel image on phones. Off by default: on a small screen it pushes the form down. */
+  sidebarMobile: z.boolean().default(false),
   showClose: z.boolean(),
   closeColor: hex,
 });
@@ -150,6 +160,8 @@ export const behaviourSchema = z.object({
   schedule: z.enum(['now', 'range']),
   startAt: z.string(),
   endAt: z.string(),
+  /** IANA zone the start/end wall-clock times are in (saved times are UTC instants). */
+  timezone: z.string().default(localZone()),
   pages: z.enum(['all', 'hide', 'show']),
   urls: z.string(),
   strict: z.boolean(),
@@ -206,7 +218,7 @@ export function defaultDesign(kind: FormKind): FormDesign {
     backdropColor: '#1b1025', backdropOpacity: 40,
     font: 'Inter', headingColor: '#1e1429', textColor: '#5b5266', labelColor: '#1e1429',
     inputBg: '#ffffff', inputBorder: '#d9d3e1', inputRadius: 6,
-    buttonBg: '#5517b8', buttonText: '#ffffff', buttonRadius: 6,
+    buttonBg: '#5517b8', buttonText: '#ffffff', buttonRadius: 6, buttonAlign: 'full', buttonStyle: 'filled', buttonSize: 15, labelAlign: 'left', sidebarMobile: false,
     showClose: true, closeColor: '#5b5266',
   };
 }
@@ -234,7 +246,7 @@ export const blockLabel: Record<BlockType, string> = {
 export const makeBlock = (type: BlockType, props: Partial<Block> = {}): Block => ({ id: makeId(), type, ...structuredClone(blockDefaults[type]), ...props });
 
 export const fieldTypeLabel: Record<FieldType, string> = {
-  email: 'Email', text: 'Text', phone: 'Phone', number: 'Number', select: 'Dropdown', checkbox: 'Checkbox', date: 'Date', hidden: 'Hidden',
+  email: 'Email', text: 'Text', textarea: 'Long text', phone: 'Phone', number: 'Number', select: 'Dropdown', checkbox: 'Checkbox', date: 'Date', hidden: 'Hidden',
 };
 
 export const makeField = (type: FieldType, props: Partial<FormField> = {}): FormField => ({
@@ -267,7 +279,7 @@ export function defaultDraft(input: { name: string; kind: FormKind; groups?: str
     success: { mode: 'message', heading: 'Thank you!', text: 'You have successfully joined our subscriber list.', buttonLabel: '', buttonUrl: 'https://', coupon: '', redirectUrl: 'https://' },
     behaviour: {
       mode: 'auto', delayOn: true, delay: 5, scrollOn: false, scroll: 50, exitOn: false,
-      repeat: 'after', frequency: 1, frequencyUnit: 'months', schedule: 'now', startAt: '', endAt: '',
+      repeat: 'after', frequency: 1, frequencyUnit: 'months', schedule: 'now', startAt: '', endAt: '', timezone: localZone(),
       pages: 'all', urls: '', strict: false, hideDesktop: false, hideTablet: false, hideMobile: false,
     },
     stats: { views: 0, subscribers: 0 }, heldByPixlPush: false,
@@ -287,6 +299,45 @@ const inDays = (days: number) => {
 
 /** `YYYY-MM-DDTHH:mm` in local time, the value a datetime-local input uses. */
 export const toLocalInput = (date: Date) => new Date(date.getTime() - date.getTimezoneOffset() * 6e4).toISOString().slice(0, 16);
+
+/* ---------- schedule time zones ---------- */
+
+export function localZone() {
+  try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'; } catch { return 'UTC'; }
+}
+
+export const allZones = (): string[] => {
+  const list = (Intl as unknown as { supportedValuesOf?: (key: string) => string[] }).supportedValuesOf?.('timeZone') ?? [];
+  return list.includes('UTC') ? list : ['UTC', ...list];
+};
+
+/** Milliseconds `zone` is ahead of UTC at instant `ms`. */
+function zoneOffset(ms: number, zone: string) {
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: zone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    .formatToParts(new Date(ms)).map((part) => [part.type, part.value]));
+  return Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second) - Math.floor(ms / 1000) * 1000;
+}
+
+/** `YYYY-MM-DDTHH:mm` as a wall clock in `zone` → UTC ISO string. Handles DST by re-checking the offset once. */
+export function wallToUtc(wall: string, zone: string) {
+  const guess = Date.parse(`${wall}:00Z`);
+  if (Number.isNaN(guess)) return null;
+  const first = guess - zoneOffset(guess, zone);
+  return new Date(guess - zoneOffset(first, zone)).toISOString();
+}
+
+/** UTC instant → `YYYY-MM-DDTHH:mm` wall clock in `zone`. */
+export function utcToWall(iso: string, zone: string) {
+  const ms = Date.parse(iso);
+  return Number.isNaN(ms) ? '' : new Date(ms + zoneOffset(ms, zone)).toISOString().slice(0, 16);
+}
+
+/** "+04:00" style offset of `zone` right now. */
+export function zoneLabel(zone: string, at = Date.now()) {
+  const minutes = Math.round(zoneOffset(at, zone) / 6e4);
+  const abs = Math.abs(minutes);
+  return `${minutes < 0 ? '-' : '+'}${String(Math.floor(abs / 60)).padStart(2, '0')}:${String(abs % 60).padStart(2, '0')}`;
+}
 
 export const templates: Template[] = [
   { id: 'blank', name: 'Start from scratch', category: 'Blank', kinds: [...formKinds], apply: (d) => ({ ...d, blocks: [makeBlock('heading', { text: 'Untitled form' }), makeBlock('fields')] }) },
@@ -470,6 +521,7 @@ export function behaviourErrors(b: FormBehaviour): Partial<Record<keyof FormBeha
     if (!b.startAt) errors.startAt = 'Choose a start date.';
     if (!b.endAt) errors.endAt = 'Choose an end date.';
     else if (b.startAt && b.endAt <= b.startAt) errors.endAt = 'End must be after the start.';
+    else if ((wallToUtc(b.endAt, b.timezone) ?? '') <= new Date().toISOString()) errors.endAt = 'This time has already passed in the chosen time zone.';
   }
   if (b.pages !== 'all' && urlLines(b.urls).length === 0) errors.urls = 'Add at least one page address.';
   if (b.hideDesktop && b.hideTablet && b.hideMobile) errors.hideMobile = 'The form must show on at least one device.';
@@ -494,7 +546,7 @@ export function blockErrors(block: Block): string | undefined {
 export function publishProblems(draft: FormDraft): string[] {
   const problems: string[] = [];
   if (!draft.name.trim()) problems.push('Give the form a name.');
-  if (draft.groups.length === 0) problems.push('Choose at least one subscriber group.');
+  if (draft.groups.length === 0) problems.push('Choose at least one audience group.');
   if (draft.options.privacy.on && !isHttpUrl(draft.options.privacy.url)) problems.push('Add a complete privacy policy web address.');
   for (const block of draft.blocks) {
     const error = blockErrors(block);
