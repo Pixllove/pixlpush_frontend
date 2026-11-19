@@ -16,6 +16,7 @@ const legacyField: Record<string, string> = {
   'Push Enabled': 'pushEnabled',
   'Email Available': 'emailAvailable',
   'Last Active': 'lastActiveAt',
+  'Last Notified': 'lastNotified',
 };
 const legacyOperator: Record<string, string> = {
   Is: 'equals',
@@ -26,6 +27,7 @@ const legacyOperator: Record<string, string> = {
   'In the last': 'within_days',
   More: 'greater_than',
   'More than': 'not_within_days',
+  'Exclude users notified in the last X days': 'exclude_in_last_days',
 };
 
 export function toBackendCondition(rule: Rule, schema?: AudienceGroupSchema) {
@@ -55,7 +57,14 @@ function valueIsValid(rule: Rule, condition: NonNullable<ReturnType<typeof schem
   const values = rule.value.split(',').map(item => item.trim()).filter(Boolean);
   if (!values.length) return false;
   if (condition.value.options?.length) return values.every(value => condition.value.options?.some(option => option.key === value));
-  if (condition.value.type === 'integer' || condition.value.type === 'number') return values.every(value => Number.isFinite(Number(value)));
+  if (condition.value.type === 'integer') {
+    return values.every(value => {
+      if (!/^[+-]?\d+$/.test(value)) return false;
+      const number = Number(value);
+      return Number.isSafeInteger(number) && number >= (condition.value.min ?? 0);
+    });
+  }
+  if (condition.value.type === 'number') return values.every(value => Number.isFinite(Number(value)));
   if (condition.value.type === 'date') return values.every(value => !Number.isNaN(Date.parse(value)));
   return true;
 }
@@ -66,6 +75,7 @@ export function ruleHasInput(rule: Rule) {
 
 export function isRuleComplete(rule: Rule, schema?: AudienceGroupSchema) {
   if (!rule.filter.trim() || !rule.operator.trim()) return false;
+  if (rule.filter === 'lastNotified') return rule.operator === 'exclude_in_last_days' && /^[1-9]\d*$/.test(rule.value.trim());
   if (!schema) return Boolean(rule.value.trim() || /available|exists|not_exists|never|no_|none/i.test(rule.operator));
   const condition = schemaCondition(rule, schema);
   if (!condition) return false;

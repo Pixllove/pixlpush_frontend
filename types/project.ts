@@ -420,6 +420,8 @@ export interface AudienceGroupSchemaField {
   key: string;
   label: string;
   category?: string;
+  /** Legacy fields remain readable for saved rules but are not offered to new rules. */
+  deprecated?: boolean;
   operators: string[];
   property?: { required?: boolean; options?: AudienceGroupSchemaOption[] };
   conditions: AudienceGroupSchemaCondition[];

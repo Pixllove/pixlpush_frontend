@@ -47,7 +47,7 @@ export default function DashboardFrame({
   requiresProject?: boolean;
   active: string;
   title: string;
-  description: string;
+  description: ReactNode;
   action?: ReactNode;
   hideHeader?: boolean;
   children: ReactNode;
@@ -151,6 +151,9 @@ export default function DashboardFrame({
   const showOnboardingWarning = activeProject?.status !== 'suspended' && activeProject?.billing?.state !== 'locked' && active !== 'Onboarding Guide' && onboardingPercent !== null && onboardingPercent < 100;
   // Nothing invented: the heading names the real Project, or says there is none.
   const projectName = activeProject?.name ?? (isEmpty ? "No project" : "");
+  const renderedDescription = typeof description === "string"
+    ? description.replace("PixlTrace", projectName)
+    : description;
   return (
     <>
     <Box className={`dashboard-app${sidebarCollapsed ? " sidebar-is-collapsed" : ""}${mobileOpen ? " mobile-navigation-open" : ""}`}>
@@ -268,9 +271,9 @@ export default function DashboardFrame({
                 <Typography variant="h1" className="dashboard-title">
                   {title}
                 </Typography>
-                <Typography color="text.secondary">
-                  {description.replace("PixlTrace", projectName)}
-                </Typography>
+                {renderedDescription && (
+                  <Typography color="text.secondary">{renderedDescription}</Typography>
+                )}
               </Box>
               {!needsProject && action}
             </Stack>

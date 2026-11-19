@@ -1080,9 +1080,9 @@ export const audienceGroupsApi = {
       BASE,
     );
   },
-  schema: (projectId: string) =>
+  schema: (projectId: string, params: { surface?: 'users-audience-groups' } = {}) =>
     authRequest<AudienceGroupSchema>(
-      at(projectId, "/audience-groups/schema"),
+      at(projectId, `/audience-groups/schema${params.surface ? `?surface=${encodeURIComponent(params.surface)}` : ''}`),
       undefined,
       BASE,
     ),

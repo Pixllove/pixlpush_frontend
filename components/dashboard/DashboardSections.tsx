@@ -147,6 +147,16 @@ export function StatCard({
     </Card>
   );
 }
+
+export function UsersPageDescription() {
+  const searchParams = useSearchParams();
+  const tab = searchParams.get("tab");
+
+  if (tab === "segments" || tab === "groups") return null;
+
+  return "Manage your users, review lifecycle segments and activity, or group users into targeted audience groups.";
+}
+
 export function OverviewSection() {
   return <HomeCommandCenter />;
 }
@@ -830,14 +840,6 @@ export function UsersSection() {
     refetchInterval: tab === "users" ? 60_000 : false,
   });
   const stats = statsQuery.data;
-  const reachRate = stats?.total
-    ? `${Math.min(100, (stats.reachable / stats.total) * 100).toFixed(1)}% of users`
-    : "No users yet";
-  const eventsTrend = !stats
-    ? ""
-    : stats.eventsYesterday
-      ? `${stats.eventsToday >= stats.eventsYesterday ? "+" : ""}${(((stats.eventsToday - stats.eventsYesterday) / stats.eventsYesterday) * 100).toFixed(1)}% vs yesterday`
-      : `${stats.eventsYesterday} yesterday`;
   const tabs = [
     {
       id: "users" as const,
@@ -862,6 +864,14 @@ export function UsersSection() {
   ];
   const users = usersQuery.data?.users ?? [];
   const formatDate = (value: string | null) => value ? formatUserDateTime(value) : "Never";
+  const handleTabChange = (nextTab: "users" | "segments" | "groups") => {
+    setTab(nextTab);
+    const params = new URLSearchParams(searchParams.toString());
+    if (nextTab === "users") params.delete("tab");
+    else params.set("tab", nextTab);
+    const query = params.toString();
+    router.replace(`/dashboard/users${query ? `?${query}` : ""}`, { scroll: false });
+  };
   const exportUsers = () => {
     const columns = [
       "User",
@@ -1160,7 +1170,7 @@ export function UsersSection() {
     <Stack gap={2.5} className="users-workspace">
       <PremiumWorkspaceTabs
         value={tab}
-        onChange={setTab}
+        onChange={handleTabChange}
         ariaLabel="User views"
         options={tabs.map(({ id, ...option }) => ({ value: id, ...option }))}
       />
@@ -1172,7 +1182,6 @@ export function UsersSection() {
                 icon={GroupsRounded}
                 label="Identified users"
                 value={stats ? stats.total.toLocaleString() : "—"}
-                trend="All users in this project"
               />
             </Grid>
             <Grid item xs={12} sm={4}>
@@ -1180,7 +1189,6 @@ export function UsersSection() {
                 icon={NotificationsActiveRounded}
                 label="Reachable users"
                 value={stats ? stats.reachable.toLocaleString() : "—"}
-                trend={reachRate}
               />
             </Grid>
             <Grid item xs={12} sm={4}>
@@ -1188,7 +1196,6 @@ export function UsersSection() {
                 icon={EventRounded}
                 label="Events today"
                 value={stats ? stats.eventsToday.toLocaleString() : "—"}
-                trend={eventsTrend}
               />
             </Grid>
           </Grid>
