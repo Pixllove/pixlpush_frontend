@@ -11,7 +11,8 @@ import SubmitButton from '@/components/auth/SubmitButton';
 import type { ApiError } from '@/types/auth';
 import AccountProfile from '@/components/auth/AccountProfile';
 import { aiApi } from '@/lib/projects/ai';
-import { projectApi } from '@/lib/projects/api';
+import { onboardingApi, projectApi } from '@/lib/projects/api';
+import { channelOptions, platformOptions } from '@/components/onboarding/onboardingStepConfig';
 
 function BusinessContextPanel({ projectId }: { projectId?: string }) {
   const contextQuery = useQuery({
@@ -19,10 +20,18 @@ function BusinessContextPanel({ projectId }: { projectId?: string }) {
     queryFn: () => aiApi.businessContext(projectId!),
     enabled: Boolean(projectId),
   });
+  const onboardingQuery = useQuery({
+    queryKey: ['projects', projectId, 'onboarding'],
+    queryFn: () => onboardingApi.get(projectId!),
+    enabled: Boolean(projectId),
+  });
   const context = contextQuery.data;
   const analysis = context?.businessAnalysis;
+  const onboarding = onboardingQuery.data;
   const [analysisOpen, setAnalysisOpen] = useState(false);
   const humanize = (value: string) => value.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/_/g, ' ').replace(/^./, (character) => character.toUpperCase());
+  const products = (onboarding?.platforms ?? []).map((platform) => platformOptions.find((option) => option.id === platform)?.title ?? humanize(platform));
+  const channels = (onboarding?.channels ?? []).map((channel) => channelOptions.find((option) => option.id === channel)?.title ?? humanize(channel));
 
   const downloadAnalysis = async () => {
     if (!context || !analysis) return;
@@ -128,6 +137,10 @@ function BusinessContextPanel({ projectId }: { projectId?: string }) {
       {context.websiteUrl && <Box className="business-context-source"><Typography className="business-context-label">Website</Typography><Typography fontSize="var(--fs-13)">{context.websiteUrl}</Typography></Box>}
       {(context.appStoreUrl || context.googlePlayUrl) && <Box className="business-context-source"><Typography className="business-context-label">App links</Typography>{context.appStoreUrl && <Typography fontSize="var(--fs-13)"><a href={context.appStoreUrl} target="_blank" rel="noreferrer">App Store <OpenInNewRounded sx={{ fontSize: 13, verticalAlign: 'middle' }} /></a></Typography>}{context.googlePlayUrl && <Typography fontSize="var(--fs-13)"><a href={context.googlePlayUrl} target="_blank" rel="noreferrer">Google Play <OpenInNewRounded sx={{ fontSize: 13, verticalAlign: 'middle' }} /></a></Typography>}</Box>}
       {analysis && <Box className="business-context-source"><Typography className="business-context-label">Business analysis</Typography><Typography fontSize="var(--fs-13)" sx={{ mt: .5 }}>{analysis.elevatorPitch}</Typography><Button type="button" size="small" sx={{ mt: 1, px: 0, minWidth: 0 }} onClick={() => setAnalysisOpen(true)}>View more</Button></Box>}
+      {analysis && <Stack direction={{ xs: 'column', sm: 'row' }} gap={1.25}>
+        <Box className="business-context-source" sx={{ flex: 1 }}><Typography className="business-context-label">Products</Typography><Typography fontSize="var(--fs-13)" sx={{ mt: .5 }}>{products.length ? products.join(' · ') : 'Not configured yet'}</Typography></Box>
+        <Box className="business-context-source" sx={{ flex: 1 }}><Typography className="business-context-label">Channels</Typography><Typography fontSize="var(--fs-13)" sx={{ mt: .5 }}>{channels.length ? channels.join(' · ') : 'Not configured yet'}</Typography></Box>
+      </Stack>}
     </Stack>
     {analysis && <Dialog open={analysisOpen} onClose={() => setAnalysisOpen(false)} maxWidth="md" fullWidth><DialogTitle sx={{ borderBottom: '1px solid #eeeaf3', pb: 1.5 }}><Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}><Typography component="span" variant="h6" fontWeight={600}>Business analysis</Typography><Button type="button" size="small" startIcon={<DownloadRounded />} onClick={downloadAnalysis}>Download PDF</Button></Stack></DialogTitle><DialogContent dividers sx={{ bgcolor: '#fbfaff' }}><Stack gap={1.25} sx={{ py: .5 }}>
       <Box className="business-analysis-dialog-section"><Typography className="business-context-label">30-second elevator pitch</Typography><Typography fontSize="var(--fs-14)" lineHeight={1.7}>{analysis.elevatorPitch}</Typography></Box>

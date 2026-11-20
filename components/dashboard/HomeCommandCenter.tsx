@@ -1,7 +1,7 @@
 "use client";
 
 import { AddRounded, ArrowForwardRounded, ArrowUpwardRounded, AutoAwesomeRounded, AutoGraphRounded, CampaignRounded, CheckRounded, CloseRounded, ContentCopyRounded, DeleteOutlineRounded, EditOutlined, PushPinOutlined, PushPinRounded, ViewSidebarOutlined, ExpandMoreRounded, HistoryRounded, InfoOutlined, InsightsRounded, LinkRounded, PeopleAltOutlined, PhoneIphoneRounded, PsychologyRounded, ReplayRounded, RouteRounded, SearchRounded, StopRounded, TrendingDownRounded } from "@mui/icons-material";
-import { Alert, Box, Button, ButtonBase, Dialog, DialogContent, DialogTitle, IconButton, InputBase, Menu, MenuItem, Stack, TextField, Tooltip, Typography } from "@mui/material";
+import { Alert, Box, Button, ButtonBase, Chip, Dialog, DialogContent, DialogTitle, IconButton, InputBase, Menu, MenuItem, Stack, TextField, Tooltip, Typography } from "@mui/material";
 import Image from "next/image";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -512,6 +512,26 @@ function BusinessAnalysisPulse() {
   </Stack>;
 }
 
+function useVisibleCountdown(active: boolean, durationSeconds: number) {
+  const [secondsLeft, setSecondsLeft] = useState(durationSeconds);
+
+  useEffect(() => {
+    if (!active) {
+      setSecondsLeft(durationSeconds);
+      return;
+    }
+
+    setSecondsLeft(durationSeconds);
+    const timer = window.setInterval(() => {
+      setSecondsLeft((current) => Math.max(0, current - 1));
+    }, 1_000);
+
+    return () => window.clearInterval(timer);
+  }, [active, durationSeconds]);
+
+  return secondsLeft;
+}
+
 function BusinessContextCard({
   context,
   existingAppLinks,
@@ -547,6 +567,8 @@ function BusinessContextCard({
   const [linkCheckMessage, setLinkCheckMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const initialized = useRef(false);
+  const linkSecondsLeft = useVisibleCountdown(checkingLinks, 5);
+  const analysisSecondsLeft = useVisibleCountdown(phase === "website" && saving && !checkingLinks, 30);
   const onboardingAppStoreUrl = existingAppLinks?.appStoreUrl?.trim() ?? "";
   const onboardingGooglePlayUrl = existingAppLinks?.googlePlayUrl?.trim() ?? "";
   const hasExistingAppLinks = Boolean(onboardingAppStoreUrl || onboardingGooglePlayUrl || draft.appStoreUrl?.trim() || draft.googlePlayUrl?.trim());
@@ -692,12 +714,13 @@ function BusinessContextCard({
   }
 
   return <Box className="guided-flow-card business-context-card">
-    <Stack direction="row" alignItems="flex-start" gap={1.5}>
+    <Stack direction="row" alignItems="flex-start" justifyContent="space-between" gap={1.5}>
       <Box className="business-context-icon"><AutoAwesomeRounded /></Box>
-      <Box>
+      <Box sx={{ flex: 1, minWidth: 0 }}>
         <Typography component="h2" className="guided-flow-title">{phase === "analysis" ? "Business summary" : "Tell me about your business"}</Typography>
         <Typography className="guided-flow-subtitle">{phase === "analysis" ? "Review and confirm what I learned about your business before we define the journey." : "I’ll use this context to make the journey recommendations more relevant. You can skip or edit anything."}</Typography>
       </Box>
+      {phase === "website" && saving && !checkingLinks && <Chip size="small" color={analysisSecondsLeft ? "secondary" : "warning"} label={analysisSecondsLeft ? `${analysisSecondsLeft}s` : "Still working"} sx={{ mt: .25, flexShrink: 0, fontWeight: 600 }} />}
     </Stack>
 
     {error && <Alert severity="error" sx={{ mt: 2, fontSize: "var(--fs-12)" }}>{error}</Alert>}
@@ -708,7 +731,7 @@ function BusinessContextCard({
       <Stack direction="row" justifyContent="space-between" gap={.75} sx={{ mt: 1.5 }}><Button className="guided-flow-secondary" onClick={() => goToPhase(draft.businessAnalysis ? "analysis" : "website")} disabled={saving}>Back</Button><Stack direction="row" gap={.75}><Button className="guided-flow-secondary" onClick={() => goToPhase("review")} disabled={saving}>Skip</Button><Button className="guided-flow-next" variant="contained" onClick={() => void saveDescriptionAndContinue()} disabled={saving}>{saving ? "Saving…" : "Continue"}</Button></Stack></Stack>
     </Box>}
 
-    {phase === "website" && (saving || checkingLinks) && <Stack alignItems="center" sx={{ py: 1.5 }} role="status" aria-live="polite"><BusinessAnalysisPulse /><Typography fontSize="var(--fs-24)" fontWeight={600}>{checkingLinks ? "Checking your website for app links…" : "Analyzing your business…"}</Typography><Typography fontSize="var(--fs-16)" fontWeight={500}>{websiteUrl}</Typography><Typography color="text.secondary" fontSize="var(--fs-13)">{checkingLinks ? "Looking for App Store and Google Play links." : "I’m using your website and app information to build your profile."}</Typography></Stack>}
+    {phase === "website" && (saving || checkingLinks) && <Stack alignItems="center" sx={{ py: 1.5 }} role="status" aria-live="polite"><BusinessAnalysisPulse /><Typography fontSize="var(--fs-24)" fontWeight={600}>{checkingLinks ? "Checking your website for app links…" : "Analyzing your business…"}</Typography><Typography fontSize="var(--fs-16)" fontWeight={500}>{websiteUrl}</Typography><Typography color="text.secondary" fontSize="var(--fs-13)">{checkingLinks ? "Looking for App Store and Google Play links." : "I’m using your website and app information to build your profile."}</Typography><Typography color={checkingLinks || analysisSecondsLeft ? "text.secondary" : "warning.main"} fontSize="var(--fs-12)" sx={{ mt: .75 }}>{checkingLinks ? `Checking links — ${linkSecondsLeft}s` : analysisSecondsLeft ? `Usually ready in ${analysisSecondsLeft}s` : "This is taking a little longer than expected. Please wait a bit more…"}</Typography></Stack>}
 
     {phase === "website" && !saving && !checkingLinks && <Box>
       <Typography className="guided-flow-question"><LinkRounded fontSize="small" sx={{ mr: .5, verticalAlign: "middle" }} />What is your website?</Typography>
