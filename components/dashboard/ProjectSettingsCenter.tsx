@@ -9,18 +9,30 @@ import DangerZonePanel from './DangerZonePanel';
 import EmailPanel from './EmailPanel';
 import FirebasePanel from './FirebasePanel';
 import ProjectDetailsPanel from './ProjectDetailsPanel';
+import BusinessSetupPanel from './BusinessSetupPanel';
 import SdkKeysPanel from './SdkKeysPanel';
 import SettingsStatus from './SettingsStatus';
 
-const tabs = ['Project & company details', 'Push setup', 'Domain', 'SDK keys', 'Data & privacy', 'Danger zone'];
+const tabs = ['Project', 'Business details', 'Push setup', 'Domain', 'SDK keys', 'Data & privacy', 'Danger zone'];
 
-function ProjectAndCompanyDetailsPanel() {
+function ProjectPanel() {
   return <Stack gap={2.5}>
     <Box>
-      <Typography variant="h3">Project & company details</Typography>
-      <Typography color="text.secondary" fontSize="var(--fs-12)">Manage the active Project identity and the company details connected to this workspace.</Typography>
+      <Typography variant="h3">Project</Typography>
+      <Typography color="text.secondary" fontSize="var(--fs-12)">Manage the identity and environment settings for the active Project.</Typography>
     </Box>
-    <ProjectDetailsPanel showHeading={false} />
+    <ProjectDetailsPanel showHeading={false} showBusinessContext={false} />
+  </Stack>;
+}
+
+function BusinessDetailsPanel() {
+  return <Stack gap={2.5}>
+    <Box>
+      <Typography variant="h3">Business details</Typography>
+      <Typography color="text.secondary" fontSize="var(--fs-12)">Manage your company information and the business context used for journeys and campaign content.</Typography>
+    </Box>
+    <ProjectDetailsPanel showHeading={false} showProjectFields={false} />
+    <BusinessSetupPanel />
   </Stack>;
 }
 
@@ -28,7 +40,8 @@ function ProjectAndCompanyDetailsPanel() {
 function PrivacyPanel() { return <Stack gap={2.5}><Box><Typography variant="h3">Data & privacy</Typography><Typography color="text.secondary" fontSize="var(--fs-12)">Control consent, retention and deletion behavior for this Project.</Typography></Box><Card className="saas-card">{[['Tracking enabled','Accept SDK events from identified users','Enabled'],['Marketing consent','Respect customer-provided email and push consent','Enabled'],['Location data','Only collect where legally permitted','Disabled']].map(([a,b,c]) => <Stack direction="row" alignItems="center" key={a} sx={{ py: 1.5, borderBottom: '1px solid #eeeaf3' }}><Box sx={{ flex: 1 }}><Typography fontWeight={600} fontSize="var(--fs-13)">{a}</Typography><Typography color="text.secondary" fontSize="var(--fs-12)">{b}</Typography></Box><SettingsStatus>{c}</SettingsStatus></Stack>)}</Card></Stack>; }
 
 const panels: Record<string, (props: { onNavigate?: (tab: string) => void }) => JSX.Element> = {
-  'Project & company details': ProjectAndCompanyDetailsPanel,
+  Project: ProjectPanel,
+  'Business details': BusinessDetailsPanel,
   'Push setup': FirebasePanel,
   Domain: EmailPanel,
   'SDK keys': SdkKeysPanel,
@@ -36,7 +49,7 @@ const panels: Record<string, (props: { onNavigate?: (tab: string) => void }) => 
   'Danger zone': DangerZonePanel,
 };
 
-export default function ProjectSettingsCenter({ initialTab = 'Project & company details' }: { initialTab?: string }) {
+export default function ProjectSettingsCenter({ initialTab = 'Project' }: { initialTab?: string }) {
   const pathname = usePathname();
   const [tab, setTab] = useState(initialTab);
   const routes: Record<string, string> = {

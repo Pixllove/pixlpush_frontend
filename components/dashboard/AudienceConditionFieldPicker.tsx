@@ -48,6 +48,7 @@ type Props = {
   onChange: (value: string) => void;
   placeholder?: string;
   ariaLabel?: string;
+  compact?: boolean;
 };
 
 type PickerGroup = {
@@ -136,6 +137,7 @@ export default function AudienceConditionFieldPicker({
   onChange,
   placeholder = 'Choose a filter',
   ariaLabel = 'Condition field',
+  compact = false,
 }: Props) {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [search, setSearch] = useState('');
@@ -170,8 +172,10 @@ export default function AudienceConditionFieldPicker({
       aria-haspopup="listbox"
       onClick={event => setAnchorEl(event.currentTarget)}
       sx={{
-        minWidth: { md: 190 },
-        flex: 1,
+        minWidth: { md: compact ? 145 : 190 },
+        width: compact ? { md: '28%', xs: '100%' } : undefined,
+        maxWidth: compact ? { md: 210 } : undefined,
+        flex: compact ? { md: '0 1 28%', xs: '1 1 100%' } : 1,
         justifyContent: 'space-between',
         textAlign: 'left',
         border: '1px solid',

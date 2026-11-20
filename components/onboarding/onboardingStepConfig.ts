@@ -1,3 +1,4 @@
+import type { OnboardingStepKind } from '@/lib/onboarding';
 import { LanguageRounded, MailOutlineRounded, NotificationsActiveRounded, PhoneIphoneRounded } from '@mui/icons-material';
 import type { ProjectPlatform } from '@/types/project';
 import { aiPrompt as reactNativeAiPrompt } from '@/components/docs/react-native/content';
@@ -44,13 +45,14 @@ export const onboardingHeadingByKind = {
   'mobile-push': 'Set up push for your app.',
   'app-sdk': 'Add the PixlPush SDK to your app.',
   'web-sdk': 'Add PixlPush to your website.',
-} as const;
+} as const satisfies Record<OnboardingStepKind, string>;
 
 export const onboardingPromptByKind = {
   basics: 'I’m Max, your onboarding guide. Let’s start with a name for the product or workspace you’re setting up.',
   products: 'Select the types of products you already have and add their links. We’ll tailor the next setup steps to your product portfolio.',
+  channels: 'Choose every channel you plan to use. We’ll tailor the remaining setup to your selections.',
   domain: 'Enter the email address you want to use for sending emails (e.g., info@yourbrand.com). This is the address your recipients will see when they receive your emails.',
   'mobile-push': 'Mobile apps send push through Firebase Cloud Messaging, or Apple Push (APNs) for iOS apps without Firebase. Upload the key and I’ll validate it securely.',
   'app-sdk': 'Install the SDK in your app when you’re ready to send product events and register devices. Here’s a starter prompt you can share with your coding assistant.',
   'web-sdk': 'Now add PixlPush to your website so it can track visitors and send Web Push. Here’s a starter prompt you can share with your coding assistant.',
-} as const;
+} as const satisfies Record<OnboardingStepKind, string>;
