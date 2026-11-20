@@ -109,6 +109,8 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
     enabled: Boolean(active?.id && userId),
   });
   const user = profileQuery.data;
+  // Imported/SDK custom fields (signupSource already has its own row).
+  const customProperties = Object.entries(user?.properties ?? {}).filter(([key]) => key !== "signupSource");
   // The API returns devices and push subscriptions as lists; show the most relevant one.
   const device = user?.installations?.[0];
   const activePush = user?.pushSubscriptions?.find((sub) => sub.active);
@@ -201,6 +203,11 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
                 badge={user?.emailConsent === true}
               />
               <DetailItem
+                icon={EmailRounded}
+                label="Email status"
+                value={display(user?.emailStatus && user.emailStatus.charAt(0).toUpperCase() + user.emailStatus.slice(1))}
+              />
+              <DetailItem
                 icon={CalendarTodayRounded}
                 label="Last active"
                 value={formatDate(user?.lastActiveAt)}
@@ -219,6 +226,26 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
                 icon={CalendarTodayRounded}
                 label="Account created"
                 value={formatDate(user?.createdAt)}
+              />
+              <DetailItem
+                icon={CalendarTodayRounded}
+                label="First seen"
+                value={formatDate(user?.firstSeenAt ?? undefined)}
+              />
+              <DetailItem
+                icon={CodeRounded}
+                label="PixlPush ID"
+                value={display(user?.pixlpushId)}
+              />
+              <DetailItem
+                icon={CheckCircleRounded}
+                label="Account status"
+                value={display(user?.accountStatus)}
+              />
+              <DetailItem
+                icon={GroupsRounded}
+                label="User type"
+                value={display(user?.userType)}
               />
             </UserDetailSection>
             <UserDetailSection title="Device & App">
@@ -345,6 +372,24 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
                 value="No"
               />
             </Grid>
+            {customProperties.length > 0 && (
+              <>
+                <Divider sx={{ my: 1.5 }} />
+                <Typography fontWeight={600} fontSize="var(--fs-13)" sx={{ mb: 1 }}>
+                  Custom fields
+                </Typography>
+                <Grid container spacing={2}>
+                  {customProperties.map(([key, value]) => (
+                    <DetailItem
+                      key={key}
+                      icon={CodeRounded}
+                      label={key.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase())}
+                      value={display(typeof value === "object" && value !== null ? JSON.stringify(value) : value)}
+                    />
+                  ))}
+                </Grid>
+              </>
+            )}
             <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: 1 }}>
               SDK events recorded:{" "}
               {count(user?.engagement?.sdkEvents ?? (eventsQuery.isLoading ? undefined : events.length))}
