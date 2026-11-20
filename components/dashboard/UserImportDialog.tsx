@@ -1002,6 +1002,19 @@ export default function UserImportDialog({
                 {summary.invalid} invalid · {summary.skipped} skipped
               </Typography>
             )}
+            {!!preview?.warnings?.length && (
+              <Alert severity="info">
+                <AlertTitle>Some values will be left out</AlertTitle>
+                {preview.warnings.slice(0, 5).map((warning) => (
+                  <Typography key={warning} fontSize="var(--fs-13)">
+                    {warning}
+                  </Typography>
+                ))}
+                <Typography fontSize="var(--fs-13)" mt={1}>
+                  These users will still be imported.
+                </Typography>
+              </Alert>
+            )}
             {summary && summary.invalid > 0 && (
               <Alert severity={allInvalid ? "error" : "warning"}>
                 <AlertTitle>

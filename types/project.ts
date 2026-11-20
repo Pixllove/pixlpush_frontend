@@ -254,6 +254,10 @@ export interface EndUser {
   emailStatus?: "subscribed" | "unsubscribed" | "bounced" | "complained" | string;
   firstSeenAt?: string | null;
   properties?: Record<string, unknown> | null;
+  /** List: the latest device only. Profile: every device. */
+  installations?: Array<{ installationId?: string; platform: string | null; osVersion?: string | null; appVersion?: string | null; deviceModel?: string | null; pushPermission?: string | null; lastActiveAt?: string | null }>;
+  /** List: the active one only. */
+  pushSubscriptions?: Array<{ id?: string; provider: string; active?: boolean; permission: string | null; lastSeenAt?: string | null }>;
 }
 
 export type EndUserStatus = "active" | "logged_out" | "deleted" | "anonymous";
@@ -644,6 +648,8 @@ export interface ImportPreview {
   /** Rows needing attention (invalid, conflict, skipped, warnings); `messages` are customer-facing. */
   attention?: Array<{ rowNumber: number; action: string; messages?: string[] }>;
   attentionTruncated?: boolean;
+  /** Customer-facing notes on values left out (e.g. an unknown time zone); the rows still import. */
+  warnings?: string[];
 }
 
 /** GET /users/stats: header counts for the Users page. */

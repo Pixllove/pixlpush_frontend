@@ -91,6 +91,7 @@ import {
 } from "@/lib/projects/api";
 import type { UserListFilter } from "@/lib/projects/api";
 import type { AudienceGroup, EndUser, LifecycleSegment } from "@/types/project";
+import { usersToCsv } from "@/lib/users-export";
 import type {
   EmailCampaign,
   EmailTemplate,
@@ -893,44 +894,10 @@ export function UsersSection() {
         cursor = page.nextCursor;
       } while (cursor);
 
-      const iso = (v?: string | null) => (v ? new Date(v).toISOString().slice(0, 19).replace("T", " ") : "");
-      const text = (v: unknown) =>
-        v === null || v === undefined ? "" : typeof v === "boolean" ? (v ? "yes" : "no") : typeof v === "object" ? JSON.stringify(v) : String(v);
-      const propertyKeys = [...new Set(all.flatMap((u) => Object.keys(u.properties ?? {})))].sort();
-      const columns: Array<[string, (u: EndUser) => unknown]> = [
-        ["User ID", (u) => u.externalUserId || u.id],
-        ["Email", (u) => u.email],
-        ["Name", (u) => u.name],
-        ["Account status", (u) => u.accountStatus],
-        ["User type", (u) => u.userType],
-        ["Country", (u) => u.country],
-        ["Region", (u) => u.region],
-        ["Timezone", (u) => u.timezone],
-        ["Preferred language", (u) => u.preferredLanguage],
-        ["Email consent", (u) => u.emailConsent],
-        ["Last active at (UTC)", (u) => iso(u.lastActiveAt)],
-        ...propertyKeys.map((key): [string, (u: EndUser) => unknown] => [key, (u) => u.properties?.[key]]),
-        ["PixlPush ID", (u) => u.pixlpushId ?? `pixlpush_${u.id}`],
-        ["PixlPush status", (u) => u.status],
-        ["PixlPush lifecycle segment", (u) => u.lifecycleSegment?.name],
-        ["PixlPush email status", (u) => u.emailStatus],
-        ["First seen at (UTC)", (u) => iso(u.firstSeenAt)],
-        ["Created at (UTC)", (u) => iso(u.createdAt)],
-        ["Logged out at (UTC)", (u) => iso(u.loggedOutAt)],
-        ["Account deleted at (UTC)", (u) => iso(u.accountDeletedAt)],
-      ];
-      const escapeCsv = (value: string) => `"${value.replace(/"/g, '""')}"`;
-      // BOM so Excel opens UTF-8 names correctly.
-      const csv = "\uFEFF" + [
-        columns.map(([header]) => header),
-        ...all.map((u) => columns.map(([, get]) => text(get(u)))),
-      ]
-        .map((row) => row.map(escapeCsv).join(","))
-        .join("\r\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
+      const blob = new Blob([usersToCsv(all)], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
       link.download = "users.csv";
       document.body.appendChild(link);
       link.click();
