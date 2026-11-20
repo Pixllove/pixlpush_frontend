@@ -5,6 +5,7 @@ import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, 
 import { useEffect, useState } from 'react';
 import { mobileSdkOptions, sdkPromptFor, type SdkId, websitePromptFor, websiteSdkOption } from './onboardingStepConfig';
 import { supportApi } from '@/lib/support/api';
+import type { ApiError } from '@/types/auth';
 
 export type DeveloperInstructionsInput = { developerEmail: string; sdk: string; prompt: string; guideUrl?: string };
 
@@ -68,14 +69,15 @@ export default function OnboardingStepExperience({
       setDeveloperEmailMessage(result.sent ? 'Instructions sent to your developer.' : 'We could not send the instructions. Please try again.');
       if (result.sent) setDeveloperEmail('');
     } catch (cause) {
-      setDeveloperEmailMessage(cause instanceof Error ? cause.message : 'Could not send the instructions. Please try again.');
+      const message = cause instanceof Error ? cause.message : (cause as Partial<ApiError> | undefined)?.message;
+      setDeveloperEmailMessage(message || 'Could not send the instructions. Please try again.');
     } finally {
       setDeveloperEmailBusy(false);
     }
   };
 
   if (kind === 'mobile-push') return <Stack gap={2} data-testid="onboarding-mobile-push-experience">
-    <Paper elevation={0} className="onboarding-guidance"><strong>Firebase Cloud Messaging (mobile apps)</strong><span>Upload the Firebase service-account JSON used by this Project. PixlPush validates it with Google before encrypting and storing it.</span><small>Never paste credentials into chat or your app. The file is sent only to the authenticated backend.</small></Paper>
+    <Paper elevation={0} className="onboarding-guidance"><strong>Firebase Cloud Messaging (mobile apps)</strong><span>Upload the Firebase service-account JSON used by this Project. PixlPush validates it with Google before encrypting and storing it.</span></Paper>
     {onFirebase ? <Button variant="contained" onClick={onFirebase} disabled={disabled}>{firebaseConnected ? 'Review Firebase' : 'Connect Firebase'}</Button> : null}
     {firebaseConnected && <Alert severity="success">Firebase is connected for this Project.</Alert>}
     <Paper elevation={0} className="onboarding-guidance"><strong>iOS app without Firebase?</strong><span>Send through Apple Push (APNs) directly with the .p8 key from your Apple Developer account. Android apps still need Firebase.</span></Paper>

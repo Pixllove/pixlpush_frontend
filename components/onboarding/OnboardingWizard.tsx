@@ -540,7 +540,7 @@ export default function OnboardingWizard() {
           <Paper elevation={0} className="onboarding-chat">
             <div className="onboarding-chat-head"><span className="max-avatar"><Image src="/assets/agent-avatar-max-v4.webp" alt="Max" width={52} height={52} /></span><span><strong>Max</strong><small>PIXLPUSH ONBOARDING GUIDE</small></span><Typography className="onboarding-chat-step-label">{questionEyebrow}</Typography></div>
               <div key={currentStep} className={`onboarding-chat-body onboarding-step-panel ${stepDirection}`}>
-              {!isSdkStep && <div className="max-message"><AutoAwesomeRounded fontSize="small" /><p>{prompt}</p></div>}
+              {!isSdkStep && prompt && <div className="max-message"><AutoAwesomeRounded fontSize="small" /><p>{prompt}</p></div>}
               <div className="onboarding-question"><Typography variant="h4" className="onboarding-question-title">{heading}</Typography>
                 {currentStep <= 3 && <OnboardingCommonStep
                   kind={activeStep.kind as 'basics' | 'products' | 'channels'}
