@@ -78,7 +78,6 @@ const categoryLabels: Record<string, string> = {
 
 const categoryOrder = [
   'Reachability & engagement',
-  'Push & mobile',
   'Product & lifecycle',
   'Profile & location',
   'Account & history',
@@ -120,8 +119,7 @@ function fieldIcon(field: AudienceGroupSchemaField, size: 'small' | 'medium' = '
 }
 
 function groupLabel(field: AudienceGroupSchemaField) {
-  if (pushKeys.has(field.key) || field.category === 'push') return 'Push & mobile';
-  if (field.key === 'lastNotified' || field.category === 'email' || field.category === 'consent') return 'Reachability & engagement';
+  if (pushKeys.has(field.key) || field.category === 'push' || field.key === 'lastNotified' || field.category === 'email' || field.category === 'consent') return 'Reachability & engagement';
   return categoryLabels[field.category ?? ''] ?? 'Account & history';
 }
 

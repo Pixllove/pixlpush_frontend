@@ -70,16 +70,28 @@ function renderFlow(overrides: { sdkIntegrated?: boolean; trackedEvents?: string
 describe('project-aware audience group chat flow', () => {
   beforeEach(() => { vi.resetAllMocks(); });
 
-  it('shows the goal branches and hides event targeting without SDK events', async () => {
+  it('shows SDK-dependent goal branches as disabled without SDK events', async () => {
     renderFlow({ sdkIntegrated: false, trackedEvents: [] });
     expect(await screen.findByText('What do you want to group these users for?')).toBeInTheDocument();
-    expect(screen.queryByText('Find users who took a specific event action')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Find users who took a specific event action.*Requires SDK integration and tracked product events/ })).toBeDisabled();
     expect(screen.getByText('Target users based on their behavior')).toBeInTheDocument();
     expect(screen.getByText('Something else')).toBeInTheDocument();
     await userEvent.setup().click(screen.getByText('Target users based on their behavior'));
     expect(screen.getByText('Product events')).toBeInTheDocument();
-    expect(screen.getByText('No lifecycle segments available')).toBeInTheDocument();
+    expect(screen.queryByText('Lifecycle segment status')).not.toBeInTheDocument();
     expect(screen.getByText('No journeys available')).toBeInTheDocument();
+  });
+
+  it('shows lifecycle segment status only after SDK integration', async () => {
+    const user = userEvent.setup();
+    const integrated = renderFlow({ sdkIntegrated: true, emptyProjectData: true });
+    await user.click(await screen.findByText('Target users based on their behavior'));
+    expect(screen.getByRole('button', { name: /Lifecycle segment status.*No lifecycle segments available/ })).toBeInTheDocument();
+
+    integrated.unmount();
+    renderFlow({ sdkIntegrated: false, emptyProjectData: false });
+    await user.click(await screen.findByText('Target users based on their behavior'));
+    expect(screen.queryByText('Lifecycle segment status')).not.toBeInTheDocument();
   });
 
   it('asks for the Something else description before showing relevant rules and preserves it on Back', async () => {
@@ -100,7 +112,7 @@ describe('project-aware audience group chat flow', () => {
   it('does not treat required metadata as project data when backed options are empty', async () => {
     const user = userEvent.setup();
     renderFlow({ emptyProjectData: true });
-    expect(screen.queryByText('Find users who took a specific event action')).not.toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Find users who took a specific event action.*No tracked product events yet/ })).toBeDisabled();
     await user.click(await screen.findByText('Target users based on their behavior'));
     expect(screen.getByRole('button', { name: /Product events.*No tracked events yet/ })).toBeDisabled();
     expect(screen.getByRole('button', { name: /Lifecycle segment status.*No lifecycle segments available/ })).toBeDisabled();
@@ -112,6 +124,8 @@ describe('project-aware audience group chat flow', () => {
     api.create.mockResolvedValue({ id: 'none-group', name: 'Email-ready users', description: null, rules: {}, memberCount: 1, createdAt: '', updatedAt: '' });
     renderFlow();
     await user.click(await screen.findByText('Group users by profile details'));
+    expect(screen.getByRole('button', { name: /Reachability & engagement.*Email opt-in/ })).toBeInTheDocument();
+    expect(screen.queryByText('Use the project fields available for this category.')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /Reachability & engagement/ }));
     expect(screen.getByText('Conditions for Reachability & engagement')).toBeInTheDocument();
     expect(screen.getByText('Selected goal: Group users by profile details')).toBeInTheDocument();
@@ -156,7 +170,7 @@ describe('project-aware audience group chat flow', () => {
     await user.type(days, '7');
     expect(screen.getByRole('button', { name: 'Review rules' })).toBeEnabled();
     await user.click(screen.getByRole('button', { name: 'Review rules' }));
-    expect(screen.getByText(/Exclude users notified in the last 7 days/)).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Description (optional)' })).toHaveValue('Users matching these conditions: Exclude users notified in the last 7 days.');
   });
 
   it('does not expose custom properties and combines mobile notification tokens', async () => {
@@ -276,8 +290,14 @@ describe('project-aware audience group chat flow', () => {
     const first = renderFlow();
     await user.click(await screen.findByText('Follow up with users from a campaign'));
     expect(screen.getByText('Any campaign')).toBeInTheDocument();
-    expect(screen.getByText(/Specific campaign filtering is unavailable/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Specific campaign' })).toBeDisabled();
+    expect(screen.getByText(/No specific campaigns are available yet/)).toBeInTheDocument();
     first.unmount();
+    const second = renderFlow({ emptyProjectData: true });
+    await user.click(await screen.findByText('Follow up with users from a campaign'));
+    expect(screen.getByRole('button', { name: 'Specific campaign' })).toBeDisabled();
+    expect(screen.getByText(/No specific campaigns are available yet/)).toBeInTheDocument();
+    second.unmount();
     renderFlow({ withoutConsent: true });
     await user.click(await screen.findByText('Reactivate users'));
     expect(screen.queryByText(/Consent or opt-in targeting is not shown/)).not.toBeInTheDocument();

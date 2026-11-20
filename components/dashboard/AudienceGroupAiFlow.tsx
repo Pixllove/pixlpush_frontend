@@ -40,7 +40,7 @@ const profileCategories: Array<{ id: ProfileCategory; label: string }> = [
 function fieldHasData(field: AudienceGroupSchemaField | undefined) {
   if (!field) return false;
   if (field.key === 'customProperty') return Boolean(field.property?.options?.length && field.conditions.length);
-  if (field.key === 'lastNotified' || field.key === 'lastPushNotification' || /last.?notified/i.test(`${field.key} ${field.label}`)) return field.conditions.some(condition => condition.value.type === 'integer' && (condition.value.min ?? 1) >= 1);
+  if (field.key === 'lastNotified' || field.key === 'lastPushNotification' || /last.?notified/i.test(`${field.key} ${field.label}`)) return field.conditions.some(condition => condition.value.type === 'integer' && (field.key === 'lastPushNotification' ? (condition.value.min ?? 0) >= 0 : (condition.value.min ?? 1) >= 1));
   return field.conditions.some(condition => condition.value.type === 'none' || Boolean(condition.value.options?.length) || condition.value.freeText === true);
 }
 
@@ -48,18 +48,29 @@ function optionHas(field: AudienceGroupSchemaField | undefined, pattern: RegExp)
   return Boolean(field?.conditions.some(condition => condition.value.options?.some(option => pattern.test(`${option.key} ${option.label}`))));
 }
 
-function fieldsForCategory(schema: AudienceGroupSchema, category: ProfileCategory) {
+function isLifecycleField(field: AudienceGroupSchemaField) {
+  return ['currentLifecycleSegment', 'historicalLifecycleSegment'].includes(field.key)
+    || /lifecycle.?segment/i.test(`${field.key} ${field.label}`);
+}
+
+function fieldsForCategory(schema: AudienceGroupSchema, category: ProfileCategory, sdkIntegrated = true) {
   const categories: Record<Exclude<ProfileCategory, 'other'>, string[]> = {
     reachability: ['email', 'emailAction', 'lastNotified', appNotificationTokenFieldKey, 'webPush', 'pushNotification', 'pushNotificationAction', 'lastPushNotification'],
     product: ['currentLifecycleSegment', 'historicalLifecycleSegment', 'journeyAutomation', 'audienceGroup', 'performedEvent'],
     profile: ['country', 'region', 'language', 'platform'],
     account: ['userImport', 'accountStatus', 'userType', 'createdDate'],
   };
-  return audiencePickerFields(schema.fields).filter(field => !field.deprecated && categories[category as Exclude<ProfileCategory, 'other'>]?.includes(field.key));
+  return audiencePickerFields(schema.fields).filter(field => !field.deprecated
+    && (categories[category as Exclude<ProfileCategory, 'other'>]?.includes(field.key) || (category === 'reachability' && field.category === 'consent'))
+    && (sdkIntegrated || !isLifecycleField(field)));
 }
 
-function ruleFields(schema: AudienceGroupSchema, goal: Goal, branch: string, profileCategory: ProfileCategory | null) {
-  const fields = audiencePickerFields(schema.fields).filter(field => !field.deprecated && fieldHasData(field));
+function availableFieldsForCategory(schema: AudienceGroupSchema, category: ProfileCategory, sdkIntegrated: boolean) {
+  return fieldsForCategory(schema, category, sdkIntegrated).filter(fieldHasData);
+}
+
+function ruleFields(schema: AudienceGroupSchema, goal: Goal, branch: string, profileCategory: ProfileCategory | null, sdkIntegrated = true) {
+  const fields = audiencePickerFields(schema.fields).filter(field => !field.deprecated && fieldHasData(field) && (sdkIntegrated || !isLifecycleField(field)));
   if (goal === 'event') return fields.filter(field => field.key === 'performedEvent');
   if (goal === 'behavior') {
     const keys = branch === 'events' ? ['performedEvent'] : branch === 'lifecycle' ? ['currentLifecycleSegment', 'historicalLifecycleSegment'] : ['journeyAutomation'];
@@ -70,7 +81,7 @@ function ruleFields(schema: AudienceGroupSchema, goal: Goal, branch: string, pro
     if (branch === 'specific') return fields.filter(field => /campaign/i.test(`${field.key} ${field.label}`) && optionHas(field, /campaign/i));
     return fields.filter(field => activity.includes(field.key));
   }
-  if (goal === 'profile' && profileCategory && profileCategory !== 'other') return fieldsForCategory(schema, profileCategory).filter(fieldHasData);
+  if (goal === 'profile' && profileCategory && profileCategory !== 'other') return fieldsForCategory(schema, profileCategory, sdkIntegrated).filter(fieldHasData);
   if (goal === 'reactivation') {
     const keys = ['email', 'emailAvailable', 'emailAction', 'lastEmailed', 'lastNotified', appNotificationTokenFieldKey, 'fcmToken', 'apnsToken', 'webPush', 'pushNotification', 'pushNotificationAction', 'lastPushNotification', 'performedEvent', 'accountStatus'];
     const consent = fields.filter(field => /consent|opt.?in/i.test(`${field.key} ${field.label}`));
@@ -83,7 +94,7 @@ function campaignSpecificField(schema: AudienceGroupSchema) {
   return schema.fields.find(field => /campaign/i.test(`${field.key} ${field.label}`) && optionHas(field, /campaign/i));
 }
 
-function fieldsForOther(schema: AudienceGroupSchema, description: string) {
+function fieldsForOther(schema: AudienceGroupSchema, description: string, sdkIntegrated = true) {
   const text = description.toLowerCase();
   const hints = [
     { words: ['event', 'action', 'purchase', 'checkout'], keys: ['performedEvent'] },
@@ -94,7 +105,7 @@ function fieldsForOther(schema: AudienceGroupSchema, description: string) {
     { words: ['segment', 'lifecycle'], keys: ['currentLifecycleSegment', 'historicalLifecycleSegment'] },
   ];
   const keys = new Set(hints.filter(hint => hint.words.some(word => text.includes(word))).flatMap(hint => hint.keys));
-  const candidates = audiencePickerFields(schema.fields).filter(field => !field.deprecated && fieldHasData(field));
+  const candidates = audiencePickerFields(schema.fields).filter(field => !field.deprecated && fieldHasData(field) && (sdkIntegrated || !isLifecycleField(field)));
   return keys.size ? candidates.filter(field => keys.has(field.key)) : candidates;
 }
 
@@ -211,7 +222,15 @@ export default function AudienceGroupAiFlow({ projectId, sdkIntegrated, trackedE
   const schema = schemaQuery.data ? withAppNotificationTokenField(schemaQuery.data) : undefined;
   const eventField = schema?.fields.find(field => field.key === 'performedEvent');
   const trackedSchemaEvents = trackedEvents.filter(event => eventField?.conditions.some(condition => condition.value.options?.some(option => option.key === event)));
-  const availableGoals = useMemo(() => goals.filter(item => item.id !== 'event' || (sdkIntegrated && trackedSchemaEvents.length > 0)), [sdkIntegrated, trackedSchemaEvents.length]);
+  const goalOptions = useMemo(() => goals.map(item => {
+    if (item.id !== 'event') return { ...item, available: true, unavailableReason: '' };
+    const available = sdkIntegrated && trackedSchemaEvents.length > 0;
+    return {
+      ...item,
+      available,
+      unavailableReason: sdkIntegrated ? 'No tracked product events yet.' : 'Requires SDK integration and tracked product events.',
+    };
+  }), [sdkIntegrated, trackedSchemaEvents.length]);
   useEffect(() => {
     if (goal !== 'reactivation' || reactivationSeededRef.current || !schema || onboardingQuery.isPending || !onboardingQuery.data) return;
     reactivationSeededRef.current = true;
@@ -221,8 +240,16 @@ export default function AudienceGroupAiFlow({ projectId, sdkIntegrated, trackedE
     setReactivationUnavailable(seeded.unavailable);
     setBlocks(current => current.length ? current : seeded.blocks);
   }, [goal, onboardingQuery.data, onboardingQuery.isPending, schema]);
+  useEffect(() => {
+    if (sdkIntegrated || branch !== 'lifecycle') return;
+    setBranch('');
+    setBlocks([]);
+    setReviewing(false);
+  }, [branch, sdkIntegrated]);
   const campaignSpecific = schema ? campaignSpecificField(schema) : undefined;
-  const fields = schema && goal ? goal === 'other' ? fieldsForOther(schema, otherDescription) : ruleFields(schema, goal, branch, profileCategory) : [];
+  const campaignActivityAvailable = Boolean(schema && ruleFields(schema, 'campaign', 'any', null).length > 0);
+  const specificCampaignAvailable = Boolean(schema && campaignSpecific);
+  const fields = schema && goal ? goal === 'other' ? fieldsForOther(schema, otherDescription, sdkIntegrated) : ruleFields(schema, goal, branch, profileCategory, sdkIntegrated) : [];
   const hasRules = validRuleCount(blocks, schema) > 0;
   const incompleteRules = incompleteRuleCount(blocks, schema);
   const createMutation = useMutation({
@@ -290,11 +317,11 @@ export default function AudienceGroupAiFlow({ projectId, sdkIntegrated, trackedE
   return <Card sx={{ p: 2.5, width: '100%' }} data-testid="audience-group-ai-flow">
     <Stack gap={2}>
       <Box><Typography variant="h3">Build an audience group</Typography><Typography color="text.secondary">Choose a goal, select conditions from this project, review the exact rules, and create the group.</Typography></Box>
-      {!goal && <Stack gap={1}><Typography fontWeight={600}>What do you want to group these users for?</Typography>{availableGoals.map(item => <ButtonBase key={item.id} onClick={() => chooseGoal(item.id)} sx={{ textAlign: 'left', display: 'block', p: { xs: 1.4, sm: 1.7 }, border: '1px solid', borderColor: 'divider', borderRadius: 2, '&:hover': { borderColor: 'primary.main', backgroundColor: 'action.hover' }, '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 } }}><Typography fontWeight={600}>{item.label}</Typography><Typography color="text.secondary" fontSize="0.85rem">{item.description}</Typography></ButtonBase>)}<Button type="button" onClick={onCancel}>Cancel</Button></Stack>}
+      {!goal && <Stack gap={1}><Typography fontWeight={600}>What do you want to group these users for?</Typography>{goalOptions.map(item => <ButtonBase key={item.id} disabled={!item.available} onClick={() => item.available && chooseGoal(item.id)} sx={{ textAlign: 'left', display: 'block', p: { xs: 1.4, sm: 1.7 }, border: '1px solid', borderColor: item.available ? 'divider' : 'action.disabledBackground', borderRadius: 2, opacity: item.available ? 1 : 0.5, filter: item.available ? 'none' : 'blur(0.5px)', cursor: item.available ? 'pointer' : 'not-allowed', '&:hover:not(:disabled)': { borderColor: 'primary.main', backgroundColor: 'action.hover' }, '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 } }}><Typography fontWeight={600}>{item.label}</Typography><Typography color="text.secondary" fontSize="0.85rem">{item.available ? item.description : item.unavailableReason}</Typography></ButtonBase>)}<Button type="button" onClick={onCancel}>Cancel</Button></Stack>}
       {goal && !showRuleEditor && !reviewing && <Stack gap={1.5}><Button type="button" startIcon={<ArrowBackRounded />} onClick={() => setGoal(null)}>Back to goals</Button>
-        {goal === 'behavior' && <><Typography fontWeight={600}>Which behavior should we use?</Typography><Stack gap={1}>{[['events', 'Product events', 'Use events tracked by this project.', 'No tracked events yet'], ['lifecycle', 'Lifecycle segment status', 'Use a current or historical lifecycle segment.', 'No lifecycle segments available'], ['journey', 'Journey activity', 'Use activity from a project journey.', 'No journeys available']].map(([id, label, text, reason]) => { const available = ruleFields(schema, goal, id, null).length > 0; return <ButtonBase key={id} disabled={!available} onClick={() => chooseBranch(id)} sx={{ width: '100%', textAlign: 'left', display: 'block', p: { xs: 1.4, sm: 1.7 }, border: '1px solid', borderColor: available ? 'divider' : 'action.disabledBackground', borderRadius: 2, opacity: available ? 1 : 0.65, '&:hover:not(:disabled)': { borderColor: 'primary.main', backgroundColor: 'action.hover' }, '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 } }}><Typography fontWeight={600}>{label}</Typography><Typography color="text.secondary" fontSize="0.82rem">{available ? text : reason}</Typography></ButtonBase>; })}</Stack></>}
-        {goal === 'campaign' && <><Typography fontWeight={600}>Which campaign scope should we use?</Typography><Stack direction={{ xs: 'column', sm: 'row' }} gap={1}>{ruleFields(schema, goal, 'any', null).length > 0 && <Button type="button" variant={branch === 'any' ? 'contained' : 'outlined'} onClick={() => chooseBranch('any')}>Any campaign</Button>}{campaignSpecific && <Button type="button" variant={branch === 'specific' ? 'contained' : 'outlined'} onClick={() => chooseBranch('specific')}>Specific campaign</Button>}</Stack>{!ruleFields(schema, goal, 'any', null).length && <Alert severity="info">This project has no supported campaign activity yet. Choose another goal and try again after activity is available.</Alert>}{!campaignSpecific && <Typography color="text.secondary" fontSize="0.82rem">Specific campaign filtering is unavailable because the backend did not provide campaign-scoped activity and campaign options.</Typography>}</>}
-        {goal === 'profile' && <><Typography fontWeight={600}>Which profile details matter?</Typography><Stack gap={1}>{profileCategories.map(item => { const available = item.id === 'other' || fieldsForCategory(schema, item.id).some(fieldHasData); return <ButtonBase key={item.id} disabled={!available} onClick={() => item.id === 'other' ? chooseGoal('other') : chooseProfileCategory(item.id)} sx={{ width: '100%', textAlign: 'left', display: 'block', p: { xs: 1.4, sm: 1.7 }, border: '1px solid', borderColor: available ? 'divider' : 'action.disabledBackground', borderRadius: 2, opacity: available ? 1 : 0.65, '&:hover:not(:disabled)': { borderColor: 'primary.main', backgroundColor: 'action.hover' }, '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 } }}><Typography fontWeight={600}>{item.label}</Typography><Typography color="text.secondary" fontSize="0.82rem">{available ? 'Use the project fields available for this category.' : 'No supported project data available'}</Typography></ButtonBase>; })}</Stack></>}
+        {goal === 'behavior' && <><Typography fontWeight={600}>Which behavior should we use?</Typography><Stack gap={1}>{[['events', 'Product events', 'Use events tracked by this project.', 'No tracked events yet'], ...(sdkIntegrated ? [['lifecycle', 'Lifecycle segment status', 'Use a current or historical lifecycle segment.', 'No lifecycle segments available'] as const] : []), ['journey', 'Journey activity', 'Use activity from a project journey.', 'No journeys available']].map(([id, label, text, reason]) => { const available = ruleFields(schema, goal, id, null, sdkIntegrated).length > 0; const unavailableReason = id === 'events' && !sdkIntegrated ? 'Requires SDK integration and tracked product events.' : reason; return <ButtonBase key={id} disabled={!available} onClick={() => chooseBranch(id)} sx={{ width: '100%', textAlign: 'left', display: 'block', p: { xs: 1.4, sm: 1.7 }, border: '1px solid', borderColor: available ? 'divider' : 'action.disabledBackground', borderRadius: 2, opacity: available ? 1 : 0.5, filter: available ? 'none' : 'blur(0.5px)', cursor: available ? 'pointer' : 'not-allowed', '&:hover:not(:disabled)': { borderColor: 'primary.main', backgroundColor: 'action.hover' }, '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 } }}><Typography fontWeight={600}>{label}</Typography><Typography color="text.secondary" fontSize="0.82rem">{available ? text : unavailableReason}</Typography></ButtonBase>; })}</Stack></>}
+        {goal === 'campaign' && <><Typography fontWeight={600}>Which campaign scope should we use?</Typography><Stack direction={{ xs: 'column', sm: 'row' }} gap={1}><Button type="button" disabled={!campaignActivityAvailable} variant={branch === 'any' ? 'contained' : 'outlined'} onClick={() => chooseBranch('any')} sx={{ opacity: campaignActivityAvailable ? 1 : 0.5, filter: campaignActivityAvailable ? 'none' : 'blur(0.5px)', cursor: campaignActivityAvailable ? 'pointer' : 'not-allowed' }}>Any campaign</Button><Button type="button" disabled={!specificCampaignAvailable} variant={branch === 'specific' ? 'contained' : 'outlined'} onClick={() => chooseBranch('specific')} sx={{ opacity: specificCampaignAvailable ? 1 : 0.5, filter: specificCampaignAvailable ? 'none' : 'blur(0.5px)', cursor: specificCampaignAvailable ? 'pointer' : 'not-allowed' }}>Specific campaign</Button></Stack>{!campaignActivityAvailable && <Alert severity="info">No campaigns are available for this project yet.</Alert>}{!specificCampaignAvailable && <Typography color="text.secondary" fontSize="0.82rem">No specific campaigns are available yet. This option will become available when campaign-scoped activity is provided.</Typography>}</>}
+        {goal === 'profile' && <><Typography fontWeight={600}>Which profile details matter?</Typography><Stack gap={1}>{profileCategories.map(item => { const availableFields = item.id === 'other' ? [] : availableFieldsForCategory(schema, item.id, sdkIntegrated); const available = item.id === 'other' || availableFields.length > 0; const summary = item.id === 'other' ? 'Describe your audience, then choose from the supported project fields.' : available ? `Available: ${availableFields.map(field => field.label).join(', ')}` : 'No supported project data available'; return <ButtonBase key={item.id} disabled={!available} onClick={() => item.id === 'other' ? chooseGoal('other') : chooseProfileCategory(item.id)} sx={{ width: '100%', textAlign: 'left', display: 'block', p: { xs: 1.4, sm: 1.7 }, border: '1px solid', borderColor: available ? 'divider' : 'action.disabledBackground', borderRadius: 2, opacity: available ? 1 : 0.5, filter: available ? 'none' : 'blur(0.5px)', cursor: available ? 'pointer' : 'not-allowed', '&:hover:not(:disabled)': { borderColor: 'primary.main', backgroundColor: 'action.hover' }, '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 } }}><Typography fontWeight={600}>{item.label}</Typography><Typography color="text.secondary" fontSize="0.82rem">{summary}</Typography></ButtonBase>; })}</Stack></>}
         {goal === 'reactivation' && <><Typography fontWeight={600}>Choose supported reactivation conditions</Typography><Typography color="text.secondary">Only activity, reachability, product events, and fields exposed by this project are available.</Typography>{!fields.length && <Alert severity="info">There are no supported reactivation conditions in this project yet. Choose another goal.</Alert>}{fields.some(field => field.key === 'accountStatus' && optionHas(field, /deleted/i)) && <Typography color="text.secondary" fontSize="0.85rem">Deleted-account targeting is available because the backend exposed it for this project.</Typography>}</>}
         {goal === 'reactivation' && reactivationUnavailable.length > 0 && <Alert severity="info">I couldn’t preselect supported conditions for: {reactivationUnavailable.join(', ')}. Add or adjust the available conditions manually.</Alert>}
         {goal === 'reactivation' && onboardingQuery.isError && <Alert severity="info">I couldn’t load the saved product and channel selections. Add or adjust the available conditions manually.</Alert>}
