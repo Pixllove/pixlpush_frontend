@@ -9,7 +9,6 @@ import { useActiveProject } from '@/hooks/projects/use-active-project';
 import { useProject, useUpdateProject } from '@/hooks/projects/use-projects';
 import SubmitButton from '@/components/auth/SubmitButton';
 import type { ApiError } from '@/types/auth';
-import AccountProfile from '@/components/auth/AccountProfile';
 import { aiApi } from '@/lib/projects/ai';
 import { projectApi } from '@/lib/projects/api';
 
@@ -119,7 +118,7 @@ function BusinessContextPanel({ projectId }: { projectId?: string }) {
 
   if (contextQuery.isPending) return <Box sx={{ mt: 3 }}><Skeleton variant="rounded" height={120} /></Box>;
   if (!context || (!analysis && !context.websiteUrl && !context.appStoreUrl && !context.googlePlayUrl)) return null;
-  return <Box className="business-context-settings" sx={{ mt: 3, pt: 3, borderTop: '1px solid #eeeaf3' }}>
+  return <Card className="saas-card business-context-settings">
     <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" gap={2}>
       <Box><Typography variant="h4">Business context</Typography><Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: .5 }}>Information collected by Max for future journeys and campaign content.</Typography></Box>
       {analysis && <Stack direction="row" alignItems="center" gap={1}><Button type="button" size="small" startIcon={<DownloadRounded />} onClick={downloadAnalysis}>Download</Button><Button type="button" size="small" startIcon={<EditOutlined />} href="/dashboard">Edit analysis</Button></Stack>}
@@ -141,11 +140,11 @@ function BusinessContextPanel({ projectId }: { projectId?: string }) {
       <Box className="business-analysis-dialog-section"><Typography className="business-context-label">Objections and barriers</Typography>{analysis.objectionsAndBarriers.map((value) => <Typography key={value} className="business-analysis-bullet" fontSize="var(--fs-14)">{value}</Typography>)}</Box>
       <Box className="business-analysis-dialog-section"><Typography className="business-context-label">Messaging recommendations</Typography>{Object.entries(analysis.messagingRecommendations).map(([key, values]) => <Box key={key} sx={{ mt: .75 }}><Typography className="business-context-sub-label">{humanize(key)}</Typography>{values.map((value) => <Typography key={value} className="business-analysis-bullet" fontSize="var(--fs-14)">{value}</Typography>)}</Box>)}</Box>
     </Stack></DialogContent></Dialog>}
-  </Box>;
+  </Card>;
 }
 
 /** Identity and environment for the active Project. */
-export default function ProjectDetailsPanel({ showHeading = true }: { showHeading?: boolean } = {}) {
+export default function ProjectDetailsPanel({ showHeading = true, showProjectFields = true, showBusinessContext = true }: { showHeading?: boolean; showProjectFields?: boolean; showBusinessContext?: boolean } = {}) {
   const { active } = useActiveProject();
   const { data: project, isPending } = useProject(active?.id);
   const updateProject = useUpdateProject(active?.id);
@@ -212,7 +211,7 @@ export default function ProjectDetailsPanel({ showHeading = true }: { showHeadin
         <Typography variant="h3">Project details</Typography>
         <Typography color="text.secondary" fontSize="var(--fs-12)">Basic identity and environment settings for the active Project.</Typography>
       </Box>}
-      <Card className="saas-card">
+      {showProjectFields && <Card className="saas-card">
         <Box component="form" onSubmit={submit}>
           <Stack gap={3}>
             {error && <Alert severity="error">{error}</Alert>}
@@ -263,13 +262,13 @@ export default function ProjectDetailsPanel({ showHeading = true }: { showHeadin
             <SubmitButton type="submit" variant="contained" pending={updateProject.isPending} disabled={disabled || !name.trim()} sx={{ alignSelf: 'flex-start' }}>
               Save changes
             </SubmitButton>
-            <AccountProfile section="company" embedded showCompanyHeading={false} />
-            <BusinessContextPanel projectId={active?.id} />
+            {showBusinessContext && <BusinessContextPanel projectId={active?.id} />}
               </>
             )}
           </Stack>
         </Box>
-      </Card>
+      </Card>}
+      {showBusinessContext && !showProjectFields && <BusinessContextPanel projectId={active?.id} />}
     </Stack>
   );
 }

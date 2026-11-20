@@ -2184,7 +2184,7 @@ export default function HomeCommandCenter() {
       setEditing(null);
       setLastDraft(null);
       setActiveFlow(null);
-      setAudienceGroupFlowOpen(false);
+      setAudienceGroupFlowOpen(conversation.flowId === "audience-group");
       setBusinessAnalysisFlowOpen(false);
       setFlowReady(false);
       setFlowAnswers({});
