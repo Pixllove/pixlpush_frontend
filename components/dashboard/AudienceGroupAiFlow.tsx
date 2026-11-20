@@ -1,12 +1,13 @@
 'use client';
 
 import { AddRounded, ArrowBackRounded, ArrowForwardRounded, CloseRounded, ReplayRounded } from '@mui/icons-material';
-import { Alert, Box, Button, ButtonBase, Card, CircularProgress, Divider, ListSubheader, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, ButtonBase, Card, CircularProgress, Divider, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { audienceGroupsApi } from '@/lib/projects/api';
 import type { AudienceGroup, AudienceGroupSchema, AudienceGroupSchemaField } from '@/types/project';
-import { appNotificationTokenFieldKey, audiencePickerFields, groupAudienceFields, incompleteRuleCount, isHiddenAudienceField, isRuleComplete, makeBlock, makeRule, readableRule, ruleHasInput, toBackendRules, validRuleCount, withAppNotificationTokenField, type Block, type Rule } from './audienceGroupRules';
+import AudienceConditionFieldPicker from './AudienceConditionFieldPicker';
+import { appNotificationTokenFieldKey, audiencePickerFields, incompleteRuleCount, isRuleComplete, makeBlock, makeRule, readableRule, ruleHasInput, toBackendRules, validRuleCount, withAppNotificationTokenField, type Block, type Rule } from './audienceGroupRules';
 
 type Goal = 'behavior' | 'campaign' | 'event' | 'profile' | 'reactivation' | 'other';
 type ProfileCategory = 'reachability' | 'product' | 'profile' | 'account' | 'other';
@@ -44,10 +45,6 @@ function fieldHasData(field: AudienceGroupSchemaField | undefined) {
 
 function optionHas(field: AudienceGroupSchemaField | undefined, pattern: RegExp) {
   return Boolean(field?.conditions.some(condition => condition.value.options?.some(option => pattern.test(`${option.key} ${option.label}`))));
-}
-
-function fieldLabel(field: AudienceGroupSchemaField) {
-  return field.label;
 }
 
 function fieldsForCategory(schema: AudienceGroupSchema, category: ProfileCategory) {
@@ -140,7 +137,6 @@ function RuleRow({ rule, schema, fields, onChange, onRemove }: { rule: Rule; sch
   const selected = condition?.value.multiple ? rule.value.split(',').map(value => value.trim()).filter(Boolean) : rule.value;
   const hasCustomProperty = field?.key === 'customProperty';
   const isLastNotified = field?.key === 'lastNotified';
-  const groupedFields = groupAudienceFields(fields.filter(field => !isHiddenAudienceField(field)));
   const complete = isRuleComplete(rule, schema);
   const incomplete = !complete;
   const incompleteMessage = !ruleHasInput(rule)
@@ -149,10 +145,7 @@ function RuleRow({ rule, schema, fields, onChange, onRemove }: { rule: Rule; sch
       ? 'Enter a positive whole number of days for Last Notified.'
       : 'Choose an operator and a required value, or remove this incomplete condition.';
   return <Stack direction={{ xs: 'column', md: 'row' }} gap={1} alignItems={{ md: 'center' }} sx={{ width: '100%', flexWrap: { md: 'wrap' } }}>
-    <Select size="small" displayEmpty value={rule.filter} inputProps={{ 'aria-label': 'Condition field' }} onChange={event => onChange('filter', String(event.target.value))} sx={{ minWidth: { md: 190 }, flex: 1 }}>
-      <MenuItem value="">Choose a field</MenuItem>
-      {groupedFields.flatMap(group => [<ListSubheader key={`${group.label}-header`} disableSticky sx={{ px: 1.5, py: 0.6, lineHeight: 1.5, fontWeight: 700, color: 'text.primary' }}>{group.label}</ListSubheader>, ...group.fields.map(item => <MenuItem key={item.key} value={item.key} sx={{ pl: 3 }}>{fieldLabel(item)}</MenuItem>)])}
-    </Select>
+    <AudienceConditionFieldPicker fields={fields} value={rule.filter} onChange={value => onChange('filter', value)} />
     {hasCustomProperty && <Select size="small" displayEmpty value={rule.property ?? ''} inputProps={{ 'aria-label': 'Custom property' }} onChange={event => onChange('property', String(event.target.value))} sx={{ minWidth: { md: 180 }, flex: 1 }}>
       <MenuItem value="">Choose a property</MenuItem>
       {(field?.property?.options ?? []).map(option => <MenuItem key={option.key} value={option.key}>{option.label}</MenuItem>)}

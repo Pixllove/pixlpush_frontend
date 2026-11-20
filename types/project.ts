@@ -653,6 +653,18 @@ export interface ImportPreview {
 }
 
 /** GET /users/stats: header counts for the Users page. */
+export type UserFilterKey =
+  | "all"
+  | "email-subscribed"
+  | "email-unsubscribed"
+  | "email-bounced"
+  | "email-spam"
+  | "push-enabled"
+  | "push-unavailable"
+  | "billable"
+  | "unreachable";
+export type UserFilterCounts = Partial<Record<UserFilterKey, number>>;
+
 export interface UserStats {
   /** People (an app user id or an email), not deleted. */
   total: number;
@@ -666,6 +678,8 @@ export interface UserStats {
   reachableAnonymous?: number;
   eventsToday: number;
   eventsYesterday: number;
+  /** Project-wide distinct-user counts for the Users page filter menu. */
+  filterCounts?: UserFilterCounts;
 }
 
 /** What the in-app checkout sends: a plan, an interval and the billing address. Never a price or amount. */

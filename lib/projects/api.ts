@@ -54,6 +54,7 @@ import type {
   UserEvent,
   UserImport,
   UserProfile,
+  UserFilterKey,
   UserStats,
   UsersPage,
 } from "@/types/project";
@@ -772,16 +773,7 @@ export const auditApi = {
 /** all = every person, deleted accounts included; anonymous = visitors nobody logged in on. */
 export type UserListStatus = "all" | "active" | "logged_out" | "deleted" | "anonymous";
 /** The Users page filter. */
-export type UserListFilter =
-  | "all"
-  | "email-subscribed"
-  | "email-unsubscribed"
-  | "email-bounced"
-  | "email-spam"
-  | "push-enabled"
-  | "push-unavailable"
-  | "billable"
-  | "unreachable";
+export type UserListFilter = UserFilterKey;
 
 export const usersApi = {
   list: (

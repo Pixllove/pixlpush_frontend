@@ -3,14 +3,15 @@
 import { Fragment, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AddRounded, ArrowBackRounded, CloseRounded, EmailRounded, GroupsRounded, NotificationsActiveRounded, TimelineRounded } from '@mui/icons-material';
-import { Box, Button, Card, Chip, CircularProgress, Divider, Grid, ListSubheader, MenuItem, Select, Skeleton, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
+import { Box, Button, Card, Chip, CircularProgress, Divider, Grid, MenuItem, Select, Skeleton, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
 import PeopleAltOutlined from '@mui/icons-material/PeopleAltOutlined';
 import EmptyState, { listEmpty } from './EmptyState';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { audienceGroupsApi } from '@/lib/projects/api';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
 import type { AudienceGroupSchema } from '@/types/project';
-import { appNotificationTokenFieldKey, appNotificationTokenFieldLabel, audiencePickerFields, groupAudienceFields, isHiddenAudienceField, isRuleComplete, makeBlock, makeRule, ruleHasInput, toBackendRules, type Block, type Rule, withAppNotificationTokenField } from './audienceGroupRules';
+import AudienceConditionFieldPicker from './AudienceConditionFieldPicker';
+import { appNotificationTokenFieldKey, appNotificationTokenFieldLabel, audiencePickerFields, isRuleComplete, makeBlock, makeRule, ruleHasInput, toBackendRules, type Block, type Rule, withAppNotificationTokenField } from './audienceGroupRules';
 import SearchField from './SearchField';
 import { formatUserDateTime } from '@/lib/timezone';
 
@@ -158,12 +159,8 @@ function ConditionRow({ rule, schema, onChange, onRemove }: { rule: Rule; schema
   const selectedValues = multiple ? rule.value.split(',').map(value => value.trim()).filter(Boolean) : rule.value;
   const isLastNotified = (field?.key ?? rule.filter) === 'lastNotified';
   const selectableFields = audiencePickerFields(schema?.fields ?? [], rule.filter).filter(item => !item.deprecated || item.key === rule.filter);
-  const groupedFields = groupAudienceFields(selectableFields);
   return <Stack direction={{ xs: 'column', md: 'row' }} gap={1} className="condition-row-card">
-    <Select size="small" displayEmpty value={rule.filter} onChange={event => onChange('filter', event.target.value)}>
-      <MenuItem value="">Choose a filter</MenuItem>
-      {schema ? groupedFields.flatMap(group => [<ListSubheader key={`${group.label}-header`} disableSticky sx={{ px: 1.5, py: 0.6, lineHeight: 1.5, fontWeight: 700, color: 'text.primary' }}>{group.label}</ListSubheader>, ...group.fields.map(item => <MenuItem key={item.key} value={item.key} disabled={isHiddenAudienceField(item)} sx={{ pl: 3 }}>{item.label}{item.deprecated || isHiddenAudienceField(item) ? ' (legacy)' : ''}</MenuItem>)]) : filters.map(item => <MenuItem key={item} value={backendField[item] ?? item}>{item}</MenuItem>)}
-    </Select>
+    <AudienceConditionFieldPicker fields={selectableFields.length ? selectableFields : filters.map(label => ({ key: backendField[label] ?? label, label, category: 'account', operators: [], conditions: [] }))} value={rule.filter} onChange={value => onChange('filter', value)} />
     {rule.filter && !isLastNotified && <Select size="small" displayEmpty value={rule.operator} onChange={event => onChange('operator', event.target.value)}>
       <MenuItem value="">Choose an operator</MenuItem>
       {schema ? (field?.conditions ?? []).map(item => <MenuItem key={item.key} value={item.key}>{item.label}</MenuItem>) : fallbackOperators.map(item => <MenuItem key={item} value={backendOperator[item] ?? item}>{item}</MenuItem>)}

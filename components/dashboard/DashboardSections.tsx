@@ -90,8 +90,8 @@ import {
   usersApi,
 } from "@/lib/projects/api";
 import type { UserListFilter } from "@/lib/projects/api";
-import type { AudienceGroup, EndUser, LifecycleSegment } from "@/types/project";
 import { usersToCsv } from "@/lib/users-export";
+import type { AudienceGroup, EndUser, LifecycleSegment, UserStats } from "@/types/project";
 import type {
   EmailCampaign,
   EmailTemplate,
@@ -115,6 +115,46 @@ import PremiumWorkspaceTabs from "./PremiumWorkspaceTabs";
 
 const safeFormAudienceReturnTo = (value: string | null) =>
   value && /^\/dashboard\/forms\/[^/?]+\/edit\?step=audience$/.test(value) ? value : null;
+
+const userFilterOptions: Array<{ value: UserListFilter; label: string }> = [
+  { value: "all", label: "All users" },
+  { value: "email-subscribed", label: "Email subscribed" },
+  { value: "email-unsubscribed", label: "Email unsubscribed" },
+  { value: "email-bounced", label: "Email bounced" },
+  { value: "email-spam", label: "Email spam complaints" },
+  { value: "push-enabled", label: "Push enabled" },
+  { value: "push-unavailable", label: "Push unavailable" },
+  { value: "billable", label: "Billable users" },
+  { value: "unreachable", label: "Unreachable users" },
+];
+
+function userFilterCount(stats: UserStats | undefined, filter: UserListFilter) {
+  if (!stats) return undefined;
+  if (filter === "all") return stats.total;
+  return stats.filterCounts?.[filter];
+}
+
+function UserFilterOption({ label, count }: { label: string; count?: number }) {
+  return (
+    <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2} sx={{ width: "100%" }}>
+      <Typography component="span" noWrap>{label}</Typography>
+      <Chip
+        size="small"
+        label={count === undefined ? "—" : count.toLocaleString()}
+        sx={{
+          minWidth: 38,
+          height: 24,
+          borderRadius: 999,
+          bgcolor: "action.hover",
+          color: "text.secondary",
+          fontSize: "0.75rem",
+          fontWeight: 600,
+          "& .MuiChip-label": { px: 0.9 },
+        }}
+      />
+    </Stack>
+  );
+}
 
 export function StatCard({
   label,
@@ -1237,15 +1277,11 @@ export function UsersSection() {
                     </InputAdornment>
                   }
                 >
-                  <MenuItem value="all">All users</MenuItem>
-                  <MenuItem value="email-subscribed">Email subscribed</MenuItem>
-                  <MenuItem value="email-unsubscribed">Email unsubscribed</MenuItem>
-                  <MenuItem value="email-bounced">Email bounced</MenuItem>
-                  <MenuItem value="email-spam">Email spam complaints</MenuItem>
-                  <MenuItem value="push-enabled">Push enabled</MenuItem>
-                  <MenuItem value="push-unavailable">Push unavailable</MenuItem>
-                  <MenuItem value="billable">Billable users</MenuItem>
-                  <MenuItem value="unreachable">Unreachable users</MenuItem>
+                  {userFilterOptions.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      <UserFilterOption label={option.label} count={userFilterCount(stats, option.value)} />
+                    </MenuItem>
+                  ))}
                 </Select>
               </Stack>
               <Stack
