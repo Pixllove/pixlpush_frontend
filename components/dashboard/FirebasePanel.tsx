@@ -5,11 +5,12 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ProjectPlatform } from '@/types/project';
 import { toggleProjectPlatform } from '@/lib/project-platforms';
-import { Apple as AppleIcon, CheckCircleRounded, CloudUploadRounded, LanguageRounded, PhoneIphoneRounded, ErrorOutlineRounded, LockRounded, RadioButtonUncheckedRounded, WarningAmberRounded } from '@mui/icons-material';
-import { Alert, Box, Button, ButtonBase, Card, Dialog, DialogActions, DialogContent, DialogTitle, Skeleton, Stack, TextField, Typography } from '@mui/material';
+import { Apple as AppleIcon, ExpandMoreRounded, CheckCircleRounded, CloudUploadRounded, LanguageRounded, PhoneIphoneRounded, ErrorOutlineRounded, LockRounded, RadioButtonUncheckedRounded } from '@mui/icons-material';
+import { Accordion, AccordionDetails, AccordionSummary, Alert, Box, Button, Divider, ButtonBase, Card, Dialog, DialogActions, DialogContent, DialogTitle, Skeleton, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
 import { useApnsSettings, useFirebaseSettings } from '@/hooks/projects/use-project-settings';
 import ApnsConnectDialog from './ApnsConnectDialog';
+import FileDropZone from './FileDropZone';
 import { aiApi } from '@/lib/projects/ai';
 import SettingsStatus from './SettingsStatus';
 import type { ApiError } from '@/types/auth';
@@ -64,7 +65,7 @@ export default function FirebasePanel() {
   const apns = config?.apns;
   const apnsConfigured = Boolean(apns && apns.status !== 'not_configured');
   const apnsConnected = apns?.status === 'connected';
-  const [file, setFile] = useState<{ name: string; text: string; projectId?: string; adminKey?: boolean }>();
+  const [file, setFile] = useState<{ name: string; text: string; projectId?: string }>();
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState<string>();
 
@@ -82,18 +83,15 @@ export default function FirebasePanel() {
     if (!picked) return setFile(undefined);
     const text = await picked.text();
     let projectId: string | undefined;
-    let adminKey = false;
     // Preview only; the backend does the real validation.
     try {
       const parsed = JSON.parse(text);
       projectId = parsed.project_id;
-      // Firebase's default Admin SDK account can do far more than send push.
-      adminKey = typeof parsed.client_email === 'string' && parsed.client_email.startsWith('firebase-adminsdk');
       if (!projectId) setError(parsed.project_info
         ? 'This is google-services.json (app config). Upload the service account key JSON instead.'
         : 'This is not a service account key. It has no project_id.');
     } catch { setError('This file is not valid JSON.'); }
-    setFile({ name: picked.name, text, projectId, adminKey });
+    setFile({ name: picked.name, text, projectId });
   };
 
   const submit = async () => {
@@ -121,11 +119,14 @@ export default function FirebasePanel() {
     try { await mutation.mutateAsync(); } catch (cause) { setError((cause as ApiError).message); }
   };
 
+  const mobileDevices = (config?.activeTokens ?? 0) + (apns?.activeDevices ?? 0);
   const checklist: Array<[string, string, boolean]> = [
     ['Service account JSON', configured ? 'Uploaded' : 'Required', configured],
     ['Firebase Cloud Messaging API', connected ? 'Enabled' : config?.status === 'error' ? 'Check failed' : 'Waiting', connected],
     ['Firebase project ID', config?.firebaseProjectId ?? '—', configured],
+    ['Service account', config?.clientEmail ?? '—', configured],
     ['Token sync', config?.activeTokens ? `${config.activeTokens} active app devices` : 'Waiting for the mobile SDK', Boolean(config?.activeTokens)],
+    ['Last checked', config?.validatedAt ? new Date(config.validatedAt).toLocaleString() : '—', Boolean(config?.validatedAt)],
   ];
 
   return (
@@ -181,7 +182,7 @@ export default function FirebasePanel() {
           <Box className="settings-large-icon"><LanguageRounded /></Box>
           <Box sx={{ flex: 1 }}>
             <Stack direction="row" alignItems="center" gap={1}>
-              <Typography fontWeight={600}>Website push (Web Push)</Typography>
+              <Typography fontWeight={600}>Website push</Typography>
               {config && <SettingsStatus tone={config.webPush?.activeBrowsers ? 'success' : 'neutral'}>{config.webPush?.activeBrowsers ? 'Active' : config.webPush?.enabled ? 'Ready' : 'Waiting for the web SDK'}</SettingsStatus>}
             </Stack>
             <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: .6 }}>
@@ -190,13 +191,29 @@ export default function FirebasePanel() {
                 : 'Nothing to configure here. Install @pixlpush/web with your SDK key, serve pixlpush-sw.js from your site, and call PixlPush.requestPushPermission() from a button.'}
             </Typography>
           </Box>
-          <Button href="/dashboard/integrations/web/quickstart" variant="outlined" size="small" sx={{ whiteSpace: 'nowrap', alignSelf: { xs: 'flex-start', sm: 'center' } }}>Web SDK guide</Button>
+          <Button href="/dashboard/integrations/web/quickstart" variant="outlined" size="small" sx={{ whiteSpace: 'nowrap', alignSelf: { xs: 'flex-start', sm: 'center' } }}>Web SDK</Button>
         </Stack>
       </Card>}
 
       {settingsLoaded && hasMobile && <>
-      <Typography fontWeight={600} sx={{ mt: 1 }}>Mobile apps</Typography>
-      <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: -1.5 }}>Connect Firebase (Android and iOS), or an APNs key if your iOS app does not use Firebase. You can use both.</Typography>
+      {hasWeb && <Divider />}
+      <Card className="settings-hero-card">
+        <Stack direction={{ xs: 'column', sm: 'row' }} gap={2} alignItems={{ sm: 'center' }}>
+          <Box className="settings-large-icon"><PhoneIphoneRounded /></Box>
+          <Box sx={{ flex: 1 }}>
+            <Stack direction="row" alignItems="center" gap={1}>
+              <Typography fontWeight={600}>Mobile apps</Typography>
+              {config && <SettingsStatus tone={mobileDevices ? 'success' : 'neutral'}>{mobileDevices ? 'Active' : connected || apnsConnected ? 'Ready' : 'Waiting for setup'}</SettingsStatus>}
+            </Stack>
+            <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: .6 }}>
+              {mobileDevices
+                ? `${mobileDevices} app device${mobileDevices === 1 ? '' : 's'} registered. Push campaigns and journeys reach them automatically.`
+                : 'Connect Firebase (Android and iOS), or an APNs key if your iOS app does not use Firebase. You can use both.'}
+            </Typography>
+          </Box>
+          <Button href="/dashboard/integrations/react-native/quickstart" variant="outlined" size="small" sx={{ whiteSpace: 'nowrap', alignSelf: { xs: 'flex-start', sm: 'center' } }}>Mobile SDK guide</Button>
+        </Stack>
+      </Card>
 
       <Card className="settings-hero-card">
 
@@ -214,11 +231,15 @@ export default function FirebasePanel() {
                 : 'For apps that include Firebase. Upload a service-account JSON to send push to Android and iOS.'}
             </Typography>
           </Box>
-          <Stack direction="row" gap={1}>
+          <Stack direction="row" gap={1} flexWrap="wrap">
             {configured && <Button variant="outlined" disabled={!canEdit || verify.isPending} onClick={() => run(verify)}>{verify.isPending ? 'Checking…' : 'Re-check'}</Button>}
-            <Button variant="contained" disabled={!canEdit} onClick={() => setOpen(true)}>{configured ? 'Replace credentials' : 'Connect Firebase'}</Button>
+            {configured && <Button color="error" variant="outlined" disabled={!canEdit || disconnect.isPending} onClick={() => run(disconnect)}>{disconnect.isPending ? 'Disconnecting…' : 'Disconnect'}</Button>}
+            <Tooltip title={configured ? `Moving ${appName} to a different Firebase project? Existing FCM tokens may no longer be valid.` : ''}>
+              <span><Button variant="contained" disabled={!canEdit} onClick={() => setOpen(true)}>{configured ? 'Replace credentials' : 'Connect Firebase'}</Button></span>
+            </Tooltip>
           </Stack>
         </Stack>
+        {configured && <StatusAccordion rows={checklist} warn={config?.status === 'error'} />}
       </Card>
 
       <Card className="settings-hero-card">
@@ -237,39 +258,25 @@ export default function FirebasePanel() {
           </Box>
           <Stack direction="row" gap={1} flexWrap="wrap">
             {apnsConfigured && <Button variant="outlined" disabled={!canEdit || apnsActions.verify.isPending} onClick={() => run(apnsActions.verify)}>{apnsActions.verify.isPending ? 'Checking…' : 'Re-check'}</Button>}
-            {apnsConfigured && <Button color="error" disabled={!canEdit || apnsActions.disconnect.isPending} onClick={() => { if (window.confirm('Disconnect APNs? iOS devices without Firebase stop receiving push.')) run(apnsActions.disconnect); }}>Disconnect</Button>}
+            {apnsConfigured && <Button color="error" variant="outlined" disabled={!canEdit || apnsActions.disconnect.isPending} onClick={() => run(apnsActions.disconnect)}>Disconnect</Button>}
             <Button variant={configured ? 'outlined' : 'contained'} disabled={!canEdit} onClick={() => setApnsOpen(true)}>{apnsConfigured ? 'Replace key' : 'Connect APNs'}</Button>
           </Stack>
         </Stack>
+        {apnsConfigured && <StatusAccordion warn={apns?.status === 'error'} rows={[
+          ['APNs key (.p8)', 'Uploaded', true],
+          ['Apple connection', apnsConnected ? 'Verified' : apns?.status === 'error' ? 'Check failed' : 'Waiting', apnsConnected],
+          ['Bundle ID', apns?.bundleId ?? '—', Boolean(apns?.bundleId)],
+          ['Team ID · Key ID', apns?.teamId && apns?.keyId ? `${apns.teamId} · ${apns.keyId}` : '—', Boolean(apns?.teamId && apns?.keyId)],
+          ['Token sync', apns?.activeDevices ? `${apns.activeDevices} active iOS device${apns.activeDevices === 1 ? '' : 's'}` : 'Waiting for the iOS SDK', Boolean(apns?.activeDevices)],
+          ['Last checked', apns?.validatedAt ? new Date(apns.validatedAt).toLocaleString() : '—', Boolean(apns?.validatedAt)],
+        ]} />}
       </Card>
       {apnsConnected && !connected && <Alert severity="info">iOS push is ready through APNs. Android apps still need Firebase.</Alert>}
 
       {!canEdit && active && <Alert severity="info">Only owners, admins and developers can change push settings.</Alert>}
       <Alert severity="info" icon={<LockRounded />}>Credentials are encrypted and stored only in the PixlPush backend. Never place a service-account JSON or a .p8 key inside your app.</Alert>
 
-      {(configured || !apnsConfigured) && <Card className="saas-card">
-        <Typography variant="h3">Firebase checklist</Typography>
-        <Stack gap={1.6} sx={{ mt: 2 }}>
-          {checklist.map(([label, value, done]) => (
-            <Stack direction="row" alignItems="center" key={label}>
-              {done ? <CheckCircleRounded sx={{ color: '#15965e', fontSize: 19, mr: 1 }} /> : config?.status === 'error' && label.startsWith('Firebase Cloud') ? <ErrorOutlineRounded sx={{ color: '#ad6415', fontSize: 19, mr: 1 }} /> : <RadioButtonUncheckedRounded sx={{ color: '#b6aabf', fontSize: 19, mr: 1 }} />}
-              <Typography fontSize="var(--fs-13)" sx={{ flex: 1 }}>{label}</Typography>
-              <Typography fontSize="var(--fs-12)" color="text.secondary">{value}</Typography>
-            </Stack>
-          ))}
-        </Stack>
-      </Card>}
 
-      {configured && (
-        <Card className="saas-card">
-          <Typography variant="h3">Change Firebase project</Typography>
-          <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: .5 }}>Use this only when moving {appName} to a completely different Firebase project. Existing FCM tokens may no longer be valid.</Typography>
-          <Stack direction="row" gap={1.5} sx={{ mt: 2 }}>
-            <Button color="warning" variant="outlined" startIcon={<WarningAmberRounded />} disabled={!canEdit} onClick={() => setOpen(true)}>Start change flow</Button>
-            <Button color="error" disabled={!canEdit || disconnect.isPending} onClick={() => { if (window.confirm('Disconnect Firebase? Push sending stops for this Project.')) run(disconnect); }}>Disconnect</Button>
-          </Stack>
-        </Card>
-      )}
 
       </>}
 
@@ -282,14 +289,9 @@ export default function FirebasePanel() {
             <Alert severity="info">
               Use a service account that can only send push. In Google Cloud Console open IAM &amp; Admin → Service accounts → Create service account, give it only the role <b>Firebase Cloud Messaging API Admin</b>, then under Keys choose Add key → JSON and upload that file here. PixlPush checks it with Google before saving.
             </Alert>
-            <Button component="label" variant="outlined" startIcon={<CloudUploadRounded />}>
-              {file ? file.name : 'Choose JSON file'}
-              <input type="file" accept="application/json,.json" hidden onChange={(e) => pick(e.target.files?.[0])} />
-            </Button>
+            <FileDropZone accept="application/json,.json" inputLabel="Firebase service account file" fileName={file?.name} onFile={pick}
+              label="Drop your service-account JSON here" hint="Drag the .json key file from Google Cloud, or click to browse." />
             {file?.projectId && <Typography fontSize="var(--fs-12)" color="text.secondary">Firebase project in this file: <b>{file.projectId}</b></Typography>}
-            {file?.adminKey && (
-              <Alert severity="warning">This is Firebase’s default Admin key. It works, but it also gives access to your database, users and storage. A key that can only send push is safer.</Alert>
-            )}
             {isSwitch && (
               <>
                 <Alert severity="warning">This moves {appName} from <b>{config?.firebaseProjectId}</b> to <b>{file?.projectId}</b>. Existing device push tokens may stop working until users reopen the app.</Alert>
@@ -307,5 +309,29 @@ export default function FirebasePanel() {
         </DialogActions>
       </Dialog>
     </Stack>
+  );
+}
+
+/** Collapsible connection status for a connected provider (Firebase / APNs). */
+function StatusAccordion({ rows, warn }: { rows: Array<[string, string, boolean]>; warn?: boolean }) {
+  const done = rows.filter(([, , ok]) => ok).length;
+  return (
+    <Accordion disableGutters elevation={0} sx={{ mt: 2, border: '1px solid', borderColor: 'divider', borderRadius: '8px !important', '&:before': { display: 'none' } }}>
+      <AccordionSummary expandIcon={<ExpandMoreRounded />}>
+        <Typography fontWeight={600} fontSize="var(--fs-13)" sx={{ flex: 1 }}>Connection status</Typography>
+        <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mr: 1 }}>{done} of {rows.length} ready</Typography>
+      </AccordionSummary>
+      <AccordionDetails>
+        <Stack gap={1.4}>
+          {rows.map(([label, value, ok]) => (
+            <Stack direction="row" alignItems="center" key={label} gap={1}>
+              {ok ? <CheckCircleRounded sx={{ color: '#15965e', fontSize: 19 }} /> : warn ? <ErrorOutlineRounded sx={{ color: '#ad6415', fontSize: 19 }} /> : <RadioButtonUncheckedRounded sx={{ color: '#b6aabf', fontSize: 19 }} />}
+              <Typography fontSize="var(--fs-13)" sx={{ flex: 1 }}>{label}</Typography>
+              <Typography fontSize="var(--fs-12)" color="text.secondary" sx={{ textAlign: 'right', wordBreak: 'break-all' }}>{value}</Typography>
+            </Stack>
+          ))}
+        </Stack>
+      </AccordionDetails>
+    </Accordion>
   );
 }

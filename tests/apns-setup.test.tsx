@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ApnsConnectDialog, { keyIdFromFileName } from '@/components/dashboard/ApnsConnectDialog';
@@ -72,6 +72,13 @@ describe('Connect Apple Push dialog', () => {
     expect(onConnected).toHaveBeenCalled();
   });
 
+  it('accepts a .p8 key dropped on the drop zone and fills the Key ID', async () => {
+    wrap(<ApnsConnectDialog open onClose={() => undefined} projectId="p1" />);
+    fireEvent.drop(screen.getByTestId('file-drop-zone'), { dataTransfer: { files: [p8File()] } });
+    expect(await screen.findByText(p8File().name)).toBeInTheDocument();
+    expect(screen.getByLabelText('Key ID')).toHaveValue('ABC123DEF4');
+  });
+
   it('refuses a file that is not a .p8 key', async () => {
     wrap(<ApnsConnectDialog open onClose={() => undefined} projectId="p1" />);
     await userEvent.upload(screen.getByLabelText('APNs key file'), p8File('AuthKey_ABC123DEF4.p8', '{"project_info":{}}'));
@@ -113,14 +120,21 @@ describe('Push setup panel', () => {
     expect(screen.getByText(/Android apps still need Firebase/)).toBeInTheDocument();
     expect(screen.queryByText('Firebase checklist')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Replace key' })).toBeInTheDocument();
+    // Connected APNs: status lives in a collapsible accordion.
+    fireEvent.click(screen.getByText('Connection status'));
+    expect(screen.getByText('Bundle ID')).toBeVisible();
+    expect(screen.getByText('3 active iOS devices')).toBeVisible();
+    expect(screen.getByText('5 of 6 ready')).toBeInTheDocument();
   });
 
-  it('nothing connected yet: both options, Firebase checklist shown', async () => {
+  it('nothing connected yet: both options and the mobile SDK guide, no checklist or status', async () => {
     vi.mocked(firebaseApi.get).mockResolvedValue(settings());
     wrap(<FirebasePanel />);
     expect(await screen.findByRole('button', { name: 'Connect APNs' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Connect Firebase' })).toBeInTheDocument();
-    expect(screen.getByText('Firebase checklist')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Mobile SDK guide' })).toHaveAttribute('href', '/dashboard/integrations/react-native/quickstart');
+    expect(screen.queryByText('Firebase checklist')).not.toBeInTheDocument();
+    expect(screen.queryByText('Connection status')).not.toBeInTheDocument();
   });
 
   it('re-check and disconnect call the APNs API', async () => {
@@ -134,5 +148,16 @@ describe('Push setup panel', () => {
     await waitFor(() => expect(apnsApi.verify).toHaveBeenCalledWith('p1'));
     await userEvent.click(screen.getByRole('button', { name: 'Disconnect' }));
     await waitFor(() => expect(apnsApi.disconnect).toHaveBeenCalledWith('p1'));
+  });
+
+  it('Firebase card has its own Disconnect; no separate "Change Firebase project" section', async () => {
+    vi.mocked(firebaseApi.get).mockResolvedValue(settings({ status: 'connected', firebaseProjectId: 'demo-fcm', clientEmail: 'sa@demo-fcm.iam.gserviceaccount.com' }));
+    vi.mocked(firebaseApi.disconnect).mockResolvedValue(settings());
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    wrap(<FirebasePanel />);
+    expect(await screen.findByRole('button', { name: 'Replace credentials' })).toBeInTheDocument();
+    expect(screen.queryByText('Change Firebase project')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Disconnect' }));
+    await waitFor(() => expect(firebaseApi.disconnect).toHaveBeenCalledWith('p1'));
   });
 });

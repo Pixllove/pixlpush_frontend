@@ -6,6 +6,7 @@ import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, 
 import { useApnsSettings } from '@/hooks/projects/use-project-settings';
 import type { ApnsSettings } from '@/types/project';
 import type { ApiError } from '@/types/auth';
+import FileDropZone from './FileDropZone';
 
 const APPLE_ID = /^[A-Z0-9]{10}$/;
 const BUNDLE_ID = /^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$/;
@@ -97,10 +98,9 @@ export default function ApnsConnectDialog({ open, onClose, projectId, existing, 
             {' '}click +, tick <b>Apple Push Notifications service (APNs)</b>, and download the .p8 file (Apple lets you download it only once).
             Your Team ID is shown under Membership details.
           </Alert>
-          <Button component="label" variant="outlined" startIcon={<CloudUploadRounded />}>
-            {file ? file.name : configured ? 'Choose a new .p8 file (optional)' : 'Choose .p8 file'}
-            <input type="file" accept=".p8" hidden aria-label="APNs key file" onChange={(e) => pick(e.target.files?.[0])} />
-          </Button>
+          <FileDropZone accept=".p8" inputLabel="APNs key file" fileName={file?.name} onFile={pick}
+            label={configured ? 'Drop a new .p8 key (optional)' : 'Drop your .p8 key here'}
+            hint="Drag the AuthKey_XXXXXXXXXX.p8 file from Apple, or click to browse." />
           <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' } }}>
             <TextField label="Key ID" value={keyId} onChange={(e) => setKeyId(e.target.value)} error={invalid.key}
               helperText={invalid.key ? '10 letters and digits' : 'Filled in from the file name'} inputProps={{ maxLength: 10 }} autoComplete="off" />
