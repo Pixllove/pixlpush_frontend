@@ -6,10 +6,10 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { audienceGroupsApi } from '@/lib/projects/api';
 import type { AudienceGroup, AudienceGroupSchema, AudienceGroupSchemaField } from '@/types/project';
-import { groupAudienceFields, incompleteRuleCount, isRuleComplete, makeBlock, makeRule, readableRule, ruleHasInput, toBackendRules, validRuleCount, type Block, type Rule } from './audienceGroupRules';
+import { appNotificationTokenFieldKey, audiencePickerFields, groupAudienceFields, incompleteRuleCount, isHiddenAudienceField, isRuleComplete, makeBlock, makeRule, readableRule, ruleHasInput, toBackendRules, validRuleCount, withAppNotificationTokenField, type Block, type Rule } from './audienceGroupRules';
 
 type Goal = 'behavior' | 'campaign' | 'event' | 'profile' | 'reactivation' | 'other';
-type ProfileCategory = 'reachability' | 'product' | 'profile' | 'account' | 'custom' | 'other';
+type ProfileCategory = 'reachability' | 'product' | 'profile' | 'account' | 'other';
 
 type Props = {
   projectId: string;
@@ -23,7 +23,7 @@ const goals: Array<{ id: Goal; label: string; description: string }> = [
   { id: 'behavior', label: 'Target users based on their behavior', description: 'Use product events, lifecycle status, or journey activity. For example, users who completed onboarding or entered a journey.' },
   { id: 'campaign', label: 'Follow up with users from a campaign', description: 'Use supported email or push activity. For example, users who opened but did not click.' },
   { id: 'event', label: 'Find users who took a specific event action', description: 'Use tracked product events from your SDK, such as users who completed a purchase in the last 30 days.' },
-  { id: 'profile', label: 'Group users by profile details', description: 'Use reachability, lifecycle, location, account, device, or custom properties.' },
+  { id: 'profile', label: 'Group users by profile details', description: 'Use reachability, lifecycle, location, account, or device fields.' },
   { id: 'reactivation', label: 'Reactivate users', description: 'Find inactive users using supported activity, event, time-window, and reachability conditions.' },
   { id: 'other', label: 'Something else', description: 'Describe the audience you have in mind, then choose and review the supported rules.' },
 ];
@@ -33,14 +33,12 @@ const profileCategories: Array<{ id: ProfileCategory; label: string }> = [
   { id: 'product', label: 'Product & lifecycle' },
   { id: 'profile', label: 'Profile & location' },
   { id: 'account', label: 'Account & history' },
-  { id: 'custom', label: 'Custom properties' },
   { id: 'other', label: 'Something else' },
 ];
 
 function fieldHasData(field: AudienceGroupSchemaField | undefined) {
   if (!field) return false;
-  if (field.key === 'customProperty') return Boolean(field.property?.options?.length && field.conditions.length);
-  if (field.key === 'lastNotified') return field.conditions.some(condition => condition.value.type === 'integer' && condition.value.min === 1);
+  if (field.key === 'lastNotified' || field.key === 'lastPushNotification') return field.conditions.some(condition => condition.value.type === 'integer');
   return field.conditions.some(condition => condition.value.type === 'none' || Boolean(condition.value.options?.length) || condition.value.freeText === true);
 }
 
@@ -54,30 +52,29 @@ function fieldLabel(field: AudienceGroupSchemaField) {
 
 function fieldsForCategory(schema: AudienceGroupSchema, category: ProfileCategory) {
   const categories: Record<Exclude<ProfileCategory, 'other'>, string[]> = {
-    reachability: ['email', 'emailAction', 'lastEmailed', 'lastNotified', 'fcmToken', 'apnsToken', 'webPush', 'pushNotification', 'pushNotificationAction', 'lastPushNotification'],
+    reachability: ['email', 'emailAction', 'lastNotified', appNotificationTokenFieldKey, 'webPush', 'pushNotification', 'pushNotificationAction', 'lastPushNotification'],
     product: ['currentLifecycleSegment', 'historicalLifecycleSegment', 'journeyAutomation', 'audienceGroup', 'performedEvent'],
     profile: ['country', 'region', 'language', 'platform'],
     account: ['userImport', 'accountStatus', 'userType', 'createdDate'],
-    custom: ['customProperty'],
   };
-  return schema.fields.filter(field => !field.deprecated && categories[category as Exclude<ProfileCategory, 'other'>]?.includes(field.key));
+  return audiencePickerFields(schema.fields).filter(field => !field.deprecated && categories[category as Exclude<ProfileCategory, 'other'>]?.includes(field.key));
 }
 
 function ruleFields(schema: AudienceGroupSchema, goal: Goal, branch: string, profileCategory: ProfileCategory | null) {
-  const fields = schema.fields.filter(field => !field.deprecated && fieldHasData(field));
+  const fields = audiencePickerFields(schema.fields).filter(field => !field.deprecated && fieldHasData(field));
   if (goal === 'event') return fields.filter(field => field.key === 'performedEvent');
   if (goal === 'behavior') {
     const keys = branch === 'events' ? ['performedEvent'] : branch === 'lifecycle' ? ['currentLifecycleSegment', 'historicalLifecycleSegment'] : ['journeyAutomation'];
     return fields.filter(field => keys.includes(field.key));
   }
   if (goal === 'campaign') {
-    const activity = ['emailAction', 'lastEmailed', 'lastNotified', 'pushNotificationAction', 'lastPushNotification'];
+    const activity = ['emailAction', 'lastNotified', 'pushNotificationAction', 'lastPushNotification'];
     if (branch === 'specific') return fields.filter(field => /campaign/i.test(`${field.key} ${field.label}`) && optionHas(field, /campaign/i));
     return fields.filter(field => activity.includes(field.key));
   }
   if (goal === 'profile' && profileCategory && profileCategory !== 'other') return fieldsForCategory(schema, profileCategory).filter(fieldHasData);
   if (goal === 'reactivation') {
-    const keys = ['email', 'emailAction', 'lastEmailed', 'lastNotified', 'fcmToken', 'apnsToken', 'webPush', 'pushNotification', 'pushNotificationAction', 'lastPushNotification', 'performedEvent', 'accountStatus'];
+    const keys = ['email', 'emailAction', 'lastNotified', appNotificationTokenFieldKey, 'webPush', 'pushNotification', 'pushNotificationAction', 'lastPushNotification', 'performedEvent', 'accountStatus'];
     const consent = fields.filter(field => /consent|opt.?in/i.test(`${field.key} ${field.label}`));
     return fields.filter(field => keys.includes(field.key) || consent.includes(field));
   }
@@ -92,14 +89,14 @@ function fieldsForOther(schema: AudienceGroupSchema, description: string) {
   const text = description.toLowerCase();
   const hints = [
     { words: ['event', 'action', 'purchase', 'checkout'], keys: ['performedEvent'] },
-    { words: ['email', 'opened', 'clicked', 'campaign'], keys: ['email', 'emailAction', 'lastEmailed', 'lastNotified'] },
-    { words: ['push', 'notification'], keys: ['fcmToken', 'apnsToken', 'webPush', 'pushNotification', 'pushNotificationAction', 'lastPushNotification', 'lastNotified'] },
+    { words: ['email', 'opened', 'clicked', 'campaign'], keys: ['email', 'emailAction', 'lastNotified'] },
+    { words: ['push', 'notification'], keys: [appNotificationTokenFieldKey, 'webPush', 'pushNotification', 'pushNotificationAction', 'lastPushNotification', 'lastNotified'] },
     { words: ['country', 'location', 'language', 'platform'], keys: ['country', 'region', 'language', 'platform'] },
     { words: ['journey'], keys: ['journeyAutomation'] },
     { words: ['segment', 'lifecycle'], keys: ['currentLifecycleSegment', 'historicalLifecycleSegment'] },
   ];
   const keys = new Set(hints.filter(hint => hint.words.some(word => text.includes(word))).flatMap(hint => hint.keys));
-  const candidates = schema.fields.filter(field => !field.deprecated && fieldHasData(field));
+  const candidates = audiencePickerFields(schema.fields).filter(field => !field.deprecated && fieldHasData(field));
   return keys.size ? candidates.filter(field => keys.has(field.key)) : candidates;
 }
 
@@ -143,7 +140,7 @@ function RuleRow({ rule, schema, fields, onChange, onRemove }: { rule: Rule; sch
   const selected = condition?.value.multiple ? rule.value.split(',').map(value => value.trim()).filter(Boolean) : rule.value;
   const hasCustomProperty = field?.key === 'customProperty';
   const isLastNotified = field?.key === 'lastNotified';
-  const groupedFields = groupAudienceFields(fields);
+  const groupedFields = groupAudienceFields(fields.filter(field => !isHiddenAudienceField(field)));
   const complete = isRuleComplete(rule, schema);
   const incomplete = !complete;
   const incompleteMessage = !ruleHasInput(rule)
@@ -187,7 +184,7 @@ export default function AudienceGroupAiFlow({ projectId, sdkIntegrated, trackedE
   const [groupName, setGroupName] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const schema = schemaQuery.data;
+  const schema = schemaQuery.data ? withAppNotificationTokenField(schemaQuery.data) : undefined;
   const eventField = schema?.fields.find(field => field.key === 'performedEvent');
   const trackedSchemaEvents = trackedEvents.filter(event => eventField?.conditions.some(condition => condition.value.options?.some(option => option.key === event)));
   const availableGoals = useMemo(() => goals.filter(item => item.id !== 'event' || (sdkIntegrated && trackedSchemaEvents.length > 0)), [sdkIntegrated, trackedSchemaEvents.length]);

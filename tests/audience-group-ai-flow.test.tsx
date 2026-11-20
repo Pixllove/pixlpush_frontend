@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AudienceGroupAiFlow from '@/components/dashboard/AudienceGroupAiFlow';
 import { audienceGroupsApi } from '@/lib/projects/api';
+import type { AudienceGroupSchema } from '@/types/project';
 
 vi.mock('@/lib/projects/api', () => ({
   audienceGroupsApi: { schema: vi.fn(), create: vi.fn() },
@@ -11,7 +12,7 @@ vi.mock('@/lib/projects/api', () => ({
 
 const api = vi.mocked(audienceGroupsApi);
 
-const schema = {
+const schema: AudienceGroupSchema = {
   levels: [],
   fields: [
     { key: 'email', label: 'Email', category: 'email', operators: ['available'], conditions: [{ key: 'available', label: 'Is available', value: { type: 'none' } }] },
@@ -20,6 +21,9 @@ const schema = {
       { key: 'performed_in_last_30', label: 'Performed in the last 30 days', value: { type: 'text', options: [{ key: 'checkout_started', label: 'Checkout started' }] } },
     ] },
     { key: 'emailAction', label: 'Email Action', category: 'email', operators: ['opened'], conditions: [{ key: 'opened', label: 'Opened', value: { type: 'text', options: [{ key: 'campaign_a', label: 'Campaign A' }] } }] },
+    { key: 'fcmToken', label: 'FCM Token', category: 'push', operators: ['available', 'not_available'], conditions: [{ key: 'available', label: 'Is available', value: { type: 'none' } }, { key: 'not_available', label: 'Is not available', value: { type: 'none' } }] },
+    { key: 'apnsToken', label: 'APNs Token (iOS without Firebase)', category: 'push', operators: ['available', 'not_available'], conditions: [{ key: 'available', label: 'Is available', value: { type: 'none' } }, { key: 'not_available', label: 'Is not available', value: { type: 'none' } }] },
+    { key: 'lastPushNotification', label: 'Last Push Notification', category: 'push', operators: ['exclude_in_last_days'], conditions: [{ key: 'exclude_in_last_days', label: 'Exclude users sent a push in the last X days', value: { type: 'integer', required: true, min: 0, unit: 'days' } }] },
     { key: 'lastNotified', label: 'Last Notified', category: 'account', operators: ['exclude_in_last_days'], conditions: [{ key: 'exclude_in_last_days', label: 'Exclude users notified in the last X days', value: { type: 'integer', required: true, min: 1, unit: 'days' } }] },
     { key: 'country', label: 'Country', category: 'location', operators: ['equals'], conditions: [{ key: 'equals', label: 'Is', value: { type: 'text', options: [{ key: 'pk', label: 'Pakistan' }] } }] },
     { key: 'customProperty', label: 'Custom property', category: 'custom', operators: ['equals'], property: { required: true, options: [{ key: 'plan', label: 'Plan' }] }, conditions: [{ key: 'equals', label: 'Is', value: { type: 'text', options: [{ key: 'pro', label: 'Pro' }] } }] },
@@ -92,7 +96,6 @@ describe('project-aware audience group chat flow', () => {
     await user.click(await screen.findByText('Group users by profile details'));
     await user.click(screen.getByRole('button', { name: /Reachability & engagement/ }));
     expect(screen.getByText('Conditions for Reachability & engagement')).toBeInTheDocument();
-    expect(screen.getByText('Reachability & engagement')).toBeInTheDocument();
     expect(screen.getByText('Selected goal: Group users by profile details')).toBeInTheDocument();
     expect(screen.getByText('No conditions selected yet')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Add condition' }));
@@ -137,22 +140,39 @@ describe('project-aware audience group chat flow', () => {
     expect(screen.getByText(/Exclude users notified in the last 7 days/)).toBeInTheDocument();
   });
 
-  it('requires a schema-backed custom property before accepting its value', async () => {
+  it('does not expose custom properties and combines mobile notification tokens', async () => {
     const user = userEvent.setup();
     renderFlow();
     await user.click(await screen.findByText('Group users by profile details'));
-    await user.click(screen.getByRole('button', { name: /Custom properties/ }));
+    expect(screen.queryByRole('button', { name: /Custom properties/ })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Reachability & engagement/ }));
     await user.click(screen.getByRole('button', { name: 'Add condition' }));
     await user.click(screen.getAllByRole('combobox')[0]);
-    await user.click(screen.getByRole('option', { name: 'Custom property' }));
-    expect(screen.getByRole('button', { name: 'Review rules' })).toBeDisabled();
+    expect(screen.getByRole('option', { name: 'App Notification Token (FCM & APNs)' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'FCM Token' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'APNs Token (iOS without Firebase)' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Last Emailed' })).not.toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Last Push Notification' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Custom property' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('option', { name: 'App Notification Token (FCM & APNs)' }));
     await user.click(screen.getAllByRole('combobox')[1]);
-    await user.click(screen.getByRole('option', { name: 'Plan' }));
-    await user.click(screen.getAllByRole('combobox')[2]);
-    await user.click(screen.getByRole('option', { name: 'Is' }));
-    await user.click(screen.getAllByRole('combobox')[3]);
-    await user.click(screen.getByRole('option', { name: 'Pro' }));
-    expect(screen.getByRole('button', { name: 'Review rules' })).toBeEnabled();
+    await user.click(screen.getByRole('option', { name: 'Is available' }));
+    api.create.mockResolvedValue({ id: 'mobile-group', name: 'Mobile users', description: null, rules: {}, memberCount: 1, createdAt: '', updatedAt: '' });
+    await user.click(screen.getByRole('button', { name: 'Review rules' }));
+    await user.type(screen.getByRole('textbox', { name: 'Group name' }), 'Mobile users');
+    await user.click(screen.getByRole('button', { name: 'Create audience group' }));
+    await waitFor(() => expect(api.create).toHaveBeenCalledWith('p1', expect.objectContaining({
+      rules: {
+        operator: 'AND',
+        conditions: [{
+          operator: 'OR',
+          conditions: [
+            { field: 'fcmToken', operator: 'available' },
+            { field: 'apnsToken', operator: 'available' },
+          ],
+        }],
+      },
+    })));
   });
 
   it('keeps review disabled and explains an incomplete required-value row', async () => {

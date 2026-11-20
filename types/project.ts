@@ -420,6 +420,8 @@ export interface AudienceGroupSchemaField {
   key: string;
   label: string;
   category?: string;
+  /** Frontend-only marker for the temporary combined FCM/APNs fallback field. */
+  synthetic?: boolean;
   /** Legacy fields remain readable for saved rules but are not offered to new rules. */
   deprecated?: boolean;
   operators: string[];

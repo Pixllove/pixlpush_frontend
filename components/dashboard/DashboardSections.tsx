@@ -1184,7 +1184,7 @@ export function UsersSection() {
             <Grid item xs={12} sm={4}>
               <StatCard
                 icon={GroupsRounded}
-                label="Identified users"
+                label="All users"
                 value={stats ? stats.total.toLocaleString() : "—"}
               />
             </Grid>

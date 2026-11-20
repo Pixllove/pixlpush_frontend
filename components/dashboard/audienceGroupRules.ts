@@ -7,6 +7,50 @@ export type Block = { id: number; rules: Rule[] };
 export const makeRule = (id: number): Rule => ({ id, filter: '', operator: '', value: '' });
 export const makeBlock = (id: number, ruleId: number): Block => ({ id, rules: [makeRule(ruleId)] });
 
+/** Fields that are no longer offered when creating a new audience condition. */
+export const hiddenAudienceFieldKeys = new Set([
+  'fcmToken',
+  'apnsToken',
+  'lastEmailed',
+  'customProperty',
+]);
+
+export const appNotificationTokenFieldKey = 'appNotificationToken';
+export const appNotificationTokenFieldLabel = 'App Notification Token (FCM & APNs)';
+
+export function isHiddenAudienceField(field: AudienceGroupSchemaField) {
+  return hiddenAudienceFieldKeys.has(field.key);
+}
+
+/**
+ * Add the combined mobile-token field when the backend still exposes the
+ * provider-specific FCM/APNs fields. The original fields remain in the schema
+ * so existing saved rules can still be read and edited as legacy conditions.
+ */
+export function withAppNotificationTokenField(schema: AudienceGroupSchema): AudienceGroupSchema {
+  if (schema.fields.some(field => field.key === appNotificationTokenFieldKey)) return schema;
+  const fcm = schema.fields.find(field => field.key === 'fcmToken');
+  const apns = schema.fields.find(field => field.key === 'apnsToken');
+  if (!fcm || !apns) return schema;
+  const insertAt = schema.fields.findIndex(field => field.key === 'fcmToken');
+  const combined: AudienceGroupSchemaField = {
+    key: appNotificationTokenFieldKey,
+    label: appNotificationTokenFieldLabel,
+    category: 'push',
+    synthetic: true,
+    operators: fcm.operators,
+    conditions: fcm.conditions,
+  };
+  const fields = [...schema.fields];
+  fields.splice(insertAt < 0 ? fields.length : insertAt, 0, combined);
+  return { ...schema, fields };
+}
+
+/** Fields shown in a new condition picker; optionally retain the current legacy field. */
+export function audiencePickerFields(fields: AudienceGroupSchemaField[], currentFieldKey?: string) {
+  return fields.filter(field => !isHiddenAudienceField(field) || field.key === currentFieldKey);
+}
+
 export const audienceFieldCategoryOrder = [
   'Reachability & engagement',
   'Product & lifecycle',
@@ -58,9 +102,18 @@ export function toBackendCondition(rule: Rule, schema?: AudienceGroupSchema) {
   const condition = field?.conditions.find(item => item.key === rule.operator || item.label === rule.operator);
   const value = rule.value.trim();
   const parsedValue = condition?.value.multiple ? value.split(',').map(item => item.trim()).filter(Boolean) : value;
+  const fieldKey = field?.key ?? rule.filter;
+  const operator = condition?.key ?? legacyOperator[rule.operator] ?? rule.operator;
+  if (fieldKey === appNotificationTokenFieldKey && field?.synthetic) {
+    const tokenCondition = (tokenField: 'fcmToken' | 'apnsToken') => ({ field: tokenField, operator: operator === 'not_available' || operator === 'not_exists' ? 'not_available' : 'available' });
+    return {
+      operator: operator === 'not_available' || operator === 'not_exists' ? 'AND' as const : 'OR' as const,
+      conditions: [tokenCondition('fcmToken'), tokenCondition('apnsToken')],
+    };
+  }
   return {
-    field: field?.key ?? legacyField[rule.filter] ?? rule.filter,
-    operator: condition?.key ?? legacyOperator[rule.operator] ?? rule.operator,
+    field: fieldKey === rule.filter ? (legacyField[rule.filter] ?? rule.filter) : fieldKey,
+    operator,
     ...(rule.property?.trim() ? { property: rule.property.trim() } : {}),
     ...(value ? { value: parsedValue } : {}),
   };
