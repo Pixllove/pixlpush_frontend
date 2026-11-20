@@ -122,6 +122,7 @@ export default function PushComposer({
   const [group, setGroup] = useState("Select group");
   const [selectedLanguages, setSelectedLanguages] = useState(["English"]);
   const [activeLanguage, setActiveLanguage] = useState("English");
+  const [fallbackLanguage, setFallbackLanguage] = useState("English");
   const [translations, setTranslations] = useState<
     Record<string, PushTranslation>
   >({});
@@ -289,7 +290,8 @@ export default function PushComposer({
         deepLink: deepLink || null,
         imageUrl: null,
         data: {},
-        translations: Object.keys(translations).length ? translations : null,
+        translations: Object.keys(sentTranslations).length ? sentTranslations : null,
+        fallbackLanguage: languageCodes[effectiveFallback] ?? "en",
       };
       if (target === "templates") {
         const template = await pushApi.templates.create(active.id, {
@@ -345,7 +347,8 @@ export default function PushComposer({
         deepLink: deepLink || null,
         imageUrl: null,
         data: {},
-        translations: Object.keys(translations).length ? translations : null,
+        translations: Object.keys(sentTranslations).length ? sentTranslations : null,
+        fallbackLanguage: languageCodes[effectiveFallback] ?? "en",
         category: "push_notification",
       });
       return pushApi.templates.test(active.id, template.id, testUserId.trim());
@@ -371,6 +374,18 @@ export default function PushComposer({
       return next;
     });
   };
+  // Only languages still selected are sent; a removed one falls back like any other.
+  const sentTranslations = Object.fromEntries(
+    Object.entries(translations).filter(([code]) =>
+      selectedLanguages.some((language) => languageCodes[language] === code),
+    ),
+  );
+  // The fallback must always have a version: English (the original) or a finished translation.
+  const fallbackOptions = selectedLanguages.filter((language) => {
+    const code = languageCodes[language];
+    return code === "en" || Boolean(sentTranslations[code]?.title?.trim() && sentTranslations[code]?.body?.trim());
+  });
+  const effectiveFallback = fallbackOptions.includes(fallbackLanguage) ? fallbackLanguage : "English";
   const activeCode = languageCodes[activeLanguage] ?? "en";
   const activeTranslation =
     activeCode === "en"
@@ -599,6 +614,26 @@ export default function PushComposer({
                 Add language
               </Button>
             </Stack>
+            <TextField
+              select
+              fullWidth
+              size="small"
+              label="Fallback language"
+              value={effectiveFallback}
+              onChange={(event) => setFallbackLanguage(event.target.value)}
+              helperText="Recipients receive notifications in their device language when available. Otherwise, the selected fallback language is used."
+              sx={{ mb: 1.5 }}
+            >
+              {selectedLanguages.map((language) => {
+                const ready = fallbackOptions.includes(language);
+                return (
+                  <MenuItem key={language} value={language} disabled={!ready}>
+                    {language}
+                    {ready ? "" : " (translate first)"}
+                  </MenuItem>
+                );
+              })}
+            </TextField>
             {translationNotice && (
               <Typography className="push-form-notice push-translation-notice">
                 {translationNotice}

@@ -245,6 +245,8 @@ export interface EmailTemplate {
   html?: string | null;
   text?: string | null;
   translations?: Record<string, { subject: string; html: string }> | null;
+  /** Sent when a recipient's language has no version. Null = the original copy. */
+  fallbackLanguage?: string | null;
   editor?: string | null;
   /** Drag & drop builder state; the editor reopens from this, not from the HTML. */
   design?: Record<string, unknown> | null;
@@ -282,6 +284,7 @@ export interface EmailCampaign {
     editor?: string | null;
     design?: Record<string, unknown> | null;
     translations?: Record<string, { subject: string; html: string }> | null;
+    fallbackLanguage?: string | null;
   };
   audience?: PushAudience;
   status: string;
@@ -420,6 +423,7 @@ export const emailApi = {
         editor?: "simple" | "drag_drop";
         design?: Record<string, unknown> | null;
         translations?: Record<string, { subject: string; html: string }>;
+        fallbackLanguage?: string | null;
       },
     ) => authRequest<EmailTemplate>(at(projectId, "/email-templates"), input, BASE),
     /**
@@ -468,7 +472,7 @@ export const emailApi = {
     update: (
       projectId: string,
       templateId: string,
-      input: Partial<Pick<EmailTemplate, "name" | "subject" | "previewText" | "html" | "text" | "editor" | "design" | "translations">>,
+      input: Partial<Pick<EmailTemplate, "name" | "subject" | "previewText" | "html" | "text" | "editor" | "design" | "translations" | "fallbackLanguage">>,
     ) =>
       authRequest<EmailTemplate>(
         at(projectId, `/email-templates/${encodeURIComponent(templateId)}`),
@@ -527,7 +531,7 @@ export const emailApi = {
       ),
     create: (projectId: string, input: {
       name: string;
-      content?: { subject: string; html: string; editor?: "simple" | "drag_drop"; design?: Record<string, unknown> | null; translations?: Record<string, { subject: string; html: string }> };
+      content?: { subject: string; html: string; editor?: "simple" | "drag_drop"; design?: Record<string, unknown> | null; translations?: Record<string, { subject: string; html: string }>; fallbackLanguage?: string | null };
       templateId?: string;
     }) =>
       authRequest<EmailCampaign>(at(projectId, "/email-campaigns"), input, BASE),
@@ -538,7 +542,7 @@ export const emailApi = {
         name?: string;
         templateId?: string;
         audience?: PushAudience;
-        content?: { subject: string; html: string; editor?: "simple" | "drag_drop"; design?: Record<string, unknown> | null; translations?: Record<string, { subject: string; html: string }> };
+        content?: { subject: string; html: string; editor?: "simple" | "drag_drop"; design?: Record<string, unknown> | null; translations?: Record<string, { subject: string; html: string }>; fallbackLanguage?: string | null };
       },
     ) =>
       authRequest<EmailCampaign>(
@@ -1112,6 +1116,8 @@ export interface PushTemplate {
   deepLink?: string | null;
   data?: Record<string, string> | null;
   translations?: Record<string, PushTranslation> | null;
+  /** Sent when a recipient's language has no version. Null = the original copy. */
+  fallbackLanguage?: string | null;
   category: "template" | "push_notification";
   campaignOnly?: boolean;
   status: "active" | "deleted";
@@ -1334,6 +1340,7 @@ export const pushApi = {
           deepLink?: string | null;
           data?: Record<string, string>;
           translations?: Record<string, PushTranslation> | null;
+          fallbackLanguage?: string | null;
         };
         category?: "template" | "push_notification";
         audience?: PushAudience;

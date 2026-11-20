@@ -9,7 +9,6 @@ import Image from "next/image";
 import EmailTranslationPanel from "./EmailTranslationPanel";
 import EmailLanguageSettings from "./EmailLanguageSettings";
 import { languageName } from "./EmailLanguageSettings";
-import aiIcon from "../../assets/ai-translation-rail.webp";
 import dragDropPreview from "../../assets/email-drag-drop-editor-preview.webp";
 import simpleEditorPreview from "../../assets/email-simple-editor-preview.webp";
 import KeyboardArrowDownRounded from "@mui/icons-material/KeyboardArrowDownRounded";
@@ -61,6 +60,7 @@ import {
   ShareRounded,
   VerticalAlignBottomRounded,
   ScheduleRounded,
+  TranslateRounded,
 } from "@mui/icons-material";
 import {
   Box,
@@ -161,6 +161,7 @@ type EmailItem = {
   updated: string;
   content?: string;
   translations?: Record<string, { subject: string; html: string }>;
+  fallbackLanguage?: string | null;
   blocks?: Block[];
   style?: { primary: string; background: string; width: number };
 };
@@ -869,6 +870,7 @@ export default function EmailWorkspace() {
               description: detail.previewText ?? current.description,
               content: detail.html ?? detail.text ?? current.content,
               translations: detail.translations ?? current.translations,
+              fallbackLanguage: detail.fallbackLanguage ?? current.fallbackLanguage,
               ...designOf(detail.design),
             },
         );
@@ -888,6 +890,8 @@ export default function EmailWorkspace() {
                 current.content,
               translations:
                 detail.template?.translations ?? current.translations,
+              fallbackLanguage:
+                detail.template?.fallbackLanguage ?? current.fallbackLanguage,
               ...designOf(detail.template?.design),
             },
         );
@@ -1962,11 +1966,11 @@ function SimpleEditor({
       <Stack direction="row" className="simple-editor-body">
         <Box className="editor-rail">
           <IconButton
-            className={`ai-translation-rail-button ${panel === "ai" ? "active" : ""}`}
+            className={panel === "ai" ? "active" : ""}
             onClick={() => setPanel("ai")}
             aria-label="AI translation"
           >
-            <Image src={aiIcon} alt="AI translation" width={28} height={28} />
+            <TranslateRounded />
           </IconButton>
           <IconButton
             className={panel === "settings" ? "active" : ""}
@@ -2254,6 +2258,9 @@ function DragEditor({
   const [translations, setTranslations] = useState<
     Record<string, { subject: string; html: string }>
   >(item?.translations || {});
+  const [fallbackLanguage, setFallbackLanguage] = useState<string | null>(
+    item?.fallbackLanguage ?? null,
+  );
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   // Uploaded images this session replaced or removed. Each is deleted on the server straight away;
@@ -2977,6 +2984,7 @@ function DragEditor({
         editor: "drag_drop" as const,
         design: { version: 1, blocks, style },
         translations,
+        fallbackLanguage,
       };
       const isExisting = Boolean(item?.id && !item.id.startsWith("email-"));
       const saved =
@@ -3015,6 +3023,7 @@ function DragEditor({
           updated: "Updated just now",
           content: html,
           translations,
+          fallbackLanguage,
           blocks,
           style,
         },
@@ -3074,11 +3083,11 @@ function DragEditor({
             <GridViewRounded />
           </IconButton>
           <IconButton
-            className={`ai-translation-rail-button ${panel === "ai" ? "active" : ""}`}
+            className={panel === "ai" ? "active" : ""}
             onClick={() => setPanel("ai")}
             aria-label="AI translation"
           >
-            <Image src={aiIcon} alt="AI translation" width={28} height={28} />
+            <TranslateRounded />
           </IconButton>
           <IconButton
             className={panel === "settings" ? "active" : ""}
@@ -3134,6 +3143,8 @@ function DragEditor({
               sourceLanguage={language}
               initialTranslations={translations}
               onTranslationsChange={setTranslations}
+              fallbackLanguage={fallbackLanguage}
+              onFallbackChange={setFallbackLanguage}
             />
           ) : (
             <>

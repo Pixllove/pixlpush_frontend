@@ -7,8 +7,6 @@ import EmailTranslationPanel from "./EmailTranslationPanel";
 import EmailLanguageSettings from "./EmailLanguageSettings";
 import { languageName } from "./EmailLanguageSettings";
 import { emailApi } from "@/lib/projects/api";
-import Image from "next/image";
-import aiIcon from "../../assets/ai-translation-rail.webp";
 
 import {
   ChangeEvent,
@@ -50,6 +48,7 @@ import {
   X,
   SendRounded,
   ScheduleRounded,
+  TranslateRounded,
 } from "@mui/icons-material";
 import {
   Box,
@@ -85,6 +84,7 @@ type EditorItem = {
   updated: string;
   content?: string;
   translations?: Record<string, { subject: string; html: string }>;
+  fallbackLanguage?: string | null;
 };
 
 type Props = {
@@ -238,6 +238,7 @@ export default function SimpleEmailEditor({
   const [subject, setSubject] = useState(item?.subject || "");
   const [content, setContent] = useState(item?.content || "");
   const [translations, setTranslations] = useState<Record<string, { subject: string; html: string }>>(item?.translations || {});
+  const [fallbackLanguage, setFallbackLanguage] = useState<string | null>(item?.fallbackLanguage ?? null);
   const [panel, setPanel] = useState<"ai" | "settings">("ai");
   const [preview, setPreview] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -296,10 +297,11 @@ export default function SimpleEmailEditor({
     setSubject(item?.subject || "");
     setContent(item?.content || "");
     setTranslations(item?.translations || {});
+    setFallbackLanguage(item?.fallbackLanguage ?? null);
     setHistory([item?.content || ""]);
     setHistoryIndex(0);
     setInsertedFooterId(item?.content?.match(/data-footer-id="([^"]+)"/)?.[1] || null);
-  }, [item?.id, item?.content, item?.name, item?.subject, item?.translations, kind]);
+  }, [item?.id, item?.content, item?.name, item?.subject, item?.translations, item?.fallbackLanguage, kind]);
 
   useEffect(() => {
     const editor = contentRef.current;
@@ -473,13 +475,13 @@ export default function SimpleEmailEditor({
       let savedId = id;
       if (destination === "templates") {
         const saved = isExisting && item?.kind === "templates"
-          ? await emailApi.templates.update(projectId, item.id, { name, subject, html: content, editor: "simple", translations })
-          : await emailApi.templates.create(projectId, { name, subject, html: content, editor: "simple", translations });
+          ? await emailApi.templates.update(projectId, item.id, { name, subject, html: content, editor: "simple", translations, fallbackLanguage })
+          : await emailApi.templates.create(projectId, { name, subject, html: content, editor: "simple", translations, fallbackLanguage });
         savedId = saved.id;
       } else {
         const campaign = isExisting && item?.kind === "drafts"
-          ? await emailApi.campaigns.update(projectId, item.id, { name, content: { subject, html: content, translations } })
-          : await emailApi.campaigns.create(projectId, { name, content: { subject, html: content, translations } });
+          ? await emailApi.campaigns.update(projectId, item.id, { name, content: { subject, html: content, translations, fallbackLanguage } })
+          : await emailApi.campaigns.create(projectId, { name, content: { subject, html: content, translations, fallbackLanguage } });
         savedId = campaign.id;
       }
       onSave(
@@ -493,6 +495,7 @@ export default function SimpleEmailEditor({
           updated: "Updated just now",
           content,
           translations,
+          fallbackLanguage,
         },
         destination === "templates" ? "Template saved" : "Draft saved",
       );
@@ -805,11 +808,11 @@ export default function SimpleEmailEditor({
       <Box className="admin-simple-layout">
         <Box className="admin-editor-rail">
           <IconButton
-            className={`ai-translation-rail-button ${panel === "ai" ? "active" : ""}`}
+            className={panel === "ai" ? "active" : ""}
             onClick={() => setPanel("ai")}
             aria-label="AI translation"
           >
-            <Image src={aiIcon} alt="AI translation" width={28} height={28} />
+            <TranslateRounded />
           </IconButton>
           <IconButton
             className={panel === "settings" ? "active" : ""}
@@ -836,6 +839,8 @@ export default function SimpleEmailEditor({
                 updateContent(translation.html);
               }}
               onTranslationsChange={setTranslations}
+              fallbackLanguage={fallbackLanguage}
+              onFallbackChange={setFallbackLanguage}
             />
           ) : (
             <>

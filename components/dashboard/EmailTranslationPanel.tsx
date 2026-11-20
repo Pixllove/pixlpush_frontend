@@ -1,8 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
-import { CheckRounded } from "@mui/icons-material";
+import { CheckRounded, TranslateRounded } from "@mui/icons-material";
 import {
   Box,
   Button,
@@ -12,7 +11,6 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import aiIcon from "../../assets/ai.webp";
 import { emailApi } from "@/lib/projects/api";
 
 export const EMAIL_TRANSLATION_LANGUAGES = [
@@ -44,6 +42,8 @@ export default function EmailTranslationPanel({
   onLanguageChange,
   onApplyTranslation,
   onTranslationsChange,
+  fallbackLanguage,
+  onFallbackChange,
 }: {
   mode: "simple" | "drag";
   onNotice: (message: string) => void;
@@ -57,6 +57,9 @@ export default function EmailTranslationPanel({
   onLanguageChange?: (language: string) => void;
   onApplyTranslation?: (language: string, translation: { subject: string; html: string }) => void;
   onTranslationsChange?: (translations: Record<string, { subject: string; html: string }>) => void;
+  /** Code of the version sent when a recipient's language has none; defaults to the editor language. */
+  fallbackLanguage?: string | null;
+  onFallbackChange?: (code: string) => void;
 }) {
   const [currentLanguage, setCurrentLanguage] = useState(sourceLanguage);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
@@ -82,6 +85,12 @@ export default function EmailTranslationPanel({
     () => Array.from(new Set([sourceLanguage, ...selectedLanguages, ...translatedLanguages])),
     [selectedLanguages, translatedLanguages, sourceLanguage],
   );
+  // Only the editor language or a finished translation can be the fallback.
+  const fallbackOptions = [sourceLanguage, ...translatedLanguages.filter((code) => code !== sourceLanguage && translations[code]?.subject && translations[code]?.html)];
+  const fallback = fallbackLanguage && fallbackOptions.includes(fallbackLanguage) ? fallbackLanguage : sourceLanguage;
+  useEffect(() => {
+    if (onFallbackChange && fallback !== fallbackLanguage) onFallbackChange(fallback);
+  }, [fallback, fallbackLanguage, onFallbackChange]);
   const toggleLanguage = (name: string) => {
     const code = languageCodes[name];
     setSelectedLanguages((current) => current.includes(code)
@@ -147,7 +156,7 @@ export default function EmailTranslationPanel({
   return (
     <Box className="email-translation-panel">
       <Stack direction="row" alignItems="center" gap={1.2}>
-        <Image src={aiIcon} alt="" width={34} height={34} className="ai-translation-icon" />
+        <Box className="ai-translation-icon" sx={{ width: 34, height: 34, display: "grid", placeItems: "center", bgcolor: "rgba(108,35,210,.22)", color: "#c9a7ff" }}><TranslateRounded fontSize="small" /></Box>
         <Typography component="h3" className="admin-side-title">AI translation</Typography>
       </Stack>
       <Typography className="admin-side-copy">
@@ -161,6 +170,20 @@ export default function EmailTranslationPanel({
         <Stack direction="row" gap={0.7} flexWrap="wrap" sx={{ mt: 1 }}>
           {selected.map((code) => <Chip key={code} label={languageNames[code] || code} size="small" onClick={() => chooseLanguage(code)} sx={{ cursor: "pointer", color: "#fff", backgroundColor: code === currentLanguage ? "#6b21c8" : "#36373d", border: "1px solid rgba(255,255,255,.16)", "& .MuiChip-label": { color: "#fff" }, "& .MuiChip-icon": { color: "#fff" } }} icon={code !== sourceLanguage && translatedLanguages.includes(code) ? <CheckRounded /> : undefined} />)}
         </Stack>
+        {onFallbackChange && (
+          <>
+            <Typography className="translation-field-label" sx={{ mt: 2 }}>Fallback language</Typography>
+            <Select fullWidth size="small" value={fallback} onChange={(event) => onFallbackChange(String(event.target.value))} sx={{ mt: 1 }} inputProps={{ "aria-label": "Fallback language" }}>
+              {selected.map((code) => {
+                const ready = fallbackOptions.includes(code);
+                return <MenuItem key={code} value={code} disabled={!ready}>{languageNames[code] || code}{ready ? "" : " (translate first)"}</MenuItem>;
+              })}
+            </Select>
+            <Typography className="admin-side-copy" sx={{ mt: 1 }}>
+              Recipients receive emails in their device language when available. Otherwise, the selected fallback language is used.
+            </Typography>
+          </>
+        )}
       </Box>
       <Typography className="admin-side-section">Translate into</Typography>
       <Box className="translation-language-list">
