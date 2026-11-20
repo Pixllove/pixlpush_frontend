@@ -20837,7 +20837,9 @@ button[aria-expanded="true"] {
     margin-top: clamp(2px, 0.4vh, 6px) !important;
   }
   .home-prompt-row {
-    margin-top: clamp(8px, 1.2vh, 14px);
+    /* Keep the suggestions and everything below them comfortably separated
+       from the composer when the Home landing view is shown. */
+    margin-top: clamp(32px, 4vh, 44px);
   }
   .home-hero .home-recent-link {
     margin-top: clamp(3px, 0.7vh, 8px) !important;
