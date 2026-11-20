@@ -876,36 +876,71 @@ export function UsersSection() {
     const query = params.toString();
     router.replace(`/dashboard/users${query ? `?${query}` : ""}`, { scroll: false });
   };
-  const exportUsers = () => {
-    const columns = [
-      "User",
-      "Lifecycle segment",
-      "Email",
-      "Last active",
-      "Country",
-    ];
-    const escapeCsv = (value: string) => `"${value.replace(/"/g, '""')}"`;
-    const csv = [
-      columns,
-      ...users.map((row) => [
-        row.externalUserId || row.id,
-        row.lifecycleSegment?.name || "No segment",
-        row.email || "",
-        formatDate(row.lastActiveAt),
-        row.country || "Unknown",
-      ]),
-    ]
-      .map((row) => row.map(escapeCsv).join(","))
-      .join("\r\n");
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  // Every user (all pages), every field. Writable fields use the importer's
+  // header names; "PixlPush ..." / timestamp columns are info only and the
+  // importer skips them, so the file can be re-imported as-is.
+  const exportUsers = async () => {
+    if (!active || exporting) return;
+    setExporting(true);
+    try {
+      const all: EndUser[] = [];
+      let cursor: string | null = null;
+      do {
+        const page = await usersApi.list(active.id, { limit: 100, cursor });
+        all.push(...page.users);
+        cursor = page.nextCursor;
+      } while (cursor);
+
+      const iso = (v?: string | null) => (v ? new Date(v).toISOString().slice(0, 19).replace("T", " ") : "");
+      const text = (v: unknown) =>
+        v === null || v === undefined ? "" : typeof v === "boolean" ? (v ? "yes" : "no") : typeof v === "object" ? JSON.stringify(v) : String(v);
+      const propertyKeys = [...new Set(all.flatMap((u) => Object.keys(u.properties ?? {})))].sort();
+      const columns: Array<[string, (u: EndUser) => unknown]> = [
+        ["User ID", (u) => u.externalUserId || u.id],
+        ["Email", (u) => u.email],
+        ["Name", (u) => u.name],
+        ["Account status", (u) => u.accountStatus],
+        ["User type", (u) => u.userType],
+        ["Country", (u) => u.country],
+        ["Region", (u) => u.region],
+        ["Timezone", (u) => u.timezone],
+        ["Preferred language", (u) => u.preferredLanguage],
+        ["Email consent", (u) => u.emailConsent],
+        ["Last active at (UTC)", (u) => iso(u.lastActiveAt)],
+        ...propertyKeys.map((key): [string, (u: EndUser) => unknown] => [key, (u) => u.properties?.[key]]),
+        ["PixlPush ID", (u) => u.pixlpushId ?? `pixlpush_${u.id}`],
+        ["PixlPush status", (u) => u.status],
+        ["PixlPush lifecycle segment", (u) => u.lifecycleSegment?.name],
+        ["PixlPush email status", (u) => u.emailStatus],
+        ["First seen at (UTC)", (u) => iso(u.firstSeenAt)],
+        ["Created at (UTC)", (u) => iso(u.createdAt)],
+        ["Logged out at (UTC)", (u) => iso(u.loggedOutAt)],
+        ["Account deleted at (UTC)", (u) => iso(u.accountDeletedAt)],
+      ];
+      const escapeCsv = (value: string) => `"${value.replace(/"/g, '""')}"`;
+      // BOM so Excel opens UTF-8 names correctly.
+      const csv = "\uFEFF" + [
+        columns.map(([header]) => header),
+        ...all.map((u) => columns.map(([, get]) => text(get(u)))),
+      ]
+        .map((row) => row.map(escapeCsv).join(","))
+        .join("\r\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "users.csv";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+      link.download = "users.csv";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      setExportError("We couldn't export your users right now. Please try again.");
+    } finally {
+      setExporting(false);
+    }
   };
   const userColumns: DataTableColumn<EndUser>[] = [
     {
@@ -1276,12 +1311,17 @@ export function UsersSection() {
                   startIcon={<FileDownloadRounded />}
                   className="users-export-button"
                   onClick={exportUsers}
-                  disabled={!users.length}
+                  disabled={!users.length || exporting}
                 >
-                  Export
+                  {exporting ? "Exporting…" : "Export"}
                 </Button>
               </Stack>
             </Stack>
+            {exportError && (
+              <Alert severity="error" onClose={() => setExportError(null)} sx={{ mb: 1.5 }}>
+                {exportError}
+              </Alert>
+            )}
             {usersQuery.isError ? (
               <EmptyState
                 size="compact"

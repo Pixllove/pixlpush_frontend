@@ -245,6 +245,15 @@ export interface EndUser {
   status?: EndUserStatus;
   loggedOutAt?: string | null;
   accountDeletedAt?: string | null;
+  pixlpushId?: string;
+  accountStatus?: string | null;
+  userType?: string | null;
+  region?: string | null;
+  timezone?: string | null;
+  emailConsent?: boolean | null;
+  emailStatus?: "subscribed" | "unsubscribed" | "bounced" | "complained" | string;
+  firstSeenAt?: string | null;
+  properties?: Record<string, unknown> | null;
 }
 
 export type EndUserStatus = "active" | "logged_out" | "deleted" | "anonymous";
@@ -632,6 +641,9 @@ export interface ImportPreview {
     invalid: number;
     skipped: number;
   };
+  /** Rows needing attention (invalid, conflict, skipped, warnings); `messages` are customer-facing. */
+  attention?: Array<{ rowNumber: number; action: string; messages?: string[] }>;
+  attentionTruncated?: boolean;
 }
 
 /** GET /users/stats: header counts for the Users page. */

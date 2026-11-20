@@ -20,6 +20,8 @@ import {
   KeyRounded,
 } from "@mui/icons-material";
 import {
+  Alert,
+  AlertTitle,
   Box,
   Button,
   Checkbox,
@@ -472,6 +474,9 @@ export default function UserImportDialog({
       setStep(3);
     });
 
+  const summary = preview?.summary;
+  const invalidRows = (preview?.attention ?? []).filter((row) => row.action === "invalid");
+  const allInvalid = Boolean(summary && summary.total > 0 && summary.invalid === summary.total);
   const canContinue = busy
     ? false
     : step === 0
@@ -480,9 +485,9 @@ export default function UserImportDialog({
         ? Boolean(uniqueField) &&
           (mapping[uniqueField] ?? "ignore") !== "ignore"
         : Boolean(preview) &&
+          !allInvalid &&
           consentConfirmed &&
           (!addToAudienceGroup || Boolean(audienceGroupName.trim()));
-  const summary = preview?.summary;
   const results = importJob?.results;
   return (
     <Dialog
@@ -997,6 +1002,28 @@ export default function UserImportDialog({
                 {summary.invalid} invalid · {summary.skipped} skipped
               </Typography>
             )}
+            {summary && summary.invalid > 0 && (
+              <Alert severity={allInvalid ? "error" : "warning"}>
+                <AlertTitle>
+                  {allInvalid
+                    ? "None of the rows in this file can be imported"
+                    : `${summary.invalid} of ${summary.total} rows can't be imported and will be skipped`}
+                </AlertTitle>
+                {invalidRows.slice(0, 5).map((row) => (
+                  <Typography key={row.rowNumber} fontSize="var(--fs-13)">
+                    Row {row.rowNumber}: {(row.messages ?? []).join(" ") || "This row has values we couldn't read."}
+                  </Typography>
+                ))}
+                {invalidRows.length > 5 && (
+                  <Typography fontSize="var(--fs-13)">
+                    …and {summary.invalid - 5} more.
+                  </Typography>
+                )}
+                <Typography fontSize="var(--fs-13)" mt={1}>
+                  Fix these rows in your file and upload it again, or go back and change how the columns are mapped.
+                </Typography>
+              </Alert>
+            )}
             <Box className="import-review-card">
               <FormControlLabel
                 control={
@@ -1091,6 +1118,13 @@ export default function UserImportDialog({
                     "The import could not be applied.")
                   : `${importJob?.processedRows ?? 0} of ${totalRows} rows processed from ${fileName || "your import"}.`}
             </Typography>
+            {importJob?.status === "completed" && results && results.errors > 0 && (
+              <Alert severity="warning" sx={{ textAlign: "left", width: "100%", maxWidth: 520 }}>
+                {results.errors === importJob.totalRows
+                  ? "No users were imported because none of the rows could be read. Check the file and try again."
+                  : `${results.errors} row${results.errors === 1 ? " was" : "s were"} skipped because ${results.errors === 1 ? "it had" : "they had"} values we couldn't read. The rest of your users were imported.`}
+              </Alert>
+            )}
             {importJob?.status !== "completed" &&
               importJob?.status !== "failed" && (
                 <Box sx={{ width: "100%", maxWidth: 420 }}>
