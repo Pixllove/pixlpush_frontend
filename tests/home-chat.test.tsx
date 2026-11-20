@@ -15,6 +15,18 @@ const api = vi.mocked(aiApi);
 const reply = (message: string) => ({ conversationId: 'c1', assistant: 'Max', provider: 'rules', message, nextActions: [], evidence: [], context: { generatedAt: '' } }) as never;
 const interaction = (type: string, fields = [{ key: 'goal', label: 'Goal', type: 'choice', required: true, options: ['Improve engagement'] }]) => ({ interactionId: `i-${type}`, type, flowId: type, status: 'awaiting_input', step: 1, totalSteps: 2, title: type === 'onboarding' ? 'Complete onboarding' : 'Choose a growth goal', description: 'Continue in chat.', fields, data: {}, actions: ['next', 'submit', 'cancel', 'retry'], requestKey: `request-${type}-123` });
 
+async function openRecentConversations(user: ReturnType<typeof userEvent.setup>) {
+  const landingButton = screen.queryByRole('button', { name: 'Recent conversations' });
+  if (landingButton) {
+    await user.click(landingButton);
+    return;
+  }
+  // Home opens the history sidebar automatically when recent threads exist.
+  // Close that initial panel first, then exercise the same explicit opener.
+  await user.click(await screen.findByRole('button', { name: 'Close conversations' }));
+  await user.click(await screen.findByRole('button', { name: 'Recent conversations' }));
+}
+
 describe('creation command matching', () => {
   it('recognises natural phrasing and common typos for every creation type', () => {
     expect(detectCreationFlow('create a journey')).toBe('journey');
@@ -383,13 +395,14 @@ describe('Home chat', () => {
     } as never);
     render(<QueryClientProvider client={new QueryClient()}><HomeCommandCenter /></QueryClientProvider>);
 
-    await user.click(screen.getByRole('button', { name: 'Recent conversations' }));
+    await openRecentConversations(user);
     const search = await screen.findByRole('textbox', { name: 'Search conversations' });
     await user.type(search, 'retention');
     await user.click(screen.getByRole('button', { name: 'Open conversation Create a retention journey' }));
 
     expect(api.conversation).toHaveBeenCalledWith('p1', 'c9');
     expect(await screen.findByText('Earlier answer')).toBeInTheDocument();
+    expect(document.querySelector('aside[aria-label="Conversations"]')).toHaveAttribute('aria-hidden', 'true');
   });
 
   it('keeps recent conversations searchable when the remote search is unavailable', async () => {
@@ -411,7 +424,7 @@ describe('Home chat', () => {
     api.conversations.mockRejectedValue({ status: 500, message: 'Search service unavailable.' });
     render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><HomeCommandCenter /></QueryClientProvider>);
 
-    await user.click(screen.getByRole('button', { name: 'Recent conversations' }));
+    await openRecentConversations(user);
     const search = await screen.findByRole('textbox', { name: 'Search conversations' });
     await user.type(search, 'New Journey');
 
@@ -439,7 +452,7 @@ describe('Home chat', () => {
     api.deleteConversation.mockResolvedValue({ conversationId: 'c11', deleted: true } as never);
     render(<QueryClientProvider client={new QueryClient()}><HomeCommandCenter /></QueryClientProvider>);
 
-    await user.click(screen.getByRole('button', { name: 'Recent conversations' }));
+    await openRecentConversations(user);
     await user.click(await screen.findByRole('button', { name: 'Delete conversation Delete me' }));
     expect(screen.getByRole('heading', { name: 'Are you sure you want to delete this conversation?' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Delete' }));

@@ -2195,7 +2195,10 @@ export default function HomeCommandCenter() {
       setInteractionErrors({});
       businessContextHydratedRef.current = false;
       setContextOpen(false);
-      closeHistoryIfOverlay();
+      // Recent conversations is a Home landing affordance. Once a thread is
+      // opened, close it on every viewport so the conversation gets the full
+      // workspace instead of leaving the history sidebar beside it.
+      setHistoryOpen(false);
       setConversationSearch("");
     } catch (error) {
       setContextError(apiMessage(error, "That conversation could not be opened. Please try again."));
