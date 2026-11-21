@@ -23,6 +23,7 @@ import {
   TravelExploreRounded,
   TuneRounded,
   KeyboardArrowDownRounded,
+  KeyboardArrowRightRounded,
 } from '@mui/icons-material';
 import {
   Box,
@@ -49,6 +50,7 @@ type Props = {
   placeholder?: string;
   ariaLabel?: string;
   compact?: boolean;
+  moreFields?: AudienceGroupSchemaField[];
 };
 
 type PickerGroup = {
@@ -136,11 +138,16 @@ export default function AudienceConditionFieldPicker({
   placeholder = 'Choose a filter',
   ariaLabel = 'Condition field',
   compact = false,
+  moreFields = [],
 }: Props) {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+  const [moreAnchorEl, setMoreAnchorEl] = useState<HTMLElement | null>(null);
   const [search, setSearch] = useState('');
+  const [moreSearch, setMoreSearch] = useState('');
   const open = Boolean(anchorEl);
-  const selectedField = fields.find(field => field.key === value || field.label === value);
+  const moreOpen = Boolean(moreAnchorEl);
+  const pickerFields = useMemo(() => [...new Map([...fields, ...moreFields].map(field => [field.key, field])).values()], [fields, moreFields]);
+  const selectedField = pickerFields.find(field => field.key === value || field.label === value);
 
   const groups = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -150,9 +157,24 @@ export default function AudienceConditionFieldPicker({
     return groupedFields(filtered);
   }, [fields, search]);
 
+  const moreGroups = useMemo(() => {
+    const query = moreSearch.trim().toLowerCase();
+    const filtered = query
+      ? moreFields.filter(field => `${field.label} ${field.key}`.toLowerCase().includes(query))
+      : moreFields;
+    return groupedFields(filtered);
+  }, [moreFields, moreSearch]);
+
   const close = () => {
     setAnchorEl(null);
+    setMoreAnchorEl(null);
     setSearch('');
+    setMoreSearch('');
+  };
+
+  const closeMore = () => {
+    setMoreAnchorEl(null);
+    setMoreSearch('');
   };
 
   const selectField = (field: AudienceGroupSchemaField) => {
@@ -236,8 +258,79 @@ export default function AudienceConditionFieldPicker({
         />
       </Box>
       <List role="listbox" disablePadding sx={{ minHeight: 0, flex: 1, overflowY: 'auto', py: 0.5 }}>
+        {compact && moreFields.length > 0 && <>
+          <ListItemButton onClick={event => setMoreAnchorEl(event.currentTarget)} sx={{ minHeight: 42, px: 2, py: 0.5, gap: 0.75 }}>
+            <ListItemIcon sx={{ minWidth: 28, color: 'primary.main' }}><TuneRounded fontSize="small" /></ListItemIcon>
+            <ListItemText primary="More options" primaryTypographyProps={{ fontSize: '0.9rem', fontWeight: 600 }} />
+            <KeyboardArrowRightRounded fontSize="small" color="action" />
+          </ListItemButton>
+          <Divider />
+        </>}
         {!groups.length && <Typography color="text.secondary" fontSize="0.85rem" sx={{ px: 2, py: 2 }}>No matching properties</Typography>}
         {groups.map((group, groupIndex) => <Box key={group.label}>
+          {groupIndex > 0 && <Divider />}
+          <Typography component="div" sx={{ px: 2, pt: groupIndex === 0 ? 0.8 : 1.2, pb: 0.5, fontSize: '0.78rem', fontWeight: 700, color: 'text.secondary', letterSpacing: 0.1 }}>
+            {group.label}
+          </Typography>
+          {group.fields.map(field => {
+            const legacy = isHiddenAudienceField(field) && field.key !== value;
+            return <ListItemButton
+              key={field.key}
+              role="option"
+              aria-selected={field.key === value}
+              disabled={legacy}
+              selected={field.key === value}
+              onClick={() => selectField(field)}
+              sx={{ minHeight: 42, px: 2, py: 0.5, gap: 0.75, '&.Mui-selected': { backgroundColor: 'primary.50' }, '&.Mui-selected:hover': { backgroundColor: 'primary.100' } }}
+            >
+              <ListItemIcon sx={{ minWidth: 28, color: legacy ? 'text.disabled' : 'primary.main' }}>{fieldIcon(field)}</ListItemIcon>
+              <ListItemText primary={field.label} primaryTypographyProps={{ fontSize: '0.9rem', noWrap: true }} />
+              {field.key === value && <CheckRounded fontSize="small" color="primary" />}
+            </ListItemButton>;
+          })}
+        </Box>)}
+      </List>
+    </Popover>
+
+    <Popover
+      open={moreOpen}
+      anchorEl={moreAnchorEl}
+      onClose={closeMore}
+      anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+      slotProps={{
+        paper: {
+          sx: theme => ({
+            ml: 0.75,
+            width: 350,
+            maxWidth: 'min(560px, calc(100vw - 32px))',
+            maxHeight: 'min(620px, calc(100vh - 48px))',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            border: '1px solid',
+            borderColor: theme.palette.divider,
+            borderRadius: 2,
+            boxShadow: theme.shadows[8],
+          }),
+        },
+      }}
+    >
+      <Box sx={{ p: 1.25, borderBottom: '1px solid', borderColor: 'divider', backgroundColor: 'background.paper' }}>
+        <TextField
+          autoFocus
+          fullWidth
+          size="small"
+          value={moreSearch}
+          onChange={event => setMoreSearch(event.target.value)}
+          placeholder="Search all properties..."
+          inputProps={{ 'aria-label': 'Search all properties' }}
+          InputProps={{ startAdornment: <InputAdornment position="start"><SearchRounded fontSize="small" /></InputAdornment> }}
+        />
+      </Box>
+      <List role="listbox" disablePadding sx={{ minHeight: 0, flex: 1, overflowY: 'auto', py: 0.5 }}>
+        {!moreGroups.length && <Typography color="text.secondary" fontSize="0.85rem" sx={{ px: 2, py: 2 }}>No matching properties</Typography>}
+        {moreGroups.map((group, groupIndex) => <Box key={group.label}>
           {groupIndex > 0 && <Divider />}
           <Typography component="div" sx={{ px: 2, pt: groupIndex === 0 ? 0.8 : 1.2, pb: 0.5, fontSize: '0.78rem', fontWeight: 700, color: 'text.secondary', letterSpacing: 0.1 }}>
             {group.label}

@@ -2251,6 +2251,12 @@ export default function HomeCommandCenter() {
   };
 
   const startFlow = (flowId: string, prompt?: string, approved = false) => {
+    // The four Home feature cards open a chat/guided flow directly. Close the
+    // landing-page Recent conversations panel before transitioning into that
+    // flow, just like the suggested prompt buttons do.
+    setHistoryOpen(false);
+    setHistoryPreferenceSet(true);
+    setConversationSearch("");
     if (flowId === "audience-group") {
       if (!projectId || thinking) return;
       const openingPrompt = prompt || "I want to create an audience group. Help me define the exact users and rules for this project.";

@@ -49,8 +49,20 @@ const schema: AudienceGroupSchema = {
   limits: { maxConditions: 10, maxDepth: 2 },
 };
 
-function renderFlow(overrides: { sdkIntegrated?: boolean; trackedEvents?: string[]; withoutConsent?: boolean; emptyProjectData?: boolean; channels?: string[]; platforms?: Array<'mobile' | 'web'> } = {}) {
+function renderFlow(overrides: { sdkIntegrated?: boolean; trackedEvents?: string[]; withoutConsent?: boolean; emptyProjectData?: boolean; channels?: string[]; platforms?: Array<'mobile' | 'web'>; journeys?: boolean } = {}) {
   let responseSchema = overrides.withoutConsent ? { ...schema, fields: schema.fields.filter(field => field.key !== 'optIn') } : schema;
+  if (overrides.journeys) {
+    responseSchema = {
+      ...responseSchema,
+      fields: [...responseSchema.fields, {
+        key: 'journeyAutomation', label: 'Journey Automation', category: 'journey', operators: ['is_currently_in', 'has_entered', 'has_never_entered'], conditions: [
+          { key: 'is_currently_in', label: 'Is currently in', value: { type: 'reference', options: [{ key: 'journey-a', label: 'Welcome journey' }, { key: 'journey-b', label: 'Retention journey' }] } },
+          { key: 'has_entered', label: 'Has entered', value: { type: 'reference', options: [{ key: 'journey-a', label: 'Welcome journey' }, { key: 'journey-b', label: 'Retention journey' }] } },
+          { key: 'has_never_entered', label: 'Has never entered', value: { type: 'reference', options: [{ key: 'journey-a', label: 'Welcome journey' }, { key: 'journey-b', label: 'Retention journey' }] } },
+        ],
+      }],
+    } as AudienceGroupSchema;
+  }
   if (overrides.emptyProjectData) {
     responseSchema = {
       ...responseSchema,
@@ -80,6 +92,37 @@ describe('project-aware audience group chat flow', () => {
     expect(screen.getByText('Product events')).toBeInTheDocument();
     expect(screen.queryByText('Lifecycle segment status')).not.toBeInTheDocument();
     expect(screen.getByText('No journeys available')).toBeInTheDocument();
+  });
+
+  it('supports any journey and specific journey scopes before editing journey activity rules', async () => {
+    const user = userEvent.setup();
+    renderFlow({ journeys: true });
+    await user.click(await screen.findByText('Target users based on their behavior'));
+    await user.click(screen.getByRole('button', { name: /Journey activity/ }));
+
+    expect(screen.getByText('Which journey scope should we use?')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Any journey' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Specific journey' })).toBeEnabled();
+
+    await user.click(screen.getByRole('button', { name: 'Any journey' }));
+    await user.click(screen.getByRole('button', { name: 'Add condition' }));
+    await user.click(screen.getAllByRole('combobox')[0]);
+    await user.click(screen.getByRole('option', { name: 'Journey Automation' }));
+    await user.click(screen.getAllByRole('combobox')[1]);
+    await user.click(screen.getByRole('option', { name: 'Has entered' }));
+    expect(screen.getByText('Any journey')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Review rules' })).toBeEnabled();
+
+    await user.click(screen.getByRole('button', { name: 'Back' }));
+    expect(screen.getByText('Which journey scope should we use?')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Specific journey' }));
+    await user.click(screen.getByRole('button', { name: 'Add condition' }));
+    await user.click(screen.getAllByRole('combobox')[0]);
+    await user.click(screen.getByRole('option', { name: 'Journey Automation' }));
+    await user.click(screen.getAllByRole('combobox')[1]);
+    await user.click(screen.getByRole('option', { name: 'Has entered' }));
+    await user.click(screen.getAllByRole('combobox')[2]);
+    expect(screen.getByRole('option', { name: 'Welcome journey' })).toBeInTheDocument();
   });
 
   it('shows lifecycle segment status only after SDK integration', async () => {
@@ -147,6 +190,21 @@ describe('project-aware audience group chat flow', () => {
     await user.type(screen.getByRole('textbox', { name: 'Group name' }), 'Email-ready users');
     await user.click(screen.getByRole('button', { name: 'Create audience group' }));
     await waitFor(() => expect(api.create).toHaveBeenCalledWith('p1', expect.objectContaining({ rules: { operator: 'AND', conditions: [{ field: 'email', operator: 'available' }] } })));
+  });
+
+  it('shows Home AI more options in a right-side picker and keeps selected fields functional', async () => {
+    const user = userEvent.setup();
+    renderFlow();
+    await user.click(await screen.findByText('Group users by profile details'));
+    await user.click(screen.getByRole('button', { name: /Product & lifecycle/ }));
+    await user.click(screen.getByRole('button', { name: 'Add condition' }));
+    await user.click(screen.getAllByRole('combobox')[0]);
+    expect(screen.getByRole('button', { name: 'More options' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'More options' }));
+    expect(screen.getByPlaceholderText('Search all properties...')).toBeInTheDocument();
+    await user.click(screen.getByRole('option', { name: 'Email' }));
+    expect(screen.getByRole('combobox', { name: 'Condition field' })).toHaveTextContent('Email');
+    expect(screen.getByRole('combobox', { name: 'Condition operator' })).toBeInTheDocument();
   });
 
   it('renders Last Notified as a fixed sentence with positive whole-number validation', async () => {

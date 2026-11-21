@@ -5,6 +5,9 @@ import type { ProjectPlatform } from '@/types/project';
 export type Rule = { id: number; filter: string; operator: string; value: string; property?: string };
 export type Block = { id: number; rules: Rule[] };
 
+/** Internal editor value for a journey rule scoped to every project journey. */
+export const anyJourneyValue = '__any_journey__';
+
 export const makeRule = (id: number): Rule => ({ id, filter: '', operator: '', value: '' });
 export const makeBlock = (id: number, ruleId: number): Block => ({ id, rules: [makeRule(ruleId)] });
 
@@ -261,6 +264,9 @@ export function isRuleComplete(rule: Rule, schema?: AudienceGroupSchema) {
   const condition = schemaCondition(rule, schema);
   if (!condition) return false;
   const field = schemaField(rule, schema);
+  if (field?.key === 'journeyAutomation' && rule.value === anyJourneyValue) {
+    return Boolean(condition.value.options?.length);
+  }
   if (isLastNotifiedField(field, rule)) {
     return /exclude.*last.*day|exclude_in_last_days|not.*within.*day/i.test(`${condition.key} ${condition.label}`)
       && condition.value.type === 'integer'
@@ -278,7 +284,21 @@ export function toBackendRules(blocks: Block[], schema?: AudienceGroupSchema) {
   if (blocks.some(block => block.rules.some(rule => !isRuleComplete(rule, schema)))) {
     throw new Error('Complete or remove every audience condition before creating the group.');
   }
-  const blockRules = (block: Block) => block.rules.map(rule => toBackendCondition(rule, schema));
+  const blockRules = (block: Block) => {
+    const conditions: Array<Record<string, unknown>> = [];
+    for (const rule of block.rules) {
+      const field = schemaField(rule, schema);
+      const condition = schemaCondition(rule, schema);
+      if (field?.key === 'journeyAutomation' && rule.value === anyJourneyValue && condition?.value.options?.length) {
+        const journeyConditions = condition.value.options.map(option => toBackendCondition({ ...rule, value: option.key }, schema));
+        const negative = /^(?:is_not_currently_in|has_never_entered|has_not_completed)$/.test(condition.key);
+        conditions.push({ operator: negative ? 'AND' : 'OR', conditions: journeyConditions });
+      } else {
+        conditions.push(toBackendCondition(rule, schema));
+      }
+    }
+    return conditions;
+  };
   const populatedBlocks = blocks.map(blockRules).filter(conditions => conditions.length);
   if (!populatedBlocks.length) return { operator: 'AND' as const, conditions: [] };
   return populatedBlocks.length > 1
@@ -298,6 +318,7 @@ export function readableRule(rule: Rule, schema?: AudienceGroupSchema) {
   const field = schema?.fields.find(item => item.key === rule.filter || item.label === rule.filter);
   const condition = field?.conditions.find(item => item.key === rule.operator || item.label === rule.operator);
   if (isLastNotifiedField(field, rule)) return `Exclude users notified in the last ${rule.value.trim()} days`;
+  if (field?.key === 'journeyAutomation' && rule.value === anyJourneyValue) return `${field.label} ${condition?.label ?? rule.operator} any journey`;
   const optionLabel = (value: string) => condition?.value.options?.find(option => option.key === value)?.label ?? value;
   const values = rule.value.split(',').map(item => item.trim()).filter(Boolean).map(optionLabel).join(', ');
   return `${field?.label ?? rule.filter} ${condition?.label ?? rule.operator}${values ? ` ${values}` : ''}${rule.property ? ` (${rule.property})` : ''}`;

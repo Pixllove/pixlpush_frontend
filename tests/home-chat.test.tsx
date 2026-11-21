@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -355,6 +355,28 @@ describe('Home chat', () => {
     expect(await screen.findByText('Nova has reviewed the project context.', {}, { timeout: 7000 })).toBeInTheDocument();
     expect(api.regenerate).toHaveBeenCalledWith('p1', 'c1', expect.objectContaining({ assistant: 'Nova', prompt: 'What should I do next?', mode: 'direct', requestKey: expect.any(String) }), expect.any(AbortSignal));
   }, 12_000);
+
+  it('closes Recent conversations when any Home feature card starts a flow', async () => {
+    const user = userEvent.setup();
+    api.context.mockResolvedValue({
+      recentConversations: [{
+        id: 'c-feature', assistant: 'Max', title: 'Previous chat', flowId: null,
+        createdAt: '2026-10-14T10:00:00.000Z', updatedAt: '2026-10-14T10:00:00.000Z',
+        _count: { messages: 1 }, lastMessage: { role: 'user', content: 'Previous chat', createdAt: '2026-10-14T10:00:00.000Z' },
+      }],
+      latestInsight: { title: 'Insight', message: 'Message', metric: { key: 'users', value: 1 }, actions: [] },
+      handoffHistory: [],
+    } as never);
+
+    for (const label of ['Create campaign', 'Create journey', 'Create segment', 'Create audience group']) {
+      render(<QueryClientProvider client={new QueryClient()}><HomeCommandCenter /></QueryClientProvider>);
+      const panel = await screen.findByRole('complementary', { name: 'Conversations' });
+      expect(panel).toHaveAttribute('aria-hidden', 'false');
+      await user.click(screen.getByRole('button', { name: new RegExp(label) }));
+      await waitFor(() => expect(panel).toHaveAttribute('aria-hidden', 'true'));
+      cleanup();
+    }
+  });
 
   it('searches recent conversations and resumes the selected thread', async () => {
     const user = userEvent.setup();
