@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { audienceGroupsApi, onboardingApi } from '@/lib/projects/api';
 import type { AudienceGroup, AudienceGroupSchema, AudienceGroupSchemaField } from '@/types/project';
 import AudienceConditionFieldPicker from './AudienceConditionFieldPicker';
-import { anyJourneyValue, appNotificationTokenFieldKey, audiencePickerFields, incompleteRuleCount, isRuleComplete, makeBlock, makeRule, readableRule, reactivationChannelsForProject, ruleHasInput, seedReactivationRules, toBackendRules, validRuleCount, withAppNotificationTokenField, type Block, type Rule } from './audienceGroupRules';
+import { anyJourneyValue, appNotificationTokenFieldKey, audiencePickerFields, incompleteRuleCount, isNotificationRecencyField, isRuleComplete, makeBlock, makeRule, notificationRecencyPhrase, readableRule, reactivationChannelsForProject, ruleHasInput, seedReactivationRules, toBackendRules, validRuleCount, withAppNotificationTokenField, type Block, type Rule } from './audienceGroupRules';
 
 type Goal = 'behavior' | 'campaign' | 'event' | 'profile' | 'reactivation' | 'other';
 type ProfileCategory = 'reachability' | 'product' | 'profile' | 'account' | 'other';
@@ -40,7 +40,7 @@ const profileCategories: Array<{ id: ProfileCategory; label: string }> = [
 function fieldHasData(field: AudienceGroupSchemaField | undefined) {
   if (!field) return false;
   if (field.key === 'customProperty') return Boolean(field.property?.options?.length && field.conditions.length);
-  if (field.key === 'lastNotified' || field.key === 'lastPushNotification' || /last.?notified/i.test(`${field.key} ${field.label}`)) return field.conditions.some(condition => condition.value.type === 'integer' && (field.key === 'lastPushNotification' ? (condition.value.min ?? 0) >= 0 : (condition.value.min ?? 1) >= 1));
+  if (isNotificationRecencyField(field)) return field.conditions.some(condition => condition.value.type === 'integer' && (condition.value.min ?? 1) >= 1);
   return field.conditions.some(condition => condition.value.type === 'none' || Boolean(condition.value.options?.length) || condition.value.freeText === true);
 }
 
@@ -55,7 +55,7 @@ function isLifecycleField(field: AudienceGroupSchemaField) {
 
 function fieldsForCategory(schema: AudienceGroupSchema, category: ProfileCategory, sdkIntegrated = true) {
   const categories: Record<Exclude<ProfileCategory, 'other'>, string[]> = {
-    reachability: ['email', 'emailAction', 'lastNotified', appNotificationTokenFieldKey, 'webPush', 'pushNotification', 'pushNotificationAction', 'lastPushNotification'],
+    reachability: ['email', 'emailAction', 'lastEmailNotification', 'lastMobilePushNotification', 'lastWebPushNotification', appNotificationTokenFieldKey, 'webPush', 'pushNotification', 'pushNotificationAction'],
     product: ['currentLifecycleSegment', 'historicalLifecycleSegment', 'journeyAutomation', 'audienceGroup', 'performedEvent'],
     profile: ['country', 'region', 'language', 'platform'],
     account: ['userImport', 'accountStatus', 'userType', 'createdDate'],
@@ -77,15 +77,15 @@ function ruleFields(schema: AudienceGroupSchema, goal: Goal, branch: string, pro
     return fields.filter(field => keys.includes(field.key));
   }
   if (goal === 'campaign') {
-    const activity = ['emailAction', 'lastNotified', 'pushNotificationAction', 'lastPushNotification'];
+    const activity = ['emailAction', 'lastEmailNotification', 'lastMobilePushNotification', 'lastWebPushNotification', 'pushNotificationAction'];
     if (branch === 'specific') return fields.filter(field => /campaign/i.test(`${field.key} ${field.label}`) && optionHas(field, /campaign/i));
     return fields.filter(field => activity.includes(field.key));
   }
   if (goal === 'profile' && profileCategory && profileCategory !== 'other') return fieldsForCategory(schema, profileCategory, sdkIntegrated).filter(fieldHasData);
   if (goal === 'reactivation') {
-    const keys = ['email', 'emailAvailable', 'emailAction', 'lastEmailed', 'lastNotified', appNotificationTokenFieldKey, 'fcmToken', 'apnsToken', 'webPush', 'pushNotification', 'pushNotificationAction', 'lastPushNotification', 'performedEvent', 'accountStatus'];
+    const keys = ['email', 'emailAvailable', 'emailAction', 'lastEmailNotification', 'lastMobilePushNotification', 'lastWebPushNotification', appNotificationTokenFieldKey, 'fcmToken', 'apnsToken', 'webPush', 'pushNotification', 'pushNotificationAction', 'performedEvent', 'accountStatus'];
     const consent = fields.filter(field => /consent|opt.?in/i.test(`${field.key} ${field.label}`));
-    return fields.filter(field => keys.includes(field.key) || ['email', 'push'].includes(field.category ?? '') || /(?:email|web.?push|mobile.?push|last.?notified)/i.test(`${field.key} ${field.label}`) || consent.includes(field));
+    return fields.filter(field => keys.includes(field.key) || ['email', 'push'].includes(field.category ?? '') || /(?:email|web.?push|mobile.?push|last.?email|last.?notified)/i.test(`${field.key} ${field.label}`) || consent.includes(field));
   }
   return fields;
 }
@@ -98,8 +98,8 @@ function fieldsForOther(schema: AudienceGroupSchema, description: string, sdkInt
   const text = description.toLowerCase();
   const hints = [
     { words: ['event', 'action', 'purchase', 'checkout'], keys: ['performedEvent'] },
-    { words: ['email', 'opened', 'clicked', 'campaign'], keys: ['email', 'emailAction', 'lastNotified'] },
-    { words: ['push', 'notification'], keys: [appNotificationTokenFieldKey, 'webPush', 'pushNotification', 'pushNotificationAction', 'lastPushNotification', 'lastNotified'] },
+    { words: ['email', 'opened', 'clicked', 'campaign'], keys: ['email', 'emailAction', 'lastEmailNotification'] },
+    { words: ['push', 'notification'], keys: [appNotificationTokenFieldKey, 'webPush', 'pushNotification', 'pushNotificationAction', 'lastMobilePushNotification', 'lastWebPushNotification'] },
     { words: ['country', 'location', 'language', 'platform'], keys: ['country', 'region', 'language', 'platform'] },
     { words: ['journey'], keys: ['journeyAutomation'] },
     { words: ['segment', 'lifecycle'], keys: ['currentLifecycleSegment', 'historicalLifecycleSegment'] },
@@ -140,10 +140,10 @@ function RuleEditor({ schema, fields, allFields, journeyScope, blocks, onChange 
         return { ...rule, [key]: value, ...(key === 'operator' ? { value: isAnyJourney ? anyJourneyValue : '' } : {}) };
       }
       const selectedField = schema.fields.find(field => field.key === value);
-      const isLastNotified = /last.?notified/i.test(`${selectedField?.key ?? ''} ${selectedField?.label ?? ''}`);
+      const isNotificationRecency = isNotificationRecencyField(selectedField);
       const defaultOperator = selectedField?.conditions.find(condition => /exclude.*last.*day|exclude_in_last_days|not.*within.*day/i.test(`${condition.key} ${condition.label}`))?.key ?? '';
       const isAnyJourney = journeyScope === 'any' && selectedField?.key === 'journeyAutomation';
-      return { ...rule, filter: value, operator: isLastNotified ? defaultOperator : '', value: isAnyJourney ? anyJourneyValue : '', property: '' };
+      return { ...rule, filter: value, operator: isNotificationRecency ? defaultOperator : '', value: isAnyJourney ? anyJourneyValue : '', property: '' };
     }),
   }));
   const addAnd = (blockId: number) => {
@@ -179,13 +179,13 @@ function RuleRow({ rule, schema, fields, allFields, journeyScope, onChange, onRe
   const selected = condition?.value.multiple ? rule.value.split(',').map(value => value.trim()).filter(Boolean) : rule.value;
   const hasCustomProperty = field?.key === 'customProperty';
   const isAnyJourney = journeyScope === 'any' && field?.key === 'journeyAutomation';
-  const isLastNotified = /last.?notified/i.test(`${field?.key ?? ''} ${field?.label ?? ''}`);
+  const isNotificationRecency = isNotificationRecencyField(field);
   const complete = isRuleComplete(rule, schema);
   const incomplete = !complete;
   const incompleteMessage = !ruleHasInput(rule)
     ? 'Choose a field, or remove this incomplete condition.'
-    : isLastNotified
-      ? 'Enter a positive whole number of days for Last Notified.'
+    : isNotificationRecency
+      ? `Enter a positive whole number of days for ${field?.label ?? 'this notification condition'}.`
       : 'Choose an operator and a required value, or remove this incomplete condition.';
   return <Stack direction={{ xs: 'column', md: 'row' }} gap={1} alignItems={{ md: 'center' }} sx={{ width: '100%', flexWrap: { md: 'wrap' } }}>
     <AudienceConditionFieldPicker fields={fields} moreFields={allFields} value={rule.filter} onChange={value => onChange('filter', value)} compact />
@@ -193,11 +193,11 @@ function RuleRow({ rule, schema, fields, allFields, journeyScope, onChange, onRe
       <MenuItem value="">Choose a property</MenuItem>
       {(field?.property?.options ?? []).map(option => <MenuItem key={option.key} value={option.key}>{option.label}</MenuItem>)}
     </Select>}
-    {field && !isLastNotified && <Select size="small" displayEmpty value={rule.operator} inputProps={{ 'aria-label': 'Condition operator' }} onChange={event => onChange('operator', String(event.target.value))} disabled={hasCustomProperty && !rule.property} sx={{ minWidth: { md: 180 }, flex: 1 }}>
+    {field && !isNotificationRecency && <Select size="small" displayEmpty value={rule.operator} inputProps={{ 'aria-label': 'Condition operator' }} onChange={event => onChange('operator', String(event.target.value))} disabled={hasCustomProperty && !rule.property} sx={{ minWidth: { md: 180 }, flex: 1 }}>
       <MenuItem value="">Choose an operator</MenuItem>
       {field.conditions.map(item => <MenuItem key={item.key} value={item.key}>{item.label}</MenuItem>)}
     </Select>}
-    {isLastNotified ? <Stack direction="row" alignItems="center" gap={0.7} sx={{ flex: 1, minWidth: 0, flexWrap: { xs: 'wrap', md: 'nowrap' } }}><Typography component="span" whiteSpace="nowrap">Exclude users notified in the last</Typography><TextField size="small" type="number" inputProps={{ min: 1, step: 1, inputMode: 'numeric', 'aria-label': 'Last Notified days' }} value={rule.value} onChange={event => onChange('value', event.target.value)} error={Boolean(rule.value) && !/^[1-9]\d*$/.test(rule.value.trim())} sx={{ width: 82, flex: '0 0 82px' }} /><Typography component="span" whiteSpace="nowrap">days</Typography></Stack> : isAnyJourney ? <Box sx={{ flex: 1, minWidth: { md: 190 }, px: 1.4, py: .85, border: '1px solid', borderColor: 'divider', borderRadius: 1, color: 'text.secondary' }}>Any journey</Box> : condition && valueType !== 'none' && (options.length ? <Select size="small" displayEmpty multiple={Boolean(condition.value.multiple)} value={selected} inputProps={{ 'aria-label': 'Condition value' }} onChange={event => {
+    {isNotificationRecency ? <Stack direction="row" alignItems="center" gap={0.7} sx={{ flex: 1, minWidth: 0, flexWrap: { xs: 'wrap', md: 'nowrap' } }}><Typography component="span" whiteSpace="nowrap">{notificationRecencyPhrase(field)}</Typography><TextField size="small" type="number" inputProps={{ min: 1, step: 1, inputMode: 'numeric', 'aria-label': `${field?.label ?? 'Notification'} days` }} value={rule.value} onChange={event => onChange('value', event.target.value)} error={Boolean(rule.value) && !/^[1-9]\d*$/.test(rule.value.trim())} sx={{ width: 82, flex: '0 0 82px' }} /><Typography component="span" whiteSpace="nowrap">days</Typography></Stack> : isAnyJourney ? <Box sx={{ flex: 1, minWidth: { md: 190 }, px: 1.4, py: .85, border: '1px solid', borderColor: 'divider', borderRadius: 1, color: 'text.secondary' }}>Any journey</Box> : condition && valueType !== 'none' && (options.length ? <Select size="small" displayEmpty multiple={Boolean(condition.value.multiple)} value={selected} inputProps={{ 'aria-label': 'Condition value' }} onChange={event => {
       const value = Array.isArray(event.target.value) ? event.target.value : [event.target.value];
       onChange('value', value.map(String).join(','));
     }} renderValue={value => (Array.isArray(value) ? value : [value]).map(item => options.find(option => option.key === item)?.label ?? item).join(', ')} sx={{ minWidth: { md: 190 }, flex: 1 }}>

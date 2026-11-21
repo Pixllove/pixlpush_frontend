@@ -91,6 +91,9 @@ const iconByKey: Record<string, ComponentType<{ fontSize?: 'small' | 'inherit' |
   emailAction: TouchAppRounded,
   lastEmailed: AccessTimeRounded,
   lastNotified: AccessTimeRounded,
+  lastEmailNotification: AccessTimeRounded,
+  lastMobilePushNotification: AccessTimeRounded,
+  lastWebPushNotification: AccessTimeRounded,
   [appNotificationTokenFieldKey]: PhoneIphoneRounded,
   fcmToken: PhoneIphoneRounded,
   apnsToken: PhoneIphoneRounded,
@@ -121,7 +124,7 @@ function fieldIcon(field: AudienceGroupSchemaField, size: 'small' | 'medium' = '
 }
 
 function groupLabel(field: AudienceGroupSchemaField) {
-  if (pushKeys.has(field.key) || field.category === 'push' || field.key === 'lastNotified' || field.category === 'email' || field.category === 'consent') return 'Reachability & engagement';
+  if (pushKeys.has(field.key) || field.category === 'push' || /last.?email|last.?mobile.?push|last.?web.?push|last.?notified/i.test(`${field.key} ${field.label}`) || field.category === 'email' || field.category === 'consent') return 'Reachability & engagement';
   return categoryLabels[field.category ?? ''] ?? 'Account & history';
 }
 

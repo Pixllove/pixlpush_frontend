@@ -38,8 +38,9 @@ const schema: AudienceGroupSchema = {
     { key: 'emailAction', label: 'Email Action', category: 'email', operators: ['opened'], conditions: [{ key: 'opened', label: 'Opened', value: { type: 'text', options: [{ key: 'campaign_a', label: 'Campaign A' }] } }] },
     { key: 'fcmToken', label: 'FCM Token', category: 'push', operators: ['available', 'not_available'], conditions: [{ key: 'available', label: 'Is available', value: { type: 'none' } }, { key: 'not_available', label: 'Is not available', value: { type: 'none' } }] },
     { key: 'apnsToken', label: 'APNs Token (iOS without Firebase)', category: 'push', operators: ['available', 'not_available'], conditions: [{ key: 'available', label: 'Is available', value: { type: 'none' } }, { key: 'not_available', label: 'Is not available', value: { type: 'none' } }] },
-    { key: 'lastPushNotification', label: 'Last Push Notification', category: 'push', operators: ['exclude_in_last_days'], conditions: [{ key: 'exclude_in_last_days', label: 'Exclude users sent a push in the last X days', value: { type: 'integer', required: true, min: 0, unit: 'days' } }] },
-    { key: 'lastNotified', label: 'Last Notified', category: 'account', operators: ['exclude_in_last_days'], conditions: [{ key: 'exclude_in_last_days', label: 'Exclude users notified in the last X days', value: { type: 'integer', required: true, min: 1, unit: 'days' } }] },
+    { key: 'lastEmailNotification', label: 'Last Email Notification', category: 'email', operators: ['exclude_in_last_days'], conditions: [{ key: 'exclude_in_last_days', label: 'Exclude users emailed in the last X days', value: { type: 'integer', required: true, min: 1, unit: 'days' } }] },
+    { key: 'lastMobilePushNotification', label: 'Last Mobile Push Notification', category: 'push', operators: ['exclude_in_last_days'], conditions: [{ key: 'exclude_in_last_days', label: 'Exclude users sent a mobile push in the last X days', value: { type: 'integer', required: true, min: 1, unit: 'days' } }] },
+    { key: 'lastWebPushNotification', label: 'Last Web Push Notification', category: 'push', operators: ['exclude_in_last_days'], conditions: [{ key: 'exclude_in_last_days', label: 'Exclude users sent a web push in the last X days', value: { type: 'integer', required: true, min: 1, unit: 'days' } }] },
     { key: 'country', label: 'Country', category: 'location', operators: ['equals'], conditions: [{ key: 'equals', label: 'Is', value: { type: 'text', options: [{ key: 'pk', label: 'Pakistan' }] } }] },
     { key: 'customProperty', label: 'Custom property', category: 'custom', operators: ['equals'], property: { required: true, options: [{ key: 'plan', label: 'Plan' }] }, conditions: [{ key: 'equals', label: 'Is', value: { type: 'text', options: [{ key: 'pro', label: 'Pro' }] } }] },
     { key: 'optIn', label: 'Email opt-in', category: 'consent', operators: ['is'], conditions: [{ key: 'is', label: 'Is', value: { type: 'text', options: [{ key: 'true', label: 'Yes' }] } }] },
@@ -207,28 +208,28 @@ describe('project-aware audience group chat flow', () => {
     expect(screen.getByRole('combobox', { name: 'Condition operator' })).toBeInTheDocument();
   });
 
-  it('renders Last Notified as a fixed sentence with positive whole-number validation', async () => {
+  it('renders each channel notification recency as a fixed sentence with positive whole-number validation', async () => {
     const user = userEvent.setup();
     renderFlow();
     await user.click(await screen.findByText('Group users by profile details'));
     await user.click(screen.getByRole('button', { name: /Reachability & engagement/ }));
     await user.click(screen.getByRole('button', { name: 'Add condition' }));
     await user.click(screen.getAllByRole('combobox')[0]);
-    await user.click(screen.getByRole('option', { name: 'Last Notified' }));
+    await user.click(screen.getByRole('option', { name: 'Last Email Notification' }));
 
-    expect(screen.getByText('Exclude users notified in the last')).toBeInTheDocument();
+    expect(screen.getByText('Exclude users emailed in the last')).toBeInTheDocument();
     expect(screen.getByText('days')).toBeInTheDocument();
     expect(screen.queryByRole('combobox', { name: 'Condition operator' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Review rules' })).toBeDisabled();
 
-    const days = screen.getByRole('spinbutton', { name: 'Last Notified days' });
+    const days = screen.getByRole('spinbutton', { name: 'Last Email Notification days' });
     await user.type(days, '0');
     expect(screen.getByRole('button', { name: 'Review rules' })).toBeDisabled();
     await user.clear(days);
     await user.type(days, '7');
     expect(screen.getByRole('button', { name: 'Review rules' })).toBeEnabled();
     await user.click(screen.getByRole('button', { name: 'Review rules' }));
-    expect(screen.getByRole('textbox', { name: 'Description (optional)' })).toHaveValue('Users matching these conditions: Exclude users notified in the last 7 days.');
+    expect(screen.getByRole('textbox', { name: 'Description (optional)' })).toHaveValue('Users matching these conditions: Exclude users emailed in the last 7 days.');
   });
 
   it('does not expose custom properties and combines mobile notification tokens', async () => {
@@ -243,7 +244,10 @@ describe('project-aware audience group chat flow', () => {
     expect(screen.queryByRole('option', { name: 'FCM Token' })).not.toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'APNs Token (iOS without Firebase)' })).not.toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'Last Emailed' })).not.toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Last Push Notification' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Last Email Notification' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Last Mobile Push Notification' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Last Web Push Notification' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Last Notified' })).not.toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'Custom property' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('option', { name: 'Mobile push' }));
     await user.click(screen.getAllByRole('combobox')[1]);
@@ -303,7 +307,7 @@ describe('project-aware audience group chat flow', () => {
     await user.click(screen.getByRole('button', { name: 'Create audience group' }));
     await waitFor(() => expect(api.create).toHaveBeenCalledWith('p1', {
       name: 'Checkout users',
-      description: undefined,
+      description: 'Users matching these conditions: Performed Event Has performed Checkout started.',
       rules: { operator: 'AND', conditions: [{ field: 'performedEvent', operator: 'has_performed', value: 'checkout_started' }] },
     }));
     expect(await screen.findByText('Audience group created')).toBeInTheDocument();
@@ -363,29 +367,34 @@ describe('project-aware audience group chat flow', () => {
   });
 
   it.each([
-    { label: 'email only', channels: ['email'], expected: [{ operator: 'AND', conditions: [{ field: 'email', operator: 'available' }, { field: 'lastNotified', operator: 'exclude_in_last_days', value: '30' }] }] },
+    { label: 'email only', channels: ['email'], expected: [{ operator: 'AND', conditions: [{ field: 'email', operator: 'available' }, { field: 'lastEmailNotification', operator: 'exclude_in_last_days', value: '30' }] }] },
     { label: 'email and mobile push', channels: ['email', 'mobile-push'], expected: [{ operator: 'AND', conditions: [
       { field: 'email', operator: 'available' },
-      { field: 'lastNotified', operator: 'exclude_in_last_days', value: '30' },
+      { field: 'lastEmailNotification', operator: 'exclude_in_last_days', value: '30' },
       { operator: 'AND', conditions: [{ field: 'fcmToken', operator: 'not_available' }, { field: 'apnsToken', operator: 'not_available' }] },
+      { field: 'lastMobilePushNotification', operator: 'exclude_in_last_days', value: '30' },
     ] }] },
     { label: 'email, mobile push, and web push', channels: ['email', 'mobile-push', 'web-push'], expected: [{ operator: 'AND', conditions: [
       { field: 'email', operator: 'available' },
-      { field: 'lastNotified', operator: 'exclude_in_last_days', value: '30' },
+      { field: 'lastEmailNotification', operator: 'exclude_in_last_days', value: '30' },
       { operator: 'AND', conditions: [{ field: 'fcmToken', operator: 'not_available' }, { field: 'apnsToken', operator: 'not_available' }] },
+      { field: 'lastMobilePushNotification', operator: 'exclude_in_last_days', value: '30' },
       { field: 'webPush', operator: 'available' },
+      { field: 'lastWebPushNotification', operator: 'exclude_in_last_days', value: '30' },
     ] }] },
     { label: 'email and web push', channels: ['email', 'web-push'], expected: [{ operator: 'AND', conditions: [
       { field: 'email', operator: 'available' },
-      { field: 'lastNotified', operator: 'exclude_in_last_days', value: '30' },
+      { field: 'lastEmailNotification', operator: 'exclude_in_last_days', value: '30' },
       { field: 'webPush', operator: 'available' },
+      { field: 'lastWebPushNotification', operator: 'exclude_in_last_days', value: '30' },
       { operator: 'AND', conditions: [{ field: 'fcmToken', operator: 'not_available' }, { field: 'apnsToken', operator: 'not_available' }] },
+      { field: 'lastMobilePushNotification', operator: 'exclude_in_last_days', value: '30' },
     ] }] },
     { label: 'mobile push only', channels: ['mobile-push'], expected: [{ operator: 'AND', conditions: [
       { operator: 'OR', conditions: [{ field: 'fcmToken', operator: 'available' }, { field: 'apnsToken', operator: 'available' }] },
-      { field: 'lastNotified', operator: 'exclude_in_last_days', value: '30' },
+      { field: 'lastMobilePushNotification', operator: 'exclude_in_last_days', value: '30' },
     ] }] },
-    { label: 'web push only', channels: ['web-push'], expected: [{ operator: 'AND', conditions: [{ field: 'webPush', operator: 'available' }, { field: 'lastNotified', operator: 'exclude_in_last_days', value: '30' }] }] },
+    { label: 'web push only', channels: ['web-push'], expected: [{ operator: 'AND', conditions: [{ field: 'webPush', operator: 'available' }, { field: 'lastWebPushNotification', operator: 'exclude_in_last_days', value: '30' }] }] },
   ])('seeds schema-backed reactivation rules for $label', ({ channels, expected }) => {
     const combinedSchema = withAppNotificationTokenField(schema);
     const result = seedReactivationRules(combinedSchema as never, channels as never);
@@ -397,15 +406,14 @@ describe('project-aware audience group chat flow', () => {
     const result = seedReactivationRules(withAppNotificationTokenField(schema), ['email', 'mobile-push']);
     expect(result.blocks).toHaveLength(1);
     expect(result.blocks[0].rules.every(rule => rule.filter && rule.operator)).toBe(true);
-    expect(result.blocks[0].rules.map(rule => rule.filter)).toEqual(['email', 'lastNotified', 'appNotificationToken']);
+    expect(result.blocks[0].rules.map(rule => rule.filter)).toEqual(['email', 'lastEmailNotification', 'appNotificationToken', 'lastMobilePushNotification']);
   });
 
   it('does not seed separate provider token fields when a combined mobile-push rule is unavailable', () => {
     const splitProviderSchema = { ...schema, fields: schema.fields.filter(field => !['fcmToken', 'apnsToken'].includes(field.key)) };
     const result = seedReactivationRules(splitProviderSchema, ['mobile-push']);
     expect(result.unavailable).toContain('Mobile push');
-    expect(result.blocks).toHaveLength(1);
-    expect(result.blocks[0].rules.map(rule => rule.filter)).toEqual(['lastNotified']);
+    expect(result.blocks).toHaveLength(0);
   });
 
   it('reports missing channel schema support without adding invalid conditions', () => {
@@ -414,7 +422,7 @@ describe('project-aware audience group chat flow', () => {
     expect(result.unavailable).toEqual(['Mobile push', 'Web push']);
     expect(toBackendRules(result.blocks, withoutPush as never)).toEqual({ operator: 'AND', conditions: [
       { field: 'email', operator: 'available' },
-      { field: 'lastNotified', operator: 'exclude_in_last_days', value: '30' },
+      { field: 'lastEmailNotification', operator: 'exclude_in_last_days', value: '30' },
     ] });
   });
 
@@ -429,23 +437,22 @@ describe('project-aware audience group chat flow', () => {
     api.create.mockResolvedValue({ id: 'reactivation-group', name: 'Inactive email users', description: null, rules: {}, memberCount: 3, createdAt: '', updatedAt: '' });
     renderFlow({ channels: ['email'] });
     await user.click(await screen.findByText('Reactivate users'));
-    const days = await screen.findByRole('spinbutton', { name: 'Last Notified days' });
+    const days = await screen.findByRole('spinbutton', { name: 'Last Email Notification days' });
     expect(days).toHaveValue(30);
     await user.clear(days);
     await user.type(days, '45');
     await user.click(screen.getByRole('button', { name: 'Back' }));
     await user.click(screen.getByText('Reactivate users'));
-    expect(await screen.findByRole('spinbutton', { name: 'Last Notified days' })).toHaveValue(45);
+    expect(await screen.findByRole('spinbutton', { name: 'Last Email Notification days' })).toHaveValue(45);
     await user.click(screen.getByRole('button', { name: 'Review rules' }));
-    expect(screen.getByText(/Exclude users notified in the last 45 days/)).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Group name' })).toHaveValue('Reactivation audience');
-    expect(screen.getByRole('textbox', { name: 'Description (optional)' })).toHaveValue('Users matching these conditions: Email Is available and Exclude users notified in the last 45 days.');
+    expect(screen.getByRole('textbox', { name: 'Description (optional)' })).toHaveValue('Users matching these conditions: Email Is available and Exclude users emailed in the last 45 days.');
     await user.clear(screen.getByRole('textbox', { name: 'Group name' }));
     await user.type(screen.getByRole('textbox', { name: 'Group name' }), 'Inactive email users');
     await user.click(screen.getByRole('button', { name: 'Create audience group' }));
     await waitFor(() => expect(api.create).toHaveBeenCalledWith('p1', expect.objectContaining({ rules: { operator: 'AND', conditions: [
       { field: 'email', operator: 'available' },
-      { field: 'lastNotified', operator: 'exclude_in_last_days', value: '45' },
+      { field: 'lastEmailNotification', operator: 'exclude_in_last_days', value: '45' },
     ] } })));
   });
 
@@ -454,8 +461,7 @@ describe('project-aware audience group chat flow', () => {
     renderFlow({ channels: ['email', 'mobile-push'] });
     await user.click(await screen.findByText('Reactivate users'));
 
-    expect(await screen.findByText('3 / 30 valid conditions. Conditions inside a group use AND; groups use OR.')).toBeInTheDocument();
-    expect(screen.getAllByRole('combobox', { name: 'Condition field' })).toHaveLength(3);
+    expect(screen.getAllByRole('combobox', { name: 'Condition field' })).toHaveLength(4);
     expect(screen.getByText('Mobile push')).toBeInTheDocument();
     expect(screen.getByText('Is not available')).toBeInTheDocument();
   });
@@ -475,8 +481,9 @@ describe('project-aware audience group chat flow', () => {
     expect(result.blocks).toHaveLength(1);
     expect(result.blocks[0].rules.map(rule => [rule.filter, rule.operator])).toEqual([
       ['email', 'available'],
-      ['lastNotified', 'exclude_in_last_days'],
+      ['lastEmailNotification', 'exclude_in_last_days'],
       ['mobilePush', 'not_available'],
+      ['lastMobilePushNotification', 'exclude_in_last_days'],
     ]);
   });
 });

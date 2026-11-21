@@ -16,11 +16,51 @@ export const hiddenAudienceFieldKeys = new Set([
   'fcmToken',
   'apnsToken',
   'lastEmailed',
+  'lastNotified',
+  'lastPushNotification',
   'customProperty',
 ]);
 
 export const appNotificationTokenFieldKey = 'appNotificationToken';
 export const appNotificationTokenFieldLabel = 'Mobile push';
+
+export type NotificationRecencyChannel = 'email' | 'mobile-push' | 'web-push';
+
+const notificationRecencyDefinitions: Record<NotificationRecencyChannel, { key: string; label: string; phrase: string }> = {
+  email: { key: 'lastEmailNotification', label: 'Last Email Notification', phrase: 'Exclude users emailed in the last' },
+  'mobile-push': { key: 'lastMobilePushNotification', label: 'Last Mobile Push Notification', phrase: 'Exclude users sent a mobile push in the last' },
+  'web-push': { key: 'lastWebPushNotification', label: 'Last Web Push Notification', phrase: 'Exclude users sent a web push in the last' },
+};
+
+function notificationRecencyText(fieldOrKey: AudienceGroupSchemaField | string | undefined) {
+  if (!fieldOrKey) return '';
+  return typeof fieldOrKey === 'string' ? fieldOrKey : `${fieldOrKey.key} ${fieldOrKey.label}`;
+}
+
+export function notificationRecencyChannel(fieldOrKey: AudienceGroupSchemaField | string | undefined): NotificationRecencyChannel | null {
+  const text = notificationRecencyText(fieldOrKey);
+  if (new RegExp(`${notificationRecencyDefinitions.email.key}|last email notification|last emailed`, 'i').test(text)) return 'email';
+  if (new RegExp(`${notificationRecencyDefinitions['mobile-push'].key}|last mobile.?push notification`, 'i').test(text)) return 'mobile-push';
+  if (new RegExp(`${notificationRecencyDefinitions['web-push'].key}|last web.?push notification`, 'i').test(text)) return 'web-push';
+  return null;
+}
+
+export function isNotificationRecencyField(fieldOrKey: AudienceGroupSchemaField | string | undefined) {
+  return Boolean(notificationRecencyChannel(fieldOrKey));
+}
+
+export function notificationRecencyLabel(channel: NotificationRecencyChannel) {
+  return notificationRecencyDefinitions[channel].label;
+}
+
+export function notificationRecencyPhrase(fieldOrKey: AudienceGroupSchemaField | string | undefined) {
+  const channel = notificationRecencyChannel(fieldOrKey);
+  return channel ? notificationRecencyDefinitions[channel].phrase : 'Exclude users notified in the last';
+}
+
+export function notificationRecencyKey(channel: NotificationRecencyChannel) {
+  return notificationRecencyDefinitions[channel].key;
+}
 
 export function isHiddenAudienceField(field: AudienceGroupSchemaField) {
   return hiddenAudienceFieldKeys.has(field.key);
@@ -84,15 +124,17 @@ function channelFields(schema: AudienceGroupSchema, channel: ReactivationChannel
     return schema.fields.filter(field => !field.deprecated && (['email', 'emailAvailable'].includes(field.key) || /^email(?: available)?$/i.test(field.label)));
   }
   if (channel === 'web-push') {
-    return schema.fields.filter(field => !field.deprecated && (field.key === 'webPush' || /(?:web|browser).*(?:push|notification)|(?:push|notification).*(?:web|browser)/i.test(`${field.key} ${field.label}`)));
+    return schema.fields.filter(field => !field.deprecated && !isNotificationRecencyField(field) && (field.key === 'webPush' || /(?:web|browser).*(?:push|notification)|(?:push|notification).*(?:web|browser)/i.test(`${field.key} ${field.label}`)));
   }
   const combined = schema.fields.find(field => field.key === appNotificationTokenFieldKey && field.synthetic);
   if (combined) return [combined];
   const explicit = schema.fields.filter(field => !field.deprecated
+    && !isNotificationRecencyField(field)
     && !['fcmToken', 'apnsToken'].includes(field.key)
     && /mobile.*(?:push|token|notification)|(?:push|token|notification).*mobile/i.test(`${field.key} ${field.label}`));
   if (explicit.length) return [...new Map(explicit.map(field => [field.key, field])).values()];
   const generic = schema.fields.filter(field => !field.deprecated
+    && !isNotificationRecencyField(field)
     && field.category === 'push'
     && !['fcmToken', 'apnsToken'].includes(field.key)
     && !/web|browser|action|activity|last.?notification/i.test(`${field.key} ${field.label}`)
@@ -102,8 +144,8 @@ function channelFields(schema: AudienceGroupSchema, channel: ReactivationChannel
   return [];
 }
 
-function lastNotifiedCondition(schema: AudienceGroupSchema) {
-  const field = schema.fields.find(item => item.key === 'lastNotified' || /last notified/i.test(item.label));
+function notificationRecencyCondition(schema: AudienceGroupSchema, channel: NotificationRecencyChannel) {
+  const field = schema.fields.find(item => notificationRecencyChannel(item) === channel);
   const condition = field?.conditions.find(item => /exclude.*last.*day|exclude_in_last_days|not.*within.*day/i.test(`${item.key} ${item.label}`));
   return field && condition ? { field, condition } : null;
 }
@@ -139,15 +181,13 @@ export function seedReactivationRules(schema: AudienceGroupSchema, selectedChann
       continue;
     }
     if (rules[0]) base.push(rules[0]);
-  }
 
-  const notified = lastNotifiedCondition(schema);
-  if (notified && notified.condition.value.type === 'integer' && (notified.condition.value.min ?? 1) <= 30) {
-    const lastNotifiedRule = { id: 0, filter: notified.field.key, operator: notified.condition.key, value: '30' };
-    const emailIndex = base.findIndex(rule => rule.filter === 'email' || rule.filter === 'emailAvailable');
-    base.splice(emailIndex >= 0 ? emailIndex + 1 : base.length, 0, lastNotifiedRule);
-  } else {
-    unavailable.push('Last notified in the last 30 days');
+    const recency = notificationRecencyCondition(schema, channel);
+    if (recency && recency.condition.value.type === 'integer' && (recency.condition.value.min ?? 1) <= 30) {
+      base.push({ id: 0, filter: recency.field.key, operator: recency.condition.key, value: '30' });
+    } else {
+      unavailable.push(notificationRecencyLabel(channel));
+    }
   }
   if (!uniqueChannels.length) unavailable.unshift('No delivery channels are selected');
 
@@ -164,15 +204,15 @@ export const audienceFieldCategoryOrder = [
 ] as const;
 
 function audienceFieldCategory(field: AudienceGroupSchemaField) {
-  if (field.key === 'lastNotified' || field.category === 'consent' || field.category === 'email' || field.category === 'push') return 'Reachability & engagement';
+  if (isNotificationRecencyField(field) || field.category === 'consent' || field.category === 'email' || field.category === 'push') return 'Reachability & engagement';
   if (field.category === 'event' || field.category === 'lifecycle' || field.category === 'journey' || field.category === 'group') return 'Product & lifecycle';
   if (field.category === 'location' || field.category === 'device') return 'Profile & location';
   if (field.category === 'custom') return 'Custom properties';
   return 'Account & history';
 }
 
-function isLastNotifiedField(field: AudienceGroupSchemaField | undefined, rule?: Rule) {
-  return /last.?notified/i.test(`${field?.key ?? ''} ${field?.label ?? rule?.filter ?? ''}`);
+function isNotificationRecencyRule(field: AudienceGroupSchemaField | undefined, rule?: Rule) {
+  return isNotificationRecencyField(field ?? rule?.filter);
 }
 
 export function groupAudienceFields(fields: AudienceGroupSchemaField[]) {
@@ -191,7 +231,9 @@ const legacyField: Record<string, string> = {
   'Push Enabled': 'pushEnabled',
   'Email Available': 'emailAvailable',
   'Last Active': 'lastActiveAt',
-  'Last Notified': 'lastNotified',
+  'Last Email Notification': 'lastEmailNotification',
+  'Last Mobile Push Notification': 'lastMobilePushNotification',
+  'Last Web Push Notification': 'lastWebPushNotification',
 };
 const legacyOperator: Record<string, string> = {
   Is: 'equals',
@@ -202,7 +244,9 @@ const legacyOperator: Record<string, string> = {
   'In the last': 'within_days',
   More: 'greater_than',
   'More than': 'not_within_days',
-  'Exclude users notified in the last X days': 'exclude_in_last_days',
+  'Exclude users emailed in the last X days': 'exclude_in_last_days',
+  'Exclude users sent a mobile push in the last X days': 'exclude_in_last_days',
+  'Exclude users sent a web push in the last X days': 'exclude_in_last_days',
 };
 
 export function toBackendCondition(rule: Rule, schema?: AudienceGroupSchema) {
@@ -259,7 +303,7 @@ export function ruleHasInput(rule: Rule) {
 
 export function isRuleComplete(rule: Rule, schema?: AudienceGroupSchema) {
   if (!rule.filter.trim() || !rule.operator.trim()) return false;
-  if (!schema && rule.filter === 'lastNotified') return rule.operator === 'exclude_in_last_days' && /^[1-9]\d*$/.test(rule.value.trim());
+  if (!schema && isNotificationRecencyField(rule.filter)) return rule.operator === 'exclude_in_last_days' && /^[1-9]\d*$/.test(rule.value.trim());
   if (!schema) return Boolean(rule.value.trim() || /available|exists|not_exists|never|no_|none/i.test(rule.operator));
   const condition = schemaCondition(rule, schema);
   if (!condition) return false;
@@ -267,7 +311,7 @@ export function isRuleComplete(rule: Rule, schema?: AudienceGroupSchema) {
   if (field?.key === 'journeyAutomation' && rule.value === anyJourneyValue) {
     return Boolean(condition.value.options?.length);
   }
-  if (isLastNotifiedField(field, rule)) {
+  if (isNotificationRecencyRule(field, rule)) {
     return /exclude.*last.*day|exclude_in_last_days|not.*within.*day/i.test(`${condition.key} ${condition.label}`)
       && condition.value.type === 'integer'
       && /^[1-9]\d*$/.test(rule.value.trim())
@@ -317,7 +361,7 @@ export function incompleteRuleCount(blocks: Block[], schema?: AudienceGroupSchem
 export function readableRule(rule: Rule, schema?: AudienceGroupSchema) {
   const field = schema?.fields.find(item => item.key === rule.filter || item.label === rule.filter);
   const condition = field?.conditions.find(item => item.key === rule.operator || item.label === rule.operator);
-  if (isLastNotifiedField(field, rule)) return `Exclude users notified in the last ${rule.value.trim()} days`;
+  if (isNotificationRecencyRule(field, rule)) return `${notificationRecencyPhrase(field ?? rule.filter)} ${rule.value.trim()} days`;
   if (field?.key === 'journeyAutomation' && rule.value === anyJourneyValue) return `${field.label} ${condition?.label ?? rule.operator} any journey`;
   const optionLabel = (value: string) => condition?.value.options?.find(option => option.key === value)?.label ?? value;
   const values = rule.value.split(',').map(item => item.trim()).filter(Boolean).map(optionLabel).join(', ');
