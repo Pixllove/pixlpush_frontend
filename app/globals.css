@@ -21103,7 +21103,7 @@ button[aria-expanded="true"] {
 /* Home conversations sidebar: fixed to the right edge under the top bar, slides in and out on every screen.
    From 1200px the page makes room for it; below that it slides over the page with a scrim. */
 .home-layout {
-  --history-w: 340px;
+  --history-w: 260px;
   transition: padding-right 260ms cubic-bezier(0.32, 0.72, 0, 1);
 }
 .home-history-sidebar {
