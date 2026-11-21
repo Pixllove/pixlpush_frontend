@@ -41,7 +41,7 @@ import {
 import { useMemo, useState } from 'react';
 import type { ComponentType, ReactNode } from 'react';
 import type { AudienceGroupSchemaField } from '@/types/project';
-import { appNotificationTokenFieldKey, isHiddenAudienceField } from './audienceGroupRules';
+import { appNotificationTokenFieldKey, audienceFieldTopic, isHiddenAudienceField } from './audienceGroupRules';
 
 type Props = {
   fields: AudienceGroupSchemaField[];
@@ -58,32 +58,12 @@ type PickerGroup = {
   fields: AudienceGroupSchemaField[];
 };
 
-const pushKeys = new Set([
-  appNotificationTokenFieldKey,
-  'fcmToken',
-  'apnsToken',
-  'webPush',
-  'pushNotification',
-  'pushNotificationAction',
-  'lastPushNotification',
-]);
-
-const categoryLabels: Record<string, string> = {
-  event: 'Product & lifecycle',
-  lifecycle: 'Product & lifecycle',
-  journey: 'Product & lifecycle',
-  group: 'Product & lifecycle',
-  location: 'Profile & location',
-  device: 'Profile & location',
-  custom: 'Custom properties',
-};
-
 const categoryOrder = [
-  'Reachability & engagement',
-  'Product & lifecycle',
-  'Profile & location',
-  'Account & history',
-  'Custom properties',
+  'Reachability',
+  'Engagement',
+  'Groups & Segments',
+  'Automation & Campaigns',
+  'Account Details',
 ];
 
 const iconByKey: Record<string, ComponentType<{ fontSize?: 'small' | 'inherit' | 'large' | 'medium' }>> = {
@@ -94,6 +74,14 @@ const iconByKey: Record<string, ComponentType<{ fontSize?: 'small' | 'inherit' |
   lastEmailNotification: AccessTimeRounded,
   lastMobilePushNotification: AccessTimeRounded,
   lastWebPushNotification: AccessTimeRounded,
+  mobilePushAction: TouchAppRounded,
+  webPushAction: TouchAppRounded,
+  mobileAppUserEvents: EventAvailableRounded,
+  webUserEvents: EventAvailableRounded,
+  historicalJourneyAutomation: EventAvailableRounded,
+  emailCampaign: AppsRounded,
+  mobilePushCampaign: AppsRounded,
+  webPushCampaign: AppsRounded,
   [appNotificationTokenFieldKey]: PhoneIphoneRounded,
   fcmToken: PhoneIphoneRounded,
   apnsToken: PhoneIphoneRounded,
@@ -123,10 +111,7 @@ function fieldIcon(field: AudienceGroupSchemaField, size: 'small' | 'medium' = '
   return <Icon fontSize={size} />;
 }
 
-function groupLabel(field: AudienceGroupSchemaField) {
-  if (pushKeys.has(field.key) || field.category === 'push' || /last.?email|last.?mobile.?push|last.?web.?push|last.?notified/i.test(`${field.key} ${field.label}`) || field.category === 'email' || field.category === 'consent') return 'Reachability & engagement';
-  return categoryLabels[field.category ?? ''] ?? 'Account & history';
-}
+function groupLabel(field: AudienceGroupSchemaField) { return audienceFieldTopic(field); }
 
 function groupedFields(fields: AudienceGroupSchemaField[]): PickerGroup[] {
   return categoryOrder

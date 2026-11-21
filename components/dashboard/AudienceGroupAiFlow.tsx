@@ -7,10 +7,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { audienceGroupsApi, onboardingApi } from '@/lib/projects/api';
 import type { AudienceGroup, AudienceGroupSchema, AudienceGroupSchemaField } from '@/types/project';
 import AudienceConditionFieldPicker from './AudienceConditionFieldPicker';
-import { anyJourneyValue, appNotificationTokenFieldKey, audiencePickerFields, incompleteRuleCount, isNotificationRecencyField, isRuleComplete, makeBlock, makeRule, notificationRecencyPhrase, readableRule, reactivationChannelsForProject, ruleHasInput, seedReactivationRules, toBackendRules, validRuleCount, withAppNotificationTokenField, type Block, type Rule } from './audienceGroupRules';
+import { anyJourneyValue, appNotificationTokenFieldKey, audienceFieldTopic, audiencePickerFields, incompleteRuleCount, isNotificationRecencyField, isRuleComplete, makeBlock, makeRule, notificationRecencyPhrase, readableRule, reactivationChannelsForProject, ruleHasInput, seedReactivationRules, toBackendRules, validRuleCount, withAppNotificationTokenField, type Block, type Rule } from './audienceGroupRules';
 
 type Goal = 'behavior' | 'campaign' | 'event' | 'profile' | 'reactivation' | 'other';
-type ProfileCategory = 'reachability' | 'product' | 'profile' | 'account' | 'other';
+type ProfileCategory = 'reachability' | 'engagement' | 'groups' | 'automation' | 'account' | 'other';
 
 type Props = {
   projectId: string;
@@ -30,10 +30,11 @@ const goals: Array<{ id: Goal; label: string; description: string }> = [
 ];
 
 const profileCategories: Array<{ id: ProfileCategory; label: string }> = [
-  { id: 'reachability', label: 'Reachability & engagement' },
-  { id: 'product', label: 'Product & lifecycle' },
-  { id: 'profile', label: 'Profile & location' },
-  { id: 'account', label: 'Account & history' },
+  { id: 'reachability', label: 'Reachability' },
+  { id: 'engagement', label: 'Engagement' },
+  { id: 'groups', label: 'Groups & Segments' },
+  { id: 'automation', label: 'Automation & Campaigns' },
+  { id: 'account', label: 'Account Details' },
   { id: 'other', label: 'Something else' },
 ];
 
@@ -54,14 +55,15 @@ function isLifecycleField(field: AudienceGroupSchemaField) {
 }
 
 function fieldsForCategory(schema: AudienceGroupSchema, category: ProfileCategory, sdkIntegrated = true) {
-  const categories: Record<Exclude<ProfileCategory, 'other'>, string[]> = {
-    reachability: ['email', 'emailAction', 'lastEmailNotification', 'lastMobilePushNotification', 'lastWebPushNotification', appNotificationTokenFieldKey, 'webPush', 'pushNotification', 'pushNotificationAction'],
-    product: ['currentLifecycleSegment', 'historicalLifecycleSegment', 'journeyAutomation', 'audienceGroup', 'performedEvent'],
-    profile: ['country', 'region', 'language', 'platform'],
-    account: ['userImport', 'accountStatus', 'userType', 'createdDate'],
+  const topicByCategory: Record<Exclude<ProfileCategory, 'other'>, string> = {
+    reachability: 'Reachability',
+    engagement: 'Engagement',
+    groups: 'Groups & Segments',
+    automation: 'Automation & Campaigns',
+    account: 'Account Details',
   };
   return audiencePickerFields(schema.fields).filter(field => !field.deprecated
-    && (categories[category as Exclude<ProfileCategory, 'other'>]?.includes(field.key) || (category === 'reachability' && field.category === 'consent'))
+    && audienceFieldTopic(field) === topicByCategory[category as Exclude<ProfileCategory, 'other'>]
     && (sdkIntegrated || !isLifecycleField(field)));
 }
 
@@ -71,19 +73,19 @@ function availableFieldsForCategory(schema: AudienceGroupSchema, category: Profi
 
 function ruleFields(schema: AudienceGroupSchema, goal: Goal, branch: string, profileCategory: ProfileCategory | null, sdkIntegrated = true) {
   const fields = audiencePickerFields(schema.fields).filter(field => !field.deprecated && fieldHasData(field) && (sdkIntegrated || !isLifecycleField(field)));
-  if (goal === 'event') return fields.filter(field => field.key === 'performedEvent');
+  if (goal === 'event') return fields.filter(field => ['performedEvent', 'mobileAppUserEvents', 'webUserEvents'].includes(field.key));
   if (goal === 'behavior') {
-    const keys = branch === 'events' ? ['performedEvent'] : branch === 'lifecycle' ? ['currentLifecycleSegment', 'historicalLifecycleSegment'] : ['journeyAutomation'];
+    const keys = branch === 'events' ? ['performedEvent', 'mobileAppUserEvents', 'webUserEvents'] : branch === 'lifecycle' ? ['currentLifecycleSegment', 'historicalLifecycleSegment'] : ['journeyAutomation', 'historicalJourneyAutomation'];
     return fields.filter(field => keys.includes(field.key));
   }
   if (goal === 'campaign') {
-    const activity = ['emailAction', 'lastEmailNotification', 'lastMobilePushNotification', 'lastWebPushNotification', 'pushNotificationAction'];
-    if (branch === 'specific') return fields.filter(field => /campaign/i.test(`${field.key} ${field.label}`) && optionHas(field, /campaign/i));
+    const activity = ['emailAction', 'mobilePushAction', 'webPushAction', 'lastEmailNotification', 'lastMobilePushNotification', 'lastWebPushNotification', 'emailCampaign', 'mobilePushCampaign', 'webPushCampaign'];
+    if (branch === 'specific') return fields.filter(field => ['emailCampaign', 'mobilePushCampaign', 'webPushCampaign'].includes(field.key) && field.conditions.some(condition => Boolean(condition.value.options?.length)));
     return fields.filter(field => activity.includes(field.key));
   }
   if (goal === 'profile' && profileCategory && profileCategory !== 'other') return fieldsForCategory(schema, profileCategory, sdkIntegrated).filter(fieldHasData);
   if (goal === 'reactivation') {
-    const keys = ['email', 'emailAvailable', 'emailAction', 'lastEmailNotification', 'lastMobilePushNotification', 'lastWebPushNotification', appNotificationTokenFieldKey, 'fcmToken', 'apnsToken', 'webPush', 'pushNotification', 'pushNotificationAction', 'performedEvent', 'accountStatus'];
+    const keys = ['email', 'emailAvailable', 'emailAction', 'mobilePushAction', 'webPushAction', 'lastEmailNotification', 'lastMobilePushNotification', 'lastWebPushNotification', appNotificationTokenFieldKey, 'fcmToken', 'apnsToken', 'webPush', 'pushNotification', 'pushNotificationAction', 'performedEvent', 'mobileAppUserEvents', 'webUserEvents', 'accountStatus'];
     const consent = fields.filter(field => /consent|opt.?in/i.test(`${field.key} ${field.label}`));
     return fields.filter(field => keys.includes(field.key) || ['email', 'push'].includes(field.category ?? '') || /(?:email|web.?push|mobile.?push|last.?email|last.?notified)/i.test(`${field.key} ${field.label}`) || consent.includes(field));
   }
@@ -91,17 +93,17 @@ function ruleFields(schema: AudienceGroupSchema, goal: Goal, branch: string, pro
 }
 
 function campaignSpecificField(schema: AudienceGroupSchema) {
-  return schema.fields.find(field => /campaign/i.test(`${field.key} ${field.label}`) && optionHas(field, /campaign/i));
+  return schema.fields.find(field => ['emailCampaign', 'mobilePushCampaign', 'webPushCampaign'].includes(field.key) && field.conditions.some(condition => Boolean(condition.value.options?.length)));
 }
 
 function fieldsForOther(schema: AudienceGroupSchema, description: string, sdkIntegrated = true) {
   const text = description.toLowerCase();
   const hints = [
-    { words: ['event', 'action', 'purchase', 'checkout'], keys: ['performedEvent'] },
+    { words: ['event', 'action', 'purchase', 'checkout'], keys: ['performedEvent', 'mobileAppUserEvents', 'webUserEvents'] },
     { words: ['email', 'opened', 'clicked', 'campaign'], keys: ['email', 'emailAction', 'lastEmailNotification'] },
-    { words: ['push', 'notification'], keys: [appNotificationTokenFieldKey, 'webPush', 'pushNotification', 'pushNotificationAction', 'lastMobilePushNotification', 'lastWebPushNotification'] },
+    { words: ['push', 'notification'], keys: [appNotificationTokenFieldKey, 'webPush', 'mobilePushAction', 'webPushAction', 'pushNotification', 'pushNotificationAction', 'lastMobilePushNotification', 'lastWebPushNotification'] },
     { words: ['country', 'location', 'language', 'platform'], keys: ['country', 'region', 'language', 'platform'] },
-    { words: ['journey'], keys: ['journeyAutomation'] },
+    { words: ['journey'], keys: ['journeyAutomation', 'historicalJourneyAutomation'] },
     { words: ['segment', 'lifecycle'], keys: ['currentLifecycleSegment', 'historicalLifecycleSegment'] },
   ];
   const keys = new Set(hints.filter(hint => hint.words.some(word => text.includes(word))).flatMap(hint => hint.keys));
@@ -136,13 +138,13 @@ function RuleEditor({ schema, fields, allFields, journeyScope, blocks, onChange 
     rules: block.rules.map(rule => {
       if (rule.id !== ruleId) return rule;
       if (key !== 'filter') {
-        const isAnyJourney = journeyScope === 'any' && rule.filter === 'journeyAutomation';
+        const isAnyJourney = journeyScope === 'any' && ['journeyAutomation', 'historicalJourneyAutomation'].includes(rule.filter);
         return { ...rule, [key]: value, ...(key === 'operator' ? { value: isAnyJourney ? anyJourneyValue : '' } : {}) };
       }
       const selectedField = schema.fields.find(field => field.key === value);
       const isNotificationRecency = isNotificationRecencyField(selectedField);
       const defaultOperator = selectedField?.conditions.find(condition => /exclude.*last.*day|exclude_in_last_days|not.*within.*day/i.test(`${condition.key} ${condition.label}`))?.key ?? '';
-      const isAnyJourney = journeyScope === 'any' && selectedField?.key === 'journeyAutomation';
+      const isAnyJourney = journeyScope === 'any' && ['journeyAutomation', 'historicalJourneyAutomation'].includes(selectedField?.key ?? '');
       return { ...rule, filter: value, operator: isNotificationRecency ? defaultOperator : '', value: isAnyJourney ? anyJourneyValue : '', property: '' };
     }),
   }));
@@ -178,7 +180,7 @@ function RuleRow({ rule, schema, fields, allFields, journeyScope, onChange, onRe
   const valueType = condition?.value.type;
   const selected = condition?.value.multiple ? rule.value.split(',').map(value => value.trim()).filter(Boolean) : rule.value;
   const hasCustomProperty = field?.key === 'customProperty';
-  const isAnyJourney = journeyScope === 'any' && field?.key === 'journeyAutomation';
+  const isAnyJourney = journeyScope === 'any' && ['journeyAutomation', 'historicalJourneyAutomation'].includes(field?.key ?? '');
   const isNotificationRecency = isNotificationRecencyField(field);
   const complete = isRuleComplete(rule, schema);
   const incomplete = !complete;

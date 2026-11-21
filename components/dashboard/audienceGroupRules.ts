@@ -18,6 +18,8 @@ export const hiddenAudienceFieldKeys = new Set([
   'lastEmailed',
   'lastNotified',
   'lastPushNotification',
+  'pushNotification',
+  'pushNotificationAction',
   'customProperty',
 ]);
 
@@ -27,9 +29,9 @@ export const appNotificationTokenFieldLabel = 'Mobile push';
 export type NotificationRecencyChannel = 'email' | 'mobile-push' | 'web-push';
 
 const notificationRecencyDefinitions: Record<NotificationRecencyChannel, { key: string; label: string; phrase: string }> = {
-  email: { key: 'lastEmailNotification', label: 'Last Email Notification', phrase: 'Exclude users emailed in the last' },
-  'mobile-push': { key: 'lastMobilePushNotification', label: 'Last Mobile Push Notification', phrase: 'Exclude users sent a mobile push in the last' },
-  'web-push': { key: 'lastWebPushNotification', label: 'Last Web Push Notification', phrase: 'Exclude users sent a web push in the last' },
+  email: { key: 'lastEmailNotification', label: 'Last Email Sent', phrase: 'Exclude users sent an email in the last' },
+  'mobile-push': { key: 'lastMobilePushNotification', label: 'Last Mobile Push Sent', phrase: 'Exclude users sent a mobile push in the last' },
+  'web-push': { key: 'lastWebPushNotification', label: 'Last Web Push Sent', phrase: 'Exclude users sent a web push in the last' },
 };
 
 function notificationRecencyText(fieldOrKey: AudienceGroupSchemaField | string | undefined) {
@@ -63,7 +65,7 @@ export function notificationRecencyKey(channel: NotificationRecencyChannel) {
 }
 
 export function isHiddenAudienceField(field: AudienceGroupSchemaField) {
-  return hiddenAudienceFieldKeys.has(field.key);
+  return Boolean(field.deprecated) || hiddenAudienceFieldKeys.has(field.key);
 }
 
 /**
@@ -81,6 +83,7 @@ export function withAppNotificationTokenField(schema: AudienceGroupSchema): Audi
     key: appNotificationTokenFieldKey,
     label: appNotificationTokenFieldLabel,
     category: 'push',
+    topic: 'reachability',
     synthetic: true,
     operators: fcm.operators,
     conditions: fcm.conditions,
@@ -196,19 +199,28 @@ export function seedReactivationRules(schema: AudienceGroupSchema, selectedChann
 }
 
 export const audienceFieldCategoryOrder = [
-  'Reachability & engagement',
-  'Product & lifecycle',
-  'Profile & location',
-  'Account & history',
-  'Custom properties',
+  'Reachability',
+  'Engagement',
+  'Groups & Segments',
+  'Automation & Campaigns',
+  'Account Details',
 ] as const;
 
-function audienceFieldCategory(field: AudienceGroupSchemaField) {
-  if (isNotificationRecencyField(field) || field.category === 'consent' || field.category === 'email' || field.category === 'push') return 'Reachability & engagement';
-  if (field.category === 'event' || field.category === 'lifecycle' || field.category === 'journey' || field.category === 'group') return 'Product & lifecycle';
-  if (field.category === 'location' || field.category === 'device') return 'Profile & location';
-  if (field.category === 'custom') return 'Custom properties';
-  return 'Account & history';
+const topicLabels: Record<string, typeof audienceFieldCategoryOrder[number]> = {
+  reachability: 'Reachability',
+  engagement: 'Engagement',
+  groups_segments: 'Groups & Segments',
+  automation_campaigns: 'Automation & Campaigns',
+  account_details: 'Account Details',
+};
+
+export function audienceFieldTopic(field: AudienceGroupSchemaField) {
+  if (field.topic && topicLabels[field.topic]) return topicLabels[field.topic];
+  if (isNotificationRecencyField(field) || field.category === 'consent' || field.category === 'email' || field.category === 'push') return 'Reachability';
+  if (field.key === 'emailAction' || field.key === 'mobilePushAction' || field.key === 'webPushAction' || field.category === 'event') return 'Engagement';
+  if (field.category === 'lifecycle' || field.category === 'group') return 'Groups & Segments';
+  if (field.category === 'journey') return 'Automation & Campaigns';
+  return 'Account Details';
 }
 
 function isNotificationRecencyRule(field: AudienceGroupSchemaField | undefined, rule?: Rule) {
@@ -217,7 +229,7 @@ function isNotificationRecencyRule(field: AudienceGroupSchemaField | undefined, 
 
 export function groupAudienceFields(fields: AudienceGroupSchemaField[]) {
   return audienceFieldCategoryOrder
-    .map(label => ({ label, fields: fields.filter(field => audienceFieldCategory(field) === label) }))
+    .map(label => ({ label, fields: fields.filter(field => audienceFieldTopic(field) === label) }))
     .filter(group => group.fields.length > 0);
 }
 
@@ -308,7 +320,7 @@ export function isRuleComplete(rule: Rule, schema?: AudienceGroupSchema) {
   const condition = schemaCondition(rule, schema);
   if (!condition) return false;
   const field = schemaField(rule, schema);
-  if (field?.key === 'journeyAutomation' && rule.value === anyJourneyValue) {
+  if (['journeyAutomation', 'historicalJourneyAutomation'].includes(field?.key ?? '') && rule.value === anyJourneyValue) {
     return Boolean(condition.value.options?.length);
   }
   if (isNotificationRecencyRule(field, rule)) {
@@ -333,9 +345,9 @@ export function toBackendRules(blocks: Block[], schema?: AudienceGroupSchema) {
     for (const rule of block.rules) {
       const field = schemaField(rule, schema);
       const condition = schemaCondition(rule, schema);
-      if (field?.key === 'journeyAutomation' && rule.value === anyJourneyValue && condition?.value.options?.length) {
+      if (['journeyAutomation', 'historicalJourneyAutomation'].includes(field?.key ?? '') && rule.value === anyJourneyValue && condition?.value.options?.length) {
         const journeyConditions = condition.value.options.map(option => toBackendCondition({ ...rule, value: option.key }, schema));
-        const negative = /^(?:is_not_currently_in|has_never_entered|has_not_completed)$/.test(condition.key);
+        const negative = /^(?:is_not_currently_in|has_never_entered|has_not_completed|has_not_been_in|has_not_been_in_any_of)$/.test(condition.key);
         conditions.push({ operator: negative ? 'AND' : 'OR', conditions: journeyConditions });
       } else {
         conditions.push(toBackendCondition(rule, schema));
@@ -362,7 +374,7 @@ export function readableRule(rule: Rule, schema?: AudienceGroupSchema) {
   const field = schema?.fields.find(item => item.key === rule.filter || item.label === rule.filter);
   const condition = field?.conditions.find(item => item.key === rule.operator || item.label === rule.operator);
   if (isNotificationRecencyRule(field, rule)) return `${notificationRecencyPhrase(field ?? rule.filter)} ${rule.value.trim()} days`;
-  if (field?.key === 'journeyAutomation' && rule.value === anyJourneyValue) return `${field.label} ${condition?.label ?? rule.operator} any journey`;
+  if (['journeyAutomation', 'historicalJourneyAutomation'].includes(field?.key ?? '') && rule.value === anyJourneyValue) return `${field?.label ?? rule.filter} ${condition?.label ?? rule.operator} any journey`;
   const optionLabel = (value: string) => condition?.value.options?.find(option => option.key === value)?.label ?? value;
   const values = rule.value.split(',').map(item => item.trim()).filter(Boolean).map(optionLabel).join(', ');
   return `${field?.label ?? rule.filter} ${condition?.label ?? rule.operator}${values ? ` ${values}` : ''}${rule.property ? ` (${rule.property})` : ''}`;

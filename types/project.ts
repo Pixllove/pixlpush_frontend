@@ -433,6 +433,8 @@ export interface AudienceGroupSchemaField {
   key: string;
   label: string;
   category?: string;
+  /** Backend-owned picker topic. Older backend responses may omit it. */
+  topic?: 'reachability' | 'engagement' | 'groups_segments' | 'automation_campaigns' | 'account_details' | string;
   /** Frontend-only marker for the temporary combined FCM/APNs fallback field. */
   synthetic?: boolean;
   /** Legacy fields remain readable for saved rules but are not offered to new rules. */
