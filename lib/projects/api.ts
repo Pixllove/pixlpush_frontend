@@ -275,11 +275,19 @@ export type SyncImportJob = {
 export type SyncWebhookEndpoint = { id: string; name: string; url: string; events: string[]; status: "active" | "paused"; createdAt: string; updatedAt: string };
 export type CreatedSyncWebhook = SyncWebhookEndpoint & { secret: string; warning: string };
 export type SyncWebhookDelivery = { id: string; status: "pending" | "processing" | "delivered" | "dead_letter"; attempts: number; responseStatus: number | null; lastError: string | null; deliveredAt: string | null; createdAt: string; topic: string; eventCreatedAt: string };
+export type SyncOverduePolicy = "catch_up" | "skip" | "exit";
+export type SyncSourceComparison = {
+  matched: boolean; participantsMigrated: boolean; missingJourneyIds: string[];
+  differences: { journeyId: string; field: string; source: number; pixlpush: number }[];
+};
 export type SyncMigrationRun = {
   id: string; projectId: string; name: string; sourceName: string;
   status: "draft" | "draining" | "cutover" | "rolled_back"; journeyIds: string[];
   stagedDefinitions: unknown; validationReport: unknown; drainConfirmedAt: string | null;
   cutoverAt: string | null; rolledBackAt: string | null; createdAt: string; updatedAt: string;
+  sourceHoldAt: string | null; sourceWatermark: string | null; comparedAt: string | null; comparisonReport: unknown;
+  cutoverRequestedAt: string | null; cutoverRequestedById: string | null; cutoverApprovedById: string | null;
+  overduePolicy: SyncOverduePolicy; overdueMaxHours: number; catchUpMinutes: number;
   ownerships?: { journeyId: string; owner: "source" | "pixlpush"; fencingToken: number }[];
 };
 const syncAt = (projectId: string, path = "") => at(projectId, `/data-sync${path}`);
@@ -321,10 +329,13 @@ export const dataSyncApi = {
   createMigration: (projectId: string, input: { name: string; sourceName?: string; journeyIds: string[] }) => authRequest<SyncMigrationRun>(syncAt(projectId, "/migrations"), input, BASE),
   validateMigration: (projectId: string, runId: string) => authRequest<unknown>(syncAt(projectId, `/migrations/${encodeURIComponent(runId)}/validate`), {}, BASE),
   stageMigration: (projectId: string, runId: string, definitions: unknown) => authRequest<SyncMigrationRun>(syncAt(projectId, `/migrations/${encodeURIComponent(runId)}/staged`), { definitions }, BASE, "PUT"),
-  importMigrationParticipants: (projectId: string, runId: string, participants: Array<{ journeyId: string; externalUserId: string; resumeAtStepKey?: string; enteredAt?: string; entryNumber?: number }>) => authRequest<{ staged: number; unknownUsers: number; duplicates: number }>(syncAt(projectId, `/migrations/${encodeURIComponent(runId)}/participants`), { participants }, BASE),
+  importMigrationParticipants: (projectId: string, runId: string, participants: Array<{ journeyId: string; externalUserId: string; resumeAtStepKey?: string; enteredAt?: string; nextRunAt?: string; entryNumber?: number }>) => authRequest<{ staged: number; unknownUsers: number; duplicates: number }>(syncAt(projectId, `/migrations/${encodeURIComponent(runId)}/participants`), { participants }, BASE),
   drainMigration: (projectId: string, runId: string) => authRequest<SyncMigrationRun>(syncAt(projectId, `/migrations/${encodeURIComponent(runId)}/drain`), {}, BASE),
   confirmMigrationDrain: (projectId: string, runId: string) => authRequest<SyncMigrationRun>(syncAt(projectId, `/migrations/${encodeURIComponent(runId)}/confirm-drain`), {}, BASE),
-  cutoverMigration: (projectId: string, runId: string) => authRequest<SyncMigrationRun>(syncAt(projectId, `/migrations/${encodeURIComponent(runId)}/cutover`), {}, BASE),
+  confirmSourceHold: (projectId: string, runId: string, watermark: string) => authRequest<SyncMigrationRun>(syncAt(projectId, `/migrations/${encodeURIComponent(runId)}/source-hold`), { watermark, confirmed: true }, BASE),
+  compareMigration: (projectId: string, runId: string, input: { participantsMigrated: boolean; journeys: Record<string, { steps: number; active: number; stepCounts: Record<string, number> }> }) => authRequest<SyncSourceComparison>(syncAt(projectId, `/migrations/${encodeURIComponent(runId)}/compare`), input, BASE),
+  requestCutover: (projectId: string, runId: string, input: { overduePolicy: SyncOverduePolicy; overdueMaxHours: number; catchUpMinutes: number }) => authRequest<SyncMigrationRun>(syncAt(projectId, `/migrations/${encodeURIComponent(runId)}/cutover/request`), input, BASE),
+  cutoverMigration: (projectId: string, runId: string, confirmSelfApproval = false) => authRequest<SyncMigrationRun>(syncAt(projectId, `/migrations/${encodeURIComponent(runId)}/cutover`), { confirmSelfApproval }, BASE),
   rollbackMigration: (projectId: string, runId: string) => authRequest<SyncMigrationRun>(syncAt(projectId, `/migrations/${encodeURIComponent(runId)}/rollback`), {}, BASE),
   serverOnlyEvents: (projectId: string) => authRequest<{ events: string[] }>(at(projectId, "/sdk-keys/server-only-events"), undefined, BASE),
   setServerOnlyEvents: (projectId: string, events: string[]) => authRequest<{ events: string[] }>(at(projectId, "/sdk-keys/server-only-events"), { events }, BASE, "PUT"),
