@@ -49,7 +49,8 @@ export default function DataSyncMigrations({ projectId, accountId, canEdit, canC
   const [watermark, setWatermark] = useState('');
   const [stopped, setStopped] = useState(false);
   const [migrated, setMigrated] = useState(true);
-  const [counts, setCounts] = useState<Record<string, { steps: string; active: string; stepCounts: string }>>({});
+  const [counts, setCounts] = useState<Record<string, { steps: string; active: string; stepCounts: string; sentMessages: string }>>({});
+  const [importProblems, setImportProblems] = useState<string[]>([]);
   const [policy, setPolicy] = useState<SyncOverduePolicy>('catch_up');
   const [maxHours, setMaxHours] = useState('24');
   const [catchUp, setCatchUp] = useState('60');
@@ -81,7 +82,7 @@ export default function DataSyncMigrations({ projectId, accountId, canEdit, canC
     setWatermark('');
     setStopped(false);
     setSelfApproved(false);
-    if (kind === 'compare') setCounts(Object.fromEntries(target.journeyIds.map((id) => [id, { steps: '', active: '0', stepCounts: '' }])));
+    if (kind === 'compare') setCounts(Object.fromEntries(target.journeyIds.map((id) => [id, { steps: '', active: '0', stepCounts: '', sentMessages: '' }])));
   };
 
   const submit = async () => {
@@ -93,7 +94,7 @@ export default function DataSyncMigrations({ projectId, accountId, canEdit, canC
       if (action.kind === 'drain') await dataSyncApi.drainMigration(projectId, id);
       if (action.kind === 'hold') await dataSyncApi.confirmSourceHold(projectId, id, watermark.trim());
       if (action.kind === 'compare') {
-        const journeys = Object.fromEntries(Object.entries(counts).map(([journeyId, value]) => [journeyId, { steps: Number(value.steps), active: Number(value.active || 0), stepCounts: parseStepCounts(value.stepCounts) }]));
+        const journeys = Object.fromEntries(Object.entries(counts).map(([journeyId, value]) => [journeyId, { steps: Number(value.steps), active: Number(value.active || 0), stepCounts: parseStepCounts(value.stepCounts), ...(migrated && value.sentMessages ? { sentMessages: Number(value.sentMessages) } : {}) }]));
         const result = await dataSyncApi.compareMigration(projectId, id, { participantsMigrated: migrated, journeys });
         if (!result.matched) {
           await refresh();
@@ -113,7 +114,7 @@ export default function DataSyncMigrations({ projectId, accountId, canEdit, canC
     }
   };
 
-  const validCounts = Object.values(counts).every((value) => /^\d+$/.test(value.steps) && (!migrated || /^\d+$/.test(value.active)));
+  const validCounts = Object.values(counts).every((value) => /^\d+$/.test(value.steps) && (!migrated || (/^\d+$/.test(value.active) && /^\d*$/.test(value.sentMessages))));
   const validPolicy = /^\d+$/.test(maxHours) && Number(maxHours) >= 1 && Number(maxHours) <= 720 && /^\d+$/.test(catchUp) && Number(catchUp) >= 1 && Number(catchUp) <= 1440;
   const canSubmit = !busy && (action?.kind === 'hold' ? Boolean(watermark.trim() && stopped) : action?.kind === 'compare' ? validCounts : action?.kind === 'request' ? validPolicy : true);
   const ownRequest = action?.kind === 'approve' && action.run.cutoverRequestedById === accountId;
@@ -199,16 +200,21 @@ export default function DataSyncMigrations({ projectId, accountId, canEdit, canC
               )}
               {participantsRun === item.id && (
                 <Stack gap={1}>
-                  <TextField multiline minRows={4} label="Participants JSON" value={participantsText} onChange={(event) => setParticipantsText(event.target.value)} helperText="Each row: journeyId, externalUserId, and optional resumeAtStepKey, enteredAt, nextRunAt, entryNumber." InputProps={{ sx: { fontFamily: 'var(--pp-mono)', fontSize: 'var(--fs-12)' } }} />
+                  <TextField multiline minRows={4} label="Participants JSON" value={participantsText} onChange={(event) => setParticipantsText(event.target.value)} helperText="Each row: journeyId, externalUserId, and optional externalKey, resumeAtStepKey, enteredAt, nextRunAt, entryNumber, completedSteps (stepKey, status, sentAt, openedAt, clickedAt, sourceMessageId)." InputProps={{ sx: { fontFamily: 'var(--pp-mono)', fontSize: 'var(--fs-12)' } }} />
+                  {importProblems.length > 0 && <Alert severity="error" onClose={() => setImportProblems([])}>{importProblems.map((problem) => <Typography key={problem} variant="body2">{problem}</Typography>)}</Alert>}
                   <Button size="small" variant="outlined" sx={{ alignSelf: 'flex-start' }} disabled={busy} onClick={() => void run(async () => {
+                    setImportProblems([]);
                     const rows = JSON.parse(participantsText) as Parameters<typeof dataSyncApi.importMigrationParticipants>[2];
                     if (!Array.isArray(rows)) throw new Error('Participants must be a JSON array.');
-                    let staged = 0; let unknown = 0; let duplicates = 0;
+                    let staged = 0; let messages = 0; let unknown = 0; let duplicates = 0; let rejectedCount = 0;
+                    const problems: string[] = [];
                     for (let offset = 0; offset < rows.length; offset += 500) {
                       const result = await dataSyncApi.importMigrationParticipants(projectId, item.id, rows.slice(offset, offset + 500));
-                      staged += result.staged; unknown += result.unknownUsers; duplicates += result.duplicates;
+                      staged += result.staged; messages += result.messages; unknown += result.unknownUsers; duplicates += result.duplicates; rejectedCount += result.rejectedCount;
+                      for (const problem of result.rejected) if (problems.length < 5) problems.push(`Row ${offset + problem.index + 1}: ${problem.message}`);
                     }
-                    setNotice(`${staged} staged · ${unknown} unknown users · ${duplicates} duplicates`);
+                    setImportProblems(rejectedCount ? [`${rejectedCount} rows need fixing.`, ...problems] : []);
+                    setNotice(`${staged} staged · ${messages} sent messages recorded · ${unknown} unknown users · ${duplicates} duplicates`);
                   })}>Stage participants</Button>
                 </Stack>
               )}
@@ -243,7 +249,7 @@ export default function DataSyncMigrations({ projectId, accountId, canEdit, canC
                     <TextField size="small" label="Source steps" value={value.steps} onChange={(event) => setCounts((all) => ({ ...all, [id]: { ...value, steps: event.target.value } }))} />
                     {migrated && <TextField size="small" label="Active participants" value={value.active} onChange={(event) => setCounts((all) => ({ ...all, [id]: { ...value, active: event.target.value } }))} />}
                   </Box>
-                  {migrated && <TextField size="small" label="Participants per step (optional)" placeholder="welcome=10, wait=3" value={value.stepCounts} onChange={(event) => setCounts((all) => ({ ...all, [id]: { ...value, stepCounts: event.target.value } }))} />}
+                  {migrated && <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '2fr 1fr' }, gap: 1 }}><TextField size="small" label="Participants per step (optional)" placeholder="welcome=10, wait=3" value={value.stepCounts} onChange={(event) => setCounts((all) => ({ ...all, [id]: { ...value, stepCounts: event.target.value } }))} /><TextField size="small" label="Sent messages (optional)" value={value.sentMessages} onChange={(event) => setCounts((all) => ({ ...all, [id]: { ...value, sentMessages: event.target.value } }))} /></Box>}
                 </Stack>
               ))}
             </>}
