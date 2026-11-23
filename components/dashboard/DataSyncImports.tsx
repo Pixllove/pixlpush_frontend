@@ -3,14 +3,15 @@
 import { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CloseRounded, HistoryRounded, InsertDriveFileRounded } from '@mui/icons-material';
-import { Alert, Box, Button, Card, Chip, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, LinearProgress, MenuItem, Skeleton, Stack, TextField, Tooltip, Typography } from '@mui/material';
+import { Alert, Box, Button, Card, Checkbox, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, LinearProgress, MenuItem, Skeleton, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import EmptyState, { listEmpty } from '@/components/dashboard/EmptyState';
 import FileDropZone from '@/components/dashboard/FileDropZone';
 import { IMPORT_FIELDS, IMPORT_FILE_MAX_BYTES, formatFileSize, parseImport, type ParsedImport } from '@/lib/data-sync-import';
-import { dataSyncApi, type SyncImportJob, type SyncImportKind, type SyncSource } from '@/lib/projects/api';
+import { dataSyncApi, type SyncImportDryRun, type SyncImportJob, type SyncImportKind, type SyncSource } from '@/lib/projects/api';
 
 const errorText = (error: unknown) => (error as { message?: string })?.message ?? 'Something went wrong. Please try again.';
-const KIND_LABEL: Record<SyncImportKind, string> = { event_history: 'Event history', message_history: 'Message history' };
+const KIND_LABEL: Record<SyncImportKind, string> = { event_history: 'Event history', message_history: 'Message history', segment_history: 'Segment history' };
+const EMPTY_DRY_RUN: SyncImportDryRun = { rows: 0, valid: 0, invalid: 0, duplicates: 0, deletedUsers: 0, newUsers: 0, unmapped: [], issues: [] };
 const STATUS: Record<SyncImportJob['status'], { label: string; color: 'default' | 'info' | 'success' | 'warning' | 'error' }> = {
   queued: { label: 'Waiting for upload', color: 'default' },
   running: { label: 'Importing', color: 'info' },
@@ -33,6 +34,9 @@ export default function DataSyncImports({ projectId, sources, source, onSelectSo
   const [kind, setKind] = useState<SyncImportKind>('event_history');
   const [file, setFile] = useState<File>();
   const [parsed, setParsed] = useState<ParsedImport>();
+  const [dryRun, setDryRun] = useState<SyncImportDryRun>();
+  const [checking, setChecking] = useState(false);
+  const [rebuildMembership, setRebuildMembership] = useState(false);
   const [fileError, setFileError] = useState('');
   const [reading, setReading] = useState(false);
   const [resumeJob, setResumeJob] = useState<SyncImportJob>();
@@ -56,6 +60,7 @@ export default function DataSyncImports({ projectId, sources, source, onSelectSo
     readId.current += 1;
     setFile(undefined);
     setParsed(undefined);
+    setDryRun(undefined);
     setFileError('');
     setReading(false);
   };
@@ -64,6 +69,7 @@ export default function DataSyncImports({ projectId, sources, source, onSelectSo
     const id = ++readId.current;
     setFile(next);
     setParsed(undefined);
+    setDryRun(undefined);
     setFileError('');
     setError('');
     setNotice('');
@@ -90,6 +96,37 @@ export default function DataSyncImports({ projectId, sources, source, onSelectSo
   const changeSource = (id: string) => {
     onSelectSource(id);
     setResumeJob(undefined);
+    setDryRun(undefined);
+  };
+
+  const runDryRun = async () => {
+    if (!source || !parsed?.parts.length) return;
+    setChecking(true);
+    setError('');
+    setDryRun(undefined);
+    try {
+      let offset = 0;
+      let total = EMPTY_DRY_RUN;
+      for (const records of parsed.parts) {
+        const part = await dataSyncApi.dryRunImport(projectId, source.id, { kind, records });
+        total = {
+          rows: total.rows + part.rows,
+          valid: total.valid + part.valid,
+          invalid: total.invalid + part.invalid,
+          duplicates: total.duplicates + part.duplicates,
+          deletedUsers: total.deletedUsers + part.deletedUsers,
+          newUsers: total.newUsers + part.newUsers,
+          unmapped: [...new Set([...total.unmapped, ...part.unmapped])],
+          issues: [...total.issues, ...part.issues.map((issue) => ({ ...issue, index: issue.index + offset }))].slice(0, 5),
+        };
+        offset += records.length;
+      }
+      setDryRun(total);
+    } catch (cause) {
+      setError(errorText(cause));
+    } finally {
+      setChecking(false);
+    }
   };
 
   const startImport = async () => {
@@ -103,7 +140,7 @@ export default function DataSyncImports({ projectId, sources, source, onSelectSo
     setProgress({ done: 0, total: parsed.parts.length });
     try {
       // Kept as the resume target, so a failed upload continues instead of starting over.
-      const job = resumeJob ?? await dataSyncApi.createImport(projectId, source.id, { kind, partsTotal: parsed.parts.length });
+      const job = resumeJob ?? await dataSyncApi.createImport(projectId, source.id, { kind, partsTotal: parsed.parts.length, rebuildMembership: kind === 'segment_history' && rebuildMembership });
       setResumeJob(job);
       const existing = await dataSyncApi.importJob(projectId, job.id);
       const uploaded = new Set((existing.parts ?? []).map((part) => part.partIndex));
@@ -152,13 +189,13 @@ export default function DataSyncImports({ projectId, sources, source, onSelectSo
     setNotice('');
   };
 
-  const canStart = Boolean(source && parsed?.parts.length && !parsed.invalidRows && !reading);
+  const canStart = Boolean(source && parsed?.parts.length && !parsed.invalidRows && !reading && dryRun && !dryRun.invalid && dryRun.valid + dryRun.duplicates > 0);
 
   return (
     <Stack gap={2}>
       <Box>
         <Typography variant="h4">Historical imports</Typography>
-        <Typography variant="body2" color="text.secondary">Upload past events or messages. They are stored separately and never start journeys or send messages.</Typography>
+        <Typography variant="body2" color="text.secondary">Upload past events, messages, or segment changes. They are stored separately and never start journeys or send messages.</Typography>
       </Box>
 
       {error && <Alert severity="error" onClose={() => setError('')}>{error}</Alert>}
@@ -174,8 +211,16 @@ export default function DataSyncImports({ projectId, sources, source, onSelectSo
               <TextField select size="small" label="History type" value={kind} disabled={uploading} onChange={(event) => changeKind(event.target.value as SyncImportKind)}>
                 <MenuItem value="event_history">Event history</MenuItem>
                 <MenuItem value="message_history">Message history</MenuItem>
+                <MenuItem value="segment_history">Segment history</MenuItem>
               </TextField>
             </Box>
+
+            {kind === 'segment_history' && (
+              <FormControlLabel
+                control={<Checkbox checked={rebuildMembership} disabled={uploading} onChange={(event) => setRebuildMembership(event.target.checked)} />}
+                label={<Box><Typography variant="body2">Also update current segment membership</Typography><Typography variant="caption" color="text.secondary">Leave off to store history only. Blocked while a live journey targets these segments.</Typography></Box>}
+              />
+            )}
 
             {resumeJob && !uploading && (
               <Alert severity="info" action={<Button size="small" onClick={() => setResumeJob(undefined)}>Start new</Button>}>
@@ -214,7 +259,15 @@ export default function DataSyncImports({ projectId, sources, source, onSelectSo
                 </Box>
               </Alert>
             )}
-            {parsed && parsed.invalidRows === 0 && !uploading && <Alert severity="success">All {parsed.rows.toLocaleString()} records are ready to import.</Alert>}
+            {parsed && parsed.invalidRows === 0 && !dryRun && !uploading && <Alert severity="info">{parsed.rows.toLocaleString()} records look valid. Run a dry run to check them against this project. Nothing is saved.{parsed.repeatedIds ? ` ${parsed.repeatedIds.toLocaleString()} repeated IDs will import once.` : ''}</Alert>}
+            {checking && <Stack gap={0.5}><Typography variant="caption" color="text.secondary">Running dry run…</Typography><LinearProgress /></Stack>}
+            {dryRun && !uploading && (
+              <Alert severity={dryRun.invalid ? 'error' : dryRun.valid ? 'success' : 'warning'}>
+                <Typography variant="body2">Dry run: {dryRun.valid.toLocaleString()} new · {dryRun.duplicates.toLocaleString()} already imported · {dryRun.invalid.toLocaleString()} need fixing · {dryRun.deletedUsers.toLocaleString()} deleted users skipped{kind === 'segment_history' ? ` · ${dryRun.newUsers.toLocaleString()} new profiles` : ''}</Typography>
+                {dryRun.unmapped.length > 0 && <Typography variant="caption" sx={{ display: 'block' }}>Unmapped segments: {dryRun.unmapped.slice(0, 8).join(', ')}</Typography>}
+                {dryRun.issues.map((issue) => <Typography variant="caption" sx={{ display: 'block' }} key={`${issue.index}-${issue.code}`}>Record {(issue.index + 1).toLocaleString()}: {issue.message}</Typography>)}
+              </Alert>
+            )}
             {progress && (
               <Stack gap={0.5}>
                 <Typography variant="caption" color="text.secondary">Uploaded {progress.done} of {progress.total} {progress.total === 1 ? 'part' : 'parts'}</Typography>
@@ -229,9 +282,12 @@ export default function DataSyncImports({ projectId, sources, source, onSelectSo
                 <Typography variant="caption" color="text.secondary">Optional</Typography>
                 {fields.optional.map((field) => <Chip key={field} size="small" variant="outlined" label={field} />)}
               </Stack>
-              <Button variant="contained" disabled={!canStart || uploading} onClick={() => void startImport()} sx={{ flexShrink: 0 }}>
-                {uploading ? 'Uploading…' : resumeJob ? 'Continue import' : 'Start import'}
-              </Button>
+              <Stack direction="row" gap={1} sx={{ flexShrink: 0 }}>
+                <Button variant={dryRun ? 'outlined' : 'contained'} disabled={!parsed?.parts.length || checking || uploading} onClick={() => void runDryRun()}>{checking ? 'Checking…' : dryRun ? 'Run again' : 'Run dry run'}</Button>
+                <Button variant="contained" disabled={!canStart || uploading || checking} onClick={() => void startImport()}>
+                  {uploading ? 'Uploading…' : resumeJob ? 'Continue import' : 'Start import'}
+                </Button>
+              </Stack>
             </Stack>
           </Stack>
         </Card>

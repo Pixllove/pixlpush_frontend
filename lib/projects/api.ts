@@ -262,7 +262,8 @@ export type ExternalSyncSegment = {
   id: string; namespace: string; key: string; displayName: string; status: "active" | "retired";
   memberCount: number; source: { name: string; environment: SyncEnvironment };
 };
-export type SyncImportKind = "event_history" | "message_history";
+export type SyncImportKind = "event_history" | "message_history" | "segment_history";
+export type SyncImportDryRun = { rows: number; valid: number; invalid: number; duplicates: number; deletedUsers: number; newUsers: number; unmapped: string[]; issues: { index: number; code: string; message: string }[] };
 export type SyncImportJob = {
   id: string; sourceId: string; kind: SyncImportKind;
   status: "queued" | "running" | "paused" | "completed" | "failed" | "canceled";
@@ -313,7 +314,8 @@ export const dataSyncApi = {
   retireSegment: (projectId: string, segmentId: string) => authRequest<ExternalSyncSegment>(syncAt(projectId, `/segments/${encodeURIComponent(segmentId)}/retire`), {}, BASE),
   imports: (projectId: string) => authRequest<SyncImportJob[]>(syncAt(projectId, "/imports"), undefined, BASE),
   importJob: (projectId: string, jobId: string) => authRequest<SyncImportJob>(syncAt(projectId, `/imports/${encodeURIComponent(jobId)}`), undefined, BASE),
-  createImport: (projectId: string, sourceId: string, input: { kind: SyncImportKind; partsTotal: number }) => authRequest<SyncImportJob>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/imports`), input, BASE),
+  dryRunImport: (projectId: string, sourceId: string, input: { kind: SyncImportKind; records: unknown[] }) => authRequest<SyncImportDryRun>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/imports/dry-run`), input, BASE),
+  createImport: (projectId: string, sourceId: string, input: { kind: SyncImportKind; partsTotal: number; rebuildMembership?: boolean }) => authRequest<SyncImportJob>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/imports`), input, BASE),
   uploadImportPart: (projectId: string, jobId: string, input: { partIndex: number; idempotencyKey: string; records: unknown[] }) => authRequest<{ id: string; partIndex: number; idempotencyKey: string; status: string; duplicate: boolean }>(syncAt(projectId, `/imports/${encodeURIComponent(jobId)}/parts`), input, BASE),
   startImport: (projectId: string, jobId: string) => authRequest<SyncImportJob>(syncAt(projectId, `/imports/${encodeURIComponent(jobId)}/start`), {}, BASE),
   pauseImport: (projectId: string, jobId: string) => authRequest<{ paused: boolean }>(syncAt(projectId, `/imports/${encodeURIComponent(jobId)}/pause`), {}, BASE),

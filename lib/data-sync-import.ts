@@ -1,4 +1,4 @@
-export type ImportKind = 'event_history' | 'message_history';
+export type ImportKind = 'event_history' | 'message_history' | 'segment_history';
 
 export const IMPORT_FILE_MAX_BYTES = 100 * 1024 * 1024;
 export const IMPORT_PART_MAX_ROWS = 500;
@@ -8,10 +8,11 @@ const MESSAGE_CHANNELS = ['email', 'push', 'mobile_push', 'web_push', 'in_app'];
 export const IMPORT_FIELDS: Record<ImportKind, { required: string[]; optional: string[] }> = {
   event_history: { required: ['sourceRecordId', 'externalUserId', 'eventName', 'occurredAt'], optional: ['properties'] },
   message_history: { required: ['sourceMessageId', 'externalUserId', 'channel', 'status'], optional: ['sentAt', 'payload'] },
+  segment_history: { required: ['sourceRecordId', 'externalUserId', 'sourceSegment', 'transition', 'occurredAt'], optional: ['namespace', 'reason'] },
 };
 
 export type ImportRowIssue = { row: number; message: string };
-export type ParsedImport = { rows: number; parts: unknown[][]; issues: ImportRowIssue[]; invalidRows: number };
+export type ParsedImport = { rows: number; parts: unknown[][]; issues: ImportRowIssue[]; invalidRows: number; repeatedIds: number };
 
 const text = (value: unknown, max: number) => typeof value === 'string' && value.trim().length > 0 && value.trim().length <= max;
 const validDate = (value: unknown) => (typeof value === 'string' || typeof value === 'number') && !Number.isNaN(new Date(value).getTime());
@@ -31,6 +32,14 @@ export function rowProblem(kind: ImportKind, raw: unknown): string | null {
     if (!text(row.eventName, 200)) return 'needs eventName';
     if (!validDate(row.occurredAt)) return 'needs a valid occurredAt date';
     return scalarRecord(row.properties) ? null : 'properties must be an object of simple values';
+  }
+  if (kind === 'segment_history') {
+    if (!text(row.sourceRecordId, 200)) return 'needs sourceRecordId';
+    if (!text(row.sourceSegment, 200)) return 'needs sourceSegment';
+    if (row.transition !== 'enter' && row.transition !== 'exit') return 'transition must be enter or exit';
+    if (!validDate(row.occurredAt)) return 'needs a valid occurredAt date';
+    if (new Date(row.occurredAt as string).getTime() > Date.now() + 60_000) return 'occurredAt cannot be in the future';
+    return row.namespace === undefined || text(row.namespace, 40) ? null : 'namespace is not valid';
   }
   if (!text(row.sourceMessageId, 200)) return 'needs sourceMessageId';
   if (!MESSAGE_CHANNELS.includes(row.channel as string)) return `channel must be ${MESSAGE_CHANNELS.join(', ')}`;
@@ -77,7 +86,8 @@ export function parseImport(kind: ImportKind, contents: string): ParsedImport {
     invalidRows += 1;
     if (issues.length < 5) issues.push({ row: index + 1, message });
   });
-  return { rows: decoded.length, parts: invalidRows ? [] : splitImportRows(decoded), issues, invalidRows };
+  const ids = decoded.map((row) => (row as { sourceRecordId?: string; sourceMessageId?: string } | null)?.[kind === 'message_history' ? 'sourceMessageId' : 'sourceRecordId']).filter(Boolean);
+  return { rows: decoded.length, parts: invalidRows ? [] : splitImportRows(decoded), issues, invalidRows, repeatedIds: ids.length - new Set(ids).size };
 }
 
 export function formatFileSize(bytes: number) {
