@@ -36,7 +36,7 @@ import type {
   ApnsUpload,
   FirebaseSettings,
   IntegrationCredentials,
-  IntegrationProvider,
+  ConnectionProvider,
   IntegrationSettings,
   ImportMappingInput,
   ImportPreview,
@@ -119,18 +119,18 @@ export const projectApi = {
 export const integrationsApi = {
   /** Every integration with its status, in one request. */
   list: (projectId: string) => authRequest<IntegrationSettings[]>(at(projectId, "/integrations"), undefined, BASE),
-  get: (projectId: string, provider: IntegrationProvider) => authRequest<IntegrationSettings>(at(projectId, `/integrations/${provider}`), undefined, BASE),
+  get: (projectId: string, provider: ConnectionProvider) => authRequest<IntegrationSettings>(at(projectId, `/integrations/${provider}`), undefined, BASE),
   /** Checked live with the integration before anything is stored. */
-  connect: (projectId: string, provider: IntegrationProvider, credentials: IntegrationCredentials) =>
+  connect: (projectId: string, provider: ConnectionProvider, credentials: IntegrationCredentials) =>
     authRequest<IntegrationSettings>(at(projectId, `/integrations/${provider}`), credentials, BASE, "PUT"),
-  setSyncEnabled: (projectId: string, provider: IntegrationProvider, syncEnabled: boolean) =>
+  setSyncEnabled: (projectId: string, provider: ConnectionProvider, syncEnabled: boolean) =>
     authRequest<IntegrationSettings>(at(projectId, `/integrations/${provider}`), { syncEnabled }, BASE, "PATCH"),
-  syncNow: (projectId: string, provider: IntegrationProvider) => authRequest<IntegrationSettings>(at(projectId, `/integrations/${provider}/sync`), {}, BASE),
-  disconnect: (projectId: string, provider: IntegrationProvider) => authRequest<IntegrationSettings>(at(projectId, `/integrations/${provider}`), {}, BASE, "DELETE"),
+  syncNow: (projectId: string, provider: ConnectionProvider) => authRequest<IntegrationSettings>(at(projectId, `/integrations/${provider}/sync`), {}, BASE),
+  disconnect: (projectId: string, provider: ConnectionProvider) => authRequest<IntegrationSettings>(at(projectId, `/integrations/${provider}`), {}, BASE, "DELETE"),
   /** "Connect with <CRM>": the consent page to send the browser to. */
-  oauthStart: (projectId: string, provider: IntegrationProvider) => authRequest<{ url: string }>(at(projectId, `/integrations/${provider}/oauth/start`), {}, BASE),
+  oauthStart: (projectId: string, provider: ConnectionProvider) => authRequest<{ url: string }>(at(projectId, `/integrations/${provider}/oauth/start`), {}, BASE),
   /** The CRM sent the browser back with ?code (and ?state when started here). */
-  oauthCallback: (projectId: string, provider: IntegrationProvider, input: { code: string; state?: string }) =>
+  oauthCallback: (projectId: string, provider: ConnectionProvider, input: { code: string; state?: string }) =>
     authRequest<IntegrationSettings>(at(projectId, `/integrations/${provider}/oauth/callback`), input, BASE),
 };
 

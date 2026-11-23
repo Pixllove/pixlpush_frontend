@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { AddRounded, ArrowForwardRounded, SearchRounded } from '@mui/icons-material';
+import { AddRounded, ArrowForwardRounded, SearchRounded, WebhookRounded } from '@mui/icons-material';
 import { Box, Button, Card, Chip, Grid, InputAdornment, Stack, TextField, Typography } from '@mui/material';
 import SettingsStatus from '@/components/dashboard/SettingsStatus';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
@@ -31,6 +31,29 @@ function IntegrationCard({ integration, status }: { integration: Integration; st
   );
 }
 
+const WEBHOOK_SUMMARY = 'Connect your backend with its URL and token. PixlPush syncs users, lifecycle statuses, and events.';
+
+function WebhookCard({ status }: { status: IntegrationStatus }) {
+  return (
+    <Card className="integration-card" sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+      <Stack direction="row" alignItems="flex-start" justifyContent="space-between" gap={1}>
+        <Box className="integration-icon"><WebhookRounded /></Box>
+        {status ? <SettingsStatus tone={status.tone}>{status.label}</SettingsStatus> : <Chip size="small" variant="outlined" label="Not connected" />}
+      </Stack>
+      <Box sx={{ flex: 1 }}>
+        <Stack direction="row" alignItems="center" gap={1}>
+          <Typography fontWeight={700} fontSize="var(--fs-14)">Webhook</Typography>
+          <Chip size="small" label="Server" className="neutral-chip" />
+        </Stack>
+        <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: 0.75 }}>{WEBHOOK_SUMMARY}</Typography>
+      </Box>
+      <Button component={Link} href="/dashboard/integrations/webhook" variant={status ? 'outlined' : 'contained'} endIcon={<ArrowForwardRounded />} sx={{ alignSelf: 'flex-start' }}>
+        {status ? 'Manage' : 'Connect'}
+      </Button>
+    </Card>
+  );
+}
+
 /** Integration directory, grouped by category like OneSignal's and MailerLite's. */
 export default function IntegrationsHub() {
   const [search, setSearch] = useState('');
@@ -41,6 +64,7 @@ export default function IntegrationsHub() {
   const q = search.trim().toLowerCase();
   const shown = INTEGRATIONS.filter((i) => !q || `${i.name} ${i.category} ${i.summary}`.toLowerCase().includes(q));
   const categories = [...new Set(shown.map((i) => i.category))];
+  const showWebhook = !q || `webhook server api ${WEBHOOK_SUMMARY}`.toLowerCase().includes(q);
 
   return (
     <Stack gap={3}>
@@ -62,7 +86,13 @@ export default function IntegrationsHub() {
           </Grid>
         </Box>
       ))}
-      {!shown.length && <Typography color="text.secondary" fontSize="var(--fs-13)">No integration matches “{search}”.</Typography>}
+      {showWebhook && (
+        <Box>
+          <Typography fontWeight={700} fontSize="var(--fs-13)" color="text.secondary" sx={{ mb: 1.5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Server</Typography>
+          <Grid container spacing={2}><Grid item xs={12} sm={6} lg={4}><WebhookCard status={statusOf('webhook')} /></Grid></Grid>
+        </Box>
+      )}
+      {!shown.length && !showWebhook && <Typography color="text.secondary" fontSize="var(--fs-13)">No integration matches “{search}”.</Typography>}
       <Card className="saas-card" sx={{ borderStyle: 'dashed' }}>
         <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ sm: 'center' }} gap={2}>
           <Box className="integration-icon"><AddRounded /></Box>

@@ -11,10 +11,9 @@ import FirebasePanel from './FirebasePanel';
 import ProjectDetailsPanel from './ProjectDetailsPanel';
 import BusinessSetupPanel from './BusinessSetupPanel';
 import SdkKeysPanel from './SdkKeysPanel';
-import DataSyncPanel from './DataSyncPanel';
 import SettingsStatus from './SettingsStatus';
 
-const tabs = ['Project', 'Business details', 'Push setup', 'Domain', 'SDK keys', 'Data Sync', 'Data & privacy', 'Danger zone'];
+const tabs = ['Project', 'Business details', 'Push setup', 'Domain', 'SDK keys', 'Data & privacy', 'Danger zone'];
 
 function ProjectPanel() {
   return <Stack gap={2.5}>
@@ -46,7 +45,6 @@ const panels: Record<string, (props: { onNavigate?: (tab: string) => void }) => 
   'Push setup': FirebasePanel,
   Domain: EmailPanel,
   'SDK keys': SdkKeysPanel,
-  'Data Sync': DataSyncPanel,
   'Data & privacy': PrivacyPanel,
   'Danger zone': DangerZonePanel,
 };
@@ -58,9 +56,8 @@ export default function ProjectSettingsCenter({ initialTab = 'Project' }: { init
     'Push setup': '/dashboard/settings/firebase',
     Domain: '/dashboard/settings/domain',
     'SDK keys': '/dashboard/settings/sdk-keys',
-    'Data Sync': '/dashboard/settings/data-sync',
   };
-  const routeTab = pathname.endsWith('/firebase') ? 'Push setup' : pathname.endsWith('/domain') ? 'Domain' : pathname.endsWith('/sdk-keys') ? 'SDK keys' : pathname.endsWith('/data-sync') ? 'Data Sync' : null;
+  const routeTab = pathname.endsWith('/firebase') ? 'Push setup' : pathname.endsWith('/domain') ? 'Domain' : pathname.endsWith('/sdk-keys') ? 'SDK keys' : null;
   useEffect(() => {
     if (routeTab) setTab(routeTab);
   }, [routeTab]);

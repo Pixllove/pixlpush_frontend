@@ -466,10 +466,12 @@ export interface UpdateProjectInput {
 /** GET /projects/:id/firebase. Credentials themselves are never returned. */
 /** Integration ids; the backend registry (src/modules/integrations/registry.ts) has the same list. */
 export type IntegrationProvider = 'hubspot' | 'salesforce' | 'pipedrive';
+/** Every connection the integrations API serves; the customer's backend has its own page. */
+export type ConnectionProvider = IntegrationProvider | 'webhook';
 
 /** GET /projects/:id/integrations/:provider. Credentials are never returned. */
 export type IntegrationSettings = {
-  provider: IntegrationProvider;
+  provider: ConnectionProvider;
   name: string;
   /** "Connect with <CRM>" (OAuth) is set up on the server. */
   oauthAvailable?: boolean;

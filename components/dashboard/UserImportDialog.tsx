@@ -580,7 +580,7 @@ export default function UserImportDialog({
                 <Typography color="text.secondary" fontSize="var(--fs-12)">
                   Create a secure server key, map your fields, and send changes to PixlPush.
                 </Typography>
-                <Button component={Link} href="/dashboard/settings/data-sync?setup=1" variant="outlined">Set up webhook</Button>
+                <Button component={Link} href="/dashboard/integrations/webhook" variant="outlined">Set up webhook</Button>
               </Box>
             ) : (
             <Box

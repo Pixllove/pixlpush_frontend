@@ -216,7 +216,7 @@ export default function LifecycleSegmentCreateDialog({
           <Stack gap={2}>
             {externalError && <Alert severity="error">{externalError}</Alert>}
             {sources && sources.length === 0 ? (
-              <Alert severity="warning" action={<Button component={Link} href="/dashboard/settings/data-sync" size="small">Connect source</Button>}>Connect your backend in Data Sync, then return here.</Alert>
+              <Alert severity="warning" action={<Button component={Link} href="/dashboard/integrations/webhook" size="small">Connect webhook</Button>}>Connect your server in Integrations, then return here.</Alert>
             ) : (
               <>
                 <TextField select label="Connected system" value={sourceId} onChange={(event) => setSourceId(event.target.value)}>

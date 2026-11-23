@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apnsApi, emailApi, firebaseApi, integrationsApi, onboardingApi, projectKeys, sdkKeyApi } from '@/lib/projects/api';
-import type { IntegrationCredentials, IntegrationProvider, IntegrationSettings, ProjectPlatform } from '@/types/project';
+import type { ConnectionProvider, IntegrationCredentials, IntegrationSettings, ProjectPlatform } from '@/types/project';
 import { isPermanentAuthError } from '@/lib/auth/client';
 import type { ApiError } from '@/types/auth';
 
@@ -73,7 +73,7 @@ function useIntegrationMutation<TIn>(projectId: string | undefined, run: (id: st
 }
 
 /** One integration's status and actions; the same for HubSpot, Salesforce, Pipedrive and any later one. */
-export function useIntegration(projectId: string | undefined, provider: IntegrationProvider) {
+export function useIntegration(projectId: string | undefined, provider: ConnectionProvider) {
   return {
     query: useQuery<IntegrationSettings, ApiError>({
       queryKey: [...projectKeys.integrations(projectId ?? ''), provider],
