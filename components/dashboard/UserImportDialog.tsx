@@ -47,7 +47,9 @@ import {
 } from "@mui/material";
 import UploadFileOutlined from "@mui/icons-material/UploadFileOutlined";
 import SyncRounded from "@mui/icons-material/SyncRounded";
+import WebhookRounded from "@mui/icons-material/WebhookRounded";
 import Link from "next/link";
+import CrmPluginsDialog from "./CrmPluginsDialog";
 import EmptyState from "./EmptyState";
 import { useActiveProject } from "@/hooks/projects/use-active-project";
 import { userImportApi } from "@/lib/projects/api";
@@ -96,12 +98,10 @@ const fields: { value: Field; label: string }[] = [
   { value: "properties.phone", label: "Phone number" },
 ];
 const sources: {
-  id: "csv" | "hubspot";
+  id: "csv" | "crm" | "webhook";
   label: string;
   description: string;
   icon: typeof FileUploadRounded;
-  /** Set for sources configured on their own settings page. */
-  href?: string;
 }[] = [
   {
     id: "csv",
@@ -110,11 +110,16 @@ const sources: {
     icon: FileUploadRounded,
   },
   {
-    id: "hubspot",
-    label: "HubSpot",
-    description: "Connect HubSpot and keep your contacts in sync automatically.",
+    id: "crm",
+    label: "CRM",
+    description: "Connect a CRM plugin and keep your contacts in sync.",
     icon: SyncRounded,
-    href: "/dashboard/integrations/hubspot",
+  },
+  {
+    id: "webhook",
+    label: "Webhook",
+    description: "Send users from your server as they change.",
+    icon: WebhookRounded,
   },
 ];
 
@@ -154,6 +159,8 @@ export default function UserImportDialog({
   const [step, setStep] = useState(0);
   const [consentConfirmed, setConsentConfirmed] = useState(false);
   const [fileName, setFileName] = useState("");
+  const [importMethod, setImportMethod] = useState<"csv" | "webhook">("csv");
+  const [crmOpen, setCrmOpen] = useState(false);
   const [fileSize, setFileSize] = useState("");
   const [headers, setHeaders] = useState<string[]>([]);
   const [rows, setRows] = useState<string[][]>([]);
@@ -264,6 +271,8 @@ export default function UserImportDialog({
 
   const reset = () => {
     setStep(0);
+    setImportMethod("csv");
+    setCrmOpen(false);
     setFileName("");
     setFileSize("");
     setHeaders([]);
@@ -506,6 +515,7 @@ export default function UserImportDialog({
           <CloseRounded />
         </IconButton>
       </Box>
+      <CrmPluginsDialog open={crmOpen} projectId={active?.id} onClose={() => setCrmOpen(false)} />
       <DialogContent className="user-import-content">
         <Stack
           direction={{ xs: "column", md: "row" }}
@@ -538,16 +548,20 @@ export default function UserImportDialog({
             <Box>
               <Typography variant="h3">Choose how to import users</Typography>
               <Typography color="text.secondary" fontSize="var(--fs-13)">
-                Upload a CSV list of users and map the columns before importing
-                them into PixlPush.
+                Upload a file, connect your CRM, or send users from your server.
               </Typography>
             </Box>
-            <Box className="import-source-grid">
-              {sources.map(({ id, label, description, icon: Icon, href }) => (
+            <Box className="import-source-grid" sx={{ gridTemplateColumns: { xs: "1fr", sm: "repeat(3, minmax(0, 1fr))" } }}>
+              {sources.map(({ id, label, description, icon: Icon }) => (
                 <Box
                   key={id}
-                  className={`import-source-card${href ? "" : " active"}`}
-                  {...(href ? { component: Link, href, sx: { color: "inherit", textDecoration: "none" } } : {})}
+                  component="button"
+                  type="button"
+                  aria-pressed={id === importMethod}
+                  aria-haspopup={id === "crm" ? "dialog" : undefined}
+                  className={`import-source-card${id === importMethod ? " active" : ""}`}
+                  onClick={() => (id === "crm" ? setCrmOpen(true) : setImportMethod(id))}
+                  sx={{ width: "100%", textAlign: "left", font: "inherit", color: "inherit", bgcolor: "transparent" }}
                 >
                   <Box className="import-source-icon">
                     <Icon />
@@ -559,6 +573,16 @@ export default function UserImportDialog({
                 </Box>
               ))}
             </Box>
+            {importMethod === "webhook" ? (
+              <Box className="csv-upload-panel" sx={{ cursor: "default" }}>
+                <WebhookRounded />
+                <Typography fontWeight={600}>Sync users from your server</Typography>
+                <Typography color="text.secondary" fontSize="var(--fs-12)">
+                  Create a secure server key, map your fields, and send changes to PixlPush.
+                </Typography>
+                <Button component={Link} href="/dashboard/settings/data-sync?setup=1" variant="outlined">Set up webhook</Button>
+              </Box>
+            ) : (
             <Box
               className={`csv-upload-panel${isUploading ? " uploading" : ""}${isDragActive ? " drag-over" : ""}`}
               onClick={() => !isUploading && inputRef.current?.click()}
@@ -611,6 +635,7 @@ export default function UserImportDialog({
                 </>
               )}
             </Box>
+            )}
             {fileName && !isUploading ? (
               <Box className="import-upload-settings">
                 <Stack direction="row" alignItems="center" gap={1.5}>
