@@ -293,7 +293,14 @@ export type SyncMigrationRun = {
 };
 const syncAt = (projectId: string, path = "") => at(projectId, `/data-sync${path}`);
 
+export type ServerDataType = "segments" | "activity" | "journeys";
+export type ServerSyncStatus = { connected: boolean; dataTypes: ServerDataType[]; segments: { lifecycleSegmentId: string; name: string; userCount: number; sourceName: string }[] };
+
 export const dataSyncApi = {
+  serverSync: (projectId: string) => authRequest<ServerSyncStatus>(syncAt(projectId, "/server-sync"), undefined, BASE),
+  setServerDataTypes: (projectId: string, dataTypes: ServerDataType[]) => authRequest<{ dataTypes: ServerDataType[] }>(syncAt(projectId, "/server-sync/data-types"), { dataTypes }, BASE, "PUT"),
+  previewServerSegments: (projectId: string) => authRequest<{ sampled: number; segments: { sourceName: string; records: number }[] }>(syncAt(projectId, "/server-sync/preview"), undefined, BASE),
+  mapServerSegment: (projectId: string, input: { sourceName: string; name: string; description?: string }) => authRequest<{ id: string; name: string }>(syncAt(projectId, "/server-sync/segments"), input, BASE),
   sources: (projectId: string) => authRequest<SyncSource[]>(syncAt(projectId, "/sources"), undefined, BASE),
   createSource: (projectId: string, input: { name: string; environment: SyncEnvironment }) => authRequest<SyncSource>(syncAt(projectId, "/sources"), input, BASE),
   setSourceStatus: (projectId: string, sourceId: string, status: SyncSource["status"]) => authRequest<SyncSource>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}`), { status }, BASE, "PATCH"),

@@ -38,8 +38,8 @@ import type { ProjectEventCatalogEntry } from "@/types/project";
 import SearchField from "./SearchField";
 import Link from "next/link";
 import { useActiveProject } from "@/hooks/projects/use-active-project";
-import { dataSyncApi, type SyncSource } from "@/lib/projects/api";
-import { SEGMENT_PURPOSES, SOURCE_COPY, withExternalSegment, type SegmentSource } from "@/lib/lifecycle-purposes";
+import { dataSyncApi } from "@/lib/projects/api";
+import { SEGMENT_PURPOSES, SOURCE_COPY, type SegmentSource } from "@/lib/lifecycle-purposes";
 
 type EventOption = ProjectEventCatalogEntry;
 export default function LifecycleSegmentCreateDialog({
@@ -56,7 +56,7 @@ export default function LifecycleSegmentCreateDialog({
 }: {
   open: boolean;
   onClose: () => void;
-  onExternalCreated?: (name: string) => void;
+  onExternalCreated?: (segment: { id: string; name: string }) => void;
   onCreate: (input: {
     name: string;
     description: string;
@@ -79,8 +79,7 @@ export default function LifecycleSegmentCreateDialog({
   const [purposeKey, setPurposeKey] = useState("");
   const [otherPurpose, setOtherPurpose] = useState("");
   const [chosenSource, setChosenSource] = useState<SegmentSource>();
-  const [sources, setSources] = useState<SyncSource[]>();
-  const [sourceId, setSourceId] = useState("");
+  const [serverConnected, setServerConnected] = useState<boolean>();
   const [incomingStatus, setIncomingStatus] = useState("");
   const [externalBusy, setExternalBusy] = useState(false);
   const [externalError, setExternalError] = useState("");
@@ -92,25 +91,19 @@ export default function LifecycleSegmentCreateDialog({
   useEffect(() => {
     if (!open || !isWebhook || !active?.id) return;
     let live = true;
-    dataSyncApi.sources(active.id)
-      .then((rows) => { if (!live) return; setSources(rows); setSourceId((current) => current || rows[0]?.id || ""); })
-      .catch((cause: { message?: string }) => { if (live) setExternalError(cause.message ?? "Could not load data sources."); });
+    dataSyncApi.serverSync(active.id)
+      .then((status) => { if (live) setServerConnected(status.connected); })
+      .catch((cause: { message?: string }) => { if (live) setExternalError(cause.message ?? "Could not load Server Sync."); });
     return () => { live = false; };
   }, [open, isWebhook, active?.id]);
 
   const createExternal = async () => {
-    if (!active?.id || !sourceId) return;
+    if (!active?.id || !serverConnected) return;
     setExternalBusy(true);
     setExternalError("");
     try {
-      const versions = await dataSyncApi.mappings(active.id, sourceId);
-      const base = versions.find((item) => item.status === "active") ?? versions.find((item) => item.status === "draft");
-      const config = withExternalSegment(base?.config, name.trim(), incomingStatus.trim());
-      // A new version, so someone's unfinished draft is never published by accident.
-      const saved = await dataSyncApi.createMapping(active.id, sourceId, config);
-      if (!saved.validation.valid) throw new Error(saved.validation.errors[0]?.message ?? "This mapping is not valid.");
-      await dataSyncApi.publishMapping(active.id, sourceId, saved.version);
-      onExternalCreated?.(name.trim());
+      const segment = await dataSyncApi.mapServerSegment(active.id, { sourceName: incomingStatus.trim(), name: name.trim(), description: description.trim() || undefined });
+      onExternalCreated?.(segment);
       onClose();
     } catch (cause) {
       setExternalError((cause as { message?: string }).message ?? "Could not create this segment.");
@@ -130,8 +123,7 @@ export default function LifecycleSegmentCreateDialog({
       setPurposeKey("");
       setOtherPurpose("");
       setChosenSource(undefined);
-      setSources(undefined);
-      setSourceId("");
+      setServerConnected(undefined);
       setIncomingStatus("");
       setExternalError("");
     }
@@ -159,8 +151,8 @@ export default function LifecycleSegmentCreateDialog({
   const close = () => {
     if (!busy) onClose();
   };
-  const canCreate = Boolean(name.trim()) && !busy && (isWebhook ? Boolean(sourceId && incomingStatus.trim()) : selectedEvents.length > 0);
-  const canAdvance = step === 0 ? Boolean(purpose && (purpose.source || (otherPurpose.trim() && chosenSource))) : step === 1 ? isWebhook || Boolean(selectedSdk) : isWebhook ? Boolean(sourceId && incomingStatus.trim()) : selectedEvents.length > 0;
+  const canCreate = Boolean(name.trim()) && !busy && (isWebhook ? Boolean(serverConnected && incomingStatus.trim()) : selectedEvents.length > 0);
+  const canAdvance = step === 0 ? Boolean(purpose && (purpose.source || (otherPurpose.trim() && chosenSource))) : step === 1 ? isWebhook || Boolean(selectedSdk) : isWebhook ? Boolean(serverConnected && incomingStatus.trim()) : selectedEvents.length > 0;
 
   return (
     <Dialog open={open} onClose={close} fullWidth maxWidth="md">
@@ -203,9 +195,9 @@ export default function LifecycleSegmentCreateDialog({
             {purposeKey === "other" && (
               <Stack gap={1.5}>
                 <TextField label="What should this segment identify?" value={otherPurpose} onChange={(event) => setOtherPurpose(event.target.value)} multiline minRows={2} />
-                <TextField select label="Where is this data recorded?" value={chosenSource ?? ""} onChange={(event) => setChosenSource(event.target.value as SegmentSource)} helperText="Use SDK for app or website actions. Use Webhook/API for backend or billing status.">
+                <TextField select label="Where is this data recorded?" value={chosenSource ?? ""} onChange={(event) => setChosenSource(event.target.value as SegmentSource)} helperText="Use SDK for app or website actions. Use Server Sync for backend or billing status.">
                   <MenuItem value="sdk">In the app or website (SDK)</MenuItem>
-                  <MenuItem value="webhook">In our backend or billing system (Webhook/API)</MenuItem>
+                  <MenuItem value="webhook">In our backend or billing system (Server Sync)</MenuItem>
                 </TextField>
               </Stack>
             )}
@@ -215,15 +207,10 @@ export default function LifecycleSegmentCreateDialog({
         ) : step === 2 && isWebhook ? (
           <Stack gap={2}>
             {externalError && <Alert severity="error">{externalError}</Alert>}
-            {sources && sources.length === 0 ? (
-              <Alert severity="warning" action={<Button component={Link} href="/dashboard/integrations/webhook" size="small">Connect webhook</Button>}>Connect your server in Integrations, then return here.</Alert>
+            {serverConnected === false ? (
+              <Alert severity="warning" action={<Button component={Link} href="/dashboard/integrations/webhook" size="small">Connect server</Button>}>Connect your server in Integrations, then return here.</Alert>
             ) : (
-              <>
-                <TextField select label="Connected system" value={sourceId} onChange={(event) => setSourceId(event.target.value)}>
-                  {(sources ?? []).map((item) => <MenuItem key={item.id} value={item.id}>{item.name} · {item.environment}</MenuItem>)}
-                </TextField>
-                <TextField label="Incoming segment or status name" placeholder="e.g. cancel_at_period_end" value={incomingStatus} onChange={(event) => setIncomingStatus(event.target.value)} helperText="The exact value your system sends as sourceSegment." />
-              </>
+              <TextField label="Incoming segment or status name" placeholder="e.g. cancel_at_period_end" value={incomingStatus} onChange={(event) => setIncomingStatus(event.target.value)} helperText="The exact value your server sends as segment." />
             )}
           </Stack>
         ) : step === 1 ? (
@@ -434,7 +421,7 @@ export default function LifecycleSegmentCreateDialog({
               }}
             >
               <Typography fontWeight={600} fontSize="var(--fs-13)">
-                {isWebhook ? `Source: Webhook/API · updates when your system sends "${incomingStatus.trim()}"` : "Source: SDK · users enter when they complete any of these events"}
+                {isWebhook ? `Source: Server Sync · updates when your server sends "${incomingStatus.trim()}"` : "Source: SDK · users enter when they complete any of these events"}
               </Typography>
               <Stack direction="row" gap={1} flexWrap="wrap" sx={{ mt: 1 }}>
                 {selectedEvents.map((event) => (

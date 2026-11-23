@@ -1036,11 +1036,11 @@ export function UsersSection() {
                 <Typography fontSize="var(--fs-12)" fontWeight={500}>
                   {row.name}
                 </Typography>
-                <Chip label="AUTO LIFECYCLE" size="small" />
+                <Chip label={row.externalSegmentId ? "FROM SERVER" : "AUTO LIFECYCLE"} size="small" />
               </Stack>
               <Typography color="text.secondary" fontSize="var(--fs-12)">
                 {row.description ||
-                  "Automatically updated based on user activity."}
+                  (row.externalSegmentId ? "Your server controls who is in this segment." : "Automatically updated based on user activity.")}
               </Typography>
             </Box>
           </Stack>
@@ -1666,6 +1666,11 @@ export function UsersSection() {
         selectedSdk={segmentSdk}
         onSdkSelect={setSegmentSdk}
         onCreate={(input) => createSegment.mutate(input)}
+        onExternalCreated={(segment) => {
+          queryClient.invalidateQueries({ queryKey: ["projects", "lifecycle-segments", active?.id] });
+          setCreateSegmentOpen(false);
+          router.push(`/dashboard/users/segments/${segment.id}?tab=segments`);
+        }}
         events={segmentEventsQuery.data?.events}
         eventsLoading={segmentEventsQuery.isPending || segmentEventsQuery.isFetching}
         loading={createSegment.isPending}

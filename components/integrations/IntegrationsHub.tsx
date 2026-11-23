@@ -31,7 +31,7 @@ function IntegrationCard({ integration, status }: { integration: Integration; st
   );
 }
 
-const WEBHOOK_SUMMARY = 'Connect your backend with its URL and token. PixlPush syncs users, lifecycle statuses, and events.';
+const WEBHOOK_SUMMARY = 'Connect your server with its URL and token, then choose what to sync: segments, historical activity, or journeys.';
 
 function WebhookCard({ status }: { status: IntegrationStatus }) {
   return (
@@ -42,7 +42,7 @@ function WebhookCard({ status }: { status: IntegrationStatus }) {
       </Stack>
       <Box sx={{ flex: 1 }}>
         <Stack direction="row" alignItems="center" gap={1}>
-          <Typography fontWeight={700} fontSize="var(--fs-14)">Webhook</Typography>
+          <Typography fontWeight={700} fontSize="var(--fs-14)">Server Sync</Typography>
           <Chip size="small" label="Server" className="neutral-chip" />
         </Stack>
         <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: 0.75 }}>{WEBHOOK_SUMMARY}</Typography>
@@ -64,7 +64,7 @@ export default function IntegrationsHub() {
   const q = search.trim().toLowerCase();
   const shown = INTEGRATIONS.filter((i) => !q || `${i.name} ${i.category} ${i.summary}`.toLowerCase().includes(q));
   const categories = [...new Set(shown.map((i) => i.category))];
-  const showWebhook = !q || `webhook server api ${WEBHOOK_SUMMARY}`.toLowerCase().includes(q);
+  const showWebhook = !q || `server sync webhook api ${WEBHOOK_SUMMARY}`.toLowerCase().includes(q);
 
   return (
     <Stack gap={3}>

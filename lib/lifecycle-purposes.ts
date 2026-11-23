@@ -22,24 +22,5 @@ export const SEGMENT_PURPOSES: SegmentPurpose[] = [
 
 export const SOURCE_COPY: Record<SegmentSource, { title: string; detail: string }> = {
   sdk: { title: 'SDK', detail: 'This is an app action. Track the event in your app so PixlPush can add users to the segment when it happens.' },
-  webhook: { title: 'Webhook/API', detail: 'This status is managed by your backend. Connect that system so PixlPush can receive changes and keep this segment current.' },
+  webhook: { title: 'Server Sync', detail: 'This status is managed by your backend. Connect that system so PixlPush can receive changes and keep this segment current.' },
 };
-
-export const segmentKey = (name: string) =>
-  name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 80) || 'segment';
-
-type MappingSegment = { sourceName: string; namespace: string; key: string; displayName: string; exclusive?: boolean };
-
-/** Adds one mapped status to a copy of the saved config. Lifecycle statuses replace each other. */
-export function withExternalSegment(config: unknown, name: string, sourceName: string) {
-  const current = (config && typeof config === 'object' ? config : {}) as Record<string, unknown> & { segments?: MappingSegment[] };
-  const segments = current.segments ?? [];
-  const namespace = 'lifecycle';
-  if (segments.some((item) => item.namespace === namespace && item.sourceName === sourceName)) {
-    throw new Error(`"${sourceName}" is already mapped to a segment.`);
-  }
-  let key = segmentKey(name);
-  for (let suffix = 2; segments.some((item) => item.namespace === namespace && item.key === key); suffix += 1) key = `${segmentKey(name).slice(0, 76)}_${suffix}`;
-  const exclusive = segments.find((item) => item.namespace === namespace)?.exclusive ?? true;
-  return { fields: [], consent: [], events: [], ...current, segments: [...segments, { sourceName, namespace, key, displayName: name, exclusive }] };
-}

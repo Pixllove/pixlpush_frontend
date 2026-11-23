@@ -63,7 +63,7 @@ export default function WebhookAdvanced() {
 
   return (
     <Stack gap={2.5}>
-      <Button component={NextLink} href="/dashboard/integrations/webhook" startIcon={<ArrowBackRounded />} sx={{ alignSelf: 'flex-start' }}>Webhook</Button>
+      <Button component={NextLink} href="/dashboard/integrations/webhook" startIcon={<ArrowBackRounded />} sx={{ alignSelf: 'flex-start' }}>Server Sync</Button>
       {error && <Alert severity="error" onClose={() => setError('')}>{error}</Alert>}
       {notice && <Alert severity="success" onClose={() => setNotice('')}>{notice}</Alert>}
       <Tabs value={tab} onChange={(_, value) => setTab(value)} variant="scrollable" allowScrollButtonsMobile>{TABS.map(([value, label]) => <Tab key={value} value={value} label={label} />)}</Tabs>
@@ -72,7 +72,7 @@ export default function WebhookAdvanced() {
       {tab === 'mapping' && (
         <Card className="saas-card">
           <Stack gap={1.5}>
-            <Box><Typography variant="h4">Field mapping</Typography><Typography variant="body2" color="text.secondary">Optional. The webhook works without changes. Edit this only if your field names differ.</Typography></Box>
+            <Box><Typography variant="h4">Field mapping</Typography><Typography variant="body2" color="text.secondary">Optional. Server Sync works without changes. Edit this only if your field names differ.</Typography></Box>
             {!source || mappings.isLoading ? <Skeleton height={160} /> : <TextField multiline minRows={12} label="Mapping JSON" value={configText} disabled={!canControl} onChange={(event) => setConfigText(event.target.value)} InputProps={{ sx: { fontFamily: 'var(--pp-mono)', fontSize: 'var(--fs-12)' } }} />}
             {canControl && <Button variant="contained" disabled={publish.isPending || !configText.trim()} sx={{ alignSelf: 'flex-start' }} onClick={() => publish.mutate()}>Publish mapping</Button>}
           </Stack>
@@ -91,7 +91,7 @@ export default function WebhookAdvanced() {
       {tab === 'protected' && (
         <Card className="saas-card">
           <Stack gap={1.5}>
-            <Box><Typography variant="h4">Protected events</Typography><Typography variant="body2" color="text.secondary">Stop public SDK keys from sending these event names. Webhook events are always trusted.</Typography></Box>
+            <Box><Typography variant="h4">Protected events</Typography><Typography variant="body2" color="text.secondary">Stop public SDK keys from sending these event names. Events from your connected server are always trusted.</Typography></Box>
             <TextField multiline minRows={6} label="Event names" helperText="One per line" value={eventsText} disabled={!canControl} onChange={(event) => setEventsText(event.target.value)} />
             {canControl && <Button variant="contained" disabled={saveEvents.isPending || events.isLoading} sx={{ alignSelf: 'flex-start' }} onClick={() => saveEvents.mutate()}>Save</Button>}
           </Stack>
