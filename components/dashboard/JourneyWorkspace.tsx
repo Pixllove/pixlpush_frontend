@@ -14,6 +14,7 @@ import {
   PlayCircleOutlineRounded,
   RocketLaunchRounded,
   SendRounded,
+  StopCircleRounded,
 } from "@mui/icons-material";
 import {
   Box,
@@ -22,6 +23,10 @@ import {
   Chip,
   Grid,
   IconButton,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   MenuItem,
   Select,
   Stack,
@@ -133,6 +138,7 @@ export default function JourneyWorkspace() {
   const [page, setPage] = useState(1);
   const [busy, setBusy] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<JourneyRow | null>(null);
+  const [toEmergencyStop, setToEmergencyStop] = useState<JourneyRow | null>(null);
   const [notice, setNotice] = useState<{
     message: string;
     severity: "success" | "error";
@@ -383,6 +389,14 @@ export default function JourneyWorkspace() {
           </IconButton>
           <IconButton
             size="small"
+            aria-label={`Emergency stop ${row.name}`}
+            disabled={Boolean(busy) || !canToggle(row)}
+            onClick={() => setToEmergencyStop(row)}
+          >
+            <StopCircleRounded fontSize="small" />
+          </IconButton>
+          <IconButton
+            size="small"
             className="delete-action"
             aria-label={`Delete ${row.name}`}
             disabled={Boolean(busy)}
@@ -560,6 +574,22 @@ export default function JourneyWorkspace() {
             : "This journey will be hidden from your workspace. Platform admins will retain its details and history."
         }
       />
+      <Dialog open={Boolean(toEmergencyStop)} onClose={() => !busy && setToEmergencyStop(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>Stop “{toEmergencyStop?.name}” and cancel queued messages?</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">
+            The journey will be paused and messages that are still queued will be canceled. A message already being sent cannot be recalled. The journey will stay paused until someone resumes it.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setToEmergencyStop(null)} disabled={Boolean(busy)}>Cancel</Button>
+          <Button color="error" variant="contained" disabled={Boolean(busy)} onClick={() => {
+            const row = toEmergencyStop!;
+            setToEmergencyStop(null);
+            void act(`emergency-stop-${row.id}`, () => journeysApi.action(projectId!, row.id, "pause", { cancelQueued: true }), "Journey paused and queued messages canceled");
+          }}>Emergency stop</Button>
+        </DialogActions>
+      </Dialog>
       <Toast
         message={notice?.message ?? null}
         severity={notice?.severity}

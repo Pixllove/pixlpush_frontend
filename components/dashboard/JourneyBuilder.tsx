@@ -2014,6 +2014,10 @@ function EmailSettings({
           </MenuItem>
         ))}
       </PanelSelect>
+      <Divider sx={{ my: 0.5 }} />
+      <Typography className="journey-field-label">Optional local send window</Typography>
+      <Stack direction="row" gap={1}><TextField fullWidth label="Start" type="time" value={values.sendWindowStart ?? ""} onChange={pick(set, "sendWindowStart")} InputLabelProps={{ shrink: true }} /><TextField fullWidth label="End" type="time" value={values.sendWindowEnd ?? ""} onChange={pick(set, "sendWindowEnd")} InputLabelProps={{ shrink: true }} /></Stack>
+      <Typography color="text.secondary" fontSize="var(--fs-12)">Delivery pauses outside this window using each subscriber’s profile time zone.</Typography>
       {/* Hidden for now: language, email name, subject, sender name, sender email and preheader.
 <PanelSelect label="Language" placeholder="User spoken language" value={values.language || ''} onChange={pick(set, 'language')}><MenuItem value="en">English</MenuItem><MenuItem value="all">All languages</MenuItem></PanelSelect><TextField fullWidth label="Email name" value={values.emailName ?? ''} onChange={pick(set, 'emailName')} /><TextField fullWidth label="Subject" value={values.subject ?? ''} onChange={pick(set, 'subject')} InputProps={{ endAdornment: <Button size="small">Suggest</Button> }} /><TextField fullWidth label="Who is it from?" value={values.fromName ?? 'Pixllove'} onChange={pick(set, 'fromName')} /><TextField fullWidth label="Sender email" value={values.senderEmail ?? 'info@pixllove.com'} onChange={pick(set, 'senderEmail')} /><TextField fullWidth label="Preheader" placeholder="Short preview text" value={values.preheader ?? ''} onChange={pick(set, 'preheader')} />
 */}
@@ -2039,6 +2043,10 @@ function NotificationSettings({
           </MenuItem>
         ))}
       </PanelSelect>
+      <Divider sx={{ my: 0.5 }} />
+      <Typography className="journey-field-label">Optional local send window</Typography>
+      <Stack direction="row" gap={1}><TextField fullWidth label="Start" type="time" value={values.sendWindowStart ?? ""} onChange={pick(set, "sendWindowStart")} InputLabelProps={{ shrink: true }} /><TextField fullWidth label="End" type="time" value={values.sendWindowEnd ?? ""} onChange={pick(set, "sendWindowEnd")} InputLabelProps={{ shrink: true }} /></Stack>
+      <Typography color="text.secondary" fontSize="var(--fs-12)">Delivery pauses outside this window using each subscriber’s profile time zone.</Typography>
     </Stack>
   );
 }
@@ -2139,6 +2147,7 @@ function SpecificTimeSettings({ values, set }: SettingProps) {
         type="time"
         value={values.time ?? "09:00"}
         onChange={pick(set, "time")}
+        helperText="Uses each subscriber’s profile time zone."
       />
     </Stack>
   );

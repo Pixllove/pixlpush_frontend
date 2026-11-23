@@ -160,6 +160,13 @@ export function toJourneyInput(state: BuilderState): JourneyInput {
   const steps: JourneyStep[] = [];
   const runnable = (list: Block[]) => list.filter((block) => block.type !== "entrance");
   const whole = (value: string | undefined, fallback: number) => Math.floor(Number(value ?? fallback));
+  const sendWindow = (own: Record<string, string>, title: string) => {
+    const start = own.sendWindowStart?.trim();
+    const end = own.sendWindowEnd?.trim();
+    if (Boolean(start) !== Boolean(end)) throw new JourneyIncomplete(`Set both local send window times for "${title}".`);
+    if (start && end && start === end) throw new JourneyIncomplete(`Choose different send window start and end times for "${title}".`);
+    return start && end ? { sendWindowStart: start, sendWindowEnd: end } : {};
+  };
 
   const emit = (block: Block, previous: Block | undefined, branch?: { of: string; side: "yes" | "no" }): JourneyStep => {
     const own = settings[block.id] ?? {};
@@ -168,18 +175,18 @@ export function toJourneyInput(state: BuilderState): JourneyInput {
       if (!own.template) throw new JourneyIncomplete(`Select a template for "${block.title}".`);
       if (block.type !== "email") {
         const channel = block.type === "web_notification" ? "web" : own.deliveryChannel === "all" ? undefined : "mobile";
-        return { type: "push", key: block.id, templateId: own.template, ...(channel ? { channel } : {}), meta };
+        return { type: "push", key: block.id, templateId: own.template, ...(channel ? { channel } : {}), ...sendWindow(own, block.title), meta };
       }
       // Subject and sender name replace the template's only when the user typed them.
-      return { type: "email", key: block.id, templateId: own.template, ...(own.subject?.trim() ? { subject: own.subject.trim() } : {}), ...(own.fromName?.trim() ? { fromName: own.fromName.trim() } : {}), meta };
+      return { type: "email", key: block.id, templateId: own.template, ...(own.subject?.trim() ? { subject: own.subject.trim() } : {}), ...(own.fromName?.trim() ? { fromName: own.fromName.trim() } : {}), ...sendWindow(own, block.title), meta };
     }
     if (block.type === "wait") {
       const amount = whole(own.amount, 3);
       if (!(amount >= 1)) throw new JourneyIncomplete(`Enter how long "${block.title}" should wait.`);
       return { type: "delay", key: block.id, amount, unit: (own.unit as JourneyStep["unit"]) || "days", meta };
     }
-    // Each user waits for the next time their arrival is followed by this clock time, in the editor's time zone.
-    if (block.type === "specific_time") return { type: "delay", key: block.id, time: own.time || "09:00", utcOffset: -new Date().getTimezoneOffset(), meta };
+    // Each user waits for the next matching time on their own profile clock.
+    if (block.type === "specific_time") return { type: "delay", key: block.id, time: own.time || "09:00", useUserTimezone: true, utcOffset: -new Date().getTimezoneOffset(), meta };
     if (block.type === "repeat_journey") {
       const count = whole(own.count, 5);
       const amount = whole(own.interval, 1);
@@ -300,6 +307,8 @@ export function fromJourney(journey: Journey): BuilderState & { status: BuilderS
       ...(step.type === "delay" && step.amount ? { amount: String(step.amount), unit: step.unit ?? "days" } : {}),
       ...(step.type === "repeat" ? { count: String(step.count), interval: String(step.amount), unit: step.unit ?? "days" } : {}),
       ...(step.time ? { time: step.time } : {}),
+      ...(step.sendWindowStart ? { sendWindowStart: step.sendWindowStart } : {}),
+      ...(step.sendWindowEnd ? { sendWindowEnd: step.sendWindowEnd } : {}),
       ...(step.subject ? { subject: step.subject } : {}),
       ...(step.fromName ? { fromName: step.fromName } : {}),
       ...meta.settings,

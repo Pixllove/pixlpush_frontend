@@ -236,6 +236,100 @@ export const sdkKeyApi = {
     authRequest<void>(at(projectId, `/sdk-keys/${encodeURIComponent(keyId)}`), {}, BASE, "DELETE"),
 };
 
+export type SyncEnvironment = "development" | "staging" | "production";
+export type SyncSource = {
+  id: string; projectId: string; name: string; environment: SyncEnvironment;
+  status: "active" | "paused"; activeMappingVersion?: number | null;
+  records?: Record<string, number>; createdAt: string; updatedAt: string;
+};
+export type SyncCredential = {
+  id: string; name: string; keyPrefix: string; scopes: string[];
+  lastUsedAt: string | null; expiresAt: string | null; revokedAt: string | null; createdAt: string;
+};
+export type CreatedSyncCredential = SyncCredential & { key: string; warning: string };
+export type SyncMapping = {
+  version: number; status: "draft" | "active" | "superseded"; config: unknown;
+  validation: { valid: boolean; errors: { code: string; path: string; message: string }[]; warnings: { code: string; path: string; message: string }[] };
+  publishedAt: string | null; createdAt: string;
+};
+export type SyncRecord = {
+  id: string; idempotencyKey: string; recordType: string; externalUserId: string;
+  status: "pending" | "processing" | "applied" | "ignored_stale" | "ignored_deleted" | "failed" | "dead_letter";
+  mappingVersion: number | null; attempts: number; lastError: string | null;
+  occurredAt: string; receivedAt: string; processedAt: string | null;
+};
+export type ExternalSyncSegment = {
+  id: string; namespace: string; key: string; displayName: string; status: "active" | "retired";
+  memberCount: number; source: { name: string; environment: SyncEnvironment };
+};
+export type SyncImportKind = "event_history" | "message_history";
+export type SyncImportJob = {
+  id: string; sourceId: string; kind: SyncImportKind;
+  status: "queued" | "running" | "paused" | "completed" | "failed" | "canceled";
+  partsTotal: number; partsCompleted: number; accepted: number; rejected: number;
+  partsUploaded?: number;
+  startedAt: string | null; completedAt: string | null; lastError: string | null;
+  createdAt: string; updatedAt: string;
+  parts?: { id: string; partIndex: number; idempotencyKey: string; status: string; attempts: number; lastError: string | null; processedAt: string | null }[];
+};
+export type SyncWebhookEndpoint = { id: string; name: string; url: string; events: string[]; status: "active" | "paused"; createdAt: string; updatedAt: string };
+export type CreatedSyncWebhook = SyncWebhookEndpoint & { secret: string; warning: string };
+export type SyncWebhookDelivery = { id: string; status: "pending" | "processing" | "delivered" | "dead_letter"; attempts: number; responseStatus: number | null; lastError: string | null; deliveredAt: string | null; createdAt: string; topic: string; eventCreatedAt: string };
+export type SyncMigrationRun = {
+  id: string; projectId: string; name: string; sourceName: string;
+  status: "draft" | "draining" | "cutover" | "rolled_back"; journeyIds: string[];
+  stagedDefinitions: unknown; validationReport: unknown; drainConfirmedAt: string | null;
+  cutoverAt: string | null; rolledBackAt: string | null; createdAt: string; updatedAt: string;
+  ownerships?: { journeyId: string; owner: "source" | "pixlpush"; fencingToken: number }[];
+};
+const syncAt = (projectId: string, path = "") => at(projectId, `/data-sync${path}`);
+
+export const dataSyncApi = {
+  sources: (projectId: string) => authRequest<SyncSource[]>(syncAt(projectId, "/sources"), undefined, BASE),
+  createSource: (projectId: string, input: { name: string; environment: SyncEnvironment }) => authRequest<SyncSource>(syncAt(projectId, "/sources"), input, BASE),
+  setSourceStatus: (projectId: string, sourceId: string, status: SyncSource["status"]) => authRequest<SyncSource>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}`), { status }, BASE, "PATCH"),
+  credentials: (projectId: string, sourceId: string) => authRequest<SyncCredential[]>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/credentials`), undefined, BASE),
+  createCredential: (projectId: string, sourceId: string, name: string) => authRequest<CreatedSyncCredential>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/credentials`), { name }, BASE),
+  revokeCredential: (projectId: string, sourceId: string, credentialId: string) => authRequest<{ revoked: boolean }>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/credentials/${encodeURIComponent(credentialId)}/revoke`), {}, BASE),
+  mappings: (projectId: string, sourceId: string) => authRequest<SyncMapping[]>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/mappings`), undefined, BASE),
+  createMapping: (projectId: string, sourceId: string, config: unknown) => authRequest<SyncMapping>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/mappings`), { config }, BASE),
+  updateMapping: (projectId: string, sourceId: string, version: number, config: unknown) => authRequest<SyncMapping>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/mappings/${version}`), { config }, BASE, "PUT"),
+  publishMapping: (projectId: string, sourceId: string, version: number) => authRequest<SyncMapping>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/mappings/${version}/publish`), {}, BASE),
+  previewMapping: (projectId: string, sourceId: string, config: unknown, attributes: Record<string, unknown>, consent: Record<string, unknown>) => authRequest<{ validation: SyncMapping["validation"]; fields: { target: string; value: unknown }[]; consent: Record<string, boolean>; recordError: { code: string; message: string } | null }>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/mappings/preview`), { config, attributes, consent }, BASE),
+  records: (projectId: string, sourceId: string, status?: SyncRecord["status"]) => {
+    const query = new URLSearchParams({ limit: "100" }); if (status) query.set("status", status);
+    return authRequest<{ items: SyncRecord[]; nextCursor: string | null }>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/records?${query}`), undefined, BASE);
+  },
+  retryRecords: (projectId: string, sourceId: string) => authRequest<{ retried: number }>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/records/retry`), {}, BASE),
+  segments: (projectId: string) => authRequest<ExternalSyncSegment[]>(syncAt(projectId, "/segments"), undefined, BASE),
+  retireSegment: (projectId: string, segmentId: string) => authRequest<ExternalSyncSegment>(syncAt(projectId, `/segments/${encodeURIComponent(segmentId)}/retire`), {}, BASE),
+  imports: (projectId: string) => authRequest<SyncImportJob[]>(syncAt(projectId, "/imports"), undefined, BASE),
+  importJob: (projectId: string, jobId: string) => authRequest<SyncImportJob>(syncAt(projectId, `/imports/${encodeURIComponent(jobId)}`), undefined, BASE),
+  createImport: (projectId: string, sourceId: string, input: { kind: SyncImportKind; partsTotal: number }) => authRequest<SyncImportJob>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/imports`), input, BASE),
+  uploadImportPart: (projectId: string, jobId: string, input: { partIndex: number; idempotencyKey: string; records: unknown[] }) => authRequest<{ id: string; partIndex: number; idempotencyKey: string; status: string; duplicate: boolean }>(syncAt(projectId, `/imports/${encodeURIComponent(jobId)}/parts`), input, BASE),
+  startImport: (projectId: string, jobId: string) => authRequest<SyncImportJob>(syncAt(projectId, `/imports/${encodeURIComponent(jobId)}/start`), {}, BASE),
+  pauseImport: (projectId: string, jobId: string) => authRequest<{ paused: boolean }>(syncAt(projectId, `/imports/${encodeURIComponent(jobId)}/pause`), {}, BASE),
+  resumeImport: (projectId: string, jobId: string) => authRequest<{ resumed: boolean }>(syncAt(projectId, `/imports/${encodeURIComponent(jobId)}/resume`), {}, BASE),
+  cancelImport: (projectId: string, jobId: string) => authRequest<{ canceled: boolean }>(syncAt(projectId, `/imports/${encodeURIComponent(jobId)}/cancel`), {}, BASE),
+  webhooks: (projectId: string, sourceId: string) => authRequest<SyncWebhookEndpoint[]>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/webhooks`), undefined, BASE),
+  createWebhook: (projectId: string, sourceId: string, input: { name: string; url: string; events: string[] }) => authRequest<CreatedSyncWebhook>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/webhooks`), input, BASE),
+  setWebhookStatus: (projectId: string, endpointId: string, status: SyncWebhookEndpoint["status"]) => authRequest<SyncWebhookEndpoint>(syncAt(projectId, `/webhooks/${encodeURIComponent(endpointId)}`), { status }, BASE, "PATCH"),
+  deleteWebhook: (projectId: string, endpointId: string) => authRequest<{ deleted: boolean }>(syncAt(projectId, `/webhooks/${encodeURIComponent(endpointId)}`), {}, BASE, "DELETE"),
+  webhookDeliveries: (projectId: string, endpointId: string) => authRequest<SyncWebhookDelivery[]>(syncAt(projectId, `/webhooks/${encodeURIComponent(endpointId)}/deliveries`), undefined, BASE),
+  replayWebhook: (projectId: string, endpointId: string, deliveryId: string) => authRequest<{ replayed: boolean }>(syncAt(projectId, `/webhooks/${encodeURIComponent(endpointId)}/deliveries/${encodeURIComponent(deliveryId)}/replay`), {}, BASE),
+  migrations: (projectId: string) => authRequest<SyncMigrationRun[]>(syncAt(projectId, "/migrations"), undefined, BASE),
+  createMigration: (projectId: string, input: { name: string; sourceName?: string; journeyIds: string[] }) => authRequest<SyncMigrationRun>(syncAt(projectId, "/migrations"), input, BASE),
+  validateMigration: (projectId: string, runId: string) => authRequest<unknown>(syncAt(projectId, `/migrations/${encodeURIComponent(runId)}/validate`), {}, BASE),
+  stageMigration: (projectId: string, runId: string, definitions: unknown) => authRequest<SyncMigrationRun>(syncAt(projectId, `/migrations/${encodeURIComponent(runId)}/staged`), { definitions }, BASE, "PUT"),
+  importMigrationParticipants: (projectId: string, runId: string, participants: Array<{ journeyId: string; externalUserId: string; resumeAtStepKey?: string; enteredAt?: string; entryNumber?: number }>) => authRequest<{ staged: number; unknownUsers: number; duplicates: number }>(syncAt(projectId, `/migrations/${encodeURIComponent(runId)}/participants`), { participants }, BASE),
+  drainMigration: (projectId: string, runId: string) => authRequest<SyncMigrationRun>(syncAt(projectId, `/migrations/${encodeURIComponent(runId)}/drain`), {}, BASE),
+  confirmMigrationDrain: (projectId: string, runId: string) => authRequest<SyncMigrationRun>(syncAt(projectId, `/migrations/${encodeURIComponent(runId)}/confirm-drain`), {}, BASE),
+  cutoverMigration: (projectId: string, runId: string) => authRequest<SyncMigrationRun>(syncAt(projectId, `/migrations/${encodeURIComponent(runId)}/cutover`), {}, BASE),
+  rollbackMigration: (projectId: string, runId: string) => authRequest<SyncMigrationRun>(syncAt(projectId, `/migrations/${encodeURIComponent(runId)}/rollback`), {}, BASE),
+  serverOnlyEvents: (projectId: string) => authRequest<{ events: string[] }>(at(projectId, "/sdk-keys/server-only-events"), undefined, BASE),
+  setServerOnlyEvents: (projectId: string, events: string[]) => authRequest<{ events: string[] }>(at(projectId, "/sdk-keys/server-only-events"), { events }, BASE, "PUT"),
+};
+
 export interface EmailTemplate {
   id: string;
   projectId: string;
@@ -583,8 +677,8 @@ export const journeysApi = {
   remove: (projectId: string, journeyId: string) =>
     authRequest<void>(at(projectId, journeyPath(journeyId)), {}, BASE, "DELETE"),
   /** activate (draft → live), pause, resume, archive (stops for good), duplicate (new draft copy). */
-  action: (projectId: string, journeyId: string, action: "activate" | "pause" | "resume" | "archive" | "duplicate") =>
-    authRequest<Journey>(at(projectId, journeyPath(journeyId, `/${action}`)), {}, BASE, "POST"),
+  action: (projectId: string, journeyId: string, action: "activate" | "pause" | "resume" | "archive" | "duplicate", options?: { cancelQueued?: boolean }) =>
+    authRequest<Journey>(at(projectId, journeyPath(journeyId, `/${action}`)), options ?? {}, BASE, "POST"),
   /** Keep one variant of an A/B test step; the test and its other variants are removed (works while running). */
   applyAbWinner: (projectId: string, journeyId: string, testKey: string, variantKey: string) =>
     authRequest<Journey>(at(projectId, journeyPath(journeyId, `/ab-tests/${encodeURIComponent(testKey)}/apply`)), { variantKey }, BASE, "POST"),

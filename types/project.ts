@@ -731,9 +731,13 @@ export interface JourneyStep {
   /** Email steps: replace the template's subject / sender name. */
   subject?: string;
   fromName?: string;
-  /** Delay: "HH:MM" on a clock `utcOffset` minutes east of UTC. */
+  /** Delay: "HH:MM" in the end user's timezone. */
   time?: string;
   utcOffset?: number;
+  useUserTimezone?: boolean;
+  /** Message steps can be held until this local delivery window opens. */
+  sendWindowStart?: string;
+  sendWindowEnd?: string;
   /** Repeat: how many extra runs. */
   count?: number;
   amount?: number;

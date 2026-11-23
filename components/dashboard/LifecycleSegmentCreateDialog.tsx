@@ -12,7 +12,12 @@ import {
   Box,
   Button,
   Checkbox,
+  Alert,
   CircularProgress,
+  MenuItem,
+  Step,
+  StepLabel,
+  Stepper,
   Dialog,
   DialogActions,
   DialogContent,
@@ -31,11 +36,16 @@ import EmptyState from "./EmptyState";
 import { useEffect, useMemo, useState } from "react";
 import type { ProjectEventCatalogEntry } from "@/types/project";
 import SearchField from "./SearchField";
+import Link from "next/link";
+import { useActiveProject } from "@/hooks/projects/use-active-project";
+import { dataSyncApi, type SyncSource } from "@/lib/projects/api";
+import { SEGMENT_PURPOSES, SOURCE_COPY, withExternalSegment, type SegmentSource } from "@/lib/lifecycle-purposes";
 
 type EventOption = ProjectEventCatalogEntry;
 export default function LifecycleSegmentCreateDialog({
   open,
   onClose,
+  onExternalCreated,
   onCreate,
   events,
   eventsLoading,
@@ -46,6 +56,7 @@ export default function LifecycleSegmentCreateDialog({
 }: {
   open: boolean;
   onClose: () => void;
+  onExternalCreated?: (name: string) => void;
   onCreate: (input: {
     name: string;
     description: string;
@@ -64,6 +75,49 @@ export default function LifecycleSegmentCreateDialog({
   const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const { active } = useActiveProject();
+  const [purposeKey, setPurposeKey] = useState("");
+  const [otherPurpose, setOtherPurpose] = useState("");
+  const [chosenSource, setChosenSource] = useState<SegmentSource>();
+  const [sources, setSources] = useState<SyncSource[]>();
+  const [sourceId, setSourceId] = useState("");
+  const [incomingStatus, setIncomingStatus] = useState("");
+  const [externalBusy, setExternalBusy] = useState(false);
+  const [externalError, setExternalError] = useState("");
+  const purpose = SEGMENT_PURPOSES.find((item) => item.key === purposeKey);
+  const dataSource = purpose?.source ?? chosenSource;
+  const isWebhook = dataSource === "webhook";
+  const busy = Boolean(loading) || externalBusy;
+
+  useEffect(() => {
+    if (!open || !isWebhook || !active?.id) return;
+    let live = true;
+    dataSyncApi.sources(active.id)
+      .then((rows) => { if (!live) return; setSources(rows); setSourceId((current) => current || rows[0]?.id || ""); })
+      .catch((cause: { message?: string }) => { if (live) setExternalError(cause.message ?? "Could not load data sources."); });
+    return () => { live = false; };
+  }, [open, isWebhook, active?.id]);
+
+  const createExternal = async () => {
+    if (!active?.id || !sourceId) return;
+    setExternalBusy(true);
+    setExternalError("");
+    try {
+      const versions = await dataSyncApi.mappings(active.id, sourceId);
+      const base = versions.find((item) => item.status === "active") ?? versions.find((item) => item.status === "draft");
+      const config = withExternalSegment(base?.config, name.trim(), incomingStatus.trim());
+      // A new version, so someone's unfinished draft is never published by accident.
+      const saved = await dataSyncApi.createMapping(active.id, sourceId, config);
+      if (!saved.validation.valid) throw new Error(saved.validation.errors[0]?.message ?? "This mapping is not valid.");
+      await dataSyncApi.publishMapping(active.id, sourceId, saved.version);
+      onExternalCreated?.(name.trim());
+      onClose();
+    } catch (cause) {
+      setExternalError((cause as { message?: string }).message ?? "Could not create this segment.");
+    } finally {
+      setExternalBusy(false);
+    }
+  };
 
   useEffect(() => {
     if (!open) {
@@ -73,6 +127,13 @@ export default function LifecycleSegmentCreateDialog({
       setSelectedEvents([]);
       setSearch("");
       setPage(1);
+      setPurposeKey("");
+      setOtherPurpose("");
+      setChosenSource(undefined);
+      setSources(undefined);
+      setSourceId("");
+      setIncomingStatus("");
+      setExternalError("");
     }
   }, [open]);
 
@@ -96,10 +157,10 @@ export default function LifecycleSegmentCreateDialog({
     );
   };
   const close = () => {
-    if (!loading) onClose();
+    if (!busy) onClose();
   };
-  const canCreate =
-    Boolean(name.trim()) && selectedEvents.length > 0 && !loading;
+  const canCreate = Boolean(name.trim()) && !busy && (isWebhook ? Boolean(sourceId && incomingStatus.trim()) : selectedEvents.length > 0);
+  const canAdvance = step === 0 ? Boolean(purpose && (purpose.source || (otherPurpose.trim() && chosenSource))) : step === 1 ? isWebhook || Boolean(selectedSdk) : isWebhook ? Boolean(sourceId && incomingStatus.trim()) : selectedEvents.length > 0;
 
   return (
     <Dialog open={open} onClose={close} fullWidth maxWidth="md">
@@ -116,11 +177,7 @@ export default function LifecycleSegmentCreateDialog({
           Create segment
         </Typography>
         <Typography color="text.secondary" fontSize="var(--fs-13)" sx={{ mt: 0.7 }}>
-          {step === 0
-            ? "Choose the SDK you want to build this lifecycle segment from."
-            : step === 1
-              ? "Choose events received from the selected SDK."
-              : "Name your segment and review the events that will qualify users."}
+          {["What do you want this lifecycle segment to track?", "Review the recommended data source.", isWebhook ? "Choose the connected system and incoming status." : "Choose events received from the selected SDK.", "Review how this segment will update."][step]}
         </Typography>
         <IconButton
           onClick={close}
@@ -132,11 +189,48 @@ export default function LifecycleSegmentCreateDialog({
       </DialogTitle>
       <Divider />
       <DialogContent sx={{ px: { xs: 3, md: 5 }, py: 3.5 }}>
+        <Stepper activeStep={step} alternativeLabel sx={{ mb: 3 }}>{["Purpose", "Source", "Configure", "Review"].map((label) => <Step key={label}><StepLabel>{label}</StepLabel></Step>)}</Stepper>
         {step === 0 ? (
+          <Stack gap={2}>
+            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", md: "1fr 1fr 1fr" }, gap: 1 }}>
+              {SEGMENT_PURPOSES.map((item) => (
+                <ListItemButton key={item.key} selected={purposeKey === item.key} onClick={() => { setPurposeKey(item.key); setName(item.suggestedName); }} sx={{ minHeight: 56, border: "1px solid", borderColor: purposeKey === item.key ? "primary.main" : "divider", borderRadius: 1 }}>
+                  <Typography variant="body2" sx={{ flex: 1 }}>{item.label}</Typography>
+                  {purposeKey === item.key && <CheckRounded color="primary" fontSize="small" />}
+                </ListItemButton>
+              ))}
+            </Box>
+            {purposeKey === "other" && (
+              <Stack gap={1.5}>
+                <TextField label="What should this segment identify?" value={otherPurpose} onChange={(event) => setOtherPurpose(event.target.value)} multiline minRows={2} />
+                <TextField select label="Where is this data recorded?" value={chosenSource ?? ""} onChange={(event) => setChosenSource(event.target.value as SegmentSource)} helperText="Use SDK for app or website actions. Use Webhook/API for backend or billing status.">
+                  <MenuItem value="sdk">In the app or website (SDK)</MenuItem>
+                  <MenuItem value="webhook">In our backend or billing system (Webhook/API)</MenuItem>
+                </TextField>
+              </Stack>
+            )}
+          </Stack>
+        ) : step === 1 && isWebhook ? (
+          <Alert severity="info"><Typography variant="body2" fontWeight={600}>Recommended source: {SOURCE_COPY.webhook.title}</Typography>{purpose?.source ? purpose.why + " " : ""}{SOURCE_COPY.webhook.detail}</Alert>
+        ) : step === 2 && isWebhook ? (
+          <Stack gap={2}>
+            {externalError && <Alert severity="error">{externalError}</Alert>}
+            {sources && sources.length === 0 ? (
+              <Alert severity="warning" action={<Button component={Link} href="/dashboard/settings/data-sync" size="small">Connect source</Button>}>Connect your backend in Data Sync, then return here.</Alert>
+            ) : (
+              <>
+                <TextField select label="Connected system" value={sourceId} onChange={(event) => setSourceId(event.target.value)}>
+                  {(sources ?? []).map((item) => <MenuItem key={item.id} value={item.id}>{item.name} · {item.environment}</MenuItem>)}
+                </TextField>
+                <TextField label="Incoming segment or status name" placeholder="e.g. cancel_at_period_end" value={incomingStatus} onChange={(event) => setIncomingStatus(event.target.value)} helperText="The exact value your system sends as sourceSegment." />
+              </>
+            )}
+          </Stack>
+        ) : step === 1 ? (
           <Stack gap={2.5}>
+            <Alert severity="info"><Typography variant="body2" fontWeight={600}>Recommended source: {SOURCE_COPY.sdk.title}</Typography>{purpose?.source ? purpose.why + " " : ""}{SOURCE_COPY.sdk.detail}</Alert>
             <Stack direction="row" gap={1} alignItems="center">
-              <Box sx={{ width: 30, height: 30, borderRadius: "50%", display: "grid", placeItems: "center", color: "#fff", bgcolor: "primary.main", fontWeight: 600 }}>1</Box>
-              <Box>
+                            <Box>
                 <Typography fontWeight={600}>Select SDK</Typography>
                 <Typography color="text.secondary" fontSize="var(--fs-12)">
                   Select where the events you need are coming from.
@@ -172,24 +266,10 @@ export default function LifecycleSegmentCreateDialog({
               })}
             </Box>
           </Stack>
-        ) : step === 1 ? (
+        ) : step === 2 ? (
           <Stack gap={2.5}>
             <Stack direction="row" gap={1} alignItems="center">
-              <Box
-                sx={{
-                  width: 30,
-                  height: 30,
-                  borderRadius: "50%",
-                  display: "grid",
-                  placeItems: "center",
-                  color: "#fff",
-                  bgcolor: "primary.main",
-                  fontWeight: 600,
-                }}
-              >
-                2
-              </Box>
-              <Box>
+                            <Box>
                 <Typography fontWeight={600}>Select events</Typography>
                 <Typography color="text.secondary" fontSize="var(--fs-12)">
                   Users who complete any selected event will enter this segment.
@@ -319,21 +399,7 @@ export default function LifecycleSegmentCreateDialog({
         ) : (
           <Stack gap={2.5}>
             <Stack direction="row" gap={1} alignItems="center">
-              <Box
-                sx={{
-                  width: 30,
-                  height: 30,
-                  borderRadius: "50%",
-                  display: "grid",
-                  placeItems: "center",
-                  color: "#fff",
-                  bgcolor: "primary.main",
-                  fontWeight: 600,
-                }}
-              >
-                3
-              </Box>
-              <Box>
+                            <Box>
                 <Typography fontWeight={600}>Add segment details</Typography>
                 <Typography color="text.secondary" fontSize="var(--fs-12)">
                   Give this lifecycle segment a clear name your team will
@@ -368,7 +434,7 @@ export default function LifecycleSegmentCreateDialog({
               }}
             >
               <Typography fontWeight={600} fontSize="var(--fs-13)">
-                Users enter when they complete any of these events
+                {isWebhook ? `Source: Webhook/API · updates when your system sends "${incomingStatus.trim()}"` : "Source: SDK · users enter when they complete any of these events"}
               </Typography>
               <Stack direction="row" gap={1} flexWrap="wrap" sx={{ mt: 1 }}>
                 {selectedEvents.map((event) => (
@@ -389,9 +455,9 @@ export default function LifecycleSegmentCreateDialog({
                 ))}
               </Stack>
             </Box>
-            {error && (
+            {(error || externalError) && (
               <Typography color="error" fontSize="var(--fs-12)">
-                {error}
+                {externalError || error}
               </Typography>
             )}
           </Stack>
@@ -404,45 +470,15 @@ export default function LifecycleSegmentCreateDialog({
           startIcon={step === 0 ? undefined : <ArrowBackRounded />}
           variant={step === 0 ? "text" : "outlined"}
           onClick={() => (step === 0 ? close() : setStep(step - 1))}
-          disabled={loading}
+          disabled={busy}
         >
           {step === 0 ? "Cancel" : "Back"}
         </Button>
-        {step === 0 ? (
-          <Button
-            variant="contained"
-            endIcon={<ArrowForwardRounded />}
-            onClick={() => setStep(1)}
-            disabled={!selectedSdk || loading}
-          >
-            Next
-          </Button>
-        ) : step === 1 ? (
-          <Button
-            variant="contained"
-            endIcon={<ArrowForwardRounded />}
-            onClick={() => setStep(2)}
-            disabled={selectedEvents.length === 0 || loading}
-          >
-            Next
-          </Button>
+        {step < 3 ? (
+          <Button variant="contained" endIcon={<ArrowForwardRounded />} onClick={() => setStep(step + 1)} disabled={!canAdvance || busy}>Next</Button>
         ) : (
-          <Button
-            variant="contained"
-            onClick={() =>
-              onCreate({
-                name: name.trim(),
-                description: description.trim(),
-                events: selectedEvents,
-              })
-            }
-            disabled={!canCreate}
-          >
-            {loading ? (
-              <CircularProgress size={18} color="inherit" />
-            ) : (
-              "Create segment"
-            )}
+          <Button variant="contained" onClick={() => isWebhook ? void createExternal() : onCreate({ name: name.trim(), description: description.trim(), events: selectedEvents })} disabled={!canCreate}>
+            {busy ? <CircularProgress size={18} color="inherit" /> : "Create segment"}
           </Button>
         )}
       </DialogActions>

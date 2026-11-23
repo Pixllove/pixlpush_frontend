@@ -13,6 +13,7 @@ const ALLOWED = [
   "integrations",
   "onboarding",
   "sdk-keys",
+  "data-sync",
   // Includes only the current read/status and test-send operations.
   "email-settings",
   "billing",
