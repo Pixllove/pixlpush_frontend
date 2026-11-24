@@ -42,13 +42,13 @@ export default function TemplateSaveDialog({
       onClose={pending ? undefined : onClose}
       maxWidth="xs"
       fullWidth
-      aria-labelledby="template-save-dialog-title"
+      aria-labelledby="reusable-email-save-dialog-title"
     >
-      <DialogTitle id="template-save-dialog-title">Save template</DialogTitle>
+      <DialogTitle id="reusable-email-save-dialog-title">Save reusable email</DialogTitle>
       <DialogContent>
         <Typography color="text.secondary" fontSize="var(--fs-13)">
-          You are editing an existing template. Choose whether to update it or
-          save the current version as a separate template.
+          You are editing an existing reusable email. Choose whether to update
+          it or save the current version as a separate reusable email.
         </Typography>
       </DialogContent>
       <DialogActions>
@@ -61,14 +61,14 @@ export default function TemplateSaveDialog({
             onClick={() => void run("new", onSaveAsNew)}
             disabled={Boolean(pending)}
           >
-            {pending === "new" ? "Saving…" : "Save as new template"}
+            {pending === "new" ? "Saving…" : "Save as new reusable email"}
           </Button>
           <Button
             variant="contained"
             onClick={() => void run("update", onUpdate)}
             disabled={Boolean(pending)}
           >
-            {pending === "update" ? "Updating…" : "Update existing"}
+            {pending === "update" ? "Updating…" : "Update reusable email"}
           </Button>
         </Stack>
       </DialogActions>

@@ -159,7 +159,7 @@ export default function PushComposer({
     queryKey: ["push", "template", active?.id, templateId],
     queryFn: () => {
       if (!active?.id || !templateId)
-        throw new Error("The push template is not available.");
+        throw new Error("The reusable notification is not available.");
       return pushApi.templates.get(active.id, templateId);
     },
     enabled: Boolean(active?.id && templateId),
@@ -369,8 +369,8 @@ export default function PushComposer({
           : target === "drafts"
             ? "Saved as a draft."
             : editingTemplate
-              ? "Template updated successfully."
-              : "Saved as a template.",
+              ? "Reusable notification updated successfully."
+              : "Reusable notification saved.",
       );
       window.setTimeout(() => onSaved(target), 500);
     },
@@ -504,7 +504,7 @@ export default function PushComposer({
         </Button>
         <Card sx={{ p: 3 }}>
           <Typography color="text.secondary">
-            Loading push template…
+    Loading reusable notification…
           </Typography>
         </Card>
       </Stack>
@@ -524,7 +524,7 @@ export default function PushComposer({
         </Button>
         <Card sx={{ p: 3 }}>
           <Typography color="error">
-            Could not load this push template. Please go back and try again.
+            Could not load this reusable notification. Please go back and try again.
           </Typography>
         </Card>
       </Stack>
@@ -582,7 +582,7 @@ export default function PushComposer({
             startIcon={<SaveRounded />}
             disabled={editingTemplate}
           >
-            Templates
+                Reusable notifications
           </Button>
         </Stack>
       </Card>
@@ -958,7 +958,7 @@ export default function PushComposer({
                 disabled={saveMutation.isPending}
                 onClick={() => action("templates")}
               >
-                {editingTemplate ? "Save changes" : "Save as template"}
+                {editingTemplate ? "Save changes" : "Save reusable notification"}
               </Button>
               {!editingTemplate && (
                 <Button
@@ -1330,7 +1330,7 @@ function PushHeading({
       </Typography>
       {disabled && (
         <Typography fontSize="var(--fs-12)" color="text.secondary">
-          (disabled for templates)
+          (disabled for reusable notifications)
         </Typography>
       )}
     </Stack>

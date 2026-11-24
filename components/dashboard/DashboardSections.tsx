@@ -1748,8 +1748,8 @@ function EmailDataSection() {
       id: item.id,
       name: item.name,
       detail: item.subject || "No subject",
-      meta: `${item.category === "template" ? "Reusable template" : (item.category ?? "Email template")} · Updated ${date(item.updatedAt)}`,
-      status: "Reusable template",
+      meta: `${item.category === "template" ? "Reusable email" : (item.category ?? "Reusable email")} · Updated ${date(item.updatedAt)}`,
+      status: "Reusable email",
     }),
   );
   const campaignRows: EmailRow[] = (
@@ -1789,7 +1789,7 @@ function EmailDataSection() {
     },
     {
       id: "templates" as const,
-      label: "My Templates",
+      label: "My Reusable Emails",
       count: templatesQuery.data?.total ?? 0,
       icon: GridViewRounded,
     },
@@ -1883,7 +1883,7 @@ function EmailDataSection() {
             Create email campaign
           </Button>
           <Button variant="outlined" startIcon={<GridViewRounded />}>
-            Create email template
+            Create reusable email
           </Button>
         </Stack>
       </Stack>
@@ -1913,7 +1913,7 @@ function EmailDataSection() {
           <Box>
             <Typography variant="h3">
               {tab === "templates"
-                ? "My Templates"
+                ? "My Reusable Emails"
                 : tab === "drafts"
                   ? "Draft emails"
                   : "Sent campaigns"}
@@ -1934,7 +1934,7 @@ function EmailDataSection() {
                 setAppliedSearch(value);
                 setPage(1);
               }}
-              placeholder={`Search ${tab === "templates" ? "templates" : tab === "drafts" ? "drafts" : "campaigns"}`}
+              placeholder={`Search ${tab === "templates" ? "reusable emails" : tab === "drafts" ? "drafts" : "campaigns"}`}
             />
             <Select
               size="small"
@@ -1952,7 +1952,7 @@ function EmailDataSection() {
           totalCount={String(activeQuery.data?.total ?? 0)}
           noun={
             tab === "templates"
-              ? "templates"
+              ? "reusable emails"
               : tab === "drafts"
                 ? "drafts"
                 : "campaigns"
@@ -1961,13 +1961,13 @@ function EmailDataSection() {
             icon: <MailOutlineRounded />,
             noun:
               tab === "templates"
-                ? "templates"
+                ? "reusable emails"
                 : tab === "drafts"
                   ? "drafts"
                   : "sent campaigns",
             description:
               tab === "templates"
-                ? "Templates you save are kept here to reuse in campaigns and journeys."
+                ? "Reusable emails you save are kept here to reuse in campaigns and journeys."
                 : tab === "drafts"
                   ? "Emails you start and save appear here until they are sent."
                   : "Campaigns appear here once they have been sent.",
@@ -2012,7 +2012,7 @@ function EmailSection() {
             detail:
               "Introduce PixlLove, highlight profile setup, and invite users to start matching.",
             meta: "Onboarding · Updated today",
-            status: "Reusable template",
+            status: "Reusable email",
           },
           {
             id: "premium",
@@ -2020,7 +2020,7 @@ function EmailSection() {
             detail:
               "A clean offer layout with benefits, pricing nudge, and a strong upgrade action.",
             meta: "Promotion · Updated yesterday",
-            status: "Reusable template",
+            status: "Reusable email",
           },
           {
             id: "reengagement",
@@ -2028,7 +2028,7 @@ function EmailSection() {
             detail:
               "Bring inactive subscribers back with warm copy and personalized reminders.",
             meta: "Winback · Updated 2 days ago",
-            status: "Reusable template",
+            status: "Reusable email",
           },
           {
             id: "product-update",
@@ -2036,7 +2036,7 @@ function EmailSection() {
             detail:
               "Share new features, product improvements, and important announcements.",
             meta: "Product · Updated 4 days ago",
-            status: "Reusable template",
+            status: "Reusable email",
           },
         ]
       : tab === "drafts"
@@ -2144,7 +2144,7 @@ function EmailSection() {
     { id: "drafts" as const, label: "Drafts", count: "2", icon: EditRounded },
     {
       id: "templates" as const,
-      label: "My Templates",
+      label: "My Reusable Emails",
       count: "4",
       icon: GridViewRounded,
     },
@@ -2169,7 +2169,7 @@ function EmailSection() {
             Create email campaign
           </Button>
           <Button variant="outlined" startIcon={<GridViewRounded />}>
-            Create email template
+            Create reusable email
           </Button>
         </Stack>
       </Stack>
@@ -2192,7 +2192,7 @@ function EmailSection() {
           <Box>
             <Typography variant="h3">
               {tab === "templates"
-                ? "My Templates"
+                ? "My Reusable Emails"
                 : tab === "drafts"
                   ? "Draft emails"
                   : "Sent campaigns"}
@@ -2207,7 +2207,7 @@ function EmailSection() {
           </Box>
           <Stack direction="row" gap={1} className="data-toolbar email-toolbar">
             <SearchField
-              placeholder={`Search ${tab === "templates" ? "templates" : tab === "drafts" ? "drafts" : "campaigns"}`}
+              placeholder={`Search ${tab === "templates" ? "reusable emails" : tab === "drafts" ? "drafts" : "campaigns"}`}
             />
             <Select
               size="small"
@@ -2225,7 +2225,7 @@ function EmailSection() {
           totalCount={String(emailRows.length)}
           noun={
             tab === "templates"
-              ? "templates"
+              ? "reusable emails"
               : tab === "drafts"
                 ? "drafts"
                 : "campaigns"
@@ -2393,10 +2393,10 @@ function PushSection() {
       category:
         item.category === "push_notification"
           ? "Push notification"
-          : "Template",
+          : "Reusable notification",
       created: formatDate(item.updatedAt),
       status: item.status === "active" ? "Active" : (item.status ?? "Active"),
-      target: "Reusable content",
+      target: "Reusable notification",
       sends: item.sends === undefined ? "—" : item.sends.toLocaleString(),
       clicks: item.opens === undefined ? "—" : item.opens.toLocaleString(),
     }),
@@ -2408,7 +2408,7 @@ function PushSection() {
     name: item.name,
     title: item.template?.title ?? "—",
     message: item.template?.body ?? "—",
-    category: item.category === "template" ? "Template" : "Push notification",
+    category: item.category === "template" ? "Reusable notification" : "Push notification",
     created: formatDate(item.updatedAt),
     status: item.status.charAt(0).toUpperCase() + item.status.slice(1),
     target: item.audience?.allUsers
@@ -2616,7 +2616,7 @@ function PushSection() {
     },
     {
       id: "templates" as const,
-      label: "My Templates",
+      label: "My Reusable Notifications",
       count: String(
         templatesQuery.data?.tabCounts?.templates ??
           templatesQuery.data?.total ??
@@ -2646,7 +2646,7 @@ function PushSection() {
             startIcon={<GridViewRounded />}
             onClick={() => openNewComposer("template")}
           >
-            Create push template
+            Create reusable notification
           </Button>
         </Stack>
       </Stack>
@@ -2677,7 +2677,7 @@ function PushSection() {
           <Box>
             <Typography variant="h3">
               {tab === "templates"
-                ? "My Templates"
+                ? "My Reusable Notifications"
                 : tab === "drafts"
                   ? "Draft notifications"
                   : "Sent notifications"}
@@ -2724,7 +2724,7 @@ function PushSection() {
           }
           noun={
             tab === "templates"
-              ? "templates"
+          ? "reusable notifications"
               : tab === "drafts"
                 ? "drafts"
                 : "campaigns"
@@ -2733,13 +2733,13 @@ function PushSection() {
             icon: <NotificationsNoneRounded />,
             noun:
               tab === "templates"
-                ? "templates"
+              ? "reusable notifications"
                 : tab === "drafts"
                   ? "drafts"
                   : "sent notifications",
             description:
               tab === "templates"
-                ? "Templates you save are kept here to reuse in campaigns and journeys."
+                ? "Reusable notifications you save are kept here to reuse in campaigns and journeys."
                 : tab === "drafts"
                   ? "Notifications you start and save appear here until they are sent."
                   : "Notifications appear here once they have been sent.",
@@ -2781,7 +2781,7 @@ function PushSection() {
         }}
         title={`Delete "${deleteTarget?.name ?? "item"}"?`}
         description={tab === "templates"
-          ? "This template will be hidden from your workspace. Existing journeys and sends keep their content, and platform admins retain its details."
+          ? "This reusable notification will be hidden from your workspace. Existing journeys and sends keep their content, and platform admins retain its details."
           : "This item will be deleted from your workspace."}
       />
       <Toast

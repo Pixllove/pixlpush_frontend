@@ -112,19 +112,19 @@ type AddTarget =
 const blockOptions: Array<[BlockType, string, string, typeof EmailRounded]> = [
   [
     "email",
-    "Email template",
+    "Reusable email",
     "Send a designed email to subscribers.",
     EmailRounded,
   ],
   [
     "notification",
-    "Push notification",
+    "Reusable notification",
     "Send a push notification to subscribers.",
     NotificationsActiveRounded,
   ],
   [
     "web_notification",
-    "Web push notification",
+    "Reusable web notification",
     "Send a web push notification to subscribers.",
     NotificationsActiveRounded,
   ],
@@ -584,7 +584,7 @@ export default function JourneyBuilder() {
       .replace(/<[^>]+>/g, "")
       .replace(/\n{3,}/g, "\n\n")
       .trim();
-  /** A message card says what will be sent: the push title/body or the complete email template. */
+  /** A message card says what will be sent: the push title/body or the complete reusable email. */
   const describe = (block: Block): Block => {
     if (block.type === "ab_test") {
       const max = abMaxVariants(settings[block.id]);
@@ -616,7 +616,7 @@ export default function JourneyBuilder() {
       description:
         block.type === "notification" || block.type === "web_notification"
           ? `Title: ${template.title ?? template.name}\nBody: ${template.body ?? ""}`
-          : `Template name: ${template.name}\nSubject: ${settings[block.id]?.subject || template.subject || template.name}\nBody:\n${readableEmailBody(template) || "No email body added yet."}`,
+          : `Reusable email: ${template.name}\nSubject: ${settings[block.id]?.subject || template.subject || template.name}\nBody:\n${readableEmailBody(template) || "No email body added yet."}`,
     };
   };
   return (
@@ -743,7 +743,7 @@ export default function JourneyBuilder() {
               <CircularProgress size={34} />
               <Typography fontWeight={600}>Loading your journey</Typography>
               <Typography color="text.secondary" fontSize="var(--fs-13)">
-                Fetching the steps and message templates…
+                Fetching the steps and reusable message content…
               </Typography>
             </Box>
           ) : (
@@ -2004,7 +2004,7 @@ function EmailSettings({
         Design email
       </Button>
       <PanelSelect
-        placeholder="Select any template"
+        placeholder="Select any reusable email"
         value={values.template || ""}
         onChange={pick(set, "template")}
       >
@@ -2028,8 +2028,8 @@ function NotificationSettings({
   return (
     <Stack gap={1.4}>
       <PanelSelect
-        label="Message template"
-        placeholder="Select a notification template"
+        label="Reusable notification"
+        placeholder="Select a reusable notification"
         value={values.template || ""}
         onChange={pick(set, "template")}
       >

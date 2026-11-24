@@ -233,7 +233,7 @@ export default function SimpleEmailEditor({
 }: Props) {
   const [name, setName] = useState(
     item?.name ||
-      (kind === "templates" ? "New email template" : "New email campaign"),
+      (kind === "templates" ? "New reusable email" : "New email campaign"),
   );
   const [activeLanguage, setActiveLanguage] = useState(language);
   const [subject, setSubject] = useState(item?.subject || "");
@@ -295,7 +295,7 @@ export default function SimpleEmailEditor({
   }, [name, subject, content, translations]);
 
   useEffect(() => {
-    setName(item?.name || (kind === "templates" ? "New email template" : "New email campaign"));
+    setName(item?.name || (kind === "templates" ? "New reusable email" : "New email campaign"));
     setSubject(item?.subject || "");
     setContent(item?.content || "");
     setTranslations(item?.translations || {});
@@ -502,7 +502,11 @@ export default function SimpleEmailEditor({
           translations,
           fallbackLanguage,
         },
-        destination === "templates" ? "Template saved" : "Draft saved",
+        destination === "templates"
+          ? templateMode === "update" && isExisting && item?.kind === "templates"
+            ? "Reusable email updated"
+            : "Reusable email saved"
+          : "Draft saved",
       );
       return true;
     } catch (error) {
@@ -814,7 +818,7 @@ export default function SimpleEmailEditor({
           <Menu anchorEl={saveAnchor} open={Boolean(saveAnchor)} onClose={() => setSaveAnchor(null)}>
             <MenuItem onClick={() => { saveAs("drafts"); setSaveAnchor(null); }}>Save as draft</MenuItem>
             <MenuItem onClick={() => { saveTemplate(); setSaveAnchor(null); }}>
-              {isExistingTemplate ? "Update template" : "Save as template"}
+              {isExistingTemplate ? "Update reusable email" : "Save reusable email"}
             </MenuItem>
             <MenuItem onClick={() => { setReviewOpen(true); setSaveAnchor(null); }}>Prepare to send campaign</MenuItem>
           </Menu>

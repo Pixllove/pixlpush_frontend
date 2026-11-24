@@ -165,7 +165,7 @@ export function toJourneyInput(state: BuilderState): JourneyInput {
     const own = settings[block.id] ?? {};
     const meta = { block: block.type, title: block.title, settings: own, ...(branch ? { branchOf: branch.of, branch: branch.side } : {}) };
     if (block.type === "email" || block.type === "notification" || block.type === "web_notification") {
-      if (!own.template) throw new JourneyIncomplete(`Select a template for "${block.title}".`);
+      if (!own.template) throw new JourneyIncomplete(`Select reusable content for "${block.title}".`);
       if (block.type !== "email") {
         const channel = block.type === "web_notification" ? "web" : own.deliveryChannel === "all" ? undefined : "mobile";
         return { type: "push", key: block.id, templateId: own.template, ...(channel ? { channel } : {}), meta };
@@ -272,7 +272,7 @@ export function toJourneyInput(state: BuilderState): JourneyInput {
 }
 
 const TITLES: Record<JourneyStep["type"], [BlockType, string, string]> = {
-  email: ["email", "Email template", "Send a designed email to subscribers."],
+  email: ["email", "Reusable email", "Send a designed email to subscribers."],
   push: ["notification", "Push notification", "Send a push notification to subscribers."],
   delay: ["wait", "Wait", "Pause before the next step."],
   condition: ["condition", "Condition", "Split subscribers into Yes and No paths."],

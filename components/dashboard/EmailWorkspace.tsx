@@ -1018,7 +1018,7 @@ export default function EmailWorkspace() {
         setView("list");
       }
       setDeleteTarget(null);
-      setToast({ message: deleteTarget.kind === "templates" ? "Template deleted successfully." : "Email deleted successfully.", severity: "success" });
+      setToast({ message: deleteTarget.kind === "templates" ? "Reusable email deleted successfully." : "Email deleted successfully.", severity: "success" });
       queryClient.invalidateQueries({ queryKey: ["email"] });
       queryClient.invalidateQueries({ queryKey: ["projects", activeProject.id, "journey-email-templates"] });
       queryClient.invalidateQueries({ queryKey: ["projects", activeProject.id, "journey-email-template-details"] });
@@ -1110,7 +1110,7 @@ export default function EmailWorkspace() {
             startIcon={<GridViewRounded />}
             onClick={() => start("templates")}
           >
-            Create email template
+            Create reusable email
           </Button>
         </Stack>
       </Stack>
@@ -1140,7 +1140,7 @@ export default function EmailWorkspace() {
           },
           {
             value: "templates",
-            label: "My Templates",
+            label: "My Reusable Emails",
             icon: GridViewRounded,
             count: templatesQuery.data?.total ?? 0,
           },
@@ -1156,7 +1156,7 @@ export default function EmailWorkspace() {
           <Box>
             <Typography variant="h3">
               {tab === "templates"
-                ? "My Templates"
+                ? "My Reusable Emails"
                 : tab === "drafts"
                   ? "Draft emails"
                   : "Sent campaigns"}
@@ -1256,7 +1256,7 @@ export default function EmailWorkspace() {
             {isListLoading
               ? "Loading emails…"
               : `Showing ${visible.length} result${visible.length === 1 ? "" : "s"}`}
-            {tab === "templates" ? " · templates" : ""}
+            {tab === "templates" ? " · reusable emails" : ""}
           </Typography>
           <Stack direction="row" alignItems="center" gap={1}>
             <Typography color="text.secondary" fontSize="var(--fs-12)">
@@ -1285,7 +1285,7 @@ export default function EmailWorkspace() {
         onConfirm={confirmRemove}
         title="Are you sure you want to delete this email?"
         description={deleteTarget?.kind === "templates"
-          ? "This template will be hidden from your workspace. Existing journeys and sends keep their content, and platform admins retain its details."
+          ? "This reusable email will be hidden from your workspace. Existing journeys and sends keep their content, and platform admins retain its details."
           : "This email and its saved content will be permanently removed."}
       />
       <Toast
@@ -1344,7 +1344,7 @@ function EmailTableRow({
         </Typography>
         <Typography color="text.secondary" fontSize="var(--fs-12)">
           {item.kind === "templates"
-            ? "Email template"
+            ? "Reusable email"
             : item.kind === "drafts"
               ? "Email draft"
               : "Email campaign"}
@@ -1374,7 +1374,7 @@ function EmailTableRow({
         <Chip
           label={
             item.kind === "templates"
-              ? "Template"
+              ? "Reusable email"
               : item.kind === "drafts"
                 ? "Draft"
                 : "Sent"
@@ -1542,7 +1542,7 @@ function ChoiceScreen({
           onClick={onBack}
           className="group-back-button"
         >
-          Back to email templates
+          Back to reusable emails
         </Button>
         <Typography color="text.secondary" fontSize="var(--fs-12)">
           <b>Design email</b> &nbsp;/&nbsp; Details &nbsp;/&nbsp; Schedule
@@ -1555,7 +1555,7 @@ function ChoiceScreen({
         </Typography>
         <Typography color="text.secondary">
           Start with a focused writing editor, build a visual layout with
-          blocks, or reuse a saved template.
+          blocks, or reuse a saved reusable email.
         </Typography>
         <Box className="campaign-progress">
           <span className="active">Design</span>
@@ -1567,7 +1567,7 @@ function ChoiceScreen({
       </Card>
       <Tabs value={tab} onChange={(_, value) => setTab(value)} sx={{ mt: 2 }}>
         <Tab label="Start from scratch" />
-        <Tab label="Templates" />
+        <Tab label="Reusable emails" />
       </Tabs>
       {tab === 0 ? (
         <Stack direction={{ xs: "column", md: "row" }} gap={2} sx={{ mt: 2 }}>
@@ -1866,11 +1866,11 @@ function EditorToolbar({
           </MenuItem>
           <MenuItem
             onClick={() => {
-              (onSaveTemplate ?? (() => onNotice("Template saved locally")))();
+              (onSaveTemplate ?? (() => onNotice("Reusable email saved locally")))();
               setSaveAnchor(null);
             }}
           >
-            {isExistingTemplate ? "Update template" : "Save as template"}
+            {isExistingTemplate ? "Update reusable email" : "Save reusable email"}
           </MenuItem>
           <MenuItem
             onClick={() => {
@@ -1906,7 +1906,7 @@ function SimpleEditor({
 }) {
   const [name, setName] = useState(
     item?.name ||
-      (kind === "templates" ? "New email template" : "New email campaign"),
+      (kind === "templates" ? "New reusable email" : "New email campaign"),
   );
   const [subject, setSubject] = useState(item?.subject || "");
   const [content, setContent] = useState(item?.content || "");
@@ -1945,7 +1945,7 @@ function SimpleEditor({
         updated: "Updated just now",
         content,
       },
-      kind === "templates" ? "Template saved" : "Draft saved",
+      kind === "templates" ? "Reusable email saved" : "Draft saved",
     );
   if (review)
     return (
@@ -2254,7 +2254,7 @@ function DragEditor({
 }) {
   const [name, setName] = useState(
     item?.name ||
-      (kind === "templates" ? "New email template" : "New email campaign"),
+      (kind === "templates" ? "New reusable email" : "New email campaign"),
   );
   const [blocks, setBlocks] = useState<Block[]>(
     item?.blocks || [
@@ -3041,7 +3041,11 @@ function DragEditor({
           blocks,
           style,
         },
-        destination === "templates" ? "Template saved" : "Draft saved",
+        destination === "templates"
+          ? templateMode === "update" && isExisting && item?.kind === "templates"
+            ? "Reusable email updated"
+            : "Reusable email saved"
+          : "Draft saved",
       );
       return true;
     } catch (error) {
@@ -3530,11 +3534,11 @@ function DragEditor({
           {selectedBlock === null ? (
             <>
               <Tabs value={0}>
-                <Tab label="Template" />
+                <Tab label="Reusable email" />
                 <Tab label="Style" disabled />
               </Tabs>
               <Paper className="inspector-brand-card" sx={{ mt: 3 }}>
-                <Typography className="drag-panel-kicker">TEMPLATE</Typography>
+                <Typography className="drag-panel-kicker">REUSABLE EMAIL</Typography>
                 <Typography variant="h3" sx={{ mt: 2 }}>
                   Brand system
                 </Typography>

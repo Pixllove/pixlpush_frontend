@@ -87,8 +87,8 @@ const toRow = (journey: JourneyListItem): JourneyRow => ({
 const guide = [
   [
     "1",
-    "Create templates",
-    "Design Email, Push or In-App messages you’ll use in your journeys.",
+    "Create reusable content",
+    "Design reusable email, notification, or in-app messages you’ll use in your journeys.",
     EmailRounded,
   ],
   [

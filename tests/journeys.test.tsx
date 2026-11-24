@@ -120,7 +120,7 @@ describe('builder ↔ API mapping', () => {
     const noAudience = state(); noAudience.entranceConfig.lifecycle = '';
     expect(() => toJourneyInput(noAudience)).toThrow(/who enters/);
     const noTemplate = state(); noTemplate.settings.push1 = {};
-    expect(() => toJourneyInput(noTemplate)).toThrow(/Select a template/);
+    expect(() => toJourneyInput(noTemplate)).toThrow(/Select reusable content/);
   });
 
   it('a saved journey comes back as the same canvas', () => {
@@ -262,7 +262,7 @@ describe('A/B test block', () => {
     const mixed = abState(); mixed.branches.ab!.variants = [block('va', 'notification'), block('m', 'email')]; mixed.settings.m = { template: 'tplMail' };
     expect(() => toJourneyInput(mixed)).toThrow(/same kind of message/);
     const noTemplate = abState(); noTemplate.settings.vb = {};
-    expect(() => toJourneyInput(noTemplate)).toThrow(/Select a template/);
+    expect(() => toJourneyInput(noTemplate)).toThrow(/Select reusable content/);
   });
 
   it('comes back as the same canvas, and a kept winner comes back as a plain block', () => {
@@ -367,8 +367,8 @@ describe('A/B test block', () => {
     wrap(<JourneyBuilder />);
     await userEvent.click(await screen.findByRole('button', { name: 'Add variant' }));
     const menu = await screen.findByRole('dialog', { name: 'Add a step' });
-    expect(within(menu).getAllByRole('button').map((b) => b.textContent).filter((t) => t && !t.includes('×'))).toEqual([expect.stringContaining('Push notification')]);
-    expect(within(menu).queryByText('Email template')).not.toBeInTheDocument();
+    expect(within(menu).getAllByRole('button').map((b) => b.textContent).filter((t) => t && !t.includes('×'))).toEqual([expect.stringContaining('Reusable notification')]);
+    expect(within(menu).queryByText('Reusable email')).not.toBeInTheDocument();
     expect(within(menu).queryByText('Web push notification')).not.toBeInTheDocument();
     expect(within(menu).queryByText('ACTIONS')).not.toBeInTheDocument();
   });
@@ -379,7 +379,7 @@ describe('A/B test block', () => {
     await userEvent.click(within(await screen.findByRole('dialog', { name: 'Add a step' })).getByText('A/B test'));
     await userEvent.click(await screen.findByRole('button', { name: 'Add variant' }));
     const menu = await screen.findByRole('dialog', { name: 'Add a step' });
-    expect(['Email template', 'Push notification', 'Web push notification'].every((t) => within(menu).queryByText(t))).toBe(true);
+    expect(['Reusable email', 'Reusable notification', 'Reusable web notification'].every((t) => within(menu).queryByText(t))).toBe(true);
     expect(within(menu).queryByText('Wait')).not.toBeInTheDocument();
   });
 });
