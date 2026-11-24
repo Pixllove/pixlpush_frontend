@@ -74,7 +74,20 @@ export function isHiddenAudienceField(field: AudienceGroupSchemaField) {
  * so existing saved rules can still be read and edited as legacy conditions.
  */
 export function withAppNotificationTokenField(schema: AudienceGroupSchema): AudienceGroupSchema {
-  if (schema.fields.some(field => field.key === appNotificationTokenFieldKey)) return schema;
+  const existing = schema.fields.find(field => field.key === appNotificationTokenFieldKey);
+  if (existing) {
+    // Older backend schemas expose the same combined predicate with the
+    // implementation-oriented label "App Notification Token (FCM & APNs)".
+    // Keep the key and operators unchanged, but use the product-facing label
+    // in both audience-group surfaces.
+    if (existing.label === appNotificationTokenFieldLabel && existing.topic === 'reachability') return schema;
+    return {
+      ...schema,
+      fields: schema.fields.map(field => field.key === appNotificationTokenFieldKey
+        ? { ...field, label: appNotificationTokenFieldLabel, topic: 'reachability' }
+        : field),
+    };
+  }
   const fcm = schema.fields.find(field => field.key === 'fcmToken');
   const apns = schema.fields.find(field => field.key === 'apnsToken');
   if (!fcm || !apns) return schema;
@@ -156,8 +169,18 @@ function notificationRecencyCondition(schema: AudienceGroupSchema, channel: Noti
 /** Build one editable AND group of schema-backed default reactivation rules. */
 export function seedReactivationRules(schema: AudienceGroupSchema, selectedChannels: ReactivationChannel[]): ReactivationSeed {
   const uniqueChannels = [...new Set(selectedChannels)];
-  const emailFallback = uniqueChannels.includes('email') && (uniqueChannels.includes('mobile-push') || uniqueChannels.includes('web-push'));
-  const channelsToSeed = emailFallback && !uniqueChannels.includes('mobile-push')
+  const emailOnlySelected = uniqueChannels.length === 1 && uniqueChannels[0] === 'email';
+  const mobileOnlySelected = uniqueChannels.length === 1 && uniqueChannels[0] === 'mobile-push';
+  const webOnlySelected = uniqueChannels.length === 1 && uniqueChannels[0] === 'web-push';
+  const emailAndMobileSelected = uniqueChannels.includes('email') && uniqueChannels.includes('mobile-push');
+  const allDeliveryChannelsSelected = (['email', 'mobile-push', 'web-push'] as const).every(channel => uniqueChannels.includes(channel));
+  // Email + web push without mobile push uses the historical mobile-token
+  // fallback to explicitly exclude mobile-only users. When mobile push is
+  // selected with email, it is a real selected channel and must be available.
+  const mobileAvailabilityFallback = uniqueChannels.includes('email')
+    && uniqueChannels.includes('web-push')
+    && !uniqueChannels.includes('mobile-push');
+  const channelsToSeed = mobileAvailabilityFallback && !uniqueChannels.includes('mobile-push')
     ? [...uniqueChannels, 'mobile-push' as const]
     : uniqueChannels;
   const unavailable: string[] = [];
@@ -166,7 +189,7 @@ export function seedReactivationRules(schema: AudienceGroupSchema, selectedChann
     const label = channel === 'email' ? 'Email' : channel === 'mobile-push' ? 'Mobile push' : 'Web push';
     const candidates = channelFields(schema, channel);
     const supported = candidates.flatMap(field => {
-      const condition = conditionForAvailability(field, channel !== 'mobile-push' || !emailFallback);
+      const condition = conditionForAvailability(field, channel !== 'mobile-push' || !mobileAvailabilityFallback);
       return condition ? [{ field, condition }] : [];
     });
     if (!supported.length || (channel === 'mobile-push' && (candidates.length !== 1 || supported.length !== 1))) {
@@ -194,7 +217,33 @@ export function seedReactivationRules(schema: AudienceGroupSchema, selectedChann
   }
   if (!uniqueChannels.length) unavailable.unshift('No delivery channels are selected');
 
-  const blocks = base.length ? [{ id: 1, rules: base.map((rule, index) => ({ ...rule, id: index + 1 })) }] : [];
+  const blocks: Block[] = base.length
+    ? [{ id: 1, rules: base.map((rule, index) => ({ ...rule, id: index + 1 })) }]
+    : [];
+
+  // When email and mobile push are selected, add the email re-entry
+  // branch requested by the reactivation flow:
+  // Email available AND Email Campaign → Never Belonged to Campaign.
+  // A campaign id is required by the backend, so never create an incomplete
+  // branch when this project has no email campaigns to choose from.
+  if (!emailOnlySelected && !mobileOnlySelected && !webOnlySelected && (emailAndMobileSelected || allDeliveryChannelsSelected)) {
+    const emailField = channelFields(schema, 'email')[0];
+    const emailAvailable = emailField ? conditionForAvailability(emailField, true) : undefined;
+    const campaignField = schema.fields.find(field => field.key === 'emailCampaign' && !field.deprecated);
+    const neverBelonged = campaignField?.conditions.find(condition => /never.*belong/i.test(`${condition.key} ${condition.label}`));
+    const campaignId = neverBelonged?.value.options?.[0]?.key;
+    if (emailField && emailAvailable && campaignField && neverBelonged && campaignId) {
+      blocks.push({
+        id: 2,
+        rules: [
+          { id: 1, filter: emailField.key, operator: emailAvailable.key, value: '' },
+          { id: 2, filter: campaignField.key, operator: neverBelonged.key, value: campaignId },
+        ],
+      });
+    } else {
+      unavailable.push('Email campaign re-entry condition');
+    }
+  }
   return { blocks, unavailable };
 }
 
@@ -221,6 +270,53 @@ export function audienceFieldTopic(field: AudienceGroupSchemaField) {
   if (field.category === 'lifecycle' || field.category === 'group') return 'Groups & Segments';
   if (field.category === 'journey') return 'Automation & Campaigns';
   return 'Account Details';
+}
+
+const languageDisplayNames = new Intl.DisplayNames(['en'], { type: 'language', fallback: 'code' });
+
+/** Display language values by name while preserving their backend key/code. */
+export function audienceOptionLabel(field: AudienceGroupSchemaField | undefined, option: { key: string; label: string }) {
+  if (!field || !['language', 'preferredLanguage'].includes(field.key)) return option.label;
+  const code = option.key.trim().replace(/_/g, '-').toLowerCase();
+  const display = languageDisplayNames.of(code);
+  return display && display.toLowerCase() !== code ? display : option.label;
+}
+
+/** Fallback copy for older backends that do not yet return emptyReason. */
+export function audienceEmptyOptionReason(field: AudienceGroupSchemaField | undefined) {
+  switch (field?.key) {
+    case 'country':
+    case 'region':
+    case 'language':
+    case 'preferredLanguage':
+    case 'accountStatus':
+    case 'userType':
+      return 'No active users have a value for this field yet.';
+    case 'platform':
+      return 'No active installations with platform information are available yet.';
+    case 'currentLifecycleSegment':
+    case 'historicalLifecycleSegment':
+      return 'No lifecycle segments have been created in this project yet.';
+    case 'journeyAutomation':
+    case 'historicalJourneyAutomation':
+      return 'No active journey automations are available in this project yet.';
+    case 'emailCampaign':
+      return 'No email campaigns are available in this project yet.';
+    case 'mobilePushCampaign':
+      return 'No mobile push campaigns are available in this project yet.';
+    case 'webPushCampaign':
+      return 'No web push campaigns are available in this project yet.';
+    case 'mobileAppUserEvents':
+      return 'No tracked iOS or Android events are available in this project yet.';
+    case 'webUserEvents':
+      return 'No tracked web events are available in this project yet.';
+    case 'performedEvent':
+      return 'No tracked product events are available in this project yet.';
+    case 'audienceGroup':
+      return 'No audience groups are available in this project yet.';
+    default:
+      return 'No project values are available yet.';
+  }
 }
 
 function isNotificationRecencyRule(field: AudienceGroupSchemaField | undefined, rule?: Rule) {
@@ -296,7 +392,9 @@ function valueIsValid(rule: Rule, condition: NonNullable<ReturnType<typeof schem
   if (condition.value.type === 'none' || condition.value.required === false) return true;
   const values = rule.value.split(',').map(item => item.trim()).filter(Boolean);
   if (!values.length) return false;
-  if (condition.value.options?.length) return values.every(value => condition.value.options?.some(option => option.key === value));
+  if (condition.value.options && !condition.value.freeText) {
+    return condition.value.options.length > 0 && values.every(value => condition.value.options?.some(option => option.key === value));
+  }
   if (condition.value.type === 'integer') {
     return values.every(value => {
       if (!/^[+-]?\d+$/.test(value)) return false;

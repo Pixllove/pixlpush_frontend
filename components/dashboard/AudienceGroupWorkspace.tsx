@@ -11,7 +11,7 @@ import { audienceGroupsApi } from '@/lib/projects/api';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
 import type { AudienceGroupSchema } from '@/types/project';
 import AudienceConditionFieldPicker from './AudienceConditionFieldPicker';
-import { appNotificationTokenFieldKey, appNotificationTokenFieldLabel, audiencePickerFields, isNotificationRecencyField, isRuleComplete, makeBlock, makeRule, notificationRecencyPhrase, ruleHasInput, toBackendRules, type Block, type Rule, withAppNotificationTokenField } from './audienceGroupRules';
+import { appNotificationTokenFieldKey, appNotificationTokenFieldLabel, audienceEmptyOptionReason, audienceOptionLabel, audiencePickerFields, isNotificationRecencyField, isRuleComplete, makeBlock, makeRule, notificationRecencyPhrase, ruleHasInput, toBackendRules, type Block, type Rule, withAppNotificationTokenField } from './audienceGroupRules';
 import SearchField from './SearchField';
 import { formatUserDateTime } from '@/lib/timezone';
 
@@ -87,6 +87,7 @@ export default function AudienceGroupWorkspace({ groupId }: { groupId: string })
   const [query, setQuery] = useState('');
   const conditionCount = blocks.reduce((sum, block) => sum + block.rules.length, 0);
   const incompleteConditions = blocks.reduce((sum, block) => sum + block.rules.filter(rule => ruleHasInput(rule) && !isRuleComplete(rule, schema)).length, 0);
+  const incompleteRecencyCondition = blocks.some(block => block.rules.some(rule => ruleHasInput(rule) && !isRuleComplete(rule, schema) && isNotificationRecencyField(schema?.fields.find(field => field.key === rule.filter || field.label === rule.filter) ?? rule.filter)));
   const updateRule = (blockId: number, ruleId: number, field: keyof Rule, value: string) => setBlocks(current => current.map(block => block.id !== blockId ? block : { ...block, rules: block.rules.map(rule => rule.id !== ruleId ? rule : { ...rule, [field]: value, ...(field === 'filter' ? { operator: isNotificationRecencyField(value) ? 'exclude_in_last_days' : '', value: '' } : field === 'operator' ? { value: '' } : {}) }) }));
   const maxConditions = 10;
   const notifyConditionLimit = () => {
@@ -115,34 +116,17 @@ export default function AudienceGroupWorkspace({ groupId }: { groupId: string })
   return <Stack gap={2} className="audience-group-workspace">
     <Button startIcon={<ArrowBackRounded />} onClick={() => router.push(`/dashboard/users?tab=${searchParams.get('tab') || 'groups'}`)} className="group-back-button">Back to audience groups</Button>
     <Card className="group-title-card"><Typography color="text.secondary" fontSize="var(--fs-12)">Audience group</Typography><Typography variant="h3" component="h1">{groupQuery.isLoading ? <Skeleton width={180} /> : title}</Typography></Card>
-    <Card className="group-section-card"><Typography variant="h3">Group conditions</Typography><Typography color="text.secondary" fontSize="var(--fs-12)">Build the audience using filters for user data, lifecycle, and engagement.</Typography><Stack gap={1.5} sx={{ mt: 2 }}><Box className="condition-groups"><Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ px: 1, pb: 1 }}><Box><Typography fontWeight={600}>Match {blocks.length > 1 ? 'any' : 'all'} of these conditions</Typography><Typography color="text.secondary" fontSize="var(--fs-12)">Conditions joined with <strong>{blocks.length > 1 ? 'OR' : 'AND'}</strong></Typography></Box><Chip label={blocks.length > 1 ? 'OR' : 'AND'} className="condition-logic-chip" size="small" /></Stack>{blocks.map((block, index) => <Fragment key={block.id}><Box className="condition-block"><Stack gap={1.2} className="condition-block-inner">{block.rules.map(rule => <ConditionRow key={rule.id} rule={rule} schema={schema} onChange={(field, value) => updateRule(block.id, rule.id, field, value)} onRemove={() => removeRule(block.id, rule.id)} />)}<Button size="small" startIcon={<AddRounded />} onClick={() => addAnd(block.id)} className="condition-add-button">AND</Button></Stack></Box>{index < blocks.length - 1 && <Box className="condition-or-divider"><span>OR</span></Box>}</Fragment>)}<Button size="small" startIcon={<AddRounded />} onClick={addOr} className="condition-add-button condition-add-or">OR</Button></Box></Stack><Divider sx={{ my: 2 }} /><Stack direction="row" justifyContent="space-between" alignItems="center"><Typography color="text.secondary" fontSize="var(--fs-12)">{conditionCount} / {maxConditions} conditions</Typography><Box textAlign="right">{incompleteConditions > 0 && <Typography color="error" fontSize="var(--fs-12)" sx={{ mb: 0.5 }}>Enter a positive whole number of days for the selected notification condition, or complete/remove the condition.</Typography>}<Button variant="contained" disabled={saveConditions.isPending || groupQuery.isLoading || incompleteConditions > 0} onClick={() => saveConditions.mutate()}>{saveConditions.isPending ? <CircularProgress size={18} color="inherit" /> : "Save conditions"}</Button>{saveConditions.isError && <Typography color="error" fontSize="var(--fs-12)" sx={{ mt: 0.5 }}>Could not save conditions. Check that at least one valid condition is selected.</Typography>}</Box></Stack></Card>
+    <Card className="group-section-card"><Typography variant="h3">Group conditions</Typography><Typography color="text.secondary" fontSize="var(--fs-12)">Build the audience using filters for user data, lifecycle, and engagement.</Typography><Stack gap={1.5} sx={{ mt: 2 }}><Box className="condition-groups"><Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ px: 1, pb: 1 }}><Box><Typography fontWeight={600}>Match {blocks.length > 1 ? 'any' : 'all'} of these conditions</Typography><Typography color="text.secondary" fontSize="var(--fs-12)">Conditions joined with <strong>{blocks.length > 1 ? 'OR' : 'AND'}</strong></Typography></Box><Chip label={blocks.length > 1 ? 'OR' : 'AND'} className="condition-logic-chip" size="small" /></Stack>{blocks.map((block, index) => <Fragment key={block.id}><Box className="condition-block"><Stack gap={1.2} className="condition-block-inner">{block.rules.map(rule => <ConditionRow key={rule.id} rule={rule} schema={schema} onChange={(field, value) => updateRule(block.id, rule.id, field, value)} onRemove={() => removeRule(block.id, rule.id)} />)}<Button size="small" startIcon={<AddRounded />} onClick={() => addAnd(block.id)} className="condition-add-button">AND</Button></Stack></Box>{index < blocks.length - 1 && <Box className="condition-or-divider"><span>OR</span></Box>}</Fragment>)}<Button size="small" startIcon={<AddRounded />} onClick={addOr} className="condition-add-button condition-add-or">OR</Button></Box></Stack><Divider sx={{ my: 2 }} /><Stack direction="row" justifyContent="space-between" alignItems="center"><Typography color="text.secondary" fontSize="var(--fs-12)">{conditionCount} / {maxConditions} conditions</Typography><Box textAlign="right">{incompleteConditions > 0 && <Typography color="error" fontSize="var(--fs-12)" sx={{ mb: 0.5 }}>{incompleteRecencyCondition ? 'Enter a positive whole number of days for the selected notification condition.' : 'Choose an operator and required value, or complete/remove the incomplete condition.'}</Typography>}<Button variant="contained" disabled={saveConditions.isPending || groupQuery.isLoading || incompleteConditions > 0} onClick={() => saveConditions.mutate()}>{saveConditions.isPending ? <CircularProgress size={18} color="inherit" /> : "Save conditions"}</Button>{saveConditions.isError && <Typography color="error" fontSize="var(--fs-12)" sx={{ mt: 0.5 }}>Could not save conditions. Check that at least one valid condition is selected.</Typography>}</Box></Stack></Card>
     <EngagementCard />
     <Card className="group-section-card users-in-group"><Typography variant="h3">Users in this group</Typography><Divider sx={{ mx: -2.5, mt: 2 }} /><Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" gap={1.2} sx={{ mt: 2 }}><SearchField value={query} onChange={setQuery} placeholder="Search users by name or email" /><Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ alignSelf: 'center' }}>{filteredUsers.length} users currently match these conditions.</Typography></Stack><Box sx={{ overflowX: 'auto', mt: 1.5 }}><Table size="small"><TableHead><TableRow>{['User', 'Email', 'Status', 'Last active', 'Entered'].map(label => <TableCell key={label}>{label}</TableCell>)}</TableRow></TableHead><TableBody>{membersQuery.isLoading ? Array.from({ length: 4 }, (_, index) => <TableRow key={`member-skeleton-${index}`}><TableCell colSpan={5}><Skeleton variant="text" /></TableCell></TableRow>) : filteredUsers.map(user => <TableRow key={user.id} hover tabIndex={0} className="group-user-row" onClick={() => openUser(user.id)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') openUser(user.id); }}><TableCell><Typography fontSize="var(--fs-12)" fontWeight={500}>{user.name || user.externalUserId || user.id}</Typography></TableCell><TableCell>{user.email || '—'}</TableCell><TableCell><Chip label="Member" size="small" className="active-chip" /></TableCell><TableCell>{user.lastActiveAt ? formatUserDateTime(user.lastActiveAt) : 'Never'}</TableCell><TableCell>{formatUserDateTime(user.enteredAt)}</TableCell></TableRow>)}{!membersQuery.isLoading && filteredUsers.length === 0 && <TableRow><TableCell colSpan={5} sx={{ borderBottom: 0 }}><EmptyState size="compact" {...listEmpty({ icon: <PeopleAltOutlined />, noun: 'users', description: 'Users appear here once they match this group’s conditions.', search: query, onClear: () => setQuery(''), error: membersQuery.isError && 'Could not load users', onRetry: () => membersQuery.refetch() })} /></TableCell></TableRow>}</TableBody></Table></Box></Card>
   </Stack>;
 }
 
-/** Every ISO country, for the Country dropdown when the project has no stored countries yet. */
-const regionNames = new Intl.DisplayNames(['en'], { type: 'region' });
-// Retired codes (UK, NH, YD…) canonicalize to another code, so skip them; the
-// rest are pseudo-regions (EU, UN, XA…) that have no likely-subtags data.
-const allCountries = Array.from({ length: 26 * 26 }, (_, i) => String.fromCharCode(65 + Math.floor(i / 26), 65 + (i % 26)))
-  .filter(code => !['EU', 'EZ', 'UN', 'QO'].includes(code))
-  .filter(code => {
-    try {
-      const locale = new Intl.Locale(`und-${code}`);
-      return locale.region === code && locale.maximize().language !== 'und';
-    } catch {
-      return false;
-    }
-  })
-  .map(code => ({ key: code.toLowerCase(), label: regionNames.of(code) ?? code }))
-  .filter(option => option.label.toLowerCase() !== option.key)
-  .sort((a, b) => a.label.localeCompare(b.label));
-
 /** ISO 639-1 language codes used for the App Language audience condition. */
 const languageNames = new Intl.DisplayNames(['en'], { type: 'language' });
 const allLanguages = `aa ab ae af ak am an ar as av ay az ba be bg bh bi bm bn bo br bs ca ce ch co cr cs cu cv cy da de dv dz ee el en eo es et eu fa ff fi fj fo fr fy ga gd gl gn gu gv ha he hi ho hr ht hu hy hz ia id ie ig ii ik io is it iu ja jv ka kg ki kj kk kl km kn ko kr ks ku kv kw ky la lb lg li ln lo lt lu lv mg mh mi mk ml mn mr ms mt my na nb nd ne ng nl nn no nr nv ny oc oj om or os pa pi pl ps pt qu rm rn ro ru rw sa sc sd se sg si sk sl sm sn so sq sr ss st su sv sw ta te tg th ti tk tl tn to tr ts tt tw ty ug uk ur uz ve vi vo wa wo xh yi yo za zh zu`.split(' ')
-  .map(code => ({ key: code, label: languageNames.of(code) ?? 'Other language' }))
+  .map(code => ({ key: code, label: languageNames.of(code) ?? code }))
+  .filter((option, index, options) => options.findIndex(item => item.label === option.label) === index)
   .sort((a, b) => a.label.localeCompare(b.label));
 
 function ConditionRow({ rule, schema, onChange, onRemove }: { rule: Rule; schema?: AudienceGroupSchema; onChange: (field: keyof Rule, value: string) => void; onRemove: () => void }) {
@@ -153,7 +137,12 @@ function ConditionRow({ rule, schema, onChange, onRemove }: { rule: Rule; schema
   const valueConfig = condition?.value;
   const isCountry = rule.filter === 'country' || rule.filter === 'Country';
   const isLanguage = rule.filter === 'language' || rule.filter === 'preferredLanguage' || rule.filter === 'App Language';
-  const options = isLanguage ? allLanguages : valueConfig?.options?.length ? valueConfig.options : isCountry ? allCountries : undefined;
+  const schemaOptions = Array.isArray(valueConfig?.options) ? valueConfig.options : undefined;
+  const options = isLanguage && schemaOptions?.length
+    ? schemaOptions.map(option => ({ ...option, label: audienceOptionLabel(field, option) }))
+    : schemaOptions;
+  const optionBacked = isLanguage || isCountry || Array.isArray(valueConfig?.options);
+  const emptyReason = valueConfig?.emptyReason ?? audienceEmptyOptionReason(field);
   const noValue = valueConfig?.type === 'none';
   const multiple = Boolean(valueConfig?.multiple && options?.length);
   const selectedValues = multiple ? rule.value.split(',').map(value => value.trim()).filter(Boolean) : rule.value;
@@ -165,7 +154,7 @@ function ConditionRow({ rule, schema, onChange, onRemove }: { rule: Rule; schema
       <MenuItem value="">Choose an operator</MenuItem>
       {schema ? (field?.conditions ?? []).map(item => <MenuItem key={item.key} value={item.key}>{item.label}</MenuItem>) : fallbackOperators.map(item => <MenuItem key={item} value={backendOperator[item] ?? item}>{item}</MenuItem>)}
     </Select>}
-    {isNotificationRecency ? <Stack direction="row" alignItems="center" gap={0.7} sx={{ flex: 1, minWidth: 0, flexWrap: 'wrap' }}><Typography component="span" whiteSpace="nowrap">{notificationRecencyPhrase(field ?? rule.filter)}</Typography><TextField size="small" type="number" inputProps={{ min: 1, step: 1, inputMode: 'numeric', 'aria-label': `${field?.label ?? 'Notification'} days` }} value={rule.value} onChange={event => onChange('value', event.target.value)} error={Boolean(rule.value) && !/^[1-9]\d*$/.test(rule.value.trim())} /><Typography component="span">days</Typography></Stack> : rule.operator && !noValue && (options?.length ? <Select size="small" displayEmpty multiple={multiple} value={selectedValues} onChange={event => {
+    {isNotificationRecency ? <Stack direction="row" alignItems="center" gap={0.7} sx={{ flex: 1, minWidth: 0, flexWrap: 'wrap' }}><Typography component="span" whiteSpace="nowrap">{notificationRecencyPhrase(field ?? rule.filter)}</Typography><TextField size="small" type="number" inputProps={{ min: 1, step: 1, inputMode: 'numeric', 'aria-label': `${field?.label ?? 'Notification'} days` }} value={rule.value} onChange={event => onChange('value', event.target.value)} error={Boolean(rule.value) && !/^[1-9]\d*$/.test(rule.value.trim())} /><Typography component="span">days</Typography></Stack> : rule.operator && !noValue && (optionBacked && !options?.length ? <Stack sx={{ flex: 1, minWidth: 0 }}><Select size="small" disabled value="" displayEmpty><MenuItem value="">No values available</MenuItem></Select><Typography color="text.secondary" fontSize="0.72rem" sx={{ mt: 0.35 }}>{emptyReason}</Typography></Stack> : options?.length ? <Select size="small" displayEmpty multiple={multiple} value={selectedValues} onChange={event => {
       const next = Array.isArray(event.target.value) ? event.target.value : [event.target.value];
       onChange('value', next.join(','));
     }} renderValue={selected => {

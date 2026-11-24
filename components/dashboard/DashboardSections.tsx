@@ -2256,6 +2256,9 @@ function PushSection() {
   const [composer, setComposer] = useState<"campaign" | "template" | null>(
     null,
   );
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(
+    null,
+  );
   const [deleteTarget, setDeleteTarget] = useState<{
     id: string;
     name: string;
@@ -2343,13 +2346,26 @@ function PushSection() {
         severity: "error",
       }),
   });
+  const openNewComposer = (next: "campaign" | "template") => {
+    setEditingTemplateId(null);
+    setComposer(next);
+  };
+  const openTemplate = (templateId: string) => {
+    setEditingTemplateId(templateId);
+    setComposer("template");
+  };
+  const closeComposer = () => {
+    setEditingTemplateId(null);
+    setComposer(null);
+  };
   if (composer)
     return (
       <PushComposer
         mode={composer}
-        onBack={() => setComposer(null)}
+        templateId={editingTemplateId}
+        onBack={closeComposer}
         onSaved={(target) => {
-          setComposer(null);
+          closeComposer();
           setTab(target === "send" ? "send" : target);
           setPage(1);
         }}
@@ -2427,8 +2443,13 @@ function PushSection() {
             type="button"
             fontSize="var(--fs-12)"
             fontWeight={500}
-            onClick={() =>
-              router.push(`/dashboard/push?tab=${tab}&highlight=${row.id}`)
+            onClick={(event) => {
+              event.stopPropagation();
+              if (tab === "templates") openTemplate(row.id);
+              else router.push(`/dashboard/push?tab=${tab}&highlight=${row.id}`);
+            }}
+            aria-label={
+              tab === "templates" ? `Edit ${row.name}` : `Open ${row.name}`
             }
             sx={{
               display: "block",
@@ -2535,7 +2556,19 @@ function PushSection() {
           direction="row"
           justifyContent="flex-end"
           className="table-row-actions"
+          onClick={(event) => event.stopPropagation()}
         >
+          {tab === "templates" && (
+            <IconButton
+              size="small"
+              className="edit-action"
+              aria-label={`Edit ${row.name}`}
+              onClick={() => openTemplate(row.id)}
+              disabled={actionMutation.isPending}
+            >
+              <EditRounded fontSize="small" />
+            </IconButton>
+          )}
           {tab === "templates" && (
             <IconButton
               size="small"
@@ -2604,14 +2637,14 @@ function PushSection() {
           <Button
             variant="contained"
             startIcon={<SendRounded />}
-            onClick={() => setComposer("campaign")}
+            onClick={() => openNewComposer("campaign")}
           >
             Create push campaign
           </Button>
           <Button
             variant="outlined"
             startIcon={<GridViewRounded />}
-            onClick={() => setComposer("template")}
+            onClick={() => openNewComposer("template")}
           >
             Create push template
           </Button>
@@ -2735,6 +2768,7 @@ function PushSection() {
           onNextPage={() => setPage((current) => current + 1)}
           page={page}
           serverPageSize={25}
+          onRowClick={tab === "templates" ? (row) => openTemplate(row.id) : undefined}
         />
       </Card>
       <DeleteConfirmDialog

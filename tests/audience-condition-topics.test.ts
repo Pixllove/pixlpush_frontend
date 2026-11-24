@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AudienceGroupSchemaField } from '@/types/project';
-import { audienceFieldTopic, audiencePickerFields, groupAudienceFields, toBackendRules } from '@/components/dashboard/audienceGroupRules';
+import { audienceFieldTopic, audienceOptionLabel, audiencePickerFields, groupAudienceFields, isRuleComplete, toBackendRules, withAppNotificationTokenField } from '@/components/dashboard/audienceGroupRules';
 
 const field = (key: string, label: string, category: string, topic?: string, options: string[] = []): AudienceGroupSchemaField => ({
   key,
@@ -52,5 +52,38 @@ describe('audience condition topics and serialization', () => {
       operator: 'AND',
       conditions: [{ field: 'mobileAppUserEvents', operator: 'is_any_of', value: ['purchase', 'signup'] }],
     });
+  });
+
+  it('normalizes the legacy combined app-token label for the picker', () => {
+    const schema = {
+      levels: [],
+      fields: [field('appNotificationToken', 'App Notification Token (FCM & APNs)', 'push', 'reachability')],
+      fieldKeys: ['appNotificationToken'],
+      logicalOperators: ['AND', 'OR'] as Array<'AND' | 'OR'>,
+      limits: { maxConditions: 30, maxDepth: 3 },
+    };
+
+    expect(withAppNotificationTokenField(schema).fields[0]).toMatchObject({
+      key: 'appNotificationToken',
+      label: 'Mobile push',
+      topic: 'reachability',
+    });
+  });
+
+  it('does not treat an event value as valid when the project has no matching event options', () => {
+    const schema = {
+      levels: [],
+      fields: [field('mobileAppUserEvents', 'Mobile App User Events', 'event', 'engagement')],
+      fieldKeys: ['mobileAppUserEvents'],
+      logicalOperators: ['AND', 'OR'] as Array<'AND' | 'OR'>,
+      limits: { maxConditions: 30, maxDepth: 3 },
+    };
+
+    expect(isRuleComplete({ id: 1, filter: 'mobileAppUserEvents', operator: 'is', value: 'checkout' }, schema)).toBe(false);
+  });
+
+  it('renders language option names while preserving their stored codes', () => {
+    expect(audienceOptionLabel(field('language', 'App Language', 'device'), { key: 'en', label: 'en' })).toBe('English');
+    expect(audienceOptionLabel(field('language', 'App Language', 'device'), { key: 'ur', label: 'ur' })).toBe('Urdu');
   });
 });

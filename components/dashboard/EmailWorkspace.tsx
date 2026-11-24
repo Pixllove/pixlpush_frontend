@@ -104,6 +104,7 @@ import {
 import { reorderByInsertionIndex } from "./dragEmailOrdering";
 import { compileEmailHtml, croppedCopyOf } from "./emailExport";
 import SimpleEmailEditor from "@/components/dashboard/SimpleEmailEditor";
+import TemplateSaveDialog from "@/components/dashboard/TemplateSaveDialog";
 import DeleteConfirmDialog from "@/components/dashboard/DeleteConfirmDialog";
 import { Toast } from "@/components/auth/AuthFeedback";
 import { useActiveProject } from "@/hooks/projects/use-active-project";
@@ -1313,6 +1314,8 @@ function EmailTableRow({
       hover
       data-email-id={item.id}
       className={highlighted ? "is-highlighted" : undefined}
+      onClick={item.kind === "templates" ? onEdit : undefined}
+      sx={item.kind === "templates" ? { cursor: "pointer" } : undefined}
     >
       <TableCell>
         <Typography
@@ -1320,7 +1323,10 @@ function EmailTableRow({
           type="button"
           fontSize="var(--fs-12)"
           fontWeight={500}
-          onClick={onEdit}
+          onClick={(event) => {
+            event.stopPropagation();
+            onEdit();
+          }}
           sx={{
             display: "block",
             p: 0,
@@ -1398,6 +1404,7 @@ function EmailTableRow({
           direction="row"
           justifyContent="flex-end"
           className="table-row-actions email-table-row-actions"
+          onClick={(event) => event.stopPropagation()}
         >
           <IconButton
             size="small"
@@ -1733,6 +1740,7 @@ function EditorToolbar({
   onSave,
   onSaveDraft,
   onSaveTemplate,
+  isExistingTemplate = false,
   onPreview,
   onPrepare,
   onNotice,
@@ -1754,6 +1762,7 @@ function EditorToolbar({
   onSave: () => void;
   onSaveDraft?: () => void;
   onSaveTemplate?: () => void;
+  isExistingTemplate?: boolean;
   onPreview: () => void;
   onPrepare: () => void;
   onNotice: (message: string) => void;
@@ -1861,7 +1870,7 @@ function EditorToolbar({
               setSaveAnchor(null);
             }}
           >
-            Save as template
+            {isExistingTemplate ? "Update template" : "Save as template"}
           </MenuItem>
           <MenuItem
             onClick={() => {
@@ -1957,6 +1966,7 @@ function SimpleEditor({
       <EditorToolbar
         name={name}
         setName={setName}
+        isExistingTemplate={Boolean(item?.id && !item.id.startsWith("email-") && item.kind === "templates")}
         onClose={onClose}
         onSave={save}
         onPreview={() => setPreview(true)}
@@ -2262,6 +2272,7 @@ function DragEditor({
     item?.fallbackLanguage ?? null,
   );
   const [saving, setSaving] = useState(false);
+  const [templateSaveOpen, setTemplateSaveOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   // Uploaded images this session replaced or removed. Each is deleted on the server straight away;
   // one the saved email still shows is kept by the server, so it is tried again after the next save.
@@ -2972,8 +2983,11 @@ function DragEditor({
     }
   };
   const emailSubject = subject.trim() || name.trim() || "Untitled email";
-  const saveAs = async (destination: "drafts" | "templates") => {
-    if (saving) return;
+  const saveAs = async (
+    destination: "drafts" | "templates",
+    templateMode: "update" | "new" = "update",
+  ): Promise<boolean> => {
+    if (saving) return false;
     setSaving(true);
     try {
       // `design` is everything needed to reopen the builder exactly as it was; `html` is what gets sent.
@@ -2989,7 +3003,7 @@ function DragEditor({
       const isExisting = Boolean(item?.id && !item.id.startsWith("email-"));
       const saved =
         destination === "templates"
-          ? isExisting && item?.kind === "templates"
+          ? templateMode === "update" && isExisting && item?.kind === "templates"
             ? await emailApi.templates.update(projectId, item.id, {
                 name,
                 ...content,
@@ -3029,13 +3043,22 @@ function DragEditor({
         },
         destination === "templates" ? "Template saved" : "Draft saved",
       );
+      return true;
     } catch (error) {
       onNotice(errorMessage(error, "Could not save this email."));
+      return false;
     } finally {
       setSaving(false);
     }
   };
   const save = () => saveAs(kind);
+  const isExistingTemplate = Boolean(
+    item?.id && !item.id.startsWith("email-") && item.kind === "templates",
+  );
+  const saveTemplate = () => {
+    if (isExistingTemplate) setTemplateSaveOpen(true);
+    else void saveAs("templates", "new");
+  };
   if (review)
     return (
       <CampaignReview
@@ -3058,10 +3081,11 @@ function DragEditor({
         name={name}
         setName={setName}
         language={language}
+        isExistingTemplate={isExistingTemplate}
         onClose={onClose}
         onSave={save}
         onSaveDraft={() => saveAs("drafts")}
-        onSaveTemplate={() => saveAs("templates")}
+        onSaveTemplate={saveTemplate}
         onPreview={() => void openPreview()}
         onPrepare={() => setReview(true)}
         onNotice={onNotice}
@@ -3070,6 +3094,12 @@ function DragEditor({
         canUndo={history.current.past.length > 0}
         canRedo={history.current.future.length > 0}
         snapshot={JSON.stringify([name, subject, blocks, style, translations])}
+      />
+      <TemplateSaveDialog
+        open={templateSaveOpen}
+        onClose={() => setTemplateSaveOpen(false)}
+        onUpdate={() => saveAs("templates", "update")}
+        onSaveAsNew={() => saveAs("templates", "new")}
       />
       <Box
         className={`drag-editor-body panel-${panel} ${libraryOpen ? "library-open" : "library-closed"}`}

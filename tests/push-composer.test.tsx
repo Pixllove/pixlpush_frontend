@@ -7,7 +7,12 @@ import { pushApi } from "@/lib/projects/api";
 vi.mock("@/lib/projects/api", () => ({
   pushApi: {
     deepLinks: { list: vi.fn(), create: vi.fn(), delete: vi.fn() },
-    templates: { create: vi.fn(), translate: vi.fn() },
+    templates: {
+      create: vi.fn(),
+      get: vi.fn(),
+      update: vi.fn(),
+      translate: vi.fn(),
+    },
     campaigns: { create: vi.fn(), audiencePreview: vi.fn() },
   },
   audienceGroupsApi: { list: vi.fn(async () => []) },
@@ -44,6 +49,8 @@ describe("PushComposer · Save as draft", () => {
     } as never);
     push.deepLinks.delete.mockResolvedValue(undefined);
     push.templates.create.mockResolvedValue({ id: "t1" } as never);
+    push.templates.get.mockResolvedValue({} as never);
+    push.templates.update.mockResolvedValue({ id: "t1" } as never);
     push.templates.translate.mockResolvedValue({ translations: {} } as never);
     push.campaigns.create.mockResolvedValue({ id: "c1" } as never);
   });
@@ -118,5 +125,75 @@ describe("PushComposer · Save as draft", () => {
         languages: ["en", "ar"],
       }),
     );
+  });
+
+  it("opens an existing template and updates that template instead of creating a duplicate", async () => {
+    push.deepLinks.list.mockResolvedValue([
+      { id: "d1", url: "pixlpush://home" },
+    ] as never);
+    push.templates.get.mockResolvedValue({
+      id: "t1",
+      projectId: "p1",
+      name: "Existing template",
+      title: "Existing title",
+      body: "Existing body",
+      deepLink: "pixlpush://home",
+      translations: { ar: { title: "عنوان", body: "رسالة" } },
+      fallbackLanguage: "ar",
+      category: "template",
+      status: "active",
+    } as never);
+
+    const onSaved = vi.fn();
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <PushComposer
+          mode="template"
+          templateId="t1"
+          onBack={() => {}}
+          onSaved={onSaved}
+        />
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByLabelText(/Push notification name/)).toHaveValue(
+        "Existing template",
+      ),
+    );
+    expect(screen.getByLabelText(/Title \(English\)/)).toHaveValue(
+      "Existing title",
+    );
+    expect(screen.getByLabelText(/Message \(English\)/)).toHaveValue(
+      "Existing body",
+    );
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Save as draft" })).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/Push notification name/), {
+      target: { value: "Updated template" },
+    });
+    fireEvent.change(screen.getByLabelText(/Title \(English\)/), {
+      target: { value: "Updated title" },
+    });
+    fireEvent.change(screen.getByLabelText(/Message \(English\)/), {
+      target: { value: "Updated body" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() =>
+      expect(push.templates.update).toHaveBeenCalledWith(
+        "p1",
+        "t1",
+        expect.objectContaining({
+          name: "Updated template",
+          title: "Updated title",
+          body: "Updated body",
+          category: "template",
+        }),
+      ),
+    );
+    expect(push.templates.create).not.toHaveBeenCalled();
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith("templates"));
   });
 });

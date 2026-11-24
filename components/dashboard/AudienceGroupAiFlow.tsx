@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { audienceGroupsApi, onboardingApi } from '@/lib/projects/api';
 import type { AudienceGroup, AudienceGroupSchema, AudienceGroupSchemaField } from '@/types/project';
 import AudienceConditionFieldPicker from './AudienceConditionFieldPicker';
-import { anyJourneyValue, appNotificationTokenFieldKey, audienceFieldTopic, audiencePickerFields, incompleteRuleCount, isNotificationRecencyField, isRuleComplete, makeBlock, makeRule, notificationRecencyPhrase, readableRule, reactivationChannelsForProject, ruleHasInput, seedReactivationRules, toBackendRules, validRuleCount, withAppNotificationTokenField, type Block, type Rule } from './audienceGroupRules';
+import { anyJourneyValue, appNotificationTokenFieldKey, audienceEmptyOptionReason, audienceFieldTopic, audienceOptionLabel, audiencePickerFields, incompleteRuleCount, isNotificationRecencyField, isRuleComplete, makeBlock, makeRule, notificationRecencyPhrase, readableRule, reactivationChannelsForProject, ruleHasInput, seedReactivationRules, toBackendRules, validRuleCount, withAppNotificationTokenField, type Block, type Rule } from './audienceGroupRules';
 
 type Goal = 'behavior' | 'campaign' | 'event' | 'profile' | 'reactivation' | 'other';
 type ProfileCategory = 'reachability' | 'engagement' | 'groups' | 'automation' | 'account' | 'other';
@@ -163,7 +163,7 @@ function RuleEditor({ schema, fields, allFields, journeyScope, blocks, onChange 
     {!blocks.length && <Box sx={{ p: { xs: 1.5, sm: 2 }, border: '1px dashed', borderColor: 'divider', borderRadius: 2, textAlign: 'center' }}><Typography fontWeight={600}>No conditions selected yet</Typography><Typography color="text.secondary" fontSize="0.85rem">Add a condition to define which users belong to this group.</Typography><Button type="button" variant="outlined" startIcon={<AddRounded />} onClick={() => onChange([makeBlock(1, 1)])} sx={{ mt: 1.2 }}>Add condition</Button></Box>}
     {blocks.map((block, blockIndex) => <Box key={block.id} sx={{ p: { xs: 1.25, sm: 1.5 }, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
       <Stack gap={1.2}>
-        {block.rules.map(rule => <RuleRow key={rule.id} rule={rule} schema={schema} fields={fields} allFields={allFields} journeyScope={journeyScope} onChange={(key, value) => updateRule(block.id, rule.id, key, value)} onRemove={() => remove(block.id, rule.id)} />)}
+        {block.rules.map((rule, ruleIndex) => <RuleRow key={rule.id} rule={rule} schema={schema} fields={fields} allFields={allFields} journeyScope={journeyScope} autoOpen={!rule.filter || (blockIndex === 0 && ruleIndex === 0)} onChange={(key, value) => updateRule(block.id, rule.id, key, value)} onRemove={() => remove(block.id, rule.id)} />)}
         <Button type="button" size="small" startIcon={<AddRounded />} onClick={() => addAnd(block.id)} disabled={conditionCount >= maxConditions}>AND condition</Button>
       </Stack>
       {blockIndex < blocks.length - 1 && <Typography align="center" color="text.secondary" sx={{ mt: 1 }}>OR</Typography>}
@@ -172,11 +172,14 @@ function RuleEditor({ schema, fields, allFields, journeyScope, blocks, onChange 
   </Stack>;
 }
 
-function RuleRow({ rule, schema, fields, allFields, journeyScope, onChange, onRemove }: { rule: Rule; schema: AudienceGroupSchema; fields: AudienceGroupSchemaField[]; allFields: AudienceGroupSchemaField[]; journeyScope: 'any' | 'specific' | null; onChange: (key: keyof Rule, value: string) => void; onRemove: () => void }) {
+function RuleRow({ rule, schema, fields, allFields, journeyScope, autoOpen = false, onChange, onRemove }: { rule: Rule; schema: AudienceGroupSchema; fields: AudienceGroupSchemaField[]; allFields: AudienceGroupSchemaField[]; journeyScope: 'any' | 'specific' | null; autoOpen?: boolean; onChange: (key: keyof Rule, value: string) => void; onRemove: () => void }) {
   const ruleFields = allFields.length ? allFields : fields;
   const field = ruleFields.find(item => item.key === rule.filter);
   const condition = field?.conditions.find(item => item.key === rule.operator);
   const options = condition?.value.options ?? [];
+  const displayOptions = options.map(option => ({ ...option, label: audienceOptionLabel(field, option) }));
+  const optionBacked = Array.isArray(condition?.value.options);
+  const emptyReason = condition?.value.emptyReason ?? audienceEmptyOptionReason(field);
   const valueType = condition?.value.type;
   const selected = condition?.value.multiple ? rule.value.split(',').map(value => value.trim()).filter(Boolean) : rule.value;
   const hasCustomProperty = field?.key === 'customProperty';
@@ -190,7 +193,7 @@ function RuleRow({ rule, schema, fields, allFields, journeyScope, onChange, onRe
       ? `Enter a positive whole number of days for ${field?.label ?? 'this notification condition'}.`
       : 'Choose an operator and a required value, or remove this incomplete condition.';
   return <Stack direction={{ xs: 'column', md: 'row' }} gap={1} alignItems={{ md: 'center' }} sx={{ width: '100%', flexWrap: { md: 'wrap' } }}>
-    <AudienceConditionFieldPicker fields={fields} moreFields={allFields} value={rule.filter} onChange={value => onChange('filter', value)} compact />
+    <AudienceConditionFieldPicker fields={fields} moreFields={allFields} value={rule.filter} onChange={value => onChange('filter', value)} compact autoOpen={autoOpen} />
     {hasCustomProperty && <Select size="small" displayEmpty value={rule.property ?? ''} inputProps={{ 'aria-label': 'Custom property' }} onChange={event => onChange('property', String(event.target.value))} sx={{ minWidth: { md: 180 }, flex: 1 }}>
       <MenuItem value="">Choose a property</MenuItem>
       {(field?.property?.options ?? []).map(option => <MenuItem key={option.key} value={option.key}>{option.label}</MenuItem>)}
@@ -202,10 +205,10 @@ function RuleRow({ rule, schema, fields, allFields, journeyScope, onChange, onRe
     {isNotificationRecency ? <Stack direction="row" alignItems="center" gap={0.7} sx={{ flex: 1, minWidth: 0, flexWrap: { xs: 'wrap', md: 'nowrap' } }}><Typography component="span" whiteSpace="nowrap">{notificationRecencyPhrase(field)}</Typography><TextField size="small" type="number" inputProps={{ min: 1, step: 1, inputMode: 'numeric', 'aria-label': `${field?.label ?? 'Notification'} days` }} value={rule.value} onChange={event => onChange('value', event.target.value)} error={Boolean(rule.value) && !/^[1-9]\d*$/.test(rule.value.trim())} sx={{ width: 82, flex: '0 0 82px' }} /><Typography component="span" whiteSpace="nowrap">days</Typography></Stack> : isAnyJourney ? <Box sx={{ flex: 1, minWidth: { md: 190 }, px: 1.4, py: .85, border: '1px solid', borderColor: 'divider', borderRadius: 1, color: 'text.secondary' }}>Any journey</Box> : condition && valueType !== 'none' && (options.length ? <Select size="small" displayEmpty multiple={Boolean(condition.value.multiple)} value={selected} inputProps={{ 'aria-label': 'Condition value' }} onChange={event => {
       const value = Array.isArray(event.target.value) ? event.target.value : [event.target.value];
       onChange('value', value.map(String).join(','));
-    }} renderValue={value => (Array.isArray(value) ? value : [value]).map(item => options.find(option => option.key === item)?.label ?? item).join(', ')} sx={{ minWidth: { md: 190 }, flex: 1 }}>
+    }} renderValue={value => (Array.isArray(value) ? value : [value]).map(item => displayOptions.find(option => option.key === item)?.label ?? item).join(', ')} sx={{ minWidth: { md: 190 }, flex: 1 }}>
       <MenuItem value="">Choose a value</MenuItem>
-      {options.map(option => <MenuItem key={option.key} value={option.key}>{option.label}</MenuItem>)}
-    </Select> : <TextField size="small" type={valueType === 'integer' || valueType === 'number' ? 'number' : valueType === 'date' ? 'date' : 'text'} value={rule.value} placeholder={condition.value.unit ? `Enter ${condition.value.unit}` : 'Enter a value'} onChange={event => onChange('value', event.target.value)} sx={{ flex: 1 }} />)}
+      {displayOptions.map(option => <MenuItem key={option.key} value={option.key}>{option.label}</MenuItem>)}
+    </Select> : optionBacked ? <Stack sx={{ minWidth: { md: 190 }, flex: 1 }}><Select size="small" disabled value="" displayEmpty><MenuItem value="">No values available</MenuItem></Select><Typography color="text.secondary" fontSize="0.72rem" sx={{ mt: 0.35 }}>{emptyReason}</Typography></Stack> : <TextField size="small" type={valueType === 'integer' || valueType === 'number' ? 'number' : valueType === 'date' ? 'date' : 'text'} value={rule.value} placeholder={condition.value.unit ? `Enter ${condition.value.unit}` : 'Enter a value'} onChange={event => onChange('value', event.target.value)} sx={{ flex: 1 }} />)}
     <Button type="button" aria-label="Remove condition" onClick={onRemove} sx={{ minWidth: 40 }}><CloseRounded fontSize="small" /></Button>
     {incomplete && <Typography color="error" fontSize="0.78rem" sx={{ width: '100%' }}>{incompleteMessage}</Typography>}
   </Stack>;
@@ -242,12 +245,14 @@ export default function AudienceGroupAiFlow({ projectId, sdkIntegrated, trackedE
   }), [sdkIntegrated, trackedSchemaEvents.length]);
   useEffect(() => {
     if (goal !== 'reactivation' || reactivationSeededRef.current || !schema || onboardingQuery.isPending || !onboardingQuery.data) return;
-    reactivationSeededRef.current = true;
     const progress = onboardingQuery.data;
     const selected = reactivationChannelsForProject(progress.platforms, progress.channels ?? []);
     const seeded = seedReactivationRules(schema, selected);
     setReactivationUnavailable(seeded.unavailable);
-    setBlocks(current => current.length ? current : seeded.blocks);
+    setBlocks(current => validRuleCount(current, schema) > 0
+      ? current
+      : seeded.blocks.length ? seeded.blocks : [makeBlock(1, 1)]);
+    reactivationSeededRef.current = true;
   }, [goal, onboardingQuery.data, onboardingQuery.isPending, schema]);
   useEffect(() => {
     if (sdkIntegrated || branch !== 'lifecycle') return;
@@ -259,7 +264,13 @@ export default function AudienceGroupAiFlow({ projectId, sdkIntegrated, trackedE
   const campaignActivityAvailable = Boolean(schema && ruleFields(schema, 'campaign', 'any', null).length > 0);
   const specificCampaignAvailable = Boolean(schema && campaignSpecific);
   const fields = schema && goal ? goal === 'other' ? fieldsForOther(schema, otherDescription, sdkIntegrated) : ruleFields(schema, goal, branch, profileCategory, sdkIntegrated) : [];
-  const allPickerFields = schema ? audiencePickerFields(schema.fields).filter(field => !field.deprecated && fieldHasData(field) && (sdkIntegrated || !isLifecycleField(field))) : [];
+  // The main list is intentionally goal-focused, but More options must be a
+  // complete view of every current backend-advertised field. Do not filter by
+  // option availability here: fields with no project data still need to be
+  // discoverable and will render a disabled value selector with the reason.
+  const allPickerFields = schema
+    ? audiencePickerFields(schema.fields).filter(field => !field.deprecated && (sdkIntegrated || !isLifecycleField(field)))
+    : [];
   const hasRules = validRuleCount(blocks, schema) > 0;
   const incompleteRules = incompleteRuleCount(blocks, schema);
   const createMutation = useMutation({
@@ -281,7 +292,7 @@ export default function AudienceGroupAiFlow({ projectId, sdkIntegrated, trackedE
 
   const chooseGoal = (next: Goal) => {
     if (lastGoalRef.current !== next) {
-      setBlocks([]);
+      setBlocks(next === 'other' ? [] : [makeBlock(1, 1)]);
       reactivationSeededRef.current = false;
       setReactivationUnavailable([]);
     }
@@ -293,10 +304,10 @@ export default function AudienceGroupAiFlow({ projectId, sdkIntegrated, trackedE
     setReviewing(false);
     setError(null);
   };
-  const chooseBranch = (next: string) => { setBranch(next); setJourneyScope(null); setBlocks([]); setReviewing(false); };
+  const chooseBranch = (next: string) => { setBranch(next); setJourneyScope(null); setBlocks([makeBlock(1, 1)]); setReviewing(false); };
   const chooseJourneyActivity = () => { setBranch('journey-scope'); setJourneyScope(null); setBlocks([]); setReviewing(false); };
-  const chooseJourneyScope = (next: 'any' | 'specific') => { setJourneyScope(next); setBranch(`journey-${next}`); setBlocks([]); setReviewing(false); };
-  const chooseProfileCategory = (next: ProfileCategory) => { setProfileCategory(next); setBranch(''); setBlocks([]); setReviewing(false); };
+  const chooseJourneyScope = (next: 'any' | 'specific') => { setJourneyScope(next); setBranch(`journey-${next}`); setBlocks([makeBlock(1, 1)]); setReviewing(false); };
+  const chooseProfileCategory = (next: ProfileCategory) => { setProfileCategory(next); setBranch(''); setBlocks([makeBlock(1, 1)]); setReviewing(false); };
   const conditionContext = goal === 'behavior'
     ? ({ events: 'Product events', lifecycle: 'Lifecycle segment status', journey: 'Journey activity', 'journey-any': 'Journey activity', 'journey-specific': 'Journey activity' } as Record<string, string>)[branch] ?? 'Behavior'
     : goal === 'profile'
@@ -314,7 +325,7 @@ export default function AudienceGroupAiFlow({ projectId, sdkIntegrated, trackedE
   const startOtherRules = () => {
     if (!otherDescription.trim()) return;
     setBranch('other');
-    setBlocks([]);
+    setBlocks([makeBlock(1, 1)]);
     setReviewing(false);
     setError(null);
   };

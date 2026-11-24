@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -96,6 +96,9 @@ const languageCodes: Record<string, string> = {
   Turkish: "tr",
   Vietnamese: "vi",
 };
+const languageNamesByCode = Object.fromEntries(
+  Object.entries(languageCodes).map(([name, code]) => [code, name]),
+) as Record<string, string>;
 const countries = [
   "All Countries",
   "United States",
@@ -108,14 +111,19 @@ export default function PushComposer({
   mode,
   onBack,
   onSaved,
+  templateId,
 }: {
   mode: Mode;
   onBack: () => void;
   onSaved: (target: SaveTarget) => void;
+  templateId?: string | null;
 }) {
   const { active } = useActiveProject();
   const queryClient = useQueryClient();
-  const [currentMode, setCurrentMode] = useState<Mode>(mode);
+  const editingTemplate = Boolean(templateId);
+  const [currentMode, setCurrentMode] = useState<Mode>(
+    editingTemplate ? "template" : mode,
+  );
   const isTemplate = currentMode === "template";
   const [name, setName] = useState("");
   const [country, setCountry] = useState("All Countries");
@@ -147,6 +155,33 @@ export default function PushComposer({
   const [deepLinkDeleteTarget, setDeepLinkDeleteTarget] = useState<{ id: string; url: string } | null>(null);
   const [testUserId, setTestUserId] = useState("");
   const [error, setError] = useState("");
+  const templateQuery = useQuery({
+    queryKey: ["push", "template", active?.id, templateId],
+    queryFn: () => {
+      if (!active?.id || !templateId)
+        throw new Error("The push template is not available.");
+      return pushApi.templates.get(active.id, templateId);
+    },
+    enabled: Boolean(active?.id && templateId),
+  });
+  useEffect(() => {
+    const template = templateQuery.data;
+    if (!template) return;
+    const loadedTranslations = template.translations ?? {};
+    const translatedLanguages = Object.keys(loadedTranslations)
+      .map((code) => languageNamesByCode[code])
+      .filter((language): language is string => Boolean(language));
+    setName(template.name);
+    setTitle(template.title);
+    setMessage(template.body);
+    setDeepLink(template.deepLink ?? "");
+    setTranslations(loadedTranslations);
+    setSelectedLanguages(["English", ...translatedLanguages.filter((language) => language !== "English")]);
+    setActiveLanguage("English");
+    setFallbackLanguage(
+      languageNamesByCode[template.fallbackLanguage ?? "en"] ?? "English",
+    );
+  }, [templateQuery.data]);
   const groupsQuery = useQuery({
     queryKey: ["projects", "audience-groups", active?.id],
     queryFn: () => audienceGroupsApi.list(active!.id),
@@ -294,11 +329,17 @@ export default function PushComposer({
         fallbackLanguage: languageCodes[effectiveFallback] ?? "en",
       };
       if (target === "templates") {
-        const template = await pushApi.templates.create(active.id, {
-          name: name.trim(),
-          ...content,
-          category: "template",
-        });
+        const template = editingTemplate
+          ? await pushApi.templates.update(active.id, templateId!, {
+              name: name.trim(),
+              ...content,
+              category: "template",
+            })
+          : await pushApi.templates.create(active.id, {
+              name: name.trim(),
+              ...content,
+              category: "template",
+            });
         return { target: "templates" as const, template };
       }
       const audience: PushAudience = group.startsWith("segment:")
@@ -327,7 +368,9 @@ export default function PushComposer({
           ? "Notification scheduled successfully."
           : target === "drafts"
             ? "Saved as a draft."
-            : "Saved as a template.",
+            : editingTemplate
+              ? "Template updated successfully."
+              : "Saved as a template.",
       );
       window.setTimeout(() => onSaved(target), 500);
     },
@@ -448,6 +491,46 @@ export default function PushComposer({
     setDeepLinkDeleteTarget(item);
   };
 
+  if (editingTemplate && templateQuery.isPending) {
+    return (
+      <Stack className="push-composer" gap={2.5}>
+        <Button
+          startIcon={<ArrowBackRounded />}
+          onClick={onBack}
+          className="group-back-button"
+          aria-label="Back to push notifications"
+        >
+          Back to push notifications
+        </Button>
+        <Card sx={{ p: 3 }}>
+          <Typography color="text.secondary">
+            Loading push template…
+          </Typography>
+        </Card>
+      </Stack>
+    );
+  }
+
+  if (editingTemplate && templateQuery.isError) {
+    return (
+      <Stack className="push-composer" gap={2.5}>
+        <Button
+          startIcon={<ArrowBackRounded />}
+          onClick={onBack}
+          className="group-back-button"
+          aria-label="Back to push notifications"
+        >
+          Back to push notifications
+        </Button>
+        <Card sx={{ p: 3 }}>
+          <Typography color="error">
+            Could not load this push template. Please go back and try again.
+          </Typography>
+        </Card>
+      </Stack>
+    );
+  }
+
   return (
     <Stack className="push-composer" gap={2.5}>
       {error && (
@@ -489,6 +572,7 @@ export default function PushComposer({
             onClick={() => setCurrentMode("campaign")}
             className={!isTemplate ? "active" : ""}
             startIcon={<SendRounded />}
+            disabled={editingTemplate}
           >
             Push notification
           </Button>
@@ -496,6 +580,7 @@ export default function PushComposer({
             onClick={() => setCurrentMode("template")}
             className={isTemplate ? "active" : ""}
             startIcon={<SaveRounded />}
+            disabled={editingTemplate}
           >
             Templates
           </Button>
@@ -873,16 +958,18 @@ export default function PushComposer({
                 disabled={saveMutation.isPending}
                 onClick={() => action("templates")}
               >
-                Save as template
+                {editingTemplate ? "Save changes" : "Save as template"}
               </Button>
-              <Button
-                variant="outlined"
-                startIcon={<SaveRounded />}
-                disabled={saveMutation.isPending}
-                onClick={() => action("drafts")}
-              >
-                Save as draft
-              </Button>
+              {!editingTemplate && (
+                <Button
+                  variant="outlined"
+                  startIcon={<SaveRounded />}
+                  disabled={saveMutation.isPending}
+                  onClick={() => action("drafts")}
+                >
+                  Save as draft
+                </Button>
+              )}
             </Stack>
             {notice && (
               <Typography className="push-form-notice">{notice}</Typography>
