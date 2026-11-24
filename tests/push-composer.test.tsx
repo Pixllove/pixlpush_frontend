@@ -14,10 +14,19 @@ vi.mock("@/lib/projects/api", () => ({
       test: vi.fn(),
       translate: vi.fn(),
     },
-    campaigns: { create: vi.fn(), audiencePreview: vi.fn() },
+    campaigns: {
+      create: vi.fn(),
+      get: vi.fn(),
+      update: vi.fn(),
+      schedule: vi.fn(),
+      sendNow: vi.fn(),
+      audiencePreview: vi.fn(),
+    },
   },
   audienceGroupsApi: { list: vi.fn(async () => []) },
   lifecycleSegmentsApi: { list: vi.fn(async () => []) },
+  effectivePushCampaignChannels: (campaign: { channels?: string[]; channel?: string | null }) =>
+    campaign.channels?.length ? campaign.channels : campaign.channel ? [campaign.channel] : null,
 }));
 vi.mock("@/hooks/projects/use-active-project", () => ({
   useActiveProject: () => ({ active: { id: "p1" } }),
@@ -320,5 +329,78 @@ describe("PushComposer · Save as draft", () => {
     );
     expect(push.templates.create).not.toHaveBeenCalled();
     await waitFor(() => expect(onSaved).toHaveBeenCalledWith("templates"));
+  });
+
+  it("opens an existing draft and updates the same campaign instead of creating a duplicate", async () => {
+    push.campaigns.get.mockResolvedValue({
+      id: "c1",
+      projectId: "p1",
+      name: "Existing draft",
+      status: "draft",
+      channels: ["web"],
+      audience: { allUsers: true },
+      template: {
+        id: "t1",
+        projectId: "p1",
+        name: "Existing draft",
+        title: "Existing draft title",
+        body: "Existing draft body",
+        deepLink: "https://pixlpush.com/welcome",
+        translations: null,
+        fallbackLanguage: "en",
+        category: "push_notification",
+        status: "active",
+      },
+    } as never);
+    push.campaigns.update.mockResolvedValue({ id: "c1", status: "draft" } as never);
+
+    const onSaved = vi.fn();
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <PushComposer
+          mode="campaign"
+          draftId="c1"
+          onBack={() => {}}
+          onSaved={onSaved}
+        />
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByLabelText(/Push notification name/)).toHaveValue(
+        "Existing draft",
+      ),
+    );
+    expect(screen.getByLabelText(/Title \(English\)/)).toHaveValue(
+      "Existing draft title",
+    );
+    expect(screen.getByRole("button", { name: "Update draft" })).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /Web Notification/ })).toBeChecked();
+
+    fireEvent.change(screen.getByLabelText(/Push notification name/), {
+      target: { value: "Updated draft" },
+    });
+    fireEvent.change(screen.getByLabelText(/Title \(English\)/), {
+      target: { value: "Updated title" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Update draft" }));
+
+    await waitFor(() =>
+      expect(push.campaigns.update).toHaveBeenCalledWith(
+        "p1",
+        "c1",
+        expect.objectContaining({
+          name: "Updated draft",
+          channels: ["web"],
+          channel: "web",
+          content: expect.objectContaining({
+            title: "Updated title",
+            body: "Existing draft body",
+          }),
+        }),
+      ),
+    );
+    expect(push.campaigns.create).not.toHaveBeenCalled();
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith("drafts"));
   });
 });

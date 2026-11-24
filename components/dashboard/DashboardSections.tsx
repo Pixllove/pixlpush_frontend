@@ -2261,6 +2261,7 @@ function PushSection() {
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(
     null,
   );
+  const [editingDraftId, setEditingDraftId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{
     id: string;
     name: string;
@@ -2350,14 +2351,22 @@ function PushSection() {
   });
   const openNewComposer = (next: "campaign" | "template") => {
     setEditingTemplateId(null);
+    setEditingDraftId(null);
     setComposer(next);
   };
   const openTemplate = (templateId: string) => {
     setEditingTemplateId(templateId);
+    setEditingDraftId(null);
     setComposer("template");
+  };
+  const openDraft = (draftId: string) => {
+    setEditingTemplateId(null);
+    setEditingDraftId(draftId);
+    setComposer("campaign");
   };
   const closeComposer = () => {
     setEditingTemplateId(null);
+    setEditingDraftId(null);
     setComposer(null);
   };
   if (composer)
@@ -2365,6 +2374,7 @@ function PushSection() {
       <PushComposer
         mode={composer}
         templateId={editingTemplateId}
+        draftId={editingDraftId}
         onBack={closeComposer}
         onSaved={(target) => {
           closeComposer();
@@ -2455,6 +2465,7 @@ function PushSection() {
             onClick={(event) => {
               event.stopPropagation();
               if (tab === "templates") openTemplate(row.id);
+              else if (tab === "drafts") openDraft(row.id);
               else router.push(`/dashboard/push?tab=${tab}&highlight=${row.id}`);
             }}
             aria-label={
@@ -2567,12 +2578,12 @@ function PushSection() {
           className="table-row-actions"
           onClick={(event) => event.stopPropagation()}
         >
-          {tab === "templates" && (
+          {(tab === "templates" || tab === "drafts") && (
             <IconButton
               size="small"
               className="edit-action"
               aria-label={`Edit ${row.name}`}
-              onClick={() => openTemplate(row.id)}
+              onClick={() => tab === "templates" ? openTemplate(row.id) : openDraft(row.id)}
               disabled={actionMutation.isPending}
             >
               <EditRounded fontSize="small" />
@@ -2777,7 +2788,13 @@ function PushSection() {
           onNextPage={() => setPage((current) => current + 1)}
           page={page}
           serverPageSize={25}
-          onRowClick={tab === "templates" ? (row) => openTemplate(row.id) : undefined}
+          onRowClick={
+            tab === "templates"
+              ? (row) => openTemplate(row.id)
+              : tab === "drafts"
+                ? (row) => openDraft(row.id)
+                : undefined
+          }
         />
       </Card>
       <DeleteConfirmDialog

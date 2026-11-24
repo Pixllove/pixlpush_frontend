@@ -1385,7 +1385,22 @@ export const pushApi = {
     update: (
       projectId: string,
       campaignId: string,
-      input: { name?: string; templateId?: string; channel?: PushDeliveryChannel; channels?: PushDeliveryChannel[]; audience?: PushAudience },
+      input: {
+        name?: string;
+        templateId?: string;
+        content?: {
+          title: string;
+          body: string;
+          imageUrl?: string | null;
+          deepLink?: string | null;
+          data?: Record<string, string>;
+          translations?: Record<string, PushTranslation> | null;
+          fallbackLanguage?: string | null;
+        };
+        channel?: PushDeliveryChannel;
+        channels?: PushDeliveryChannel[];
+        audience?: PushAudience;
+      },
     ) =>
       authRequest<PushCampaign>(
         at(projectId, `/push-campaigns/${encodeURIComponent(campaignId)}`),

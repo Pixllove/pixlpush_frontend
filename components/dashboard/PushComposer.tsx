@@ -55,6 +55,7 @@ import {
   audienceGroupsApi,
   lifecycleSegmentsApi,
   pushApi,
+  effectivePushCampaignChannels,
   type PushAudience,
   type PushDeliveryChannel,
   type PushTranslation,
@@ -173,16 +174,19 @@ export default function PushComposer({
   onBack,
   onSaved,
   templateId,
+  draftId,
 }: {
   mode: Mode;
   onBack: () => void;
   onSaved: (target: SaveTarget) => void;
   templateId?: string | null;
+  draftId?: string | null;
 }) {
   const { active } = useActiveProject();
   const { query: pushSettingsQuery } = useFirebaseSettings(active?.id);
   const queryClient = useQueryClient();
   const editingTemplate = Boolean(templateId);
+  const editingDraft = Boolean(draftId);
   const [currentMode, setCurrentMode] = useState<Mode>(
     editingTemplate ? "template" : mode,
   );
@@ -231,6 +235,15 @@ export default function PushComposer({
     },
     enabled: Boolean(active?.id && templateId),
   });
+  const draftQuery = useQuery({
+    queryKey: ["push", "campaign", active?.id, draftId],
+    queryFn: () => {
+      if (!active?.id || !draftId)
+        throw new Error("The draft notification is not available.");
+      return pushApi.campaigns.get(active.id, draftId);
+    },
+    enabled: Boolean(active?.id && draftId),
+  });
   useEffect(() => {
     const template = templateQuery.data;
     if (!template) return;
@@ -249,6 +262,51 @@ export default function PushComposer({
       languageNamesByCode[template.fallbackLanguage ?? "en"] ?? "English",
     );
   }, [templateQuery.data]);
+  useEffect(() => {
+    const draft = draftQuery.data;
+    if (!draft) return;
+    const draftTemplate = draft.template;
+    const loadedTranslations = draftTemplate?.translations ?? {};
+    const translatedLanguages = Object.keys(loadedTranslations)
+      .map((code) => languageNamesByCode[code])
+      .filter((language): language is string => Boolean(language));
+    const channels = effectivePushCampaignChannels(draft) ?? ["mobile"];
+    const audience = draft.audience ?? {};
+    const audienceGroupId = audience.audienceGroupIds?.[0];
+    const lifecycleSegmentId = audience.lifecycleSegmentIds?.[0];
+
+    setCurrentMode("campaign");
+    setName(draft.name);
+    setTitle(draftTemplate?.title ?? "");
+    setMessage(draftTemplate?.body ?? "");
+    setDeepLink(draftTemplate?.deepLink ?? "");
+    setTranslations(loadedTranslations);
+    setSelectedLanguages(["English", ...translatedLanguages.filter((language) => language !== "English")]);
+    setActiveLanguage("English");
+    setFallbackLanguage(
+      languageNamesByCode[draftTemplate?.fallbackLanguage ?? "en"] ?? "English",
+    );
+    setIos(channels.includes("mobile"));
+    setAndroid(false);
+    setWeb(channels.includes("web"));
+    setPreviewChannel(channels.includes("web") && !channels.includes("mobile") ? "web" : "mobile");
+    setCountry("All Countries");
+    setGroup(
+      audienceGroupId
+        ? `group:${audienceGroupId}`
+        : lifecycleSegmentId
+          ? `segment:${lifecycleSegmentId}`
+          : "Select group",
+    );
+    if (draft.scheduledAt) {
+      const scheduled = new Date(draft.scheduledAt);
+      if (!Number.isNaN(scheduled.getTime())) {
+        setDelivery("specific");
+        setScheduledDate(scheduled.toISOString().slice(0, 10));
+        setScheduledTime(scheduled.toTimeString().slice(0, 5));
+      }
+    }
+  }, [draftQuery.data]);
   const groupsQuery = useQuery({
     queryKey: ["projects", "audience-groups", active?.id],
     queryFn: () => audienceGroupsApi.list(active!.id),
@@ -420,6 +478,22 @@ export default function PushComposer({
         target === "send" && delivery === "specific"
           ? new Date(`${scheduledDate}T${scheduledTime}`).toISOString()
           : undefined;
+      if (editingDraft) {
+        const updated = await pushApi.campaigns.update(active.id, draftId!, {
+          name: name.trim(),
+          content,
+          channels: selectedChannels,
+          ...(selectedChannels.length === 1 ? { channel: selectedChannels[0] } : {}),
+          audience,
+        });
+        if (target === "send") {
+          const sent = scheduledAt
+            ? await pushApi.campaigns.schedule(active.id, draftId!, scheduledAt)
+            : await pushApi.campaigns.sendNow(active.id, draftId!);
+          return { target, campaign: sent ?? updated };
+        }
+        return { target: "drafts" as const, campaign: updated };
+      }
       const campaign = await pushApi.campaigns.create(active.id, {
         name: name.trim(),
         content,
@@ -560,7 +634,7 @@ export default function PushComposer({
     setDeepLinkDeleteTarget(item);
   };
 
-  if (editingTemplate && templateQuery.isPending) {
+  if ((editingTemplate && templateQuery.isPending) || (editingDraft && draftQuery.isPending)) {
     return (
       <Stack className="push-composer" gap={2.5}>
         <Button
@@ -573,14 +647,14 @@ export default function PushComposer({
         </Button>
         <Card sx={{ p: 3 }}>
           <Typography color="text.secondary">
-    Loading reusable notification…
+            {editingDraft ? "Loading draft notification…" : "Loading reusable notification…"}
           </Typography>
         </Card>
       </Stack>
     );
   }
 
-  if (editingTemplate && templateQuery.isError) {
+  if ((editingTemplate && templateQuery.isError) || (editingDraft && draftQuery.isError)) {
     return (
       <Stack className="push-composer" gap={2.5}>
         <Button
@@ -593,7 +667,7 @@ export default function PushComposer({
         </Button>
         <Card sx={{ p: 3 }}>
           <Typography color="error">
-            Could not load this reusable notification. Please go back and try again.
+            Could not load this {editingDraft ? "draft notification" : "reusable notification"}. Please go back and try again.
           </Typography>
         </Card>
       </Stack>
@@ -1063,14 +1137,28 @@ export default function PushComposer({
                 </Button>
               )}
               <Button
-                variant={isTemplate ? "contained" : "outlined"}
+                variant={isTemplate || editingDraft ? "contained" : "outlined"}
                 startIcon={<SaveRounded />}
                 disabled={saveMutation.isPending}
-                onClick={() => action("templates")}
+                onClick={() => action(editingDraft ? "drafts" : "templates")}
               >
-                {editingTemplate ? "Save changes" : "Save reusable notification"}
+                {editingTemplate
+                  ? "Save changes"
+                  : editingDraft
+                    ? "Update draft"
+                    : "Save reusable notification"}
               </Button>
-              {!editingTemplate && (
+              {editingDraft && (
+                <Button
+                  variant="outlined"
+                  startIcon={<SaveRounded />}
+                  disabled={saveMutation.isPending}
+                  onClick={() => action("templates")}
+                >
+                  Save reusable notification
+                </Button>
+              )}
+              {!editingTemplate && !editingDraft && (
                 <Button
                   variant="outlined"
                   startIcon={<SaveRounded />}
