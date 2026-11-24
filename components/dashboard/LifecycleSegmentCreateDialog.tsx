@@ -133,6 +133,160 @@ function ServerEventField({
   );
 }
 
+const PAGE_SIZE = 20;
+
+/** Searchable, paged event checklist. The same picker serves app (SDK) and server events. */
+function EventPicker({
+  options,
+  selected,
+  onToggle,
+  loading,
+  disabled,
+  emptyDescription,
+}: {
+  options: EventOption[];
+  selected: string[];
+  onToggle: (name: string) => void;
+  loading?: boolean;
+  disabled?: boolean;
+  emptyDescription: string;
+}) {
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const visible = options.filter((option) =>
+    option.name.toLowerCase().includes(search.trim().toLowerCase()),
+  );
+  const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
+  const paged = visible.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  return (
+    <Stack gap={2.5}>
+      <SearchField
+        value={search}
+        onChange={(value) => {
+          setSearch(value);
+          setPage(1);
+        }}
+        placeholder="Search events"
+      />
+      <Box
+        sx={{
+          border: "1px solid #e3dcef",
+          borderRadius: 2,
+          overflow: "hidden",
+          bgcolor: "#fcfbff",
+        }}
+      >
+        {loading ? (
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+            }}
+          >
+            {Array.from({ length: 8 }, (_, index) => (
+              <Stack
+                key={index}
+                direction="row"
+                gap={2}
+                alignItems="center"
+                sx={{ px: 2, py: 1.6, borderBottom: "1px solid #eeeaf5" }}
+              >
+                <Skeleton variant="rounded" width={22} height={22} />
+                <Skeleton variant="text" width="68%" />
+              </Stack>
+            ))}
+          </Box>
+        ) : paged.length ? (
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+            }}
+          >
+            {paged.map((option) => {
+              const checked = selected.includes(option.name);
+              const locked = Boolean(option.assignedSegment) || disabled;
+              return (
+                <ListItemButton
+                  key={option.name}
+                  onClick={() => !locked && onToggle(option.name)}
+                  disabled={locked}
+                  sx={{
+                    minHeight: 78,
+                    py: 1.1,
+                    px: 1.5,
+                    borderRight: { sm: "1px solid #eeeaf5" },
+                    borderBottom: "1px solid #eeeaf5",
+                    bgcolor: checked ? "#f1eaff" : "transparent",
+                    "&:hover": { bgcolor: checked ? "#ede3ff" : "#f8f5ff" },
+                  }}
+                >
+                  <Checkbox
+                    checked={checked}
+                    disabled={locked}
+                    onChange={() => onToggle(option.name)}
+                    onClick={(event) => event.stopPropagation()}
+                    sx={{ mr: 1 }}
+                  />
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography fontSize="var(--fs-12)" fontWeight={500} noWrap>
+                      {option.name}
+                    </Typography>
+                    <Typography
+                      color="text.secondary"
+                      fontSize="var(--fs-12)"
+                      noWrap
+                    >
+                      {option.assignedSegment
+                        ? `Already assigned to ${option.assignedSegment.name}`
+                        : "Tracked events"}
+                    </Typography>
+                  </Box>
+                  {checked && <CheckRounded color="primary" fontSize="small" />}
+                </ListItemButton>
+              );
+            })}
+          </Box>
+        ) : (
+          <EmptyState
+            size="compact"
+            icon={<SearchOffRounded />}
+            title={
+              search ? "No matching events found" : "No events received yet"
+            }
+            description={
+              search
+                ? "Check the spelling or try a different search."
+                : emptyDescription
+            }
+          />
+        )}
+      </Box>
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        justifyContent="space-between"
+        alignItems={{ sm: "center" }}
+        gap={1}
+      >
+        <Typography color="text.secondary" fontSize="var(--fs-12)">
+          {selected.length} event{selected.length === 1 ? "" : "s"} selected ·
+          Showing {paged.length} of {visible.length}
+        </Typography>
+        {pageCount > 1 && (
+          <Pagination
+            size="small"
+            page={page}
+            count={pageCount}
+            onChange={(_event, value) => setPage(value)}
+            color="primary"
+            shape="rounded"
+          />
+        )}
+      </Stack>
+    </Stack>
+  );
+}
+
 export default function LifecycleSegmentCreateDialog({
   open,
   onClose,
@@ -164,8 +318,6 @@ export default function LifecycleSegmentCreateDialog({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
   const [purposeKey, setPurposeKey] = useState("");
   const [chosenSource, setChosenSource] = useState<SegmentSource>();
   const [enter, setEnter] = useState<string[]>([]);
@@ -194,8 +346,6 @@ export default function LifecycleSegmentCreateDialog({
     setName("");
     setDescription("");
     setSelectedEvents([]);
-    setSearch("");
-    setPage(1);
     setPurposeKey("");
     setChosenSource(undefined);
     setEnter([]);
@@ -213,24 +363,15 @@ export default function LifecycleSegmentCreateDialog({
   };
 
   const eventOptions = useMemo<EventOption[]>(() => events ?? [], [events]);
-  const visibleEvents = eventOptions.filter((option) =>
-    option.name.toLowerCase().includes(search.trim().toLowerCase()),
-  );
-  const pageSize = 20;
-  const pageCount = Math.max(1, Math.ceil(visibleEvents.length / pageSize));
-  const pagedEvents = visibleEvents.slice(
-    (page - 1) * pageSize,
-    page * pageSize,
-  );
   const eventListLoading = open && eventsLoading && !error;
-  const toggleEvent = (option: EventOption) => {
-    if (option.assignedSegment || loading) return;
-    setSelectedEvents((current) =>
-      current.includes(option.name)
-        ? current.filter((item) => item !== option.name)
-        : [...current, option.name],
-    );
-  };
+  const toggleIn =
+    (setter: (update: (current: string[]) => string[]) => void) =>
+    (name: string) =>
+      setter((current) =>
+        current.includes(name)
+          ? current.filter((item) => item !== name)
+          : [...current, name],
+      );
 
   const received = useMemo(
     () => new Set((serverEvents.data?.events ?? []).map((item) => item.name)),
@@ -548,53 +689,79 @@ export default function LifecycleSegmentCreateDialog({
               )}
             </Box>
 
-            <ServerEventField
-              label="Add users when your server sends"
-              helper={
-                purpose?.server
-                  ? "Standard event names are filled in. Change them only if your server uses different names."
-                  : "The event name your server sends when a user should join."
-              }
-              value={enter}
-              onChange={setEnter}
-              options={serverOptions}
-              disabled={loading}
-            />
-            {exitSummary ? (
-              <Stack
-                direction="row"
-                gap={1}
-                alignItems="center"
-                flexWrap="wrap"
-              >
-                <Typography variant="body2">
-                  Users leave {exitSummary}.
+            {!purpose?.server && (
+              <Box>
+                <Typography fontWeight={600}>
+                  Events from your server
                 </Typography>
-                <Button size="small" onClick={() => setEditExit(true)}>
-                  Edit events
-                </Button>
-              </Stack>
-            ) : (
-              <ServerEventField
-                label="Remove users when your server sends (optional)"
-                helper="Users also move out when they join another lifecycle segment."
-                value={exit}
-                onChange={setExit}
-                options={serverOptions}
-                disabled={loading}
-              />
+                <Typography
+                  color="text.secondary"
+                  fontSize="var(--fs-12)"
+                  sx={{ mb: 1.25 }}
+                >
+                  Tick the events that should add users to this segment.
+                </Typography>
+                <EventPicker
+                  options={serverEvents.data?.events ?? []}
+                  selected={enter}
+                  onToggle={toggleIn(setEnter)}
+                  loading={serverEvents.isLoading}
+                  disabled={loading}
+                  emptyDescription="Events sent by your server will appear here."
+                />
+              </Box>
             )}
-            {overlap.length > 0 && (
-              <Alert severity="error">
-                {overlap.join(", ")} cannot both add and remove users.
-              </Alert>
-            )}
-            {serverEvents.data && (
-              <Typography color="text.secondary" fontSize="var(--fs-12)">
-                {received.size
-                  ? `${enter.filter((item) => received.has(item)).length} of ${enter.length} chosen events have already arrived from your server.`
-                  : "No events have arrived from your server yet. That is fine: the segment fills up as they arrive."}
-              </Typography>
+            {purpose?.server && (
+              <>
+                <ServerEventField
+                  label="Add users when your server sends"
+                  helper={
+                    purpose?.server
+                      ? "Standard event names are filled in. Change them only if your server uses different names."
+                      : "Selected events show here. To add one that has not arrived yet, type its name and press Enter."
+                  }
+                  value={enter}
+                  onChange={setEnter}
+                  options={serverOptions}
+                  disabled={loading}
+                />
+                {exitSummary ? (
+                  <Stack
+                    direction="row"
+                    gap={1}
+                    alignItems="center"
+                    flexWrap="wrap"
+                  >
+                    <Typography variant="body2">
+                      Users leave {exitSummary}.
+                    </Typography>
+                    <Button size="small" onClick={() => setEditExit(true)}>
+                      Edit events
+                    </Button>
+                  </Stack>
+                ) : (
+                  <ServerEventField
+                    label="Remove users when your server sends (optional)"
+                    helper="Users also move out when they join another lifecycle segment."
+                    value={exit}
+                    onChange={setExit}
+                    options={serverOptions}
+                    disabled={loading}
+                  />
+                )}
+                {overlap.length > 0 && (
+                  <Alert severity="error">
+                    {overlap.join(", ")} cannot both add and remove users.
+                  </Alert>
+                )}
+                {serverEvents.data && (
+                  <Typography color="text.secondary" fontSize="var(--fs-12)">
+                    {received.size
+                      ? `${enter.filter((item) => received.has(item)).length} of ${enter.length} chosen events have already arrived from your server.`
+                      : "No events have arrived from your server yet. That is fine: the segment fills up as they arrive."}
+                  </Typography>
+                )}
+              </>
             )}
           </Stack>
         ) : step === 1 ? (
@@ -631,8 +798,6 @@ export default function LifecycleSegmentCreateDialog({
                     onClick={() => {
                       onSdkSelect(sdk);
                       setSelectedEvents([]);
-                      setSearch("");
-                      setPage(1);
                     }}
                     sx={{
                       minHeight: 88,
@@ -668,147 +833,15 @@ export default function LifecycleSegmentCreateDialog({
                     {error}
                   </Typography>
                 )}
-                <SearchField
-                  value={search}
-                  onChange={(value) => {
-                    setSearch(value);
-                    setPage(1);
-                  }}
-                  placeholder="Search events"
+                <EventPicker
+                  key={selectedSdk}
+                  options={eventOptions}
+                  selected={selectedEvents}
+                  onToggle={toggleIn(setSelectedEvents)}
+                  loading={eventListLoading}
+                  disabled={loading}
+                  emptyDescription="Events sent by this SDK will appear here."
                 />
-                <Box
-                  sx={{
-                    border: "1px solid #e3dcef",
-                    borderRadius: 2,
-                    overflow: "hidden",
-                    bgcolor: "#fcfbff",
-                  }}
-                >
-                  {eventListLoading ? (
-                    <Box
-                      sx={{
-                        display: "grid",
-                        gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
-                      }}
-                    >
-                      {Array.from({ length: 8 }, (_, index) => (
-                        <Stack
-                          key={index}
-                          direction="row"
-                          gap={2}
-                          alignItems="center"
-                          sx={{
-                            px: 2,
-                            py: 1.6,
-                            borderBottom: "1px solid #eeeaf5",
-                          }}
-                        >
-                          <Skeleton variant="rounded" width={22} height={22} />
-                          <Skeleton variant="text" width="68%" />
-                        </Stack>
-                      ))}
-                    </Box>
-                  ) : pagedEvents.length ? (
-                    <Box
-                      sx={{
-                        display: "grid",
-                        gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
-                      }}
-                    >
-                      {pagedEvents.map((option) => {
-                        const checked = selectedEvents.includes(option.name);
-                        return (
-                          <ListItemButton
-                            key={option.name}
-                            onClick={() => toggleEvent(option)}
-                            disabled={
-                              Boolean(option.assignedSegment) || loading
-                            }
-                            sx={{
-                              minHeight: 78,
-                              py: 1.1,
-                              px: 1.5,
-                              borderRight: { sm: "1px solid #eeeaf5" },
-                              borderBottom: "1px solid #eeeaf5",
-                              bgcolor: checked ? "#f1eaff" : "transparent",
-                              "&:hover": {
-                                bgcolor: checked ? "#ede3ff" : "#f8f5ff",
-                              },
-                            }}
-                          >
-                            <Checkbox
-                              checked={checked}
-                              disabled={
-                                Boolean(option.assignedSegment) || loading
-                              }
-                              onChange={() => toggleEvent(option)}
-                              onClick={(event) => event.stopPropagation()}
-                              sx={{ mr: 1 }}
-                            />
-                            <Box sx={{ flex: 1, minWidth: 0 }}>
-                              <Typography
-                                fontSize="var(--fs-12)"
-                                fontWeight={500}
-                                noWrap
-                              >
-                                {option.name}
-                              </Typography>
-                              <Typography
-                                color="text.secondary"
-                                fontSize="var(--fs-12)"
-                                noWrap
-                              >
-                                {option.assignedSegment
-                                  ? `Already assigned to ${option.assignedSegment.name}`
-                                  : "Tracked events"}
-                              </Typography>
-                            </Box>
-                            {checked && (
-                              <CheckRounded color="primary" fontSize="small" />
-                            )}
-                          </ListItemButton>
-                        );
-                      })}
-                    </Box>
-                  ) : (
-                    <EmptyState
-                      size="compact"
-                      icon={<SearchOffRounded />}
-                      title={
-                        search
-                          ? "No matching events found"
-                          : "No events received yet"
-                      }
-                      description={
-                        search
-                          ? "Check the spelling or try a different search."
-                          : "Events sent by this SDK will appear here."
-                      }
-                    />
-                  )}
-                </Box>
-                <Stack
-                  direction={{ xs: "column", sm: "row" }}
-                  justifyContent="space-between"
-                  alignItems={{ sm: "center" }}
-                  gap={1}
-                >
-                  <Typography color="text.secondary" fontSize="var(--fs-12)">
-                    {selectedEvents.length} event
-                    {selectedEvents.length === 1 ? "" : "s"} selected · Showing{" "}
-                    {pagedEvents.length} of {visibleEvents.length}
-                  </Typography>
-                  {pageCount > 1 && (
-                    <Pagination
-                      size="small"
-                      page={page}
-                      count={pageCount}
-                      onChange={(_event, value) => setPage(value)}
-                      color="primary"
-                      shape="rounded"
-                    />
-                  )}
-                </Stack>
               </Stack>
             )}
           </Stack>
