@@ -3,29 +3,21 @@
 import { useState, type ReactNode } from "react";
 import NextLink from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import {
-  ArrowBackRounded,
-  ChevronRightRounded,
-  CloseRounded,
-  WebhookRounded,
-} from "@mui/icons-material";
+import { ArrowBackRounded, WebhookRounded } from "@mui/icons-material";
 import {
   Alert,
   Box,
   Button,
   Card,
   Chip,
-  Drawer,
+  CircularProgress,
   FormControlLabel,
-  IconButton,
-  ListItemButton,
   Skeleton,
   Stack,
   Switch,
   TextField,
   Typography,
 } from "@mui/material";
-import DataSyncImports from "@/components/dashboard/DataSyncImports";
 import DataSyncMigrations from "@/components/dashboard/DataSyncMigrations";
 import SettingsStatus from "@/components/dashboard/SettingsStatus";
 import { useCurrentUser } from "@/hooks/auth/use-current-user";
@@ -45,25 +37,6 @@ const mono = {
   fontFamily: "var(--pp-mono)",
   fontSize: "var(--fs-12)",
 } as const;
-
-type Extra = "mapping" | "updates" | "history" | "journeys";
-const EXTRAS: { key: Extra; title: string; detail: string }[] = [
-  {
-    key: "mapping",
-    title: "Segments and user association",
-    detail: "Map profile fields, source segment names, subscription products, and choose ongoing sync or historical membership import.",
-  },
-  {
-    key: "history",
-    title: "Historical user activity",
-    detail: "Choose event or message history to import as an archive. These records do not become live messaging activity.",
-  },
-  {
-    key: "journeys",
-    title: "Journeys and campaigns",
-    detail: "Map source step keys to existing PixlPush journeys, stage participant progress, and review what content is reusable.",
-  },
-];
 
 function StepItem({
   n,
@@ -118,8 +91,6 @@ export default function WebhookIntegration() {
   const [url, setUrl] = useState("");
   const [token, setToken] = useState("");
   const [replacing, setReplacing] = useState(false);
-  const [confirming, setConfirming] = useState(false);
-  const [extra, setExtra] = useState<Extra>();
   const [error, setError] = useState("");
 
   // Created by the first sync after connecting; the extras need it.
@@ -149,7 +120,6 @@ export default function WebhookIntegration() {
       setToken("");
       setReplacing(false);
     });
-  const openExtra = EXTRAS.find((item) => item.key === extra);
 
   return (
     <Stack gap={2.5}>
@@ -198,74 +168,6 @@ export default function WebhookIntegration() {
           </Box>
         </Stack>
       </Card>
-
-      {query.isLoading && <Skeleton height={120} />}
-
-      {settings && (!connected || replacing) && (
-        <Card className="saas-card">
-          <Stack
-            gap={2.5}
-            component="form"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void submit();
-            }}
-          >
-            <Typography variant="h4">
-              {connected ? "Change URL or token" : "Connect in 2 steps"}
-            </Typography>
-            {!connected && (
-              <StepItem n={1} title="Send these instructions to your developer">
-                <Typography variant="caption" color="text.secondary">
-                  Email your developer the setup guide. They add one small
-                  endpoint to your backend and send you back a URL and a token.
-                </Typography>
-                <WebhookDeveloperGuide projectId={projectId} />
-              </StepItem>
-            )}
-            <StepItem
-              n={connected ? 1 : 2}
-              title="Paste the URL and token, then connect"
-            >
-              <Stack gap={1.5} sx={{ mt: 1 }}>
-                <TextField
-                  size="small"
-                  fullWidth
-                  label="URL"
-                  placeholder="https://api.example.com/pixlpush/events"
-                  value={url}
-                  disabled={!canEdit}
-                  onChange={(event) => setUrl(event.target.value)}
-                />
-                <TextField
-                  size="small"
-                  fullWidth
-                  type="password"
-                  autoComplete="off"
-                  label="Token"
-                  helperText="Stored encrypted. Nobody can see it again, including you."
-                  value={token}
-                  disabled={!canEdit}
-                  onChange={(event) => setToken(event.target.value)}
-                />
-                <Button
-                  type="submit"
-                  variant="contained"
-                  sx={{ alignSelf: "flex-start" }}
-                  disabled={
-                    !canEdit ||
-                    connect.isPending ||
-                    !url.trim() ||
-                    token.trim().length < 8
-                  }
-                >
-                  {connect.isPending ? "Checking…" : "Connect"}
-                </Button>
-              </Stack>
-            </StepItem>
-          </Stack>
-        </Card>
-      )}
 
       {connected && (
         <Card className="saas-card">
@@ -330,128 +232,193 @@ export default function WebhookIntegration() {
                 }
               />
               <Stack direction="row" gap={1} flexWrap="wrap">
+                {/* One click: disconnecting only pauses the sync; synced data stays and you can reconnect. */}
                 <Button
+                  color="error"
                   variant="text"
-                  disabled={!canEdit}
-                  onClick={() => setReplacing((value) => !value)}
+                  disabled={!canEdit || disconnect.isPending}
+                  onClick={() => run(() => disconnect.mutateAsync())}
+                  startIcon={
+                    disconnect.isPending ? (
+                      <CircularProgress size={16} color="inherit" />
+                    ) : undefined
+                  }
                 >
-                  {replacing ? "Cancel" : "Change URL or token"}
+                  {disconnect.isPending ? "Disconnecting…" : "Disconnect"}
                 </Button>
-                {confirming ? (
-                  <Button
-                    color="error"
-                    variant="contained"
-                    disabled={disconnect.isPending}
-                    onClick={() =>
-                      run(async () => {
-                        await disconnect.mutateAsync();
-                        setConfirming(false);
-                      })
-                    }
-                  >
-                    Confirm disconnect
-                  </Button>
-                ) : (
-                  <Button
-                    color="error"
-                    variant="text"
-                    disabled={!canEdit}
-                    onClick={() => setConfirming(true)}
-                  >
-                    Disconnect
-                  </Button>
-                )}
               </Stack>
             </Stack>
           </Stack>
         </Card>
       )}
 
+      {query.isLoading && <Skeleton height={120} />}
 
-      {source && projectId && (
+      {settings && (
         <Card className="saas-card">
-          <Stack gap={1.5}>
-            <StepItem n={3} title="Map data">
+          <Stack gap={3}>
+            <Typography variant="h4">Connect in 3 steps</Typography>
+            <StepItem n={1} title="Copy the AI prompt or send the instructions">
               <Typography variant="caption" color="text.secondary">
-                Choose any categories you use. Historical imports and ongoing sync are separate, and journey participants stay staged until you review cutover.
+                Give the prompt to your AI coding assistant, or email the setup
+                guide to your developer. Either way you get back a URL and a
+                token.
               </Typography>
+              <WebhookDeveloperGuide projectId={projectId} />
             </StepItem>
-            <Stack gap={0.5}>
-              {EXTRAS.map((item) => (
-                <ListItemButton key={item.key} onClick={() => setExtra(item.key)} sx={{ px: 1, borderTop: "1px solid", borderColor: "divider", gap: 1.5 }}>
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography variant="body2" fontWeight={600}>{item.title}</Typography>
-                    <Typography variant="caption" color="text.secondary">{item.detail}</Typography>
-                  </Box>
-                  <ChevronRightRounded color="action" />
-                </ListItemButton>
-              ))}
-            </Stack>
+
+            <StepItem n={2} title="Paste the URL and token">
+              {connected && !replacing ? (
+                <Stack
+                  direction={{ xs: "column", sm: "row" }}
+                  gap={1}
+                  alignItems={{ sm: "center" }}
+                  sx={{ mt: 1 }}
+                >
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      flex: 1,
+                      minWidth: 0,
+                      overflowWrap: "anywhere",
+                    }}
+                  >
+                    Connected to <b>{connected.accountLabel}</b>. The token is
+                    stored encrypted.
+                  </Typography>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    disabled={!canEdit}
+                    onClick={() => setReplacing(true)}
+                  >
+                    Change URL or token
+                  </Button>
+                </Stack>
+              ) : (
+                <Stack
+                  gap={1.5}
+                  sx={{ mt: 1 }}
+                  component="form"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    void submit();
+                  }}
+                >
+                  <TextField
+                    size="small"
+                    fullWidth
+                    label="Server URL"
+                    placeholder="https://api.example.com/pixlpush/events"
+                    value={url}
+                    disabled={!canEdit}
+                    onChange={(event) => setUrl(event.target.value)}
+                  />
+                  <TextField
+                    size="small"
+                    fullWidth
+                    type="password"
+                    autoComplete="off"
+                    label="Token"
+                    helperText="Stored encrypted. It won’t be shown again."
+                    value={token}
+                    disabled={!canEdit}
+                    onChange={(event) => setToken(event.target.value)}
+                  />
+                  <Stack direction="row" gap={1}>
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      disabled={
+                        !canEdit ||
+                        connect.isPending ||
+                        !url.trim() ||
+                        token.trim().length < 8
+                      }
+                      startIcon={
+                        connect.isPending ? (
+                          <CircularProgress size={16} color="inherit" />
+                        ) : undefined
+                      }
+                    >
+                      {connect.isPending
+                        ? "Connecting…"
+                        : connected
+                          ? "Save"
+                          : "Connect"}
+                    </Button>
+                    {replacing && (
+                      <Button onClick={() => setReplacing(false)}>
+                        Cancel
+                      </Button>
+                    )}
+                  </Stack>
+                </Stack>
+              )}
+            </StepItem>
+
+            <StepItem n={3} title="Map data">
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                component="p"
+                sx={{ mb: 1.5 }}
+              >
+                Choose what to sync from your server. Older events in your feed
+                are stored too, so users are placed right away; journey
+                participants stay staged until you switch over.
+              </Typography>
+              {source && projectId ? (
+                <WebhookMapping
+                  projectId={projectId}
+                  sourceId={source.id}
+                  canEdit={canControl}
+                  journeys={
+                    <>
+                      <DataSyncMigrations
+                        projectId={projectId}
+                        accountId={account?.id}
+                        canEdit={canEdit}
+                        canControl={canControl}
+                      />
+                      <Box
+                        sx={{
+                          pt: 2,
+                          borderTop: "1px solid",
+                          borderColor: "divider",
+                        }}
+                      >
+                        <Typography fontWeight={600}>
+                          Send journey and message status to your server
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{ mb: 1 }}
+                        >
+                          Optional. PixlPush posts signed updates to your URL so
+                          your own admin can show each user’s journey status.
+                        </Typography>
+                        <WebhookUpdates
+                          projectId={projectId}
+                          sourceId={source.id}
+                          canControl={canControl}
+                        />
+                      </Box>
+                    </>
+                  }
+                />
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  {connected
+                    ? "Available once the first sync finishes."
+                    : "Available after you connect your server."}
+                </Typography>
+              )}
+            </StepItem>
           </Stack>
         </Card>
       )}
-
-      <Drawer
-        anchor="right"
-        open={Boolean(openExtra && source)}
-        onClose={() => setExtra(undefined)}
-        PaperProps={{ sx: { width: { xs: "100%", md: 720 } } }}
-      >
-        {openExtra && source && projectId && (
-          <Stack gap={2} sx={{ p: 3 }}>
-            <Stack direction="row" alignItems="flex-start" gap={1}>
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="h3">{openExtra.title}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {openExtra.detail}
-                </Typography>
-              </Box>
-              <IconButton
-                aria-label="Close"
-                onClick={() => setExtra(undefined)}
-              >
-                <CloseRounded />
-              </IconButton>
-            </Stack>
-            {extra === "mapping" && (
-              <WebhookMapping
-                projectId={projectId}
-                sourceId={source.id}
-                canEdit={canControl}
-              />
-            )}
-            {extra === "updates" && (
-              <WebhookUpdates
-                projectId={projectId}
-                sourceId={source.id}
-                canControl={canControl}
-              />
-            )}
-            {extra === "history" && (
-              <DataSyncImports
-                projectId={projectId}
-                source={source}
-                canControl={canControl}
-              />
-            )}
-            {extra === "journeys" && (
-              <Stack gap={3}>
-                <Box>
-                  <Typography variant="h4">Content and step support</Typography>
-                  <Typography variant="body2" color="text.secondary">Map source step keys to an existing PixlPush journey and reuse project templates already attached to its steps (email subject/body or push title/body/image/deep link). Source template content, standalone campaign records, in-app content, and unsupported creative fields are not imported. Recreate and review those manually before cutover.</Typography>
-                </Box>
-                <DataSyncMigrations projectId={projectId} accountId={account?.id} canEdit={canEdit} canControl={canControl} />
-                <Box sx={{ pt: 2, borderTop: "1px solid", borderColor: "divider" }}>
-                  <Typography variant="h4">Outbound journey and message updates</Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>This separate integration sends PixlPush delivery status to your server. It is not the incoming server feed.</Typography>
-                  <WebhookUpdates projectId={projectId} sourceId={source.id} canControl={canControl} />
-                </Box>
-              </Stack>
-            )}
-            {extra === "updates" && <WebhookUpdates projectId={projectId} sourceId={source.id} canControl={canControl} />}
-          </Stack>
-        )}
-      </Drawer>
     </Stack>
   );
 }

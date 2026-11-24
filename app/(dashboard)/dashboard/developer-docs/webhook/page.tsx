@@ -125,6 +125,17 @@ export default function WebhookDeveloperDocsPage() {
         <Body><p>Custom event names are also accepted and stored as events. Include the same event id and event data if you retry a read or replay an event.</p></Body>
       </Section>
 
+      <Section id="matching" title="How PixlPush matches your data">
+        <Body><p>After connecting, PixlPush reads a sample of your feed and compares each profile field and event name with what it already knows: standard fields, standard Webhook events, and the events already in your project. Each item gets one of these states on the Webhook page under Map data.</p></Body>
+        <DataTable code={false} headers={["State", "Meaning"]} rows={[
+          ["Matched", "An exact match, or a mapping someone confirmed. Applied to new data."],
+          ["Suggested", "A close match, such as a different spelling. Not applied until someone confirms it."],
+          ["Needs mapping", "Nothing close. The data is still stored: fields as custom properties, events under their own name."],
+        ]} />
+        <Body><p>Click the pencil next to an event to pick a suggestion, choose another PixlPush event, or create a custom event. A custom event needs a description of what it means and when it happens, so your team and PixlPush AI features understand it. PixlPush refuses a name that already exists, including the same name in another spelling.</p></Body>
+        <Callout title="Consent and identity are never guessed">Only <code>email_consent</code> and <code>push_consent</code> are treated as consent, and users are always matched by <code>custom_user_id</code> or <code>user_id</code>. Confirmed mappings apply to new data only; they do not change data already synced or send messages.</Callout>
+      </Section>
+
       <Section id="journey-migrations" title="Journey migration and message content">
         <Callout tone="warning" title="The event feed does not import journey definitions">The Webhook feed imports user, subscription, segment, and event data. Journey migration is a separate staged workflow under Integrations → Webhook. It maps participants to journeys and steps that already exist in the PixlPush project.</Callout>
         <Body><p>A staged participant row is associated with an existing PixlPush user by <code>externalUserId</code>, an existing target journey by <code>journeyId</code>, and a target step by <code>resumeAtStepKey</code>. <code>enteredAt</code>, <code>nextRunAt</code>, and <code>entryNumber</code> are retained. Each <code>completedSteps</code> item records the target <code>stepKey</code>, one supported outcome (<code>sent</code>, <code>delivered</code>, <code>opened</code>, or <code>clicked</code>), timestamps, and optional <code>sourceMessageId</code>. These outcomes are stored against the staged participant and step so the journey runner can skip messages already sent.</p></Body>

@@ -250,17 +250,6 @@ export type SyncMapping = {
   publishedAt: string | null; createdAt: string;
 };
 export type SyncExternalSegment = { id: string; sourceId: string; namespace: string; key: string; displayName: string; status: "active" | "retired"; memberCount: number };
-export type SyncImportKind = "event_history" | "message_history" | "segment_history";
-export type SyncImportDryRun = { rows: number; valid: number; invalid: number; duplicates: number; deletedUsers: number; newUsers: number; unmapped: string[]; issues: { index: number; code: string; message: string }[] };
-export type SyncImportJob = {
-  id: string; sourceId: string; kind: SyncImportKind;
-  status: "queued" | "running" | "paused" | "completed" | "failed" | "canceled";
-  partsTotal: number; partsCompleted: number; accepted: number; rejected: number;
-  partsUploaded?: number;
-  startedAt: string | null; completedAt: string | null; lastError: string | null;
-  createdAt: string; updatedAt: string;
-  parts?: { id: string; partIndex: number; idempotencyKey: string; status: string; attempts: number; lastError: string | null; processedAt: string | null }[];
-};
 export type SyncWebhookEndpoint = { id: string; name: string; url: string; events: string[]; status: "active" | "paused"; createdAt: string; updatedAt: string };
 export type CreatedSyncWebhook = SyncWebhookEndpoint & { secret: string; warning: string };
 export type SyncWebhookDelivery = { id: string; status: "pending" | "processing" | "delivered" | "dead_letter"; attempts: number; responseStatus: number | null; lastError: string | null; deliveredAt: string | null; createdAt: string; topic: string; eventCreatedAt: string };
@@ -281,23 +270,23 @@ export type SyncMigrationRun = {
 };
 const syncAt = (projectId: string, path = "") => at(projectId, `/data-sync${path}`);
 
+export type MatchStatus = "matched" | "suggested" | "needs_mapping";
+/** One page of the Webhook feed with suggested matches. Suggestions only; nothing is saved. */
+export type WebhookSample = {
+  sampled: number; fields: string[]; events: string[]; products: string[];
+  fieldMatches: { source: string; target: string | null; status: MatchStatus; reason: string; samples: string[] }[];
+  eventMatches: { source: string; target: string | null; status: MatchStatus; reason: string; candidates: { name: string; score: number; reason: string }[]; sampleProperties: string[] }[];
+  knownEvents: { name: string; standard: boolean; description: string | null }[];
+};
+
 export const dataSyncApi = {
   sources: (projectId: string) => authRequest<SyncSource[]>(syncAt(projectId, "/sources"), undefined, BASE),
   segments: (projectId: string) => authRequest<SyncExternalSegment[]>(syncAt(projectId, "/segments"), undefined, BASE),
   /** Names seen in one page of the connected Webhook feed (no values). */
-  serverSample: (projectId: string) => authRequest<{ sampled: number; fields: string[]; events: string[]; products: string[] }>(syncAt(projectId, "/server-sync/sample"), undefined, BASE),
+  serverSample: (projectId: string) => authRequest<WebhookSample>(syncAt(projectId, "/server-sync/sample"), undefined, BASE),
   mappings: (projectId: string, sourceId: string) => authRequest<SyncMapping[]>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/mappings`), undefined, BASE),
   createMapping: (projectId: string, sourceId: string, config: unknown) => authRequest<SyncMapping>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/mappings`), { config }, BASE),
   publishMapping: (projectId: string, sourceId: string, version: number) => authRequest<SyncMapping>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/mappings/${version}/publish`), {}, BASE),
-  imports: (projectId: string) => authRequest<SyncImportJob[]>(syncAt(projectId, "/imports"), undefined, BASE),
-  importJob: (projectId: string, jobId: string) => authRequest<SyncImportJob>(syncAt(projectId, `/imports/${encodeURIComponent(jobId)}`), undefined, BASE),
-  dryRunImport: (projectId: string, sourceId: string, input: { kind: SyncImportKind; records: unknown[] }) => authRequest<SyncImportDryRun>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/imports/dry-run`), input, BASE),
-  createImport: (projectId: string, sourceId: string, input: { kind: SyncImportKind; partsTotal: number; rebuildMembership?: boolean }) => authRequest<SyncImportJob>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/imports`), input, BASE),
-  uploadImportPart: (projectId: string, jobId: string, input: { partIndex: number; idempotencyKey: string; records: unknown[] }) => authRequest<{ id: string; partIndex: number; idempotencyKey: string; status: string; duplicate: boolean }>(syncAt(projectId, `/imports/${encodeURIComponent(jobId)}/parts`), input, BASE),
-  startImport: (projectId: string, jobId: string) => authRequest<SyncImportJob>(syncAt(projectId, `/imports/${encodeURIComponent(jobId)}/start`), {}, BASE),
-  pauseImport: (projectId: string, jobId: string) => authRequest<{ paused: boolean }>(syncAt(projectId, `/imports/${encodeURIComponent(jobId)}/pause`), {}, BASE),
-  resumeImport: (projectId: string, jobId: string) => authRequest<{ resumed: boolean }>(syncAt(projectId, `/imports/${encodeURIComponent(jobId)}/resume`), {}, BASE),
-  cancelImport: (projectId: string, jobId: string) => authRequest<{ canceled: boolean }>(syncAt(projectId, `/imports/${encodeURIComponent(jobId)}/cancel`), {}, BASE),
   webhooks: (projectId: string, sourceId: string) => authRequest<SyncWebhookEndpoint[]>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/webhooks`), undefined, BASE),
   createWebhook: (projectId: string, sourceId: string, input: { name: string; url: string; events: string[] }) => authRequest<CreatedSyncWebhook>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/webhooks`), input, BASE),
   setWebhookStatus: (projectId: string, endpointId: string, status: SyncWebhookEndpoint["status"]) => authRequest<SyncWebhookEndpoint>(syncAt(projectId, `/webhooks/${encodeURIComponent(endpointId)}`), { status }, BASE, "PATCH"),
@@ -923,6 +912,9 @@ export type SegmentRulesInput =
   | { source: "server"; enter: string[]; exit: string[] };
 
 export const eventsApi = {
+  /** A described custom event, so mappings and AI features know what it means. */
+  createCustom: (projectId: string, input: { name: string; description: string }) =>
+    authRequest<{ name: string; description: string }>(at(projectId, "/event-catalog"), input, BASE),
   listCatalog: (
     projectId: string,
     platform: "web" | "mobile" | "server",
