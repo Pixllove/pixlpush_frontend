@@ -1,6 +1,7 @@
 import { createElement, forwardRef, type AnchorHTMLAttributes } from 'react';
 import NextLink from 'next/link';
 import { alpha, createTheme } from '@mui/material/styles';
+import KeyboardArrowDownRounded from '@mui/icons-material/KeyboardArrowDownRounded';
 
 /**
  * PixlPush design tokens (DESIGN.md). Neutrals with a slight violet tint, one violet accent, semantic
@@ -198,8 +199,13 @@ export const theme = createTheme({
     },
     MuiFormHelperText: { styleOverrides: { root: { margin: '4px 2px 0', fontSize: 'var(--fs-12)' } } },
     MuiSelect: {
-      defaultProps: { size: 'small', MenuProps: { PaperProps: { sx: { maxHeight: 320 } } } },
-      styleOverrides: { select: { '&.MuiSelect-select': { minHeight: 20, lineHeight: '20px' } }, icon: { right: 8, fontSize: 20, color: t.textMuted } },
+      // A rounded chevron that turns smoothly when the menu opens and closes (MUI adds .MuiSelect-iconOpen).
+      defaultProps: { size: 'small', IconComponent: KeyboardArrowDownRounded, MenuProps: { PaperProps: { sx: { maxHeight: 320 } } } },
+      styleOverrides: {
+        select: { '&.MuiSelect-select': { minHeight: 20, lineHeight: '20px' } },
+        icon: { right: 8, fontSize: 20, color: t.textMuted, transition: 'transform 200ms cubic-bezier(.2,.6,.2,1), color 150ms ease' },
+        iconOpen: { color: t.accent },
+      },
     },
     MuiMenu: { styleOverrides: { paper: { marginTop: 4, borderRadius: t.radius.overlay, border: `1px solid ${t.border}`, boxShadow: menuShadow }, list: { padding: 6, '& .MuiMenuItem-root + .MuiMenuItem-root': { marginTop: 2 } } } },
     MuiPopover: { styleOverrides: { paper: { borderRadius: t.radius.overlay, border: `1px solid ${t.border}`, boxShadow: menuShadow } } },

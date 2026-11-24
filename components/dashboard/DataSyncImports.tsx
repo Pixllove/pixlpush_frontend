@@ -22,11 +22,9 @@ const STATUS: Record<SyncImportJob['status'], { label: string; color: 'default' 
 };
 const isOpen = (job: SyncImportJob) => job.status === 'queued' || job.status === 'running' || job.status === 'paused';
 
-export default function DataSyncImports({ projectId, sources, source, onSelectSource, canControl }: {
+export default function DataSyncImports({ projectId, source, canControl }: {
   projectId: string;
-  sources: SyncSource[];
   source?: SyncSource;
-  onSelectSource: (id: string) => void;
   canControl: boolean;
 }) {
   const client = useQueryClient();
@@ -93,11 +91,6 @@ export default function DataSyncImports({ projectId, sources, source, onSelectSo
     if (file) void readFile(file, next);
   };
 
-  const changeSource = (id: string) => {
-    onSelectSource(id);
-    setResumeJob(undefined);
-    setDryRun(undefined);
-  };
 
   const runDryRun = async () => {
     if (!source || !parsed?.parts.length) return;
@@ -182,7 +175,6 @@ export default function DataSyncImports({ projectId, sources, source, onSelectSo
   };
 
   const continueUpload = (job: SyncImportJob) => {
-    onSelectSource(job.sourceId);
     setKind(job.kind);
     setResumeJob(job);
     clearFile();
@@ -193,21 +185,14 @@ export default function DataSyncImports({ projectId, sources, source, onSelectSo
 
   return (
     <Stack gap={2}>
-      <Box>
-        <Typography variant="h4">Historical imports</Typography>
-        <Typography variant="body2" color="text.secondary">Upload past events, messages, or segment changes. They are stored separately and never start journeys or send messages.</Typography>
-      </Box>
 
       {error && <Alert severity="error" onClose={() => setError('')}>{error}</Alert>}
       {notice && <Alert severity="success" onClose={() => setNotice('')}>{notice}</Alert>}
 
-      {!source ? <Alert severity="info">Create a sync source before importing history.</Alert> : !canControl ? <Alert severity="info">Only owners and admins can start historical imports.</Alert> : (
+      {!source ? <Alert severity="info">Connect the Webhook before importing history.</Alert> : !canControl ? <Alert severity="info">Only owners and admins can start historical imports.</Alert> : (
         <Card className="saas-card">
           <Stack gap={2}>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
-              <TextField select size="small" label="Sync source" value={source.id} disabled={uploading} onChange={(event) => changeSource(event.target.value)}>
-                {sources.map((item) => <MenuItem key={item.id} value={item.id}>{item.name} · {item.environment}</MenuItem>)}
-              </TextField>
               <TextField select size="small" label="History type" value={kind} disabled={uploading} onChange={(event) => changeKind(event.target.value as SyncImportKind)}>
                 <MenuItem value="event_history">Event history</MenuItem>
                 <MenuItem value="message_history">Message history</MenuItem>
@@ -316,7 +301,7 @@ export default function DataSyncImports({ projectId, sources, source, onSelectSo
                     <Chip size="small" color={STATUS[job.status].color} label={STATUS[job.status].label} />
                   </Stack>
                   <Typography variant="caption" color="text.secondary">
-                    {sources.find((item) => item.id === job.sourceId)?.name ?? 'Source'} · {new Date(job.createdAt).toLocaleString()} · {job.accepted.toLocaleString()} imported · {job.rejected.toLocaleString()} rejected
+                    {new Date(job.createdAt).toLocaleString()} · {job.accepted.toLocaleString()} imported · {job.rejected.toLocaleString()} rejected
                   </Typography>
                   {job.lastError && <Typography variant="caption" color="error" sx={{ display: 'block' }}>{job.lastError}</Typography>}
                   {isOpen(job) && <LinearProgress variant="determinate" value={percent} aria-label={`${KIND_LABEL[job.kind]} progress`} sx={{ mt: 0.75, maxWidth: 420 }} />}

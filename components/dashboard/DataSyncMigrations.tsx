@@ -129,10 +129,6 @@ export default function DataSyncMigrations({ projectId, accountId, canEdit, canC
 
   return (
     <Stack gap={2}>
-      <Box>
-        <Typography variant="h4">Journey migration runs</Typography>
-        <Typography variant="body2" color="text.secondary">Move journeys safely. Only one system can send at a time, and cutover needs an explicit approval.</Typography>
-      </Box>
       {error && <Alert severity="error" onClose={() => setError('')}>{error}</Alert>}
       {notice && <Alert severity="success" onClose={() => setNotice('')}>{notice}</Alert>}
 

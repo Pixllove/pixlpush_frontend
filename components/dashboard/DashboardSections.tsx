@@ -89,7 +89,7 @@ import {
   userStatsApi,
   usersApi,
 } from "@/lib/projects/api";
-import type { UserListFilter } from "@/lib/projects/api";
+import type { SegmentRulesInput, UserListFilter } from "@/lib/projects/api";
 import { usersToCsv } from "@/lib/users-export";
 import type { AudienceGroup, EndUser, LifecycleSegment, UserStats } from "@/types/project";
 import type {
@@ -838,15 +838,12 @@ export function UsersSection() {
     mutationFn: (input: {
       name: string;
       description: string;
-      events: string[];
+      rules: SegmentRulesInput;
     }) =>
       lifecycleSegmentsApi.create(active!.id, {
         name: input.name,
         description: input.description || undefined,
-        rules: {
-          operator: "OR",
-          conditions: input.events.map((event) => ({ event })),
-        },
+        rules: input.rules,
       }),
     onSuccess: (segment) => {
       queryClient.invalidateQueries({
@@ -1036,11 +1033,11 @@ export function UsersSection() {
                 <Typography fontSize="var(--fs-12)" fontWeight={500}>
                   {row.name}
                 </Typography>
-                <Chip label={row.externalSegmentId ? "FROM SERVER" : "AUTO LIFECYCLE"} size="small" />
+                <Chip label={row.rules?.source === "server" ? "FROM SERVER" : "AUTO LIFECYCLE"} size="small" />
               </Stack>
               <Typography color="text.secondary" fontSize="var(--fs-12)">
                 {row.description ||
-                  (row.externalSegmentId ? "Your server controls who is in this segment." : "Automatically updated based on user activity.")}
+                  (row.rules?.source === "server" ? "Updated by events from your server." : "Automatically updated based on user activity.")}
               </Typography>
             </Box>
           </Stack>
@@ -1666,11 +1663,6 @@ export function UsersSection() {
         selectedSdk={segmentSdk}
         onSdkSelect={setSegmentSdk}
         onCreate={(input) => createSegment.mutate(input)}
-        onExternalCreated={(segment) => {
-          queryClient.invalidateQueries({ queryKey: ["projects", "lifecycle-segments", active?.id] });
-          setCreateSegmentOpen(false);
-          router.push(`/dashboard/users/segments/${segment.id}?tab=segments`);
-        }}
         events={segmentEventsQuery.data?.events}
         eventsLoading={segmentEventsQuery.isPending || segmentEventsQuery.isFetching}
         loading={createSegment.isPending}

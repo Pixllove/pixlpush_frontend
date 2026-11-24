@@ -346,8 +346,6 @@ export interface LifecycleSegment {
   name: string;
   description: string | null;
   rules: Record<string, unknown>;
-  /** Set when the customer's server controls membership. */
-  externalSegmentId?: string | null;
   userCount?: number;
   usersCount?: number;
   createdAt: string;

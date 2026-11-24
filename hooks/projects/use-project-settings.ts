@@ -79,7 +79,8 @@ export function useIntegration(projectId: string | undefined, provider: Connecti
       queryKey: [...projectKeys.integrations(projectId ?? ''), provider],
       queryFn: () => integrationsApi.get(projectId as string, provider),
       enabled: Boolean(projectId),
-      refetchInterval: 60_000,
+      // Poll quickly while a sync runs so "Syncing…" turns into "Last checked" promptly.
+      refetchInterval: (query) => (query.state.data?.connected && query.state.data.syncing ? 5_000 : 60_000),
       retry: (count, error) => !isPermanentAuthError(error) && count < 2,
     }),
     connect: useIntegrationMutation(projectId, (id, input: IntegrationCredentials) => integrationsApi.connect(id, provider, input)),
