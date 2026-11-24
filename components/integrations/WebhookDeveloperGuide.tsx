@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { ContentCopyRounded, EmailRounded, OpenInNewRounded, SmartToyRounded } from '@mui/icons-material';
-import { Box, Button, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
+import { useState, type FormEvent } from 'react';
+import { CloseRounded, EmailRounded, OpenInNewRounded, SmartToyRounded } from '@mui/icons-material';
+import { Alert, Box, Button, Drawer, IconButton, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
 import Link from 'next/link';
+import { onboardingApi } from '@/lib/projects/api';
 
 /** One source for both the on-screen guide and the copied text, so they never drift apart. */
 const EXAMPLE = `{
@@ -43,32 +44,16 @@ const EVENTS: [string, string][] = [
 ];
 
 const STEPS = [
-  'Create one endpoint in your backend, for example GET https://api.yourapp.com/pixlpush/events.',
+  'Create a read-only endpoint in your backend, for example GET https://api.yourapp.com/pixlpush/events.',
   'Protect it with a secret token. PixlPush sends it in the header: Authorization: Bearer <token>.',
-  'Return the latest user events as JSON, newest or oldest first, in the format below.',
-  'Make it a public HTTPS URL. Localhost and private network addresses do not work.',
+  'Return events as JSON in stable chronological order, using the format and paging rules below.',
+  'Make it a public HTTPS URL. Localhost, private network addresses, and endpoints with invalid TLS certificates do not work.',
   'Send the URL and the token to the person setting up PixlPush. They paste both on the Webhook page.',
 ];
 
-const PAGING = 'PixlPush calls the URL every 2 minutes and adds ?limit=500&since=<date of the last check>. If there are more events than fit on one page, return "next" with any text (a cursor). PixlPush then calls again with &cursor=<that text>. Otherwise return "next": null.';
+const PAGING = 'PixlPush requests up to 500 events per page with limit=500. It may include since=<ISO timestamp> to request events from a recent checkpoint; include events at the boundary so retries cannot skip them. When more results remain, return next as a non-empty opaque cursor and use that cursor to return the next page for the same query. Return next:null on the final page. Keep ordering stable across pages. Event ids must remain stable because PixlPush uses them to deduplicate overlapping reads and retries.';
 
 const DEVELOPER_DOCS = '/dashboard/developer-docs/webhook';
-
-function emailText() {
-  return [
-    'Hi,',
-    '',
-    'Please add the PixlPush server webhook feed to our backend. The endpoint is read by PixlPush (it is not a callback that we receive).',
-    '',
-    ...STEPS.map((step, index) => `${index + 1}. ${step}`),
-    '',
-    `Implementation guide: ${typeof window === 'undefined' ? DEVELOPER_DOCS : `${window.location.origin}${DEVELOPER_DOCS}`}`,
-    '',
-    'Please reply with the public HTTPS endpoint URL and a newly generated token after deployment. Store the token securely and do not commit it to source control.',
-    '',
-    'Thanks,',
-  ].join('\n');
-}
 
 function aiPrompt() {
   return [
@@ -97,61 +82,79 @@ function aiPrompt() {
   ].join('\n');
 }
 
-const plainText = () => [
-  'PixlPush Webhook: setup for your developer',
-  '',
-  'What to build',
-  ...STEPS.map((step, index) => `${index + 1}. ${step}`),
-  '',
-  'Response format',
-  EXAMPLE,
-  '',
-  'Fields',
-  ...FIELDS.map(([name, required, about]) => `- ${name} (${required === 'Yes' ? 'required' : required === 'No' ? 'optional' : required.toLowerCase()}): ${about}`),
-  '',
-  'Event names',
-  ...EVENTS.map(([when, names]) => `- ${when}: ${names}`),
-  '- Anything else: any other event_name is saved too and can be used in segments and journeys.',
-  '',
-  'Paging',
-  PAGING,
-].join('\n');
-
 const code = { fontFamily: 'var(--pp-mono)', fontSize: 'var(--fs-12)' } as const;
 
-export default function WebhookDeveloperGuide() {
-  const [copied, setCopied] = useState(false);
+export default function WebhookDeveloperGuide({ projectId }: { projectId?: string }) {
   const [open, setOpen] = useState(false);
-  const copy = async () => {
+  const [promptCopied, setPromptCopied] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [developerEmail, setDeveloperEmail] = useState('');
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [emailError, setEmailError] = useState('');
+  const validDeveloperEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(developerEmail.trim());
+  const copyPrompt = async () => {
     try {
-      await navigator.clipboard.writeText(plainText());
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      await navigator.clipboard.writeText(aiPrompt());
+      setPromptCopied(true);
+      setTimeout(() => setPromptCopied(false), 2000);
     } catch {
       setOpen(true);
     }
   };
-  const [emailCopied, setEmailCopied] = useState(false);
-  const [promptCopied, setPromptCopied] = useState(false);
-  const copyText = async (value: string, done: (copied: boolean) => void) => {
+  const sendEmail = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!projectId || emailSending) return;
+    setEmailSending(true);
+    setEmailError('');
     try {
-      await navigator.clipboard.writeText(value);
-      done(true);
-      setTimeout(() => done(false), 2000);
-    } catch {
-      setOpen(true);
+      await onboardingApi.sendWebhookInstructions(projectId, developerEmail.trim());
+      setEmailSent(true);
+    } catch (error) {
+      setEmailError(error instanceof Error ? error.message : 'The email could not be sent. Please try again.');
+    } finally {
+      setEmailSending(false);
     }
+  };
+  const openEmailPanel = () => {
+    setEmailSent(false);
+    setEmailError('');
+    setEmailOpen(true);
   };
 
   return (
     <Stack gap={1.5} sx={{ mt: 1 }}>
       <Stack direction="row" gap={1} flexWrap="wrap">
-        <Button size="small" variant="contained" startIcon={<ContentCopyRounded />} onClick={() => void copy()}>{copied ? 'Copied' : 'Copy instructions'}</Button>
-        <Button size="small" startIcon={<EmailRounded />} onClick={() => void copyText(emailText(), setEmailCopied)}>{emailCopied ? 'Email copied' : 'Copy email to developer'}</Button>
-        <Button size="small" startIcon={<SmartToyRounded />} onClick={() => void copyText(aiPrompt(), setPromptCopied)}>{promptCopied ? 'AI prompt copied' : 'Copy AI prompt'}</Button>
+        <Button size="small" variant="contained" startIcon={<EmailRounded />} onClick={openEmailPanel} disabled={!projectId}>Email developer</Button>
+        <Button size="small" startIcon={<SmartToyRounded />} onClick={() => void copyPrompt()}>{promptCopied ? 'AI prompt copied' : 'Copy AI prompt'}</Button>
         <Button size="small" component={Link} href={DEVELOPER_DOCS} endIcon={<OpenInNewRounded />}>Go to developer docs</Button>
         <Button size="small" onClick={() => setOpen((value) => !value)}>{open ? 'Hide instructions' : 'Preview instructions'}</Button>
       </Stack>
+      <Drawer anchor="right" open={emailOpen} onClose={() => !emailSending && setEmailOpen(false)} PaperProps={{ sx: { width: { xs: '100%', sm: 460 }, p: { xs: 2.5, sm: 3 }, boxSizing: 'border-box' } }}>
+        <Stack component="form" onSubmit={sendEmail} gap={2} sx={{ height: '100%' }}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between">
+            <Typography variant="h5">Email your developer</Typography>
+            <IconButton aria-label="Close email panel" onClick={() => setEmailOpen(false)} disabled={emailSending}><CloseRounded /></IconButton>
+          </Stack>
+          <Typography variant="body2" color="text.secondary">We’ll email the Webhook setup steps and developer documentation link for this project.</Typography>
+          {emailError && <Alert severity="error">{emailError}</Alert>}
+          {emailSent ? (
+            <Stack gap={2}>
+              <Alert severity="success">Instructions sent to {developerEmail.trim()}.</Alert>
+              <Button variant="contained" onClick={() => setEmailOpen(false)} sx={{ alignSelf: 'flex-start' }}>Done</Button>
+            </Stack>
+          ) : (
+            <>
+              <TextField label="Developer email" type="email" required autoFocus fullWidth value={developerEmail} onChange={(event) => setDeveloperEmail(event.target.value)} placeholder="developer@example.com" />
+              <Box sx={{ flex: 1 }} />
+              <Stack direction="row" justifyContent="flex-end" gap={1}>
+                <Button onClick={() => setEmailOpen(false)} disabled={emailSending}>Cancel</Button>
+                <Button type="submit" variant="contained" startIcon={<EmailRounded />} disabled={!projectId || emailSending || !validDeveloperEmail}>{emailSending ? 'Sending…' : 'Send email'}</Button>
+              </Stack>
+            </>
+          )}
+        </Stack>
+      </Drawer>
       {open && (
         <Stack gap={2.5} sx={{ p: { xs: 2, sm: 2.5 }, border: '1px solid', borderColor: 'divider', borderRadius: 2, bgcolor: 'background.paper' }}>
           <Box>

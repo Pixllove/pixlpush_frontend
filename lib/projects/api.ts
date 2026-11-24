@@ -179,6 +179,8 @@ export const onboardingApi = {
     authRequest<{ androidAppUrl: string | null; iosAppUrl: string | null }>(at(projectId, "/onboarding/app-links"), { websiteUrl }, BASE),
   sendSdkInstructions: (projectId: string, input: { developerEmail: string; sdk: string; prompt: string; guideUrl?: string }) =>
     authRequest<{ sent: boolean }>(at(projectId, "/onboarding/sdk-instructions"), input, BASE),
+  sendWebhookInstructions: (projectId: string, developerEmail: string) =>
+    authRequest<{ sent: boolean }>(at(projectId, "/onboarding/webhook-instructions"), { developerEmail }, BASE),
 };
 
 export type RoadmapStage = 'under_consideration' | 'future' | 'planned' | 'in_progress' | 'done' | 'unlikely_to_build';
@@ -247,6 +249,7 @@ export type SyncMapping = {
   validation: { valid: boolean; errors: { code: string; path: string; message: string }[]; warnings: { code: string; path: string; message: string }[] };
   publishedAt: string | null; createdAt: string;
 };
+export type SyncExternalSegment = { id: string; sourceId: string; namespace: string; key: string; displayName: string; status: "active" | "retired"; memberCount: number };
 export type SyncImportKind = "event_history" | "message_history" | "segment_history";
 export type SyncImportDryRun = { rows: number; valid: number; invalid: number; duplicates: number; deletedUsers: number; newUsers: number; unmapped: string[]; issues: { index: number; code: string; message: string }[] };
 export type SyncImportJob = {
@@ -280,6 +283,7 @@ const syncAt = (projectId: string, path = "") => at(projectId, `/data-sync${path
 
 export const dataSyncApi = {
   sources: (projectId: string) => authRequest<SyncSource[]>(syncAt(projectId, "/sources"), undefined, BASE),
+  segments: (projectId: string) => authRequest<SyncExternalSegment[]>(syncAt(projectId, "/segments"), undefined, BASE),
   /** Names seen in one page of the connected Webhook feed (no values). */
   serverSample: (projectId: string) => authRequest<{ sampled: number; fields: string[]; events: string[]; products: string[] }>(syncAt(projectId, "/server-sync/sample"), undefined, BASE),
   mappings: (projectId: string, sourceId: string) => authRequest<SyncMapping[]>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/mappings`), undefined, BASE),

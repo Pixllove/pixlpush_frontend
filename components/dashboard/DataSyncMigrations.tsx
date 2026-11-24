@@ -136,6 +136,9 @@ export default function DataSyncMigrations({ projectId, accountId, canEdit, canC
         <Card className="saas-card">
           <Stack gap={1.5}>
             <Typography variant="subtitle1">Create a staged migration</Typography>
+            <Alert severity="info">
+              Choose an existing PixlPush journey first. This migration maps participants and supported step outcomes to its existing steps; it does not import source message or campaign content, create in-app steps, or preserve source completion, pause, or exit states. Imported participants stay staged. No message is sent until an approved cutover is completed and the journey is explicitly resumed.
+            </Alert>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 1.5 }}>
               <TextField size="small" label="Run name" value={name} onChange={(event) => setName(event.target.value)} inputProps={{ maxLength: 100 }} />
               <TextField size="small" label="Current source system" value={sourceName} onChange={(event) => setSourceName(event.target.value)} inputProps={{ maxLength: 100 }} />
@@ -196,7 +199,7 @@ export default function DataSyncMigrations({ projectId, accountId, canEdit, canC
               )}
               {participantsRun === item.id && (
                 <Stack gap={1}>
-                  <TextField multiline minRows={4} label="Participants JSON" value={participantsText} onChange={(event) => setParticipantsText(event.target.value)} helperText="Each row: journeyId, externalUserId, and optional externalKey, resumeAtStepKey, enteredAt, nextRunAt, entryNumber, completedSteps (stepKey, status, sentAt, openedAt, clickedAt, sourceMessageId)." InputProps={{ sx: { fontFamily: 'var(--pp-mono)', fontSize: 'var(--fs-12)' } }} />
+                  <TextField multiline minRows={4} label="Participants JSON" value={participantsText} onChange={(event) => setParticipantsText(event.target.value)} helperText="Each user must already exist in this project by externalUserId. Supported: journeyId, externalKey, resumeAtStepKey, enteredAt, nextRunAt, entryNumber, and completedSteps (stepKey, status, sentAt, openedAt, clickedAt, sourceMessageId). Source completed/exited/paused status and message content are not imported." InputProps={{ sx: { fontFamily: 'var(--pp-mono)', fontSize: 'var(--fs-12)' } }} />
                   {importProblems.length > 0 && <Alert severity="error" onClose={() => setImportProblems([])}>{importProblems.map((problem) => <Typography key={problem} variant="body2">{problem}</Typography>)}</Alert>}
                   <Button size="small" variant="outlined" sx={{ alignSelf: 'flex-start' }} disabled={busy} onClick={() => void run(async () => {
                     setImportProblems([]);

@@ -34,7 +34,7 @@ import { useIntegration } from "@/hooks/projects/use-project-settings";
 import { dataSyncApi } from "@/lib/projects/api";
 import { integrationStatus } from "./registry";
 import WebhookDeveloperGuide from "./WebhookDeveloperGuide";
-import WebhookMapping from "./WebhookMapping";
+import WebhookMapping, { webhookSwitchSx } from "./WebhookMapping";
 import WebhookUpdates from "./WebhookUpdates";
 
 const CONFIG_ROLES = ["owner", "admin", "developer"];
@@ -50,27 +50,18 @@ type Extra = "mapping" | "updates" | "history" | "journeys";
 const EXTRAS: { key: Extra; title: string; detail: string }[] = [
   {
     key: "mapping",
-    title: "Rename fields",
-    detail:
-      "Only if your data uses different names, like full_name instead of name.",
-  },
-  {
-    key: "updates",
-    title: "Send journey status to your server",
-    detail:
-      "Only if your own admin dashboard should show journey and message status.",
+    title: "Segments and user association",
+    detail: "Map profile fields, source segment names, subscription products, and choose ongoing sync or historical membership import.",
   },
   {
     key: "history",
-    title: "Import past data",
-    detail:
-      "One time. Bring in old events, messages or segment changes from a file. Nothing is sent to users and no journey starts.",
+    title: "Historical user activity",
+    detail: "Choose event or message history to import as an archive. These records do not become live messaging activity.",
   },
   {
     key: "journeys",
-    title: "Move journeys from another tool",
-    detail:
-      "Only if you are switching running journeys over to PixlPush. PixlPush keeps a paused copy until you check it and switch over, so users never get a message twice.",
+    title: "Journeys and campaigns",
+    detail: "Map source step keys to existing PixlPush journeys, stage participant progress, and review what content is reusable.",
   },
 ];
 
@@ -226,11 +217,10 @@ export default function WebhookIntegration() {
             {!connected && (
               <StepItem n={1} title="Send these instructions to your developer">
                 <Typography variant="caption" color="text.secondary">
-                  Copy the instructions and send them by email or chat. Your
-                  developer adds one small endpoint to your backend and sends
-                  you back a URL and a token.
+                  Email your developer the setup guide. They add one small
+                  endpoint to your backend and send you back a URL and a token.
                 </Typography>
-                <WebhookDeveloperGuide />
+                <WebhookDeveloperGuide projectId={projectId} />
               </StepItem>
             )}
             <StepItem
@@ -329,6 +319,8 @@ export default function WebhookIntegration() {
                 label="Automatic sync"
                 control={
                   <Switch
+                    size="small"
+                    sx={webhookSwitchSx}
                     checked={connected.syncEnabled}
                     disabled={!canEdit || setSyncEnabled.isPending}
                     onChange={(_, on) =>
@@ -376,64 +368,25 @@ export default function WebhookIntegration() {
       )}
 
 
-      {connected && (
+      {source && projectId && (
         <Card className="saas-card">
-          <Stack
-            direction={{ xs: "column", sm: "row" }}
-            gap={1.5}
-            alignItems={{ sm: "center" }}
-            justifyContent="space-between"
-          >
-            <Box>
-              <Typography variant="h4">Next: group your users</Typography>
-              <Typography variant="body2" color="text.secondary">
-                Create a lifecycle segment like “Cancelled, still active”. It
-                fills up on its own from your server’s updates.
+          <Stack gap={1.5}>
+            <StepItem n={3} title="Map data">
+              <Typography variant="caption" color="text.secondary">
+                Choose any categories you use. Historical imports and ongoing sync are separate, and journey participants stay staged until you review cutover.
               </Typography>
-            </Box>
-            <Button
-              variant="contained"
-              component={NextLink}
-              href="/dashboard/users?tab=segments"
-              sx={{ flexShrink: 0 }}
-            >
-              Create lifecycle segment
-            </Button>
-          </Stack>
-        </Card>
-      )}
-
-      {source && (
-        <Card className="saas-card">
-          <Stack gap={0.5}>
-            <Box sx={{ mb: 1 }}>
-              <Typography variant="h4">Optional extras</Typography>
-              <Typography variant="body2" color="text.secondary">
-                Most teams never need these.
-              </Typography>
-            </Box>
-            {EXTRAS.map((item) => (
-              <ListItemButton
-                key={item.key}
-                onClick={() => setExtra(item.key)}
-                sx={{
-                  px: 1,
-                  borderTop: "1px solid",
-                  borderColor: "divider",
-                  gap: 1.5,
-                }}
-              >
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography variant="body2" fontWeight={600}>
-                    {item.title}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {item.detail}
-                  </Typography>
-                </Box>
-                <ChevronRightRounded color="action" />
-              </ListItemButton>
-            ))}
+            </StepItem>
+            <Stack gap={0.5}>
+              {EXTRAS.map((item) => (
+                <ListItemButton key={item.key} onClick={() => setExtra(item.key)} sx={{ px: 1, borderTop: "1px solid", borderColor: "divider", gap: 1.5 }}>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="body2" fontWeight={600}>{item.title}</Typography>
+                    <Typography variant="caption" color="text.secondary">{item.detail}</Typography>
+                  </Box>
+                  <ChevronRightRounded color="action" />
+                </ListItemButton>
+              ))}
+            </Stack>
           </Stack>
         </Card>
       )}
@@ -482,13 +435,20 @@ export default function WebhookIntegration() {
               />
             )}
             {extra === "journeys" && (
-              <DataSyncMigrations
-                projectId={projectId}
-                accountId={account?.id}
-                canEdit={canEdit}
-                canControl={canControl}
-              />
+              <Stack gap={3}>
+                <Box>
+                  <Typography variant="h4">Content and step support</Typography>
+                  <Typography variant="body2" color="text.secondary">Map source step keys to an existing PixlPush journey and reuse project templates already attached to its steps (email subject/body or push title/body/image/deep link). Source template content, standalone campaign records, in-app content, and unsupported creative fields are not imported. Recreate and review those manually before cutover.</Typography>
+                </Box>
+                <DataSyncMigrations projectId={projectId} accountId={account?.id} canEdit={canEdit} canControl={canControl} />
+                <Box sx={{ pt: 2, borderTop: "1px solid", borderColor: "divider" }}>
+                  <Typography variant="h4">Outbound journey and message updates</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>This separate integration sends PixlPush delivery status to your server. It is not the incoming server feed.</Typography>
+                  <WebhookUpdates projectId={projectId} sourceId={source.id} canControl={canControl} />
+                </Box>
+              </Stack>
             )}
+            {extra === "updates" && <WebhookUpdates projectId={projectId} sourceId={source.id} canControl={canControl} />}
           </Stack>
         )}
       </Drawer>
