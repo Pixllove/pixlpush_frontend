@@ -86,6 +86,7 @@ import {
   eventsApi,
   lifecycleSegmentsApi,
   pushApi,
+  effectivePushCampaignChannels,
   userStatsApi,
   usersApi,
 } from "@/lib/projects/api";
@@ -96,6 +97,7 @@ import type {
   EmailCampaign,
   EmailTemplate,
   PushCampaign,
+  PushDeliveryChannel,
   PushTemplate,
 } from "@/lib/projects/api";
 import { useActiveProject } from "@/hooks/projects/use-active-project";
@@ -2403,28 +2405,35 @@ function PushSection() {
   );
   const campaignRows: PushRow[] = (
     (tab === "drafts" ? draftsQuery.data?.items : sentQuery.data?.items) ?? []
-  ).map((item: PushCampaign) => ({
-    id: item.id,
-    name: item.name,
-    title: item.template?.title ?? "—",
-    message: item.template?.body ?? "—",
-    category: item.category === "template" ? "Reusable notification" : "Push notification",
-    created: formatDate(item.updatedAt),
-    status: item.status.charAt(0).toUpperCase() + item.status.slice(1),
-    target: item.audience?.allUsers
+  ).map((item: PushCampaign) => {
+    const audienceLabel = item.audience?.allUsers
       ? "All eligible users"
       : item.audience?.audienceGroupIds?.length
         ? "Audience group"
         : item.audience?.lifecycleSegmentIds?.length
           ? "Lifecycle segment"
-          : "Selected users",
-    sends:
-      item.stats?.sent === undefined ? "—" : item.stats.sent.toLocaleString(),
-    clicks:
-      item.stats?.opened === undefined
-        ? "—"
-        : `${item.stats.opened.toLocaleString()} · ${item.stats.openRate.toFixed(1)}%`,
-  }));
+          : "Selected users";
+    const channels = effectivePushCampaignChannels(item);
+    const deliveryLabel = channels === null
+      ? "All push channels"
+      : channels.map((channel: PushDeliveryChannel) => channel === "web" ? "Web Notification" : "Mobile Push").join(" + ");
+    return {
+      id: item.id,
+      name: item.name,
+      title: item.template?.title ?? "—",
+      message: item.template?.body ?? "—",
+      category: item.category === "template" ? "Reusable notification" : "Push notification",
+      created: formatDate(item.updatedAt),
+      status: item.status.charAt(0).toUpperCase() + item.status.slice(1),
+      target: `${audienceLabel} · ${deliveryLabel}`,
+      sends:
+        item.stats?.sent === undefined ? "—" : item.stats.sent.toLocaleString(),
+      clicks:
+        item.stats?.opened === undefined
+          ? "—"
+          : `${item.stats.opened.toLocaleString()} · ${item.stats.openRate.toFixed(1)}%`,
+    };
+  });
   const activeQuery =
     tab === "templates"
       ? templatesQuery

@@ -11,6 +11,7 @@ vi.mock("@/lib/projects/api", () => ({
       create: vi.fn(),
       get: vi.fn(),
       update: vi.fn(),
+      test: vi.fn(),
       translate: vi.fn(),
     },
     campaigns: { create: vi.fn(), audiencePreview: vi.fn() },
@@ -20,6 +21,18 @@ vi.mock("@/lib/projects/api", () => ({
 }));
 vi.mock("@/hooks/projects/use-active-project", () => ({
   useActiveProject: () => ({ active: { id: "p1" } }),
+}));
+vi.mock("@/hooks/projects/use-project-settings", () => ({
+  useFirebaseSettings: () => ({
+    query: {
+      data: {
+        platforms: ["mobile", "web"],
+        webPush: { enabled: true, enabledAt: "2026-11-24T00:00:00.000Z", activeBrowsers: 0 },
+      },
+      isPending: false,
+      isError: false,
+    },
+  }),
 }));
 
 const push = vi.mocked(pushApi, true);
@@ -51,6 +64,7 @@ describe("PushComposer · Save as draft", () => {
     push.templates.create.mockResolvedValue({ id: "t1" } as never);
     push.templates.get.mockResolvedValue({} as never);
     push.templates.update.mockResolvedValue({ id: "t1" } as never);
+    push.templates.test.mockResolvedValue({ delivered: 1, failed: 0, channels: ["mobile"], channelResults: { mobile: { delivered: 1, failed: 0 } } } as never);
     push.templates.translate.mockResolvedValue({ translations: {} } as never);
     push.campaigns.create.mockResolvedValue({ id: "c1" } as never);
   });
@@ -100,6 +114,117 @@ describe("PushComposer · Save as draft", () => {
     expect(push.campaigns.create).toHaveBeenCalledWith(
       "p1",
       expect.objectContaining({ sendNow: false, scheduledAt: undefined }),
+    );
+  });
+
+  it("sends a web-only notification with the web delivery channel", async () => {
+    const onSaved = vi.fn();
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <PushComposer mode="campaign" onBack={() => {}} onSaved={onSaved} />
+      </QueryClientProvider>,
+    );
+    fireEvent.change(screen.getByLabelText(/Push notification name/), {
+      target: { value: "Web promo" },
+    });
+    fireEvent.click(screen.getByRole("checkbox", { name: "Disable Apple iOS" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Enable Web Notification" }));
+    fireEvent.click(screen.getByRole("button", { name: "Send notification" }));
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith("send"), { timeout: 2000 });
+    expect(push.campaigns.create).toHaveBeenCalledWith(
+      "p1",
+      expect.objectContaining({
+        name: "Web promo",
+        channels: ["web"],
+        channel: "web",
+      }),
+    );
+  });
+
+  it("preserves both mobile and web selections for a multi-channel draft", async () => {
+    const onSaved = vi.fn();
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <PushComposer mode="campaign" onBack={() => {}} onSaved={onSaved} />
+      </QueryClientProvider>,
+    );
+    fireEvent.change(screen.getByLabelText(/Push notification name/), {
+      target: { value: "Everywhere promo" },
+    });
+    fireEvent.click(screen.getByRole("checkbox", { name: "Enable Web Notification" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save as draft" }));
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith("drafts"), { timeout: 2000 });
+    expect(push.campaigns.create).toHaveBeenCalledWith(
+      "p1",
+      expect.objectContaining({
+        name: "Everywhere promo",
+        channels: ["mobile", "web"],
+      }),
+    );
+  });
+
+  it("shows Web SDK setup guidance when no browser is subscribed", () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <PushComposer mode="campaign" onBack={() => {}} onSaved={() => {}} />
+      </QueryClientProvider>,
+    );
+    fireEvent.click(screen.getByRole("checkbox", { name: "Enable Web Notification" }));
+    expect(screen.getByText(/No active browser subscription is detected yet/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open Web SDK guide" })).toHaveAttribute(
+      "href",
+      "/dashboard/integrations/web/quickstart",
+    );
+  });
+
+  it("sends test results only for the selected channels", async () => {
+    push.templates.test.mockResolvedValue({
+      delivered: 2,
+      failed: 0,
+      channels: ["mobile", "web"],
+      channelResults: {
+        mobile: { delivered: 1, failed: 0 },
+        web: { delivered: 1, failed: 0 },
+      },
+    } as never);
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <PushComposer mode="campaign" onBack={() => {}} onSaved={() => {}} />
+      </QueryClientProvider>,
+    );
+    fireEvent.change(screen.getByLabelText(/Push notification name/), {
+      target: { value: "Multi-channel test" },
+    });
+    fireEvent.click(screen.getByRole("checkbox", { name: "Enable Web Notification" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Test notification" })[0]!);
+    fireEvent.change(screen.getByLabelText("End-user ID"), {
+      target: { value: "user-1" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Send test" }));
+    await waitFor(() =>
+      expect(push.templates.test).toHaveBeenCalledWith("p1", expect.any(String), "user-1", ["mobile", "web"]),
+    );
+    await waitFor(() =>
+      expect(screen.getByText("Test notification delivered through Mobile Push and Web Notification.")).toBeInTheDocument(),
+    );
+  });
+
+  it("shows channel-specific setup guidance when the backend reports mobile readiness failure", async () => {
+    push.campaigns.create.mockRejectedValue({
+      code: "MOBILE_PUSH_NOT_READY",
+      message: "backend message",
+    });
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <PushComposer mode="campaign" onBack={() => {}} onSaved={() => {}} />
+      </QueryClientProvider>,
+    );
+    fireEvent.change(screen.getByLabelText(/Push notification name/), {
+      target: { value: "Needs setup" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Send notification" }));
+    await waitFor(() =>
+      expect(screen.getByText(/Mobile Push is not ready\. Connect Firebase or APNs/)).toBeInTheDocument(),
     );
   });
 

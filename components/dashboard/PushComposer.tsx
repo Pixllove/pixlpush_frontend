@@ -45,22 +45,83 @@ import {
   Select,
   Stack,
   Switch,
+  Tab,
+  Tabs,
   TextField,
   Typography,
+  Alert,
 } from "@mui/material";
 import {
   audienceGroupsApi,
   lifecycleSegmentsApi,
   pushApi,
   type PushAudience,
+  type PushDeliveryChannel,
   type PushTranslation,
 } from "@/lib/projects/api";
+import type { ApiError } from "@/types/auth";
 import { useActiveProject } from "@/hooks/projects/use-active-project";
+import { useFirebaseSettings } from "@/hooks/projects/use-project-settings";
 import { Toast } from "@/components/auth/AuthFeedback";
 import DeleteConfirmDialog from "@/components/dashboard/DeleteConfirmDialog";
 
 type Mode = "campaign" | "template";
 type SaveTarget = "send" | "drafts" | "templates";
+
+const channelLabel = (channel: PushDeliveryChannel) =>
+  channel === "web" ? "Web Notification" : "Mobile Push";
+
+function pushErrorMessage(cause: unknown, fallback: string): string {
+  const error = cause as Partial<ApiError> | undefined;
+  const details = error?.details;
+  const missingChannels =
+    details && typeof details === "object" && !Array.isArray(details) &&
+    Array.isArray((details as { missingChannels?: unknown }).missingChannels)
+      ? (details as { missingChannels: unknown[] }).missingChannels.filter(
+          (value): value is PushDeliveryChannel => value === "mobile" || value === "web",
+        )
+      : [];
+
+  if (error?.code === "MOBILE_PUSH_NOT_READY") {
+    return "Mobile Push is not ready. Connect Firebase or APNs in Push setup before sending this notification.";
+  }
+  if (error?.code === "WEB_PUSH_NOT_READY") {
+    return "Web Notification is not ready. Set up Web Push and VAPID configuration before sending this notification.";
+  }
+  if (error?.code === "PUSH_CHANNELS_NOT_READY") {
+    const labels = (missingChannels.length ? missingChannels : ["mobile", "web"])
+      .map((channel) => channelLabel(channel as PushDeliveryChannel));
+    return `${labels.join(" and ")} ${labels.length === 1 ? "is" : "are"} not ready. Complete the required channel setup before sending.`;
+  }
+  return error?.message || fallback;
+}
+
+function pushTestResultMessage(
+  result: {
+    delivered: number;
+    failed: number;
+    error?: string | null;
+    channelResults?: Partial<Record<PushDeliveryChannel, { delivered: number; failed: number; lastError?: string | null }>>;
+  },
+  selectedChannels: PushDeliveryChannel[],
+) {
+  const results = selectedChannels.map((channel) => ({
+    channel,
+    result: result.channelResults?.[channel],
+  }));
+  const delivered = results.filter(({ result: channelResult }) => (channelResult?.delivered ?? 0) > 0);
+  const failed = results.filter(({ result: channelResult }) => (channelResult?.failed ?? 0) > 0 || (channelResult && channelResult.delivered === 0));
+
+  if (delivered.length && !failed.length) {
+    return delivered.length === 1
+      ? `${channelLabel(delivered[0]!.channel)} test notification delivered.`
+      : `Test notification delivered through ${delivered.map(({ channel }) => channelLabel(channel)).join(" and ")}.`;
+  }
+  if (delivered.length && failed.length) {
+    return `${delivered.map(({ channel }) => channelLabel(channel)).join(" and ")} delivered; ${failed.map(({ channel }) => channelLabel(channel)).join(" and ")} failed.`;
+  }
+  return result.error || "The test notification could not be delivered through the selected channels.";
+}
 
 const languages = [
   "English",
@@ -119,6 +180,7 @@ export default function PushComposer({
   templateId?: string | null;
 }) {
   const { active } = useActiveProject();
+  const { query: pushSettingsQuery } = useFirebaseSettings(active?.id);
   const queryClient = useQueryClient();
   const editingTemplate = Boolean(templateId);
   const [currentMode, setCurrentMode] = useState<Mode>(
@@ -143,6 +205,8 @@ export default function PushComposer({
   const [newDeepLink, setNewDeepLink] = useState("");
   const [ios, setIos] = useState(true);
   const [android, setAndroid] = useState(false);
+  const [web, setWeb] = useState(false);
+  const [previewChannel, setPreviewChannel] = useState<PushDeliveryChannel>("mobile");
   const [delivery, setDelivery] = useState("immediately");
   const [scheduledDate, setScheduledDate] = useState("");
   const [scheduledTime, setScheduledTime] = useState("");
@@ -155,6 +219,9 @@ export default function PushComposer({
   const [deepLinkDeleteTarget, setDeepLinkDeleteTarget] = useState<{ id: string; url: string } | null>(null);
   const [testUserId, setTestUserId] = useState("");
   const [error, setError] = useState("");
+  const selectedChannels: PushDeliveryChannel[] = [];
+  if (ios || android) selectedChannels.push("mobile");
+  if (web) selectedChannels.push("web");
   const templateQuery = useQuery({
     queryKey: ["push", "template", active?.id, templateId],
     queryFn: () => {
@@ -289,20 +356,22 @@ export default function PushComposer({
         : group.startsWith("group:")
           ? { audienceGroupIds: [group.slice(6)] }
           : { allUsers: true };
-      return pushApi.campaigns.audiencePreview(active.id, audience);
+      return pushApi.campaigns.audiencePreview(active.id, audience, selectedChannels);
     },
     onSuccess: (result) =>
       setNotice(
-        `${result.matching.toLocaleString()} users match this audience · ${result.reachable.toLocaleString()} are reachable.`,
+        `${result.matching.toLocaleString()} users match this audience · ${result.reachable.toLocaleString()} are reachable${selectedChannels.length > 1 ? " across the selected channels" : ""}.`,
       ),
     onError: (cause: Error) =>
-      setError(cause.message || "Could not preview the audience."),
+      setError(pushErrorMessage(cause, "Could not preview the audience.")),
   });
   const saveMutation = useMutation({
     mutationFn: async ({ target }: { target: SaveTarget }) => {
       if (!active?.id)
         throw new Error("Select a project before saving a notification.");
       if (!name.trim()) throw new Error("Enter a notification name.");
+      if (target !== "templates" && selectedChannels.length === 0)
+        throw new Error("Select at least one delivery platform.");
       if (
         !isTemplate &&
         country !== "All Countries" &&
@@ -355,6 +424,8 @@ export default function PushComposer({
         name: name.trim(),
         content,
         category: isTemplate ? "template" : "push_notification",
+        channels: selectedChannels,
+        ...(selectedChannels.length === 1 ? { channel: selectedChannels[0] } : {}),
         audience,
         sendNow: target === "send" && delivery === "immediately",
         scheduledAt,
@@ -375,7 +446,7 @@ export default function PushComposer({
       window.setTimeout(() => onSaved(target), 500);
     },
     onError: (cause: Error) =>
-      setError(cause.message || "Could not save the notification."),
+      setError(pushErrorMessage(cause, "Could not save the notification.")),
   });
   const testMutation = useMutation({
     mutationFn: async () => {
@@ -383,6 +454,8 @@ export default function PushComposer({
         throw new Error("Select a project before sending a test.");
       if (!testUserId.trim())
         throw new Error("Enter an end-user ID for the test device.");
+      if (selectedChannels.length === 0)
+        throw new Error("Select at least one delivery platform before sending a test.");
       const template = await pushApi.templates.create(active.id, {
         name: `${name || "Test notification"} · test`,
         title,
@@ -394,18 +467,14 @@ export default function PushComposer({
         fallbackLanguage: languageCodes[effectiveFallback] ?? "en",
         category: "push_notification",
       });
-      return pushApi.templates.test(active.id, template.id, testUserId.trim());
+      return pushApi.templates.test(active.id, template.id, testUserId.trim(), selectedChannels);
     },
     onSuccess: (result) => {
       setTestOpen(false);
-      setNotice(
-        result.delivered
-          ? "Test notification delivered."
-          : result.error || "Test notification could not be delivered.",
-      );
+      setNotice(pushTestResultMessage(result, selectedChannels));
     },
     onError: (cause: Error) =>
-      setError(cause.message || "Could not send the test notification."),
+      setError(pushErrorMessage(cause, "Could not send the test notification.")),
   });
 
   const toggleLanguage = (language: string) => {
@@ -833,10 +902,10 @@ export default function PushComposer({
                 disabled={disabled}
               />
               <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mb: 1.5 }}>
-                Select which platforms to send this notification to.
+                Select one or more delivery platforms for this notification.
               </Typography>
               <Grid container spacing={1.5}>
-                <Grid item xs={12} sm={6}>
+                <Grid item xs={12} sm={4}>
                   <PlatformCard
                     icon={<PhoneIphoneRounded />}
                     title="Apple iOS"
@@ -846,7 +915,7 @@ export default function PushComposer({
                     disabled={disabled}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid item xs={12} sm={4}>
                   <PlatformCard
                     icon={<PhoneIphoneRounded />}
                     title="Google Android"
@@ -856,7 +925,48 @@ export default function PushComposer({
                     disabled={disabled}
                   />
                 </Grid>
+                <Grid item xs={12} sm={4}>
+                  <PlatformCard
+                    icon={<LanguageRounded />}
+                    title="Web Notification"
+                    subtitle="Browser subscribers"
+                    checked={web}
+                    onChange={setWeb}
+                    disabled={disabled}
+                  />
+                </Grid>
               </Grid>
+              {web && (
+                <Alert
+                  severity={
+                    pushSettingsQuery.data?.webPush?.activeBrowsers
+                      ? "success"
+                      : "warning"
+                  }
+                  sx={{ mt: 1.5 }}
+                  action={
+                    <Button
+                      component="a"
+                      href="/dashboard/integrations/web/quickstart"
+                      size="small"
+                      color="inherit"
+                    >
+                      Open Web SDK guide
+                    </Button>
+                  }
+                >
+                  {pushSettingsQuery.isPending
+                    ? "Checking Web Push setup…"
+                    : pushSettingsQuery.isError
+                      ? "Web Push setup could not be checked. Verify the Web SDK, service worker, and browser subscription before sending."
+                      : pushSettingsQuery.data?.platforms?.length &&
+                          !pushSettingsQuery.data.platforms.includes("web")
+                        ? "Website is not enabled for this project. Enable the Website platform in Push setup before sending Web Notifications."
+                        : pushSettingsQuery.data?.webPush?.activeBrowsers
+                          ? `${pushSettingsQuery.data.webPush.activeBrowsers} active browser subscription${pushSettingsQuery.data.webPush.activeBrowsers === 1 ? "" : "s"} detected. Selected Web Notifications can be delivered to these browsers.`
+                          : "No active browser subscription is detected yet. Integrate @pixlpush/web, serve /pixlpush-sw.js from the website root, and call requestPushPermission() from a user click before sending."}
+                </Alert>
+              )}
             </Box>
 
             <Divider sx={{ my: 3 }} />
@@ -988,9 +1098,16 @@ export default function PushComposer({
                 <Typography className="push-preview-title" variant="h3">
                   Live preview
                 </Typography>
-                <Typography color="text.secondary" fontSize="var(--fs-12)">
-                  Previewing {activeLanguage}
-                </Typography>
+                <Tabs
+                  className="push-preview-tabs"
+                  value={previewChannel}
+                  onChange={(_, value: PushDeliveryChannel) => setPreviewChannel(value)}
+                  aria-label="Notification preview"
+                  sx={{ minHeight: 34, mt: 0.5 }}
+                >
+                  <Tab value="mobile" label="App preview" />
+                  <Tab value="web" label="Web preview" />
+                </Tabs>
               </Box>
               <Button
                 className="push-preview-test-button"
@@ -1000,7 +1117,12 @@ export default function PushComposer({
                 Test notification
               </Button>
             </Stack>
-            <Box className="ios-device">
+            {previewChannel === "web" ? (
+              <WebNotificationPreview
+                title={activeTranslation.title || "Your notification title"}
+                body={activeTranslation.body || "Your notification message will appear here."}
+              />
+            ) : <Box className="ios-device">
               <i className="ios-btn ios-btn-action" />
               <i className="ios-btn ios-btn-vol-up" />
               <i className="ios-btn ios-btn-vol-down" />
@@ -1054,7 +1176,7 @@ export default function PushComposer({
                 </Box>
                 <Box className="ios-home-indicator" />
               </Box>
-            </Box>
+            </Box>}
           </Box>
         </Grid>
       </Grid>
@@ -1336,6 +1458,60 @@ function PushHeading({
     </Stack>
   );
 }
+function WebNotificationPreview({ title, body }: { title: string; body: string }) {
+  return (
+    <Box className="macbook-preview" aria-label="Web notification preview">
+      <Box className="macbook-screen">
+        <Box className="macbook-camera" />
+        <Box className="browser-toolbar">
+          <Stack direction="row" gap={0.55} className="browser-window-dots">
+            <i />
+            <i />
+            <i />
+          </Stack>
+          <Box className="browser-address">pixlpush.com</Box>
+          <LanguageRounded className="browser-toolbar-icon" />
+        </Box>
+        <Box className="pixlpush-site">
+          <Stack direction="row" alignItems="center" justifyContent="space-between" className="pixlpush-site-nav">
+            <Stack direction="row" alignItems="center" gap={0.7}>
+              <Image src="/assets/site-icon.webp" alt="PixlPush" width={22} height={22} />
+              <Typography fontWeight={700} fontSize="var(--fs-12)">PixlPush</Typography>
+            </Stack>
+            <Stack direction="row" gap={1.2} className="pixlpush-site-links">
+              <span>Overview</span>
+              <span>Analytics</span>
+              <span>Account</span>
+            </Stack>
+          </Stack>
+          <Box className="pixlpush-site-content">
+            <Typography className="pixlpush-site-eyebrow">GROWTH CONCIERGE</Typography>
+            <Typography className="pixlpush-site-heading">Build better customer journeys.</Typography>
+            <Typography className="pixlpush-site-copy">Create engaging experiences with PixlPush.</Typography>
+            <Box className="pixlpush-site-card-row"><i /><i /><i /></Box>
+          </Box>
+          <Box className="web-browser-notification">
+            <Stack direction="row" gap={1} alignItems="flex-start">
+              <Box className="web-browser-notification-icon">
+                <Image src="/assets/site-icon.webp" alt="PixlPush" width={12} height={12} />
+              </Box>
+              <Box sx={{ minWidth: 0, flex: 1 }}>
+                <Stack direction="row" justifyContent="space-between" gap={1}>
+                  <Typography fontSize="7px" fontWeight={700} noWrap>PixlPush</Typography>
+                  <Typography fontSize="6px" color="text.secondary">now</Typography>
+                </Stack>
+                <Typography className="web-browser-notification-title" fontSize="var(--fs-12)" fontWeight={700} sx={{ mt: 0.35 }}>{title}</Typography>
+                <Typography fontSize="var(--fs-11)" color="text.secondary" className="web-browser-notification-body">{body}</Typography>
+              </Box>
+            </Stack>
+          </Box>
+        </Box>
+      </Box>
+      <Box className="macbook-base"><Box className="macbook-base-notch" /></Box>
+    </Box>
+  );
+}
+
 function PlatformCard({
   icon,
   title,
@@ -1355,7 +1531,7 @@ function PlatformCard({
     <Card className="push-platform-card" variant="outlined">
       <Stack direction="row" alignItems="center" gap={1.2}>
         <Box className="push-platform-icon">{icon}</Box>
-        <Box sx={{ flex: 1 }}>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography fontWeight={600} fontSize="var(--fs-13)">
             {title}
           </Typography>
@@ -1366,14 +1542,10 @@ function PlatformCard({
         <Switch
           checked={checked}
           disabled={disabled}
+          inputProps={{ "aria-label": `${checked ? "Disable" : "Enable"} ${title}` }}
           onChange={(event) => onChange(event.target.checked)}
         />
       </Stack>
-      {checked && (
-        <Typography color="#477fe4" fontSize="var(--fs-12)" sx={{ mt: 1 }}>
-          ✓ Enabled for this platform
-        </Typography>
-      )}
     </Card>
   );
 }
