@@ -1593,7 +1593,7 @@ function ChoiceScreen({
       </Card>
       <Tabs value={tab} onChange={(_, value) => setTab(value)} sx={{ mt: 2 }}>
         <Tab label="Start from scratch" />
-        <Tab label="Reusable emails" />
+        <Tab label="Templates" />
       </Tabs>
       {tab === 0 ? (
         <Stack direction={{ xs: "column", md: "row" }} gap={2} sx={{ mt: 2 }}>
