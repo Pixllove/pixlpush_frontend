@@ -12,9 +12,9 @@ import {
 } from '@mui/material';
 import { initialOnboardingState, isPushReady, normalizeOnboardingUrl, normalizeOnboardingUrls, onboardingStepsOf, onboardingUrlError, type OnboardingState, type OnboardingUrlField } from '@/lib/onboarding';
 import { toggleProjectPlatform } from '@/lib/project-platforms';
-import type { ProjectPlatform } from '@/types/project';
+import type { CreatedSdkKey, ProjectPlatform, SdkKey } from '@/types/project';
 import { authApi, authKeys } from '@/lib/auth/api';
-import { firebaseApi, onboardingApi, projectApi, projectKeys } from '@/lib/projects/api';
+import { firebaseApi, onboardingApi, projectApi, projectKeys, sdkKeyApi } from '@/lib/projects/api';
 import ApnsConnectDialog from '@/components/dashboard/ApnsConnectDialog';
 import FirebaseConnectDialog from './FirebaseConnectDialog';
 import { useActiveProject } from '@/hooks/projects/use-active-project';
@@ -95,6 +95,39 @@ export default function OnboardingWizard() {
   // so use the first accessible Project while Redux restores its selection.
   const selectedProject = activeProject ?? projects[0] ?? projectsQuery.data?.[0];
   const projectId = selectedProject?.id;
+  const sdkKeysQuery = useQuery({
+    queryKey: ['projects', projectId, 'sdk-keys'],
+    queryFn: () => sdkKeyApi.list(projectId!),
+    enabled: Boolean(projectId),
+    staleTime: 30_000,
+  });
+  const [onboardingSdkKey, setOnboardingSdkKey] = useState<SdkKey | CreatedSdkKey>();
+  const [onboardingSdkKeyValue, setOnboardingSdkKeyValue] = useState('');
+  const [sdkKeyRevealBusy, setSdkKeyRevealBusy] = useState(false);
+  const activeOnboardingSdkKey = onboardingSdkKey ?? sdkKeysQuery.data?.find((key) => key.status === 'active');
+
+  useEffect(() => {
+    setOnboardingSdkKey(undefined);
+    setOnboardingSdkKeyValue('');
+    setSdkKeyRevealBusy(false);
+  }, [projectId]);
+
+  const handleOnboardingSdkKeyCreated = useCallback((created: CreatedSdkKey) => {
+    setOnboardingSdkKey(created);
+    setOnboardingSdkKeyValue(created.key);
+  }, []);
+
+  const revealOnboardingSdkKey = useCallback(async () => {
+    if (!projectId || !activeOnboardingSdkKey) throw new Error('No active project SDK key is available.');
+    setSdkKeyRevealBusy(true);
+    try {
+      const revealed = await sdkKeyApi.reveal(projectId, activeOnboardingSdkKey.id);
+      setOnboardingSdkKeyValue(revealed.key);
+      return revealed.key;
+    } finally {
+      setSdkKeyRevealBusy(false);
+    }
+  }, [activeOnboardingSdkKey, projectId]);
   const resumeProgress = projectId ? queryClient.getQueryData<OnboardingState>(['projects', projectId, 'onboarding']) : undefined;
   const progressQuery = useQuery({
     queryKey: ['projects', projectId, 'onboarding'],
@@ -590,6 +623,11 @@ export default function OnboardingWizard() {
                   projectId={projectId}
                   projectSlug={selectedProject?.slug}
                   canCreateSdkKey={Boolean(selectedProject && ['owner', 'admin', 'developer'].includes(selectedProject.role))}
+                  sdkKey={activeOnboardingSdkKey}
+                  sdkKeyValue={onboardingSdkKeyValue}
+                  onSdkKeyCreated={handleOnboardingSdkKeyCreated}
+                  onRevealSdkKey={revealOnboardingSdkKey}
+                  sdkKeyRevealBusy={sdkKeyRevealBusy}
                   onRequestSdk={() => setSdkRequestOpen(true)}
                   onSendDeveloperInstructions={async (input) => {
                     if (!projectId) throw new Error('Select a project before sending developer instructions.');

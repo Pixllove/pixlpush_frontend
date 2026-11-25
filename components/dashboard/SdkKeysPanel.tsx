@@ -59,9 +59,9 @@ const mono = { fontFamily: 'var(--pp-mono)', fontSize: 12.5 };
 const roundIcon = { border: '1px solid', borderColor: 'divider', width: 30, height: 30 };
 
 /**
- * Public SDK / ingestion keys of the active Project, laid out like Supabase's
- * API keys page: active keys can be revealed and copied any time (each reveal
- * is audited); revoking is immediate and permanent.
+ * Public SDK / ingestion key of the active Project, laid out like Supabase's
+ * API keys page: the project has one active key shared by mobile and web;
+ * active keys can be revealed and copied any time (each reveal is audited).
  */
 export default function SdkKeysPanel() {
   const { active } = useActiveProject();
@@ -125,7 +125,7 @@ export default function SdkKeysPanel() {
     try { await copy(key.id, await fetchKey(key)); } catch (cause) { setError(message(cause)); }
   };
 
-  /** Like rolling a key elsewhere: a new revealable key; the old one stays active until revoked. */
+  /** Creating a replacement makes the backend revoke the previous active key. */
   const replaceKey = async (key: SdkKey) => {
     setError(undefined);
     try {
@@ -147,7 +147,7 @@ export default function SdkKeysPanel() {
         <Box>
           <Typography variant="h3">SDK keys</Typography>
           <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ maxWidth: 640 }}>
-            Public keys your app uses to send events and register devices. They are safe to ship inside your app. Use one key per app or environment, so you can revoke one without touching the others.
+            The project SDK key is shared by your mobile app and website. It is safe to ship inside your app, but keep it private when possible. Creating a new key automatically revokes the previous active key.
           </Typography>
         </Box>
         {canManage && (
@@ -160,6 +160,7 @@ export default function SdkKeysPanel() {
       {!canManage && active && <Alert severity="info">Only owners, admins and developers can view and manage SDK keys.</Alert>}
       {query.isError && <Alert severity="error">{query.error.message}</Alert>}
       {error && <Alert severity="error" onClose={() => setError(undefined)}>{error}</Alert>}
+      {canManage && activeKeys.length > 1 && <Alert severity="warning">This project has multiple active SDK keys from an older setup. Create a new SDK key to replace them; the backend will revoke the older active keys automatically.</Alert>}
 
       {canManage && (
         <Card className="saas-card" sx={{ p: '0 !important', overflow: 'hidden' }}>
@@ -369,7 +370,7 @@ function CreateKeyPanel({ open, fresh, pending, slug, copied, onCopy, onClose, o
     return (
       <SidePanel open={open} onClose={close} eyebrow="SDK key created" title={fresh.name} footer={<Button variant="contained" onClick={close}>Done</Button>}>
         <Typography fontSize="var(--fs-13)" color="text.secondary">
-          Add this key to your app. You can reveal and copy it again from the SDK keys page any time. If it replaces an older key, revoke the old one once your updated app is released.
+          Add this shared project key to your mobile app and website. You can reveal and copy it again from the SDK keys page any time. Any older active project key is revoked automatically when this key is created.
         </Typography>
         <Box className="key-field" sx={{ mt: '0 !important' }}>
           <KeyRounded />
@@ -396,7 +397,7 @@ function CreateKeyPanel({ open, fresh, pending, slug, copied, onCopy, onClose, o
       </>}
     >
       <Typography fontSize="var(--fs-13)" color="text.secondary">
-        Use one key per app or environment (for example Production iOS, Staging web), so you can revoke one without touching the others.
+        One project SDK key is shared by the mobile and web integrations. Creating this key automatically revokes every other active SDK key in the project.
       </Typography>
       <Box component="form" onSubmit={submit}>
         <TextField label="Key name" placeholder="Production iOS" value={name} onChange={(e) => setName(e.target.value)} inputProps={{ maxLength: 80 }} autoFocus fullWidth helperText="Only you and your team see this name." />
