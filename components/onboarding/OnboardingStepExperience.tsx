@@ -1,17 +1,22 @@
 'use client';
 
-import { ArrowForwardRounded, AutoAwesomeRounded, CloseRounded, ContentCopyRounded, LanguageRounded, MailOutlineRounded, OpenInNewRounded } from '@mui/icons-material';
-import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Paper, Stack, TextField, Typography } from '@mui/material';
+import { ArrowForwardRounded, AutoAwesomeRounded, CheckRounded, CloseRounded, ContentCopyRounded, KeyRounded, LanguageRounded, MailOutlineRounded, OpenInNewRounded } from '@mui/icons-material';
+import { Alert, Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { mobileSdkOptions, sdkPromptFor, type SdkId, websitePromptFor, websiteSdkOption } from './onboardingStepConfig';
 import { supportApi } from '@/lib/support/api';
+import { sdkKeyApi } from '@/lib/projects/api';
 import type { ApiError } from '@/types/auth';
+import type { CreatedSdkKey } from '@/types/project';
 
 export type DeveloperInstructionsInput = { developerEmail: string; sdk: string; prompt: string; guideUrl?: string };
 
 type Props = {
   kind: 'mobile-push' | 'app-sdk' | 'web-sdk';
   projectName?: string;
+  projectId?: string;
+  projectSlug?: string;
+  canCreateSdkKey?: boolean;
   firebaseConnected?: boolean;
   apnsConnected?: boolean;
   onFirebase?: () => void;
@@ -24,6 +29,9 @@ type Props = {
 export default function OnboardingStepExperience({
   kind,
   projectName = '',
+  projectId,
+  projectSlug,
+  canCreateSdkKey = false,
   firebaseConnected = false,
   apnsConnected = false,
   onFirebase,
@@ -38,8 +46,16 @@ export default function OnboardingStepExperience({
   const [developerEmail, setDeveloperEmail] = useState('');
   const [developerEmailBusy, setDeveloperEmailBusy] = useState(false);
   const [developerEmailMessage, setDeveloperEmailMessage] = useState('');
+  const [sdkKeyName, setSdkKeyName] = useState('PixlPush SDK – Development');
+  const [createdSdkKey, setCreatedSdkKey] = useState<CreatedSdkKey>();
+  const [sdkKeyBusy, setSdkKeyBusy] = useState(false);
+  const [sdkKeyError, setSdkKeyError] = useState('');
+  const [includeSdkKeyInPrompt, setIncludeSdkKeyInPrompt] = useState(false);
+  const [projectIdCopied, setProjectIdCopied] = useState(false);
   const selectedSdkOption = isWebsite ? websiteSdkOption : (mobileSdkOptions.find((option) => option.id === selectedSdk) ?? mobileSdkOptions[0]);
-  const sdkPrompt = isWebsite ? websitePromptFor(projectName) : sdkPromptFor(selectedSdkOption.id, projectName);
+  const projectIdentifier = projectSlug || projectId || 'YOUR_PROJECT_ID';
+  const sdkPromptBase = isWebsite ? websitePromptFor(projectName) : sdkPromptFor(selectedSdkOption.id, projectName);
+  const sdkPrompt = `${sdkPromptBase}\n\nPixlPush project ID: \`${projectIdentifier}\`\n\nInitialize the SDK with:\n\`\`\`js\n{\n  sdkKey: '${includeSdkKeyInPrompt && createdSdkKey ? createdSdkKey.key : '[ADD SDK KEY MANUALLY]'}',\n  projectId: '${projectIdentifier}',\n}\n\`\`\``;
 
   useEffect(() => {
     if (kind === 'web-sdk') setSelectedSdk('web');
@@ -52,6 +68,32 @@ export default function OnboardingStepExperience({
       window.setTimeout(() => setCopied(false), 1800);
     } catch {
       setCopied(false);
+    }
+  };
+
+  const copyProjectId = async () => {
+    if (!projectIdentifier || projectIdentifier === 'YOUR_PROJECT_ID') return;
+    try {
+      await navigator.clipboard.writeText(projectIdentifier);
+      setProjectIdCopied(true);
+      window.setTimeout(() => setProjectIdCopied(false), 1800);
+    } catch {
+      setProjectIdCopied(false);
+    }
+  };
+
+  const createSdkKey = async () => {
+    if (!projectId || !sdkKeyName.trim() || sdkKeyBusy || !canCreateSdkKey) return;
+    setSdkKeyBusy(true);
+    setSdkKeyError('');
+    try {
+      const created = await sdkKeyApi.create(projectId, sdkKeyName.trim());
+      setCreatedSdkKey(created);
+      setIncludeSdkKeyInPrompt(false);
+    } catch (cause) {
+      setSdkKeyError((cause as Partial<ApiError>)?.message || 'Could not create the SDK key. Please try again.');
+    } finally {
+      setSdkKeyBusy(false);
     }
   };
 
@@ -97,8 +139,7 @@ export default function OnboardingStepExperience({
       </div>
     </> : <>
       <div className="onboarding-sdk-selector">
-        <Typography className="onboarding-sdk-selector-title">What technology is your app built with?</Typography>
-        <Typography color="text.secondary" variant="body2">Select your framework to get the right integration instructions.</Typography>
+        <div className="onboarding-sdk-section-heading"><span>1</span><div><strong>Choose your framework</strong><small>Select your framework to get the right integration instructions and AI prompt.</small></div></div>
         <div className="onboarding-sdk-options">
           {mobileSdkOptions.map((option) => <button key={option.id} type="button" className={`onboarding-sdk-option${selectedSdk === option.id ? ' selected' : ''}`} onClick={() => { setSelectedSdk(option.id); if (option.id === 'other') onRequestSdk?.(); }} disabled={disabled}>
             <span className="onboarding-sdk-radio" aria-hidden="true">{selectedSdk === option.id && <span />}</span>
@@ -108,8 +149,31 @@ export default function OnboardingStepExperience({
       </div>
       <div className="onboarding-sdk-request-card"><div><strong>Need another SDK?</strong><small>Request an SDK for your framework. We’ll route it to Help & Support.</small></div><Button variant="outlined" onClick={onRequestSdk} disabled={disabled} endIcon={<ArrowForwardRounded />}>Request SDK</Button></div>
     </>}
+    <div className="onboarding-sdk-key-card">
+      <div className="onboarding-sdk-section-heading"><span>2</span><div><strong>Create an SDK key</strong><small>Create a project key for this SDK integration.</small></div></div>
+      <Alert severity="warning" className="onboarding-sdk-security-note">
+        For security, we recommend creating the key here and adding it manually to your project. Only include it in the AI prompt if you understand the risk of sharing the key with your coding assistant.
+      </Alert>
+      {!projectId ? <Alert severity="info">Select a project before creating an SDK key.</Alert> : !canCreateSdkKey ? <Alert severity="info">Only project owners, admins, and developers can create SDK keys.</Alert> : null}
+      <TextField fullWidth size="small" label="Key name" value={sdkKeyName} onChange={(event) => setSdkKeyName(event.target.value)} disabled={disabled || sdkKeyBusy || !canCreateSdkKey} inputProps={{ maxLength: 80 }} />
+      <Stack direction={{ xs: 'column', sm: 'row' }} gap={1}>
+        <TextField fullWidth size="small" label="SDK key" value={createdSdkKey?.key ?? ''} placeholder="Your key will appear here after creation" InputProps={{ readOnly: true }} />
+        <Button variant="outlined" onClick={() => void createSdkKey()} disabled={disabled || sdkKeyBusy || !projectId || !canCreateSdkKey || !sdkKeyName.trim()} startIcon={sdkKeyBusy ? undefined : <KeyRounded />} sx={{ minWidth: { sm: 142 }, whiteSpace: 'nowrap' }}>
+          {sdkKeyBusy ? 'Creating…' : createdSdkKey ? 'Create another key' : 'Create key'}
+        </Button>
+      </Stack>
+      <Stack direction={{ xs: 'column', sm: 'row' }} gap={1}>
+        <TextField fullWidth size="small" label="Project ID" value={projectIdentifier} InputProps={{ readOnly: true, endAdornment: projectId && <IconButton size="small" onClick={() => void copyProjectId()} aria-label="Copy project ID">{projectIdCopied ? <CheckRounded color="success" fontSize="small" /> : <ContentCopyRounded fontSize="small" />}</IconButton> }} />
+      </Stack>
+      <FormControlLabel
+        control={<Checkbox size="small" checked={includeSdkKeyInPrompt} onChange={(event) => setIncludeSdkKeyInPrompt(event.target.checked)} disabled={disabled || !createdSdkKey} />}
+        label={<span><strong>Include the SDK key in the AI prompt</strong><small className="onboarding-sdk-checkbox-help">Off by default for security. You can copy the key into your app manually.</small></span>}
+      />
+      {includeSdkKeyInPrompt && createdSdkKey ? <Alert severity="warning">The generated key will be included when you copy or send these instructions.</Alert> : null}
+      {sdkKeyError ? <Alert severity="error">{sdkKeyError}</Alert> : null}
+    </div>
     <Paper elevation={0} className="onboarding-sdk-prompt-panel">
-      <div className="onboarding-sdk-prompt-head"><div><strong>{isWebsite ? 'PIXLPUSH WEB SDK & WEB PUSH' : `PIXLPUSH ${selectedSdkOption.title.toUpperCase()} SDK`}</strong><small>{isWebsite ? 'AI-ready setup · Complete integration in one prompt' : 'AI-ready setup'}</small></div><Button size="small" onClick={() => void copySdkPrompt()} startIcon={<ContentCopyRounded />} disabled={disabled}>{copied ? 'Copied' : 'Copy'}</Button></div>
+      <div className="onboarding-sdk-prompt-head"><div><strong>3 · {isWebsite ? 'PIXLPUSH WEB SDK & WEB PUSH' : `PIXLPUSH ${selectedSdkOption.title.toUpperCase()} SDK`}</strong><small>Copy this prompt into your coding assistant to complete the integration.</small></div><Button size="small" onClick={() => void copySdkPrompt()} startIcon={<ContentCopyRounded />} disabled={disabled}>{copied ? 'Copied' : 'Copy'}</Button></div>
       <code>{sdkPrompt}</code>
     </Paper>
     <Button variant="outlined" className="onboarding-sdk-copy-button" onClick={() => void copySdkPrompt()} startIcon={<ContentCopyRounded />} disabled={disabled}>{copied ? 'Prompt copied' : 'Copy AI Integration Prompt'}</Button>

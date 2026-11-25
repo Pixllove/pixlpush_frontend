@@ -16,6 +16,9 @@ export type OnboardingLinkCheckResult = { androidAppUrl: string | null; iosAppUr
 
 type InteractionRendererProps = {
   interaction: AiInteraction;
+  projectId?: string;
+  projectSlug?: string;
+  canCreateSdkKey?: boolean;
   onSubmit: (fields: Record<string, unknown>, action?: AiInteractionAction) => void;
   onCancel?: () => void;
   onRetry?: () => void;
@@ -253,7 +256,7 @@ function SafeInteractionData({ data }: { data: Record<string, unknown> }) {
   </Stack>;
 }
 
-function InteractionFormCard({ interaction, onSubmit, onCancel, onRetry, onReload, onSecureAction, onCheckLinks, onVerifyDomain, onOpenFirebase, onOpenApns, onRequestSdk, onSendDeveloperInstructions, firebaseConnected, apnsConnected, busy, error, kind }: InteractionRendererProps & { kind: string }) {
+function InteractionFormCard({ interaction, projectId, projectSlug, canCreateSdkKey, onSubmit, onCancel, onRetry, onReload, onSecureAction, onCheckLinks, onVerifyDomain, onOpenFirebase, onOpenApns, onRequestSdk, onSendDeveloperInstructions, firebaseConnected, apnsConnected, busy, error, kind }: InteractionRendererProps & { kind: string }) {
   const [values, setValues] = useState<Record<string, unknown>>({});
   const [urlErrors, setUrlErrors] = useState<Record<string, string>>({});
   const [linkCheckState, setLinkCheckState] = useState<"idle" | "checking" | "found" | "not-found" | "error">("idle");
@@ -560,6 +563,9 @@ function InteractionFormCard({ interaction, onSubmit, onCancel, onRetry, onReloa
     </Fragment>)}</Stack> : null}
     {onboardingExperienceKind ? <Box sx={{ mt: 1.5 }}><OnboardingStepExperience
       kind={onboardingExperienceKind}
+      projectId={projectId}
+      projectSlug={projectSlug}
+      canCreateSdkKey={canCreateSdkKey}
       projectName={String(values.projectName ?? recordValue(interaction.data?.values).projectName ?? onboardingData.projectName ?? interaction.data.projectName ?? "")}
       firebaseConnected={firebaseConnected ?? Boolean(recordValue(interaction.data.firebase).status === "connected" || interaction.data.firebaseConnected === true)}
       apnsConnected={apnsConnected ?? Boolean(recordValue(interaction.data.apns).status === "connected" || interaction.data.apnsConnected === true)}

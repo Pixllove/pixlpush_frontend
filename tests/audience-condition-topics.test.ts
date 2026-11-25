@@ -65,7 +65,7 @@ describe('audience condition topics and serialization', () => {
 
     expect(withAppNotificationTokenField(schema).fields[0]).toMatchObject({
       key: 'appNotificationToken',
-      label: 'Mobile push',
+      label: 'App Notification',
       topic: 'reachability',
     });
   });

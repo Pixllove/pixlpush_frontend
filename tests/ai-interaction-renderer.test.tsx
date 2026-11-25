@@ -350,9 +350,11 @@ describe('AiInteractionRenderer', () => {
     expect(screen.getByRole('button', { name: 'Review Firebase' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Review Apple Push (APNs)' })).toBeInTheDocument();
 
-    rerender(<AiInteractionRenderer interaction={{ ...base, data: { currentStep: { kind: 'app-sdk', title: 'App SDK' }, values: { projectName: 'Demo' } } }} onSubmit={vi.fn()} onRequestSdk={vi.fn()} onSendDeveloperInstructions={vi.fn()} />);
+    rerender(<AiInteractionRenderer projectId="project-db-id" projectSlug="pixlpush-demo" canCreateSdkKey interaction={{ ...base, data: { currentStep: { kind: 'app-sdk', title: 'App SDK' }, values: { projectName: 'Demo' } } }} onSubmit={vi.fn()} onRequestSdk={vi.fn()} onSendDeveloperInstructions={vi.fn()} />);
     expect(screen.getByTestId('onboarding-app-sdk-experience')).toBeInTheDocument();
-    expect(screen.getByText('What technology is your app built with?')).toBeInTheDocument();
+    expect(screen.getByText('Choose your framework')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Project ID' })).toHaveValue('pixlpush-demo');
+    expect(screen.getByRole('button', { name: 'Create key' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Copy AI Integration Prompt' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Request SDK' })).toBeInTheDocument();
     expect(screen.getByPlaceholderText('developer@company.com')).toBeInTheDocument();

@@ -24,7 +24,7 @@ export const hiddenAudienceFieldKeys = new Set([
 ]);
 
 export const appNotificationTokenFieldKey = 'appNotificationToken';
-export const appNotificationTokenFieldLabel = 'Mobile push';
+export const appNotificationTokenFieldLabel = 'App Notification';
 
 export type NotificationRecencyChannel = 'email' | 'mobile-push' | 'web-push';
 
@@ -115,7 +115,18 @@ export type ReactivationChannel = 'email' | 'mobile-push' | 'web-push';
 export type ReactivationSeed = { blocks: Block[]; unavailable: string[] };
 
 export function reactivationChannelsForProject(platforms: ProjectPlatform[], channels: string[]): ReactivationChannel[] {
-  const selected = new Set(channels);
+  // Onboarding currently stores `mobile-push` and `web-push`, but older
+  // progress rows and a few integrations used `mobile`, `web`, or snake-case
+  // variants. Normalize them here so reactivation never loses a selected
+  // channel and falls back to the wrong defaults.
+  const selected = new Set<string>();
+  for (const channel of channels) {
+    const normalized = channel.trim().toLowerCase().replace(/_/g, '-');
+    if (normalized === 'email') selected.add('email');
+    else if (normalized === 'mobile' || normalized === 'mobile-push' || normalized === 'mobilepush') selected.add('mobile-push');
+    else if (normalized === 'web' || normalized === 'web-push' || normalized === 'webpush') selected.add('web-push');
+    else if (normalized === 'push') selected.add('push');
+  }
   if (selected.has('push')) {
     if (platforms.includes('mobile')) selected.add('mobile-push');
     if (platforms.includes('web')) selected.add('web-push');
@@ -142,7 +153,11 @@ function channelFields(schema: AudienceGroupSchema, channel: ReactivationChannel
   if (channel === 'web-push') {
     return schema.fields.filter(field => !field.deprecated && !isNotificationRecencyField(field) && (field.key === 'webPush' || /(?:web|browser).*(?:push|notification)|(?:push|notification).*(?:web|browser)/i.test(`${field.key} ${field.label}`)));
   }
-  const combined = schema.fields.find(field => field.key === appNotificationTokenFieldKey && field.synthetic);
+  // Prefer the backend's canonical combined field when it is available. The
+  // synthetic fallback below is only for older schemas that expose FCM/APNs
+  // separately; filtering for `synthetic` here caused the real field to be
+  // skipped and left the App Notification condition out of reactivation.
+  const combined = schema.fields.find(field => field.key === appNotificationTokenFieldKey);
   if (combined) return [combined];
   const explicit = schema.fields.filter(field => !field.deprecated
     && !isNotificationRecencyField(field)
@@ -174,22 +189,20 @@ export function seedReactivationRules(schema: AudienceGroupSchema, selectedChann
   const webOnlySelected = uniqueChannels.length === 1 && uniqueChannels[0] === 'web-push';
   const emailAndMobileSelected = uniqueChannels.includes('email') && uniqueChannels.includes('mobile-push');
   const allDeliveryChannelsSelected = (['email', 'mobile-push', 'web-push'] as const).every(channel => uniqueChannels.includes(channel));
-  // Email + web push without mobile push uses the historical mobile-token
-  // fallback to explicitly exclude mobile-only users. When mobile push is
-  // selected with email, it is a real selected channel and must be available.
-  const mobileAvailabilityFallback = uniqueChannels.includes('email')
-    && uniqueChannels.includes('web-push')
-    && !uniqueChannels.includes('mobile-push');
-  const channelsToSeed = mobileAvailabilityFallback && !uniqueChannels.includes('mobile-push')
-    ? [...uniqueChannels, 'mobile-push' as const]
-    : uniqueChannels;
+  // Keep the generated rows in the same order as the reactivation design:
+  // Email, Web Push, then App Notification/Mobile Push.
+  const channelOrder: ReactivationChannel[] = ['email', 'web-push', 'mobile-push'];
+  const orderedChannels = channelOrder.filter(channel => uniqueChannels.includes(channel));
+  // Only selected channels may seed conditions. In particular, Email + Web
+  // Push must not silently add App Notification or mobile recency rows.
+  const channelsToSeed = orderedChannels;
   const unavailable: string[] = [];
   const base: Rule[] = [];
   for (const channel of channelsToSeed) {
     const label = channel === 'email' ? 'Email' : channel === 'mobile-push' ? 'Mobile push' : 'Web push';
     const candidates = channelFields(schema, channel);
     const supported = candidates.flatMap(field => {
-      const condition = conditionForAvailability(field, channel !== 'mobile-push' || !mobileAvailabilityFallback);
+      const condition = conditionForAvailability(field, true);
       return condition ? [{ field, condition }] : [];
     });
     if (!supported.length || (channel === 'mobile-push' && (candidates.length !== 1 || supported.length !== 1))) {
@@ -214,6 +227,7 @@ export function seedReactivationRules(schema: AudienceGroupSchema, selectedChann
     } else {
       unavailable.push(notificationRecencyLabel(channel));
     }
+
   }
   if (!uniqueChannels.length) unavailable.unshift('No delivery channels are selected');
 
@@ -221,27 +235,24 @@ export function seedReactivationRules(schema: AudienceGroupSchema, selectedChann
     ? [{ id: 1, rules: base.map((rule, index) => ({ ...rule, id: index + 1 })) }]
     : [];
 
-  // When email and mobile push are selected, add the email re-entry
-  // branch requested by the reactivation flow:
-  // Email available AND Email Campaign → Never Belonged to Campaign.
-  // A campaign id is required by the backend, so never create an incomplete
-  // branch when this project has no email campaigns to choose from.
-  if (!emailOnlySelected && !mobileOnlySelected && !webOnlySelected && (emailAndMobileSelected || allDeliveryChannelsSelected)) {
+  // For Email + Mobile Push, including the all-channel case, add the
+  // re-entry branch from the correct reactivation design:
+  // Email available AND App Notification not available.
+  if (emailAndMobileSelected || allDeliveryChannelsSelected) {
     const emailField = channelFields(schema, 'email')[0];
     const emailAvailable = emailField ? conditionForAvailability(emailField, true) : undefined;
-    const campaignField = schema.fields.find(field => field.key === 'emailCampaign' && !field.deprecated);
-    const neverBelonged = campaignField?.conditions.find(condition => /never.*belong/i.test(`${condition.key} ${condition.label}`));
-    const campaignId = neverBelonged?.value.options?.[0]?.key;
-    if (emailField && emailAvailable && campaignField && neverBelonged && campaignId) {
+    const mobileField = channelFields(schema, 'mobile-push')[0];
+    const mobileUnavailable = mobileField ? conditionForAvailability(mobileField, false) : undefined;
+    if (emailField && emailAvailable && mobileField && mobileUnavailable) {
       blocks.push({
         id: 2,
         rules: [
           { id: 1, filter: emailField.key, operator: emailAvailable.key, value: '' },
-          { id: 2, filter: campaignField.key, operator: neverBelonged.key, value: campaignId },
+          { id: 2, filter: mobileField.key, operator: mobileUnavailable.key, value: '' },
         ],
       });
     } else {
-      unavailable.push('Email campaign re-entry condition');
+      unavailable.push('Mobile push unavailable condition');
     }
   }
   return { blocks, unavailable };

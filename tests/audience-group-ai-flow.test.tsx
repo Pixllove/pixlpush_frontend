@@ -260,7 +260,7 @@ describe('project-aware audience group chat flow', () => {
     await user.click(await screen.findByText('Group users by profile details'));
     expect(screen.queryByRole('button', { name: /Custom properties/ })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /Reachability/ }));
-    expect(screen.getByRole('option', { name: 'Mobile push' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'App Notification' })).toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'FCM Token' })).not.toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'APNs Token (iOS without Firebase)' })).not.toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'Last Emailed' })).not.toBeInTheDocument();
@@ -269,7 +269,7 @@ describe('project-aware audience group chat flow', () => {
     expect(screen.getByRole('option', { name: 'Last Web Push Sent' })).toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'Last Notified' })).not.toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'Custom property' })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('option', { name: 'Mobile push' }));
+    await user.click(screen.getByRole('option', { name: 'App Notification' }));
     await user.click(screen.getAllByRole('combobox')[1]);
     await user.click(screen.getByRole('option', { name: 'Is available' }));
     api.create.mockResolvedValue({ id: 'mobile-group', name: 'Mobile users', description: null, rules: {}, memberCount: 1, createdAt: '', updatedAt: '' });
@@ -392,18 +392,16 @@ describe('project-aware audience group chat flow', () => {
     { label: 'email, mobile push, and web push', channels: ['email', 'mobile-push', 'web-push'], expected: [{ operator: 'AND', conditions: [
       { field: 'email', operator: 'available' },
       { field: 'lastEmailNotification', operator: 'exclude_in_last_days', value: '30' },
-      { operator: 'OR', conditions: [{ field: 'fcmToken', operator: 'available' }, { field: 'apnsToken', operator: 'available' }] },
-      { field: 'lastMobilePushNotification', operator: 'exclude_in_last_days', value: '30' },
       { field: 'webPush', operator: 'available' },
       { field: 'lastWebPushNotification', operator: 'exclude_in_last_days', value: '30' },
+      { operator: 'OR', conditions: [{ field: 'fcmToken', operator: 'available' }, { field: 'apnsToken', operator: 'available' }] },
+      { field: 'lastMobilePushNotification', operator: 'exclude_in_last_days', value: '30' },
     ] }] },
     { label: 'email and web push', channels: ['email', 'web-push'], expected: [{ operator: 'AND', conditions: [
       { field: 'email', operator: 'available' },
       { field: 'lastEmailNotification', operator: 'exclude_in_last_days', value: '30' },
       { field: 'webPush', operator: 'available' },
       { field: 'lastWebPushNotification', operator: 'exclude_in_last_days', value: '30' },
-      { operator: 'AND', conditions: [{ field: 'fcmToken', operator: 'not_available' }, { field: 'apnsToken', operator: 'not_available' }] },
-      { field: 'lastMobilePushNotification', operator: 'exclude_in_last_days', value: '30' },
     ] }] },
     { label: 'mobile push only', channels: ['mobile-push'], expected: [{ operator: 'AND', conditions: [
       { operator: 'OR', conditions: [{ field: 'fcmToken', operator: 'available' }, { field: 'apnsToken', operator: 'available' }] },
@@ -412,18 +410,9 @@ describe('project-aware audience group chat flow', () => {
     { label: 'web push only', channels: ['web-push'], expected: [{ operator: 'AND', conditions: [{ field: 'webPush', operator: 'available' }, { field: 'lastWebPushNotification', operator: 'exclude_in_last_days', value: '30' }] }] },
   ])('seeds schema-backed reactivation rules for $label', ({ channels, expected }) => {
     const combinedSchema = withAppNotificationTokenField(schema);
-    const schemaForChannels = channels.includes('email') && channels.includes('mobile-push')
-      ? {
-        ...combinedSchema,
-        fields: [...combinedSchema.fields, {
-          key: 'emailCampaign', label: 'Email Campaign', category: 'email', topic: 'automation_campaigns', operators: ['never_belonged_to_campaign'],
-          conditions: [{ key: 'never_belonged_to_campaign', label: 'Never Belonged to Campaign', value: { type: 'reference' as const, required: true, options: [{ key: 'campaign-1', label: 'Welcome email' }] } }],
-        }],
-      }
-      : combinedSchema;
-    const result = seedReactivationRules(schemaForChannels as never, channels as never);
+    const result = seedReactivationRules(combinedSchema, channels as never);
     expect(result.unavailable).toEqual([]);
-    const backendRules = toBackendRules(result.blocks, schemaForChannels as never);
+    const backendRules = toBackendRules(result.blocks, combinedSchema);
     if (channels.includes('email') && channels.includes('mobile-push')) {
       expect(result.blocks).toHaveLength(2);
       expect(backendRules).toMatchObject({
@@ -434,7 +423,7 @@ describe('project-aware audience group chat flow', () => {
             operator: 'AND',
             conditions: [
               { field: 'email', operator: 'available' },
-              { field: 'emailCampaign', operator: 'never_belonged_to_campaign', value: 'campaign-1' },
+              { operator: 'AND', conditions: [{ field: 'fcmToken', operator: 'not_available' }, { field: 'apnsToken', operator: 'not_available' }] },
             ],
           },
         ],
@@ -444,12 +433,8 @@ describe('project-aware audience group chat flow', () => {
     }
   });
 
-  it('adds the email re-entry OR branch when all three delivery channels are selected', () => {
-    const emailCampaign = {
-      key: 'emailCampaign', label: 'Email Campaign', category: 'email', topic: 'automation_campaigns', operators: ['never_belonged_to_campaign'],
-      conditions: [{ key: 'never_belonged_to_campaign', label: 'Never Belonged to Campaign', value: { type: 'reference' as const, required: true, options: [{ key: 'campaign-1', label: 'Welcome email' }] } }],
-    };
-    const combinedSchema = withAppNotificationTokenField({ ...schema, fields: [...schema.fields, emailCampaign] });
+  it('adds the Email plus App Notification unavailable OR branch for all delivery channels', () => {
+    const combinedSchema = withAppNotificationTokenField(schema);
     const result = seedReactivationRules(combinedSchema, ['email', 'mobile-push', 'web-push']);
 
     expect(result.unavailable).toEqual([]);
@@ -462,7 +447,7 @@ describe('project-aware audience group chat flow', () => {
           operator: 'AND',
           conditions: [
             { field: 'email', operator: 'available' },
-            { field: 'emailCampaign', operator: 'never_belonged_to_campaign', value: 'campaign-1' },
+            { operator: 'AND', conditions: [{ field: 'fcmToken', operator: 'not_available' }, { field: 'apnsToken', operator: 'not_available' }] },
           ],
         },
       ],
@@ -470,10 +455,12 @@ describe('project-aware audience group chat flow', () => {
   });
 
   it('uses one combined mobile-push rule and selects availability without blank rows', () => {
-    const result = seedReactivationRules(withAppNotificationTokenField(schema), ['email', 'mobile-push']);
-    expect(result.blocks).toHaveLength(1);
+    const combinedSchema = withAppNotificationTokenField(schema);
+    const result = seedReactivationRules(combinedSchema, ['email', 'mobile-push']);
+    expect(result.blocks).toHaveLength(2);
     expect(result.blocks[0].rules.every(rule => rule.filter && rule.operator)).toBe(true);
     expect(result.blocks[0].rules.map(rule => rule.filter)).toEqual(['email', 'lastEmailNotification', 'appNotificationToken', 'lastMobilePushNotification']);
+    expect(result.blocks[1].rules.map(rule => rule.filter)).toEqual(['email', 'appNotificationToken']);
   });
 
   it('does not seed separate provider token fields when a combined mobile-push rule is unavailable', () => {
@@ -486,7 +473,7 @@ describe('project-aware audience group chat flow', () => {
   it('reports missing channel schema support without adding invalid conditions', () => {
     const withoutPush = { ...schema, fields: schema.fields.filter(field => !['fcmToken', 'apnsToken', 'webPush'].includes(field.key)) };
     const result = seedReactivationRules(withoutPush as never, ['email', 'mobile-push', 'web-push']);
-    expect(result.unavailable).toEqual(['Mobile push', 'Web push', 'Email campaign re-entry condition']);
+    expect(result.unavailable).toEqual(['Web push', 'Mobile push', 'Mobile push unavailable condition']);
     expect(toBackendRules(result.blocks, withoutPush as never)).toEqual({ operator: 'AND', conditions: [
       { field: 'email', operator: 'available' },
       { field: 'lastEmailNotification', operator: 'exclude_in_last_days', value: '30' },
@@ -495,8 +482,59 @@ describe('project-aware audience group chat flow', () => {
 
   it('uses saved product types to expand legacy push and ignores channels for unselected products', () => {
     expect(reactivationChannelsForProject(['mobile', 'web'], ['email', 'push'])).toEqual(['email', 'mobile-push', 'web-push']);
+    expect(reactivationChannelsForProject(['mobile', 'web'], ['email', 'mobile', 'web'])).toEqual(['email', 'mobile-push', 'web-push']);
+    expect(reactivationChannelsForProject(['mobile', 'web'], ['email', 'mobile_push', 'web_push'])).toEqual(['email', 'mobile-push', 'web-push']);
     expect(reactivationChannelsForProject(['mobile'], ['web-push'])).toEqual([]);
     expect(reactivationChannelsForProject(['web'], ['push'])).toEqual(['web-push']);
+  });
+
+  it('uses the canonical appNotificationToken field from the backend schema', () => {
+    const actualBackendShape = {
+      ...schema,
+      fields: [
+        ...schema.fields.filter(field => !['fcmToken', 'apnsToken'].includes(field.key)),
+        { key: 'appNotificationToken', label: 'App Notification Token (FCM & APNs)', category: 'push', topic: 'reachability', operators: ['available', 'not_available'], conditions: [
+          { key: 'available', label: 'Is available', value: { type: 'none' as const } },
+          { key: 'not_available', label: 'Is not available', value: { type: 'none' as const } },
+        ] },
+      ],
+    };
+
+    const selectedChannels = reactivationChannelsForProject(['mobile', 'web'], ['email', 'mobile', 'web']);
+    const normalizedSchema = withAppNotificationTokenField(actualBackendShape as never);
+    const result = seedReactivationRules(normalizedSchema, selectedChannels);
+
+    expect(result.unavailable).toEqual([]);
+    expect(result.blocks).toHaveLength(2);
+    expect(result.blocks[0]?.rules.map(rule => rule.filter)).toEqual([
+      'email',
+      'lastEmailNotification',
+      'webPush',
+      'lastWebPushNotification',
+      'appNotificationToken',
+      'lastMobilePushNotification',
+    ]);
+    expect(result.blocks[1]?.rules).toEqual([
+      { id: 1, filter: 'email', operator: 'available', value: '' },
+      { id: 2, filter: 'appNotificationToken', operator: 'not_available', value: '' },
+    ]);
+    expect(toBackendRules(result.blocks, normalizedSchema)).toEqual({
+      operator: 'OR',
+      conditions: [
+        { operator: 'AND', conditions: [
+          { field: 'email', operator: 'available' },
+          { field: 'lastEmailNotification', operator: 'exclude_in_last_days', value: '30' },
+          { field: 'webPush', operator: 'available' },
+          { field: 'lastWebPushNotification', operator: 'exclude_in_last_days', value: '30' },
+          { field: 'appNotificationToken', operator: 'available' },
+          { field: 'lastMobilePushNotification', operator: 'exclude_in_last_days', value: '30' },
+        ] },
+        { operator: 'AND', conditions: [
+          { field: 'email', operator: 'available' },
+          { field: 'appNotificationToken', operator: 'not_available' },
+        ] },
+      ],
+    });
   });
 
   it('preserves edited reactivation defaults after Back and re-entry, and saves the reviewed rules', async () => {
@@ -585,12 +623,12 @@ describe('project-aware audience group chat flow', () => {
     await user.click(await screen.findByText('Reactivate users'));
     await user.keyboard('{Escape}');
 
-    expect(screen.getAllByRole('combobox', { name: 'Condition field' })).toHaveLength(4);
-    expect(screen.getByText('Mobile push')).toBeInTheDocument();
-    expect(screen.getAllByText('Is available')).toHaveLength(2);
+    expect(screen.getAllByRole('combobox', { name: 'Condition field' })).toHaveLength(6);
+    expect(screen.getAllByText('App Notification')).toHaveLength(2);
+    expect(screen.getAllByText('Is available')).toHaveLength(3);
   });
 
-  it('uses the schema’s combined Mobile push field and selects its availability operator', () => {
+  it('uses the schema’s combined Mobile push field and selects both availability operators', () => {
     const mobilePush = {
       key: 'mobilePush', label: 'Mobile push', category: 'push', operators: ['available', 'not_available'],
       conditions: [
@@ -598,16 +636,23 @@ describe('project-aware audience group chat flow', () => {
         { key: 'not_available', label: 'Is not available', value: { type: 'none' as const } },
       ],
     };
-    const combinedSchema = { ...schema, fields: [...schema.fields.filter(field => !['fcmToken', 'apnsToken'].includes(field.key)), mobilePush] };
+    const combinedSchema = { ...schema, fields: [...schema.fields.filter(field => !['fcmToken', 'apnsToken'].includes(field.key)), mobilePush, {
+      key: 'emailCampaign', label: 'Email Campaign', category: 'email', topic: 'automation_campaigns', operators: ['never_belonged_to_campaign'],
+      conditions: [{ key: 'never_belonged_to_campaign', label: 'Never Belonged to Campaign', value: { type: 'reference' as const, required: true, options: [{ key: 'campaign-1', label: 'Welcome email' }] } }],
+    }] };
     const result = seedReactivationRules(combinedSchema, ['email', 'mobile-push']);
 
-    expect(result.unavailable).toEqual(['Email campaign re-entry condition']);
-    expect(result.blocks).toHaveLength(1);
+    expect(result.unavailable).toEqual([]);
+    expect(result.blocks).toHaveLength(2);
     expect(result.blocks[0].rules.map(rule => [rule.filter, rule.operator])).toEqual([
       ['email', 'available'],
       ['lastEmailNotification', 'exclude_in_last_days'],
       ['mobilePush', 'available'],
       ['lastMobilePushNotification', 'exclude_in_last_days'],
+    ]);
+    expect(result.blocks[1].rules.map(rule => [rule.filter, rule.operator])).toEqual([
+      ['email', 'available'],
+      ['mobilePush', 'not_available'],
     ]);
   });
 });
