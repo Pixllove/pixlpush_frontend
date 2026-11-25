@@ -204,7 +204,7 @@ describe('journey builder', () => {
     const counter = (card: string, label: string) => within(screen.getByText(card).closest('.journey-flow-block') as HTMLElement).getByText(label).querySelector('b')!.textContent;
     expect([counter('Entrance Trigger', 'Users entered'), counter('Entrance Trigger', 'Unreachable users')]).toEqual(['52', '6']);
     expect([counter('wait', 'Waiting'), counter('wait', 'Completed'), counter('wait', 'Exited early')]).toEqual(['7', '21', '4']);
-    expect([counter('notification', 'Sent'), counter('notification', 'Clicks'), counter('notification', 'Click rate'), counter('notification', 'Paused'), counter('notification', 'Deleted'), counter('notification', 'Exited early')]).toEqual(['40', '10', '25%', '3', '1', '2']);
+    expect([counter('Mobile Push', 'Sent'), counter('Mobile Push', 'Clicks'), counter('Mobile Push', 'Click rate'), counter('Mobile Push', 'Paused'), counter('Mobile Push', 'Deleted'), counter('Mobile Push', 'Exited early')]).toEqual(['40', '10', '25%', '3', '1', '2']);
 
     // running: only the name can change
     await userEvent.click(screen.getByRole('button', { name: 'Save draft' }));
@@ -353,7 +353,7 @@ describe('A/B test block', () => {
     search = 'id=j1';
     api.get.mockResolvedValue(saved(abState(), { va: { sent: 5 }, vb: { sent: 5 }, vc: { sent: 5 } }));
     wrap(<JourneyBuilder />);
-    const variants = await screen.findAllByText('notification');
+    const variants = await screen.findAllByText('Mobile Push');
     await userEvent.click(variants[1]!);
     const panel = screen.getByText('Results').closest('.journey-settings-panel') as HTMLElement;
     expect(within(panel).getAllByText('0%')).toHaveLength(3);
@@ -367,9 +367,9 @@ describe('A/B test block', () => {
     wrap(<JourneyBuilder />);
     await userEvent.click(await screen.findByRole('button', { name: 'Add variant' }));
     const menu = await screen.findByRole('dialog', { name: 'Add a step' });
-    expect(within(menu).getAllByRole('button').map((b) => b.textContent).filter((t) => t && !t.includes('×'))).toEqual([expect.stringContaining('Reusable notification')]);
-    expect(within(menu).queryByText('Reusable email')).not.toBeInTheDocument();
-    expect(within(menu).queryByText('Web push notification')).not.toBeInTheDocument();
+    expect(within(menu).getAllByRole('button').map((b) => b.textContent).filter((t) => t && !t.includes('×'))).toEqual([expect.stringContaining('Mobile Push')]);
+    expect(within(menu).queryByText('Email')).not.toBeInTheDocument();
+    expect(within(menu).queryByText('Web Push')).not.toBeInTheDocument();
     expect(within(menu).queryByText('ACTIONS')).not.toBeInTheDocument();
   });
 
@@ -379,7 +379,7 @@ describe('A/B test block', () => {
     await userEvent.click(within(await screen.findByRole('dialog', { name: 'Add a step' })).getByText('A/B test'));
     await userEvent.click(await screen.findByRole('button', { name: 'Add variant' }));
     const menu = await screen.findByRole('dialog', { name: 'Add a step' });
-    expect(['Reusable email', 'Reusable notification', 'Reusable web notification'].every((t) => within(menu).queryByText(t))).toBe(true);
+    expect(['Email', 'Mobile Push', 'Web Push'].every((t) => within(menu).queryByText(t))).toBe(true);
     expect(within(menu).queryByText('Wait')).not.toBeInTheDocument();
   });
 });
