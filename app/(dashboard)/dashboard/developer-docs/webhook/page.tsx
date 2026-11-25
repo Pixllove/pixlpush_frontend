@@ -19,8 +19,26 @@ const responseExample = `{
       "user": {
         "email": "ana@example.com",
         "name": "Ana",
-        "email_consent": true
+        "language": "en",
+        "country": "DE",
+        "region": "Berlin",
+        "timezone": "Europe/Berlin",
+        "user_type": "premium",
+        "account_status": "active",
+        "platform": "ios",
+        "email_consent": true,
+        "push_consent": true
       }
+    },
+    {
+      "id": "msg_2001_opened",
+      "event_name": "message_opened",
+      "user_id": "12345",
+      "time": "2026-11-20T09:15:00Z",
+      "channel": "email",
+      "message_id": "msg_2001",
+      "campaign_id": "spring_sale",
+      "campaign_name": "Spring Sale"
     }
   ],
   "next": null
@@ -45,9 +63,9 @@ app.get("/pixlpush/events", async (req, res, next) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const requestedLimit = Number(req.query.limit ?? 500);
-    if (!Number.isInteger(requestedLimit) || requestedLimit < 1 || requestedLimit > 500) {
-      return res.status(400).json({ error: "limit must be an integer from 1 to 500" });
+    const requestedLimit = Number(req.query.limit ?? 2500);
+    if (!Number.isInteger(requestedLimit) || requestedLimit < 1 || requestedLimit > 2500) {
+      return res.status(400).json({ error: "limit must be an integer from 1 to 2500" });
     }
     const limit = requestedLimit;
     const since = typeof req.query.since === "string" ? req.query.since : undefined;
@@ -63,16 +81,32 @@ app.get("/pixlpush/events", async (req, res, next) => {
 });`;
 
 const fields = [
-  [<code>id</code>, "Required", "Stable unique event id (8–160 characters). Keep it unchanged on retries."],
-  [<code>event_name</code>, "Required", "Event name (1–120 characters). Use a supported lifecycle name or your own event name."],
-  [<code>user_id</code>, "Required", "User identifier in the billing provider or your application."],
-  [<code>custom_user_id</code>, "Optional", "Your application's user id. When provided and non-empty, it takes precedence over user_id."],
-  [<code>time</code>, "Required in feed", "Event occurrence time as an ISO date, Unix seconds, or Unix milliseconds."],
-  [<code>user</code>, "Optional", "Flat profile fields. Scalar values only; email_consent and push_consent are treated as consent flags."],
-  [<code>properties</code>, "Optional", "Flat event properties with string, number, boolean, or null values."],
-  [<code>product_id</code>, "Conditional", "Required for subscription and trial lifecycle events."],
-  [<code>expires_at</code>, "Optional", "Entitlement access end time. transaction.expires is also accepted."],
-  [<code>segment</code>, "Conditional", "Required for segment_entered and segment_exited."],
+  [<code key="id">id</code>, "Required", "Stable unique event id (8–160 characters). Keep it unchanged on retries."],
+  [<code key="event_name">event_name</code>, "Required", "Event name (1–120 characters). Use a supported lifecycle name or your own event name."],
+  [<code key="user_id">user_id</code>, "Required", "User identifier in the billing provider or your application."],
+  [<code key="custom_user_id">custom_user_id</code>, "Optional", "Your application's user id. When provided and non-empty, it takes precedence over user_id."],
+  [<code key="time">time</code>, "Required in feed", "Event occurrence time as an ISO date, Unix seconds, or Unix milliseconds."],
+  [<code key="user">user</code>, "Recommended", "The user’s current profile as flat scalar values. See Profile fields. Send it on every event; only keys you include are changed."],
+  [<code key="properties">properties</code>, "Optional", "Flat event properties with string, number, boolean, or null values."],
+  [<code key="product_id">product_id</code>, "Conditional", "Required for subscription and trial lifecycle events."],
+  [<code key="expires_at">expires_at</code>, "Optional", "Entitlement access end time. transaction.expires is also accepted."],
+  [<code key="segment">segment</code>, "Conditional", "Required for segment_entered and segment_exited."],
+  [<code key="channel">channel</code>, "Conditional", "email or push. Required for message_* history events."],
+  [<code key="message_id">message_id</code>, "Conditional", "Your id for one delivered message. Required for message_* history events."],
+  [<code key="campaign_id">campaign_id</code>, "Conditional", "Your campaign id for message_* history events; campaign_name helps PixlPush suggest a match."],
+  [<code key="journey_id">journey_id, step_id</code>, "Conditional", "Required for journey_step_entered; journey_name and step_name help PixlPush suggest a match."],
+];
+
+const profileFields = [
+  [<code key="contact">email, name</code>, "Contact details. An invalid email rejects that one event."],
+  [<code key="language">language</code>, "Language code, e.g. en or de."],
+  [<code key="country">country, region</code>, "Country and region or city."],
+  [<code key="timezone">timezone</code>, "IANA name such as Asia/Karachi. An invalid value is skipped; the rest of the profile still syncs."],
+  [<code key="user_type">user_type</code>, "Your plan or user type, e.g. free, premium, trial."],
+  [<code key="account_status">account_status</code>, "e.g. active, paused, blocked, deleted."],
+  [<code key="platform">platform</code>, "ios, android or web. Shown on the user profile until the PixlPush SDK registers a device."],
+  [<code key="consent">email_consent, push_consent</code>, "true or false. Leave the key out when the user never made a choice."],
+  ["Any other key", "Saved as a custom property and available in segments."],
 ];
 
 const lifecycleEvents = [
@@ -80,7 +114,8 @@ const lifecycleEvents = [
   ["Subscription", "subscription_started, subscription_renewed, subscription_upgraded, subscription_downgraded, subscription_product_changed"],
   ["Cancellation and access", "subscription_canceled, subscription_cancelled, subscription_renew_restored, will_renew, subscription_expired, subscription_refunded, in_app_refunded, subscription_revoked"],
   ["Billing retry", "subscription_billing_retry, subscription_billing_retry_entered"],
-  ["Account and segments", "account_deleted, segment_entered, segment_exited"],
+  ["Account and segments", "account_paused, account_resumed, account_deleted, segment_entered, segment_exited"],
+  ["History (optional)", "message_sent, message_delivered, message_opened, message_clicked, message_bounced, message_failed, message_unsubscribed, message_complained, journey_step_entered"],
 ];
 
 export default function WebhookDeveloperDocsPage() {
@@ -98,19 +133,29 @@ export default function WebhookDeveloperDocsPage() {
 
       <Section id="endpoint" title="Endpoint and authentication">
         <Body><p>Implement a read-only <code>GET</code> route such as <code>https://api.example.com/pixlpush/events</code>. It must be reachable over public HTTPS. Localhost, private network addresses, redirects, and invalid TLS certificates are rejected.</p></Body>
-        <CodeBlock language="HTTP" code={'GET /pixlpush/events?limit=500&since=2026-11-24T10%3A00%3A00.000Z&cursor=eyJ... HTTP/1.1\nHost: api.example.com\nAuthorization: Bearer <your-token>\nAccept: application/json'} />
-        <Callout tone="warning" title="Keep the feed token private">Generate a unique high-entropy token, store it in your server's secret manager or environment, and compare it as a bearer credential. Do not put it in browser or mobile code, source control, or application logs. Rotate it by reconnecting with the replacement token.</Callout>
+        <CodeBlock language="HTTP" code={'GET /pixlpush/events?limit=2500&since=2026-11-24T10%3A00%3A00.000Z&cursor=eyJ... HTTP/1.1\nHost: api.example.com\nAuthorization: Bearer <your-token>\nAccept: application/json'} />
+        <Callout tone="warning" title="Keep the feed token private">Generate a unique high-entropy token, store it in your server’s secret manager or environment, and compare it as a bearer credential. Do not put it in browser or mobile code, source control, or application logs. Rotate it by reconnecting with the replacement token.</Callout>
         <Body><p>Return <code>401</code> or <code>403</code> for invalid credentials. Return a successful JSON response only after the page has been read from your data store. The request has a 15 second timeout, and each response is limited to 5 MB.</p></Body>
       </Section>
 
       <Section id="pagination" title="Request parameters and pagination">
         <DataTable headers={["Parameter", "Meaning"]} rows={[
-          [<code>limit</code>, "Maximum events requested per page; PixlPush requests 500."],
-          [<code>since</code>, "ISO timestamp checkpoint. Filter inclusively so events at the boundary are not lost."],
-          [<code>cursor</code>, "Opaque cursor returned in next. Use it to continue the same query on the next page."],
+          [<code key="limit">limit</code>, "Events per page. PixlPush asks for 2500 and reads one page every 2 minutes until it reaches your last page. Never return more than limit events, and keep each page under 5 MB."],
+          [<code key="since">since</code>, "ISO timestamp checkpoint. Filter inclusively so events at the boundary are not lost."],
+          [<code key="cursor">cursor</code>, "Opaque cursor returned in next. Use it to continue the same query on the next page."],
         ]} />
         <Body><p>Return events in stable chronological order. Use a deterministic tie-breaker such as event id when timestamps match. Keep cursor values opaque to the caller. If a page has more events, return a non-empty <code>next</code> cursor; return <code>null</code> when it is the final page. PixlPush may re-read an overlapping time range, so keep event ids stable and make reading the feed safe to repeat.</p></Body>
         <CodeBlock language="JSON" code={responseExample} />
+      </Section>
+
+      <Section id="performance" title="Make the feed fast">
+        <Body><p>PixlPush waits up to 15 seconds for each page. Aim for well under a second per 2,500-event page:</p></Body>
+        <Box component="ul" sx={{ pl: 2.5, m: 0, color: "text.secondary", "& li": { mb: 1 } }}>
+          <li>Index the columns you order and filter by, for example <code>(occurred_at, id)</code>.</li>
+          <li>Use a keyset cursor: <code>WHERE (occurred_at, id) &gt; (:time, :id) ORDER BY occurred_at, id LIMIT :limit</code>. Never use <code>OFFSET</code>; it gets slower on every page.</li>
+          <li>Select only the columns you send, and load each user’s profile in one query for the whole page, not one query per event.</li>
+          <li>Keep times in UTC when comparing with <code>since</code> and the cursor.</li>
+        </Box>
       </Section>
 
       <Section id="event-schema" title="Event fields">
@@ -119,10 +164,23 @@ export default function WebhookDeveloperDocsPage() {
         <Callout title="Identity matching">Set <code>custom_user_id</code> to your stable application user id when a billing provider supplies a different <code>user_id</code>. PixlPush uses the non-empty <code>custom_user_id</code> as the user identity.</Callout>
       </Section>
 
+      <Section id="profile" title="Profile fields">
+        <DataTable headers={["Key inside user", "What to send"]} rows={profileFields} code={false} minWidth={760} />
+        <Body><p>Send the user’s current profile on every event. A key you leave out never clears anything, so you can send only what you have. Push permission and push tokens come from the PixlPush SDK in your app; from the server, send <code>push_consent</code> and <code>platform</code>.</p></Body>
+        <Callout title="Consent is never guessed">Only <code>email_consent</code> and <code>push_consent</code> change consent, and only when the key is present. Do not send <code>false</code> for users who were never asked.</Callout>
+      </Section>
+
       <Section id="events" title="Lifecycle event names">
         <DataTable headers={["Category", "Accepted event names"]} rows={lifecycleEvents} code={false} minWidth={760} />
-        <Body><p>Subscription and trial events update the user's subscription entitlement and are also recorded as events. They require <code>product_id</code>. Cancellation schedules access to end; send <code>subscription_expired</code> when access actually ends. <code>account_deleted</code> removes the user. <code>segment_entered</code> and <code>segment_exited</code> require a <code>segment</code> name.</p></Body>
+        <Body><p>Segments from <code>segment_entered</code> and <code>segment_exited</code> start <b>turned off</b>. They are listed under Integrations → Webhook → 3.1, where each one can be associated with a PixlPush segment such as “Uncancelled active subscription” or “Expired subscription”. PixlPush suggests one from the name. Turn it on and publish: users your server puts in that segment, including earlier entries, join the PixlPush segment and leave it when your server sends <code>segment_exited</code>. Several of your segments can point to the same PixlPush segment.</p></Body>
+        <Body><p>Subscription and trial events update the user’s subscription entitlement and are also recorded as events. They require <code>product_id</code>. Cancellation schedules access to end; send <code>subscription_expired</code> when access actually ends. <code>account_deleted</code> removes the user. <code>segment_entered</code> and <code>segment_exited</code> require a <code>segment</code> name.</p></Body>
         <Body><p>Custom event names are also accepted and stored as events. Include the same event id and event data if you retry a read or replay an event.</p></Body>
+      </Section>
+
+      <Section id="history" title="Campaign and journey history (optional)">
+        <Body><p>If you are moving from another messaging tool, you can include its history in the same feed. Message events (<code>message_sent</code>, <code>message_delivered</code>, <code>message_opened</code>, <code>message_clicked</code>, <code>message_bounced</code>, <code>message_failed</code>, <code>message_unsubscribed</code>, <code>message_complained</code>) need <code>channel</code>, <code>message_id</code> and <code>campaign_id</code>. <code>journey_step_entered</code> needs <code>journey_id</code> and <code>step_id</code>.</p></Body>
+        <Body><p>On the Webhook page, step 3.3 maps your campaigns to PixlPush email and push campaigns, and your journeys and steps to PixlPush journeys. The history then appears on user profiles, campaign reports and journey pages, marked as imported.</p></Body>
+        <Callout tone="warning" title="History never sends">Imported history is never counted as a PixlPush send, never sends a message, and never moves anyone through a journey. PixlPush records push opens but not push clicks, so push click events are not stored.</Callout>
       </Section>
 
       <Section id="matching" title="How PixlPush matches your data">
@@ -144,7 +202,7 @@ export default function WebhookDeveloperDocsPage() {
       </Section>
 
       <Section id="implementation" title="Express implementation shape">
-        <Body><p>This example shows the HTTP boundary and auth check. Connect <code>eventRepository.listForPixlPush</code> to your database and implement its cursor using the last event's timestamp and id. Keep the query bounded by the requested limit.</p></Body>
+        <Body><p>This example shows the HTTP boundary and auth check. Connect <code>eventRepository.listForPixlPush</code> to your database and implement its cursor using the last event’s timestamp and id. Keep the query bounded by the requested limit.</p></Body>
         <CodeBlock language="TypeScript" filename="routes/pixlpush-events.ts" code={expressExample} />
       </Section>
 
@@ -152,11 +210,11 @@ export default function WebhookDeveloperDocsPage() {
         <Box component="ol" sx={{ pl: 2.5, m: 0, color: "text.secondary", "& li": { mb: 1 } }}>
           <li>Call the endpoint with the bearer token and verify it returns valid JSON in the documented shape.</li>
           <li>Check that an incorrect token receives 401 or 403, and that the token is absent from logs and responses.</li>
-          <li>Request a small limit, follow the returned cursor, and confirm pages contain no gaps or duplicates.</li>
+          <li>Request a small limit, follow the returned cursor, and confirm pages contain no gaps or duplicates and never more than limit events.</li>
           <li>Replay the same page and confirm every event keeps the same id and occurrence time.</li>
           <li>Open Integrations → Webhook in PixlPush, paste the public URL and token, and connect. The connection check requests one event before it is saved.</li>
         </Box>
-        <Callout tone="success" title="After connecting">Use the Webhook page's sync controls and sample data to confirm events and profile fields are arriving. Map profile fields and product tiers there if your source uses different names.</Callout>
+        <Callout tone="success" title="After connecting">PixlPush reads one page of up to 2,500 events every 2 minutes, so a first import of 100,000 events takes about 80 minutes; after that each run picks up only new events. The status shows “Importing” until it is up to date. Check profile fields and plans under Map data, and turn on the segments you want.</Callout>
       </Section>
     </Stack>
   </DashboardFrame>;

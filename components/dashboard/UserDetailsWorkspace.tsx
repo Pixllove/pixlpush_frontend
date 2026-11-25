@@ -45,6 +45,7 @@ import { eventsApi, usersApi } from "@/lib/projects/api";
 import type { UserActivity, UserProfile } from "@/types/project";
 import { formatUserDateTime } from "@/lib/timezone";
 import UserStatusChip from "./UserStatusChip";
+import ImportedHistory from "./ImportedHistory";
 
 const formatDate = (value?: string | null) => formatUserDateTime(value);
 /** granted → "Allowed", as browsers and phones word it. */
@@ -253,12 +254,22 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
                 icon={NotificationsActiveRounded}
                 label="Push permission"
                 // The device's own reading (allowed / blocked / reset), kept current by the SDK.
-                value={display(permissionLabel(device?.pushPermission ?? activePush?.permission ?? user?.pushSubscriptions?.[0]?.permission))}
+                value={display(
+                  permissionLabel(device?.pushPermission ?? activePush?.permission ?? user?.pushSubscriptions?.[0]?.permission) ??
+                    // No app device yet: show the choice the customer's server sent.
+                    (user?.pushMarketingConsent == null ? null : user.pushMarketingConsent ? "Allowed (from your server)" : "Turned off (from your server)"),
+                )}
               />
               <DetailItem
                 icon={PhoneAndroidRounded}
                 label="Platform"
-                value={display(device ? [device.platform, device.deviceModel, device.osVersion].filter(Boolean).join(" · ") : null)}
+                value={display(
+                  device
+                    ? [device.platform, device.deviceModel, device.osVersion].filter(Boolean).join(" · ")
+                    : typeof user?.properties?.platform === "string"
+                      ? `${user.properties.platform === "ios" ? "iOS" : user.properties.platform === "android" ? "Android" : user.properties.platform} (from your server)`
+                      : null,
+                )}
               />
               <DetailItem
                 icon={NotificationsActiveRounded}
@@ -308,6 +319,7 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
               ) : null}
             </UserDetailSection>
           </Card>
+          <ImportedHistory kind="user" projectId={active?.id} userId={userId} />
           <Card className="group-section-card user-engagement-card">
             <Typography variant="h3">Engagement</Typography>
             <Typography color="text.secondary" fontSize="var(--fs-12)">
@@ -317,7 +329,7 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
               {metric(EmailRounded, "Emails sent", count(email?.sent))}
               {metric(EmailRounded, "Emails opened", count(email?.opened))}
               {metric(NotificationsActiveRounded, "Pushes sent", count(push?.sent))}
-              {metric(SendRounded, "Pushes clicked", count(push?.clicked))}
+              {metric(SendRounded, "Pushes opened", count(push?.clicked))}
             </Grid>
             <Divider sx={{ my: 1.5 }} />
             <Grid container spacing={2}>
@@ -344,7 +356,7 @@ export default function UserDetailsWorkspace({ userId }: { userId: string }) {
                     `Sent|${count(push?.sent)}`,
                     `Delivered|${count(push?.delivered)}`,
                     `Failed|${count(push?.failed)}`,
-                    `Click rate|${percent(push?.clickRate)}`,
+                    `Open rate|${percent(push?.clickRate)}`,
                     `No token|${percent(push?.noTokenRate)}`,
                   ]}
                 />

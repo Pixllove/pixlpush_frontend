@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AddRounded,
@@ -24,7 +25,13 @@ import {
   Button,
   Card,
   Chip,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   FormControlLabel,
+  Paper,
   IconButton,
   MenuItem,
   Skeleton,
@@ -38,7 +45,14 @@ import {
   type MatchStatus,
   type SyncExternalSegment,
 } from "@/lib/projects/api";
+import { SEGMENT_PURPOSES } from "@/lib/lifecycle-purposes";
 import EventMappingDialog from "./EventMappingDialog";
+import {
+  CampaignTable,
+  HistoryNotice,
+  JourneyTable,
+  type Choice,
+} from "./WebhookHistory";
 
 type FieldRule = {
   source: string;
@@ -61,11 +75,26 @@ type SegmentRule = {
   enabled?: boolean;
   exclusive?: boolean;
   emitOnEnter?: string;
+  /** The PixlPush lifecycle segment this server segment is associated with. */
+  lifecycle?: string;
 };
 /** Only ongoing sync is switchable; imports, outbound updates and migrations are explicit actions. */
 type DataCategories = {
   userAndSegments: { ongoingSync: boolean };
   activity: { ongoingSync: boolean };
+  emailCampaigns: { ongoingSync: boolean };
+  pushCampaigns: { ongoingSync: boolean };
+  journeys: { ongoingSync: boolean };
+};
+type CampaignRule = {
+  channel: "email" | "push";
+  source: string;
+  target: string | null;
+};
+type JourneyRule = {
+  source: string;
+  target: string | null;
+  steps: { source: string; target: string | null }[];
 };
 type Config = {
   fields?: FieldRule[];
@@ -83,6 +112,8 @@ type Config = {
   events?: EventRule[];
   segments?: SegmentRule[];
   categories?: Partial<DataCategories>;
+  campaigns?: CampaignRule[];
+  journeys?: JourneyRule[];
   autoMap?: boolean;
   [key: string]: unknown;
 };
@@ -97,10 +128,14 @@ const TARGETS = [
   ["region", "Region"],
   ["accountStatus", "Account status"],
   ["userType", "User type"],
+  ["properties.platform", "Platform"],
 ] as const;
 const DEFAULT_CATEGORIES: DataCategories = {
   userAndSegments: { ongoingSync: true },
   activity: { ongoingSync: true },
+  emailCampaigns: { ongoingSync: true },
+  pushCampaigns: { ongoingSync: true },
+  journeys: { ongoingSync: true },
 };
 const errorText = (error: unknown) =>
   (error as { message?: string })?.message ??
@@ -111,8 +146,33 @@ const sourceKey = (value: string) =>
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "")
     .slice(0, 80) || "segment";
-const matchLabel = (match: boolean, enabled: boolean) =>
-  !enabled ? "Disabled" : match ? "Matched" : "Needs mapping";
+/** PixlPush's built-in lifecycle segments a server segment can be associated with. */
+const LIFECYCLE_TARGETS = SEGMENT_PURPOSES.filter(
+  (item) => item.key !== "other",
+);
+// First hit wins, so "uncancelled" is checked before "cancelled" and trials before subscriptions.
+const LIFECYCLE_HINTS: [RegExp, string][] = [
+  [/trial.*(cancel)|(cancel).*trial/, "trial_cancelled"],
+  [/trial/, "trial_active"],
+  [
+    /un-?cancel|not.?cancel|active.?(sub|premium|vip)|^(premium|vip|paid|pro)\b(?!.*(cancel|expir))/,
+    "subscription_active",
+  ],
+  [/cancel/, "subscription_cancelled"],
+  [/expir|lapsed|churn/, "subscription_expired"],
+  [/paywall/, "paywall_drop_off"],
+  [/onboard|registr|sign.?up.?(start|incomplete)/, "registration_started"],
+  [/pause/, "account_paused"],
+  [/first.?(open|launch)/, "first_app_open"],
+  [/new.*user|account.?created|signed.?up/, "account_created"],
+];
+/** The built-in lifecycle segment a server segment name most likely means, if any. */
+const suggestLifecycle = (name: string) => {
+  const key = LIFECYCLE_HINTS.find(([pattern]) =>
+    pattern.test(name.toLowerCase()),
+  )?.[1];
+  return LIFECYCLE_TARGETS.find((item) => item.key === key)?.label;
+};
 export const webhookSwitchSx = {
   width: 30,
   height: 18,
@@ -301,8 +361,16 @@ export default function WebhookMapping({
     {},
   );
   const [editing, setEditing] = useState<string>();
+  const [campaignChoices, setCampaignChoices] = useState<
+    Record<string, Choice>
+  >({});
+  const [journeyChoices, setJourneyChoices] = useState<Record<string, Choice>>(
+    {},
+  );
+  const [stepChoices, setStepChoices] = useState<
+    Record<string, Record<string, Choice>>
+  >({});
   const [segments, setSegments] = useState<SegmentRule[]>([]);
-  const [segmentSource, setSegmentSource] = useState("");
   const [categories, setCategories] =
     useState<DataCategories>(DEFAULT_CATEGORIES);
   const [busy, setBusy] = useState(false);
@@ -313,6 +381,12 @@ export default function WebhookMapping({
     [config.consent],
   );
 
+  // Unsaved-changes tracking: the snapshot taken right after loading is the baseline.
+  const [resetToken, setResetToken] = useState(0);
+  const [baseline, setBaseline] = useState<string | null>(null);
+  const pendingBaseline = useRef(false);
+  const [leaveTo, setLeaveTo] = useState<string | null>(null);
+  const router = useRouter();
   useEffect(() => {
     const current = active?.config as Config | undefined;
     if (!current) return;
@@ -377,8 +451,60 @@ export default function WebhookMapping({
       activity: {
         ongoingSync: current.categories?.activity?.ongoingSync ?? true,
       },
+      emailCampaigns: {
+        ongoingSync: current.categories?.emailCampaigns?.ongoingSync ?? true,
+      },
+      pushCampaigns: {
+        ongoingSync: current.categories?.pushCampaigns?.ongoingSync ?? true,
+      },
+      journeys: {
+        ongoingSync: current.categories?.journeys?.ongoingSync ?? true,
+      },
     });
-  }, [active, sample.data]);
+    // Step 3.3: saved choices win; otherwise only an exact match is applied, suggestions wait.
+    const nextCampaigns: Record<string, Choice> = {};
+    for (const match of sample.data?.campaignMatches ?? []) {
+      nextCampaigns[`${match.channel}:${match.source}`] = {
+        target: match.target,
+        confirmed: match.status === "matched",
+      };
+    }
+    for (const rule of current.campaigns ?? [])
+      nextCampaigns[`${rule.channel}:${rule.source}`] = {
+        target: rule.target,
+        confirmed: true,
+      };
+    const nextJourneys: Record<string, Choice> = {};
+    const nextSteps: Record<string, Record<string, Choice>> = {};
+    for (const match of sample.data?.journeyMatches ?? []) {
+      nextJourneys[match.source] = {
+        target: match.target,
+        confirmed: match.status === "matched",
+      };
+      nextSteps[match.source] = Object.fromEntries(
+        match.steps.map((step) => [
+          step.source,
+          { target: step.target, confirmed: step.status === "matched" },
+        ]),
+      );
+    }
+    for (const rule of current.journeys ?? []) {
+      nextJourneys[rule.source] = { target: rule.target, confirmed: true };
+      nextSteps[rule.source] = {
+        ...nextSteps[rule.source],
+        ...Object.fromEntries(
+          rule.steps.map((step) => [
+            step.source,
+            { target: step.target, confirmed: true },
+          ]),
+        ),
+      };
+    }
+    setCampaignChoices(nextCampaigns);
+    setJourneyChoices(nextJourneys);
+    setStepChoices(nextSteps);
+    pendingBaseline.current = true;
+  }, [active, sample.data, resetToken]);
 
   const shown = sample.data?.fields.length
     ? sample.data.fields
@@ -436,36 +562,144 @@ export default function WebhookMapping({
     }));
   };
 
-  const addSegment = () => {
-    const sourceName = segmentSource.trim();
-    if (
-      !sourceName ||
-      segments.some(
-        (item) => item.sourceName.toLowerCase() === sourceName.toLowerCase(),
+  // Every segment name seen in the data is listed; names without a saved rule start off.
+  const seenSegments = [
+    ...new Set([
+      ...(sample.data?.segmentNames ?? []),
+      ...externalSegments
+        .filter((item) => item.namespace === "webhook")
+        .map((item) => item.displayName),
+    ]),
+  ];
+  const allSegments: SegmentRule[] = [
+    ...segments,
+    ...seenSegments
+      .filter(
+        (name) =>
+          !segments.some(
+            (item) => item.sourceName.toLowerCase() === name.toLowerCase(),
+          ),
       )
-    )
-      return;
-    const match = existingSegmentMatch(sourceName, externalSegments);
-    setSegments((current) => [
-      ...current,
-      {
-        sourceName,
-        namespace: match?.namespace ?? "webhook",
-        key: match?.key ?? sourceKey(sourceName),
-        displayName: match?.displayName ?? sourceName,
-        enabled: true,
+      .sort()
+      .map((name) => ({
+        sourceName: name,
+        namespace: "webhook",
+        key:
+          existingSegmentMatch(name, externalSegments)?.key ?? sourceKey(name),
+        displayName: name,
+        enabled: false,
         exclusive: false,
-      },
-    ]);
-    setSegmentSource("");
-  };
+      })),
+  ];
 
   const updateSegment = (sourceName: string, patch: Partial<SegmentRule>) =>
     setSegments((current) =>
-      current.map((item) =>
-        item.sourceName === sourceName ? { ...item, ...patch } : item,
-      ),
+      current.some((item) => item.sourceName === sourceName)
+        ? current.map((item) =>
+            item.sourceName === sourceName ? { ...item, ...patch } : item,
+          )
+        : [
+            ...current,
+            {
+              ...allSegments.find((item) => item.sourceName === sourceName)!,
+              ...patch,
+            },
+          ],
     );
+
+  const snapshot = JSON.stringify({
+    fields,
+    fieldEnabled,
+    tiers,
+    events,
+    segments,
+    categories,
+    campaignChoices,
+    journeyChoices,
+    stepChoices,
+  });
+  // Until the customer edits something, the baseline follows the loaded state (sections
+  // finish loading at different times), so the bar never shows without a real change.
+  const [touched, setTouched] = useState(false);
+  useEffect(() => {
+    if (!pendingBaseline.current && touched) return;
+    pendingBaseline.current = false;
+    setBaseline(snapshot);
+  }, [snapshot, touched]);
+  const dirty = touched && baseline !== null && snapshot !== baseline;
+  const discard = () => {
+    setTouched(false);
+    setResetToken((value) => value + 1);
+  };
+  // The bar is fixed to the screen bottom (a parent card clips overflow, so sticky
+  // cannot work) and lined up with this section so it never covers the sidebar.
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const [barBox, setBarBox] = useState<{ left: number; width: number } | null>(
+    null,
+  );
+  useEffect(() => {
+    // From the sidebar's right edge to the window's right edge (no sidebar on phones).
+    const sidebar = document.querySelector(
+      '[aria-label="PixlPush navigation"]',
+    );
+    const measure = () => {
+      const rect = sidebar?.getBoundingClientRect();
+      const left = rect && rect.width > 0 && rect.right > 0 ? rect.right : 0;
+      const width = document.documentElement.clientWidth - left;
+      setBarBox((current) =>
+        current && current.left === left && current.width === width
+          ? current
+          : { left, width },
+      );
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    if (sidebar) observer.observe(sidebar);
+    observer.observe(document.documentElement);
+    window.addEventListener("resize", measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [mappings.isLoading]);
+  // The floating bar is only needed while the Review mapping card is off-screen.
+  const reviewRef = useRef<HTMLDivElement | null>(null);
+  const [reviewVisible, setReviewVisible] = useState(false);
+  useEffect(() => {
+    const node = reviewRef.current;
+    if (!node || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(([entry]) =>
+      setReviewVisible(Boolean(entry?.isIntersecting)),
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  });
+
+  // Leaving with unsaved changes: the browser asks on reload/close; in-app links ask here.
+  useEffect(() => {
+    if (!dirty) return;
+    const beforeUnload = (event: BeforeUnloadEvent) => event.preventDefault();
+    const onClick = (event: MouseEvent) => {
+      const link = (event.target as Element | null)?.closest?.("a[href]");
+      const href = link?.getAttribute("href");
+      if (
+        !href ||
+        !href.startsWith("/") ||
+        link?.getAttribute("target") === "_blank"
+      )
+        return;
+      if (href.split("#")[0] === window.location.pathname) return;
+      event.preventDefault();
+      event.stopPropagation();
+      setLeaveTo(href);
+    };
+    window.addEventListener("beforeunload", beforeUnload);
+    document.addEventListener("click", onClick, true);
+    return () => {
+      window.removeEventListener("beforeunload", beforeUnload);
+      document.removeEventListener("click", onClick, true);
+    };
+  }, [dirty]);
 
   const save = async () => {
     setBusy(true);
@@ -529,6 +763,28 @@ export default function WebhookMapping({
           })),
         segments,
         categories,
+        // Only confirmed 3.3 choices are saved; unconfirmed history is still stored, just not linked.
+        campaigns: Object.entries(campaignChoices)
+          .filter(([, choice]) => choice.confirmed)
+          .map(([key, choice]) => ({
+            channel: key.split(":")[0] as "email" | "push",
+            source: key.slice(key.indexOf(":") + 1),
+            target: choice.target,
+          })),
+        journeys: Object.entries(journeyChoices)
+          .filter(([, choice]) => choice.confirmed)
+          .map(([source, choice]) => ({
+            source,
+            target: choice.target,
+            steps: choice.target
+              ? Object.entries(stepChoices[source] ?? {})
+                  .filter(([, step]) => step.confirmed)
+                  .map(([step, value]) => ({
+                    source: step,
+                    target: value.target,
+                  }))
+              : [],
+          })),
         entitlements: {
           states: [],
           events: {},
@@ -550,8 +806,12 @@ export default function WebhookMapping({
       await dataSyncApi.publishMapping(projectId, sourceId, draft.version);
       await client.invalidateQueries({ queryKey: mappingKey });
       setSaved(true);
+      setBaseline(snapshot);
+      setTouched(false);
+      return true;
     } catch (cause) {
       setError(errorText(cause));
+      return false;
     } finally {
       setBusy(false);
     }
@@ -567,7 +827,16 @@ export default function WebhookMapping({
   const products = Object.keys(tiers).sort();
 
   return (
-    <Stack gap={2}>
+    <Stack
+      gap={2}
+      ref={rootRef}
+      onChangeCapture={() => setTouched(true)}
+      onClickCapture={(event) => {
+        // Switches, selects and buttons inside the mapping count as edits.
+        if ((event.target as Element).closest("input, [role=option], button"))
+          setTouched(true);
+      }}
+    >
       {sample.isError && (
         <Alert severity="warning">
           Could not read a sample from your server: {errorText(sample.error)}{" "}
@@ -609,110 +878,96 @@ export default function WebhookMapping({
         <Typography variant="subtitle2" sx={{ mt: 1 }}>
           Segments
         </Typography>
-        <Stack
-          direction={{ xs: "column", sm: "row" }}
-          gap={1}
-          alignItems={{ sm: "flex-start" }}
-          component="form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            addSegment();
-          }}
-        >
-          <TextField
-            size="small"
-            label="Segment name from your server"
-            value={segmentSource}
-            onChange={(event) => setSegmentSource(event.target.value)}
-            disabled={!canEdit || busy}
-            placeholder="e.g. cancel_at_period_end"
-            helperText="The exact value your server sends in segment."
-            sx={{ flex: 1, maxWidth: { sm: 420 } }}
-            InputLabelProps={{ shrink: true }}
-          />
-          <Button
-            type="submit"
-            variant="outlined"
-            startIcon={<AddRounded />}
-            disabled={!canEdit || busy || !segmentSource.trim()}
-            sx={{ height: 40, flexShrink: 0, whiteSpace: "nowrap" }}
-          >
-            Add segment mapping
-          </Button>
-        </Stack>
-        {segments.map((segment) => {
-          const match = existingSegmentMatch(
-            segment.sourceName,
-            externalSegments,
-          );
+        <Typography variant="caption" color="text.secondary">
+          Every segment your server sends is listed here, turned off. Turn one
+          on and associate it with a PixlPush segment, then publish: its users,
+          including past entries, join that PixlPush segment and leave it when
+          your server takes them out.
+        </Typography>
+        {allSegments.map((segment) => {
+          const enabled = segment.enabled !== false;
+          const suggested = suggestLifecycle(segment.sourceName);
+          const status = segment.lifecycle
+            ? { label: "Associated", color: "success" as const }
+            : suggested
+              ? { label: "Suggested", color: "info" as const }
+              : { label: "Not associated", color: "default" as const };
           return (
             <Stack
               key={segment.sourceName}
               direction={{ xs: "column", md: "row" }}
-              gap={1}
+              gap={1.5}
               alignItems={{ md: "center" }}
               sx={{ py: 1, borderTop: "1px solid", borderColor: "divider" }}
             >
-              <Typography
-                variant="body2"
-                sx={{
-                  flex: 1,
-                  fontFamily: "var(--pp-mono)",
-                  overflowWrap: "anywhere",
-                }}
-              >
-                {segment.sourceName}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {match
-                  ? `Existing: ${match.displayName}`
-                  : `New external segment: ${segment.displayName}`}
-              </Typography>
-              <Chip
-                size="small"
-                label={matchLabel(Boolean(match), segment.enabled !== false)}
-                color={
-                  segment.enabled === false
-                    ? "default"
-                    : match
-                      ? "success"
-                      : "warning"
-                }
-              />
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontFamily: "var(--pp-mono)",
+                    overflowWrap: "anywhere",
+                  }}
+                >
+                  {segment.sourceName}
+                </Typography>
+              </Box>
               <TextField
+                select
                 size="small"
-                label="PixlPush segment name"
-                value={segment.displayName}
+                label="PixlPush segment"
+                value={segment.lifecycle ?? ""}
                 disabled={!canEdit || busy}
                 onChange={(event) =>
                   updateSegment(segment.sourceName, {
-                    displayName: event.target.value,
-                    key: sourceKey(event.target.value),
+                    // Associating never turns import on; only the switch does.
+                    lifecycle: event.target.value || undefined,
                   })
                 }
-              />
+                sx={{ width: { xs: "100%", md: 300 }, flexShrink: 0 }}
+                SelectProps={{ displayEmpty: true }}
+                InputLabelProps={{ shrink: true }}
+              >
+                <MenuItem value="">
+                  <Typography component="span" color="text.secondary">
+                    Not associated
+                  </Typography>
+                </MenuItem>
+                {LIFECYCLE_TARGETS.map((item) => (
+                  <MenuItem key={item.key} value={item.label}>
+                    {item.label}
+                    {item.label === suggested ? " (suggested)" : ""}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <Chip size="small" label={status.label} color={status.color} />
               <FormControlLabel
                 sx={mappingSwitchLabelSx}
                 control={
                   <Switch
                     size="small"
                     sx={webhookSwitchSx}
-                    checked={segment.enabled !== false}
+                    checked={enabled}
                     disabled={!canEdit || busy}
                     onChange={(_, on) =>
-                      updateSegment(segment.sourceName, { enabled: on })
+                      updateSegment(segment.sourceName, {
+                        enabled: on,
+                        // Turning a segment on applies the suggestion; it can be changed.
+                        ...(on && !segment.lifecycle && suggested
+                          ? { lifecycle: suggested }
+                          : {}),
+                      })
                     }
                   />
                 }
-                label={segment.enabled === false ? "Disabled" : "Enabled"}
+                label={enabled ? "Enabled" : "Disabled"}
               />
             </Stack>
           );
         })}
-        {!segments.length && (
+        {!allSegments.length && (
           <Typography variant="body2" color="text.secondary">
-            No segment values have been mapped yet. Add source names from your
-            server data; unknown values won’t be reported as matched.
+            No segments found in your server data yet. They appear here, turned
+            off, as soon as your feed sends segment_entered or segment_exited.
           </Typography>
         )}
       </Section>
@@ -840,9 +1095,12 @@ export default function WebhookMapping({
                       {label}
                     </MenuItem>
                   ))}
-                  <MenuItem value={`properties.${sourceKey(name)}`}>
-                    Custom property · {sourceKey(name)}
-                  </MenuItem>
+                  {`properties.${sourceKey(name)}` !==
+                    "properties.platform" && (
+                    <MenuItem value={`properties.${sourceKey(name)}`}>
+                      Custom property · {sourceKey(name)}
+                    </MenuItem>
+                  )}
                 </TextField>
                 <StatusChip
                   status={
@@ -1101,18 +1359,161 @@ export default function WebhookMapping({
         number="3.3"
         icon={<RouteRounded fontSize="small" />}
         title="Journeys and campaigns data"
-        detail="Stage participants in existing PixlPush journeys. Nothing is sent until you switch over."
+        detail="Map email campaigns, push campaigns and journeys from your previous tool, and import who received what."
       >
-        <Alert severity="info">
-          Participants map to an existing PixlPush user, journey and step.
-          Existing email and push templates in this project can be reused;
-          source content, standalone campaigns and in-app steps are not
-          imported.
-        </Alert>
-        {journeys}
+        <HistoryNotice unknownChannel={sample.data?.unknownChannel ?? 0} />
+        {(
+          [
+            [
+              "emailCampaigns",
+              "3.3.1 Email campaigns",
+              "email",
+              "Sent, delivered, opened, clicked, bounced, failed, unsubscribed and complained.",
+            ],
+            [
+              "pushCampaigns",
+              "3.3.2 Push campaigns",
+              "push",
+              "Sent, delivered, opened and failed. PixlPush records push opens, not link clicks.",
+            ],
+          ] as const
+        ).map(([key, label, channel, statuses]) => (
+          <Box
+            key={key}
+            sx={{ pt: 1.5, borderTop: "1px solid", borderColor: "divider" }}
+          >
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              gap={1}
+              justifyContent="space-between"
+              alignItems={{ sm: "center" }}
+            >
+              <Box>
+                <Typography fontWeight={600}>{label}</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {statuses}
+                </Typography>
+              </Box>
+              <FormControlLabel
+                sx={mappingSwitchLabelSx}
+                control={
+                  <Switch
+                    size="small"
+                    sx={webhookSwitchSx}
+                    checked={categories[key].ongoingSync}
+                    disabled={!canEdit || busy}
+                    onChange={(_, on) => setCategory(key, "ongoingSync", on)}
+                  />
+                }
+                label={categories[key].ongoingSync ? "Import" : "Skip"}
+              />
+            </Stack>
+            {categories[key].ongoingSync && (
+              <Box sx={{ mt: 1 }}>
+                <CampaignTable
+                  channel={channel}
+                  matches={sample.data?.campaignMatches ?? []}
+                  targets={sample.data?.targets[channel] ?? []}
+                  choices={Object.fromEntries(
+                    Object.entries(campaignChoices)
+                      .filter(([itemKey]) => itemKey.startsWith(`${channel}:`))
+                      .map(([itemKey, value]) => [
+                        itemKey.slice(channel.length + 1),
+                        value,
+                      ]),
+                  )}
+                  disabled={!canEdit || busy}
+                  onChange={(source, target) =>
+                    setCampaignChoices((current) => ({
+                      ...current,
+                      [`${channel}:${source}`]: { target, confirmed: true },
+                    }))
+                  }
+                />
+              </Box>
+            )}
+          </Box>
+        ))}
+        <Box sx={{ pt: 1.5, borderTop: "1px solid", borderColor: "divider" }}>
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            gap={1}
+            justifyContent="space-between"
+            alignItems={{ sm: "center" }}
+          >
+            <Box>
+              <Typography fontWeight={600}>3.3.3 Journeys</Typography>
+              <Typography variant="caption" color="text.secondary">
+                Which step each user reached. History only: nobody is added to
+                or moved through a PixlPush journey.
+              </Typography>
+            </Box>
+            <FormControlLabel
+              sx={mappingSwitchLabelSx}
+              control={
+                <Switch
+                  size="small"
+                  sx={webhookSwitchSx}
+                  checked={categories.journeys.ongoingSync}
+                  disabled={!canEdit || busy}
+                  onChange={(_, on) =>
+                    setCategory("journeys", "ongoingSync", on)
+                  }
+                />
+              }
+              label={categories.journeys.ongoingSync ? "Import" : "Skip"}
+            />
+          </Stack>
+          {categories.journeys.ongoingSync && (
+            <Box sx={{ mt: 1 }}>
+              <JourneyTable
+                matches={sample.data?.journeyMatches ?? []}
+                targets={sample.data?.targets.journeys ?? []}
+                choices={journeyChoices}
+                stepChoices={stepChoices}
+                disabled={!canEdit || busy}
+                onJourney={(source, target) => {
+                  setJourneyChoices((current) => ({
+                    ...current,
+                    [source]: { target, confirmed: true },
+                  }));
+                  // A different journey has different steps; start them over.
+                  setStepChoices((current) => ({ ...current, [source]: {} }));
+                }}
+                onStep={(journey, step, target) =>
+                  setStepChoices((current) => ({
+                    ...current,
+                    [journey]: {
+                      ...current[journey],
+                      [step]: { target, confirmed: true },
+                    },
+                  }))
+                }
+              />
+            </Box>
+          )}
+          {journeys && (
+            <Box sx={{ mt: 2 }}>
+              <Typography fontWeight={600}>
+                Move users who are mid-journey (optional)
+              </Typography>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                component="p"
+                sx={{ mb: 1 }}
+              >
+                A separate, staged step for switching running journeys to
+                PixlPush. Participants stay paused until you review and switch
+                over.
+              </Typography>
+              {journeys}
+            </Box>
+          )}
+        </Box>
       </Section>
 
-      <Card className="saas-card">
+      <Card className="saas-card" ref={reviewRef}>
         <Stack gap={1.5}>
           <Typography variant="h4">Review mapping</Typography>
           <Typography variant="body2" color="text.secondary">
@@ -1157,15 +1558,130 @@ export default function WebhookMapping({
           {canEdit && (
             <Button
               variant="contained"
-              sx={{ alignSelf: "flex-start" }}
-              disabled={busy || !active || mappingStatuses.conflicts > 0}
+              sx={{ alignSelf: { xs: "stretch", sm: "flex-start" } }}
+              disabled={
+                busy || !active || mappingStatuses.conflicts > 0 || !dirty
+              }
               onClick={() => void save()}
+              startIcon={
+                busy ? (
+                  <CircularProgress size={16} color="inherit" />
+                ) : undefined
+              }
             >
-              {busy ? "Saving…" : "Review and publish mapping"}
+              {busy
+                ? "Publishing…"
+                : dirty
+                  ? "Save and publish"
+                  : "No changes to publish"}
             </Button>
           )}
         </Stack>
       </Card>
+
+      {canEdit && dirty && !reviewVisible && (
+        <Paper
+          elevation={0}
+          square
+          role="region"
+          aria-label="Unsaved mapping changes"
+          sx={{
+            position: "fixed",
+            bottom: 0,
+            left: barBox ? barBox.left : 0,
+            width: barBox ? barBox.width : "100%",
+            zIndex: (theme) => theme.zIndex.appBar,
+            px: { xs: 2, sm: 3, md: 4 },
+            py: { xs: 1.5, sm: 1.75 },
+            borderTop: "1px solid",
+            borderColor: "divider",
+            bgcolor: "background.paper",
+            display: "flex",
+            flexDirection: { xs: "column", sm: "row" },
+            alignItems: { xs: "stretch", sm: "center" },
+            gap: 1.5,
+          }}
+        >
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography variant="body2" fontWeight={600}>
+              You have unsaved changes
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Save and publish to apply them to data from your server.
+            </Typography>
+          </Box>
+          <Stack direction="row" gap={1} justifyContent="flex-end">
+            <Button onClick={discard} disabled={busy}>
+              Discard
+            </Button>
+            <Button
+              variant="contained"
+              onClick={() => void save()}
+              disabled={busy || !active || mappingStatuses.conflicts > 0}
+              startIcon={
+                busy ? (
+                  <CircularProgress size={16} color="inherit" />
+                ) : undefined
+              }
+            >
+              {busy ? "Publishing…" : "Save and publish"}
+            </Button>
+          </Stack>
+        </Paper>
+      )}
+
+      <Dialog
+        open={leaveTo !== null}
+        onClose={() => !busy && setLeaveTo(null)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>Save your mapping changes?</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">
+            You changed the Webhook mapping but did not publish it. Save and
+            publish now, or discard the changes and leave.
+          </Typography>
+          {error && (
+            <Alert severity="error" sx={{ mt: 1.5 }}>
+              {error}
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, flexWrap: "wrap", gap: 1 }}>
+          <Button onClick={() => setLeaveTo(null)} disabled={busy}>
+            Keep editing
+          </Button>
+          <Button
+            color="error"
+            disabled={busy}
+            onClick={() => {
+              const href = leaveTo!;
+              setTouched(false);
+              setLeaveTo(null);
+              router.push(href);
+            }}
+          >
+            Discard changes
+          </Button>
+          <Button
+            variant="contained"
+            disabled={busy || !active || mappingStatuses.conflicts > 0}
+            startIcon={
+              busy ? <CircularProgress size={16} color="inherit" /> : undefined
+            }
+            onClick={async () => {
+              const href = leaveTo!;
+              if (await save()) {
+                setLeaveTo(null);
+                router.push(href);
+              }
+            }}
+          >
+            {busy ? "Publishing…" : "Save and publish"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Stack>
   );
 }

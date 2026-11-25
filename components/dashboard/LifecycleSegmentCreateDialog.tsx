@@ -48,6 +48,7 @@ import SearchField from "./SearchField";
 import type { ProjectEventCatalogEntry } from "@/types/project";
 import { useActiveProject } from "@/hooks/projects/use-active-project";
 import {
+  dataSyncApi,
   eventsApi,
   integrationsApi,
   projectKeys,
@@ -339,6 +340,19 @@ export default function LifecycleSegmentCreateDialog({
     enabled: Boolean(open && isWebhook && step >= 1 && projectId),
   });
   const connection = webhook.data?.connected ? webhook.data : undefined;
+  // The customer's own segments (turned on in Webhook mapping) can drive a lifecycle segment.
+  const serverSegments = useQuery({
+    queryKey: ["projects", projectId, "data-sync", "segments"],
+    queryFn: () => dataSyncApi.segments(projectId!),
+    enabled: Boolean(open && isWebhook && step >= 1 && projectId),
+  });
+  const followable = (serverSegments.data ?? []).filter(
+    (item) => item.status === "active" && item.namespace === "webhook",
+  );
+  const followed =
+    enter.length === 1 && enter[0]!.startsWith("segment_entered:")
+      ? enter[0]!.slice("segment_entered:".length)
+      : "";
 
   useEffect(() => {
     if (open) return;
@@ -689,7 +703,35 @@ export default function LifecycleSegmentCreateDialog({
               )}
             </Box>
 
-            {!purpose?.server && (
+            {!purpose?.server && followable.length > 0 && (
+              <TextField
+                select
+                size="small"
+                label="Follow one of your server’s segments (optional)"
+                value={followed}
+                disabled={loading}
+                onChange={(event) => {
+                  const name = event.target.value;
+                  setEnter(name ? [`segment_entered:${name}`] : []);
+                  setExit(name ? [`segment_exited:${name}`] : []);
+                }}
+                helperText="Users join when your server puts them in this segment and leave when it takes them out. Turn segments on under Integrations → Webhook → 3.1."
+                SelectProps={{ displayEmpty: true }}
+                InputLabelProps={{ shrink: true }}
+              >
+                <MenuItem value="">
+                  <Typography component="span" color="text.secondary">
+                    Choose events instead
+                  </Typography>
+                </MenuItem>
+                {followable.map((item) => (
+                  <MenuItem key={item.id} value={item.displayName}>
+                    {item.displayName} · {item.memberCount} users
+                  </MenuItem>
+                ))}
+              </TextField>
+            )}
+            {!purpose?.server && !followed && (
               <Box>
                 <Typography fontWeight={600}>
                   Events from your server

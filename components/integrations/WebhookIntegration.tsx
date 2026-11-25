@@ -3,7 +3,12 @@
 import { useState, type ReactNode } from "react";
 import NextLink from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowBackRounded, WebhookRounded } from "@mui/icons-material";
+import {
+  ArrowBackRounded,
+  VisibilityOffRounded,
+  VisibilityRounded,
+  WebhookRounded,
+} from "@mui/icons-material";
 import {
   Alert,
   Box,
@@ -12,6 +17,8 @@ import {
   Chip,
   CircularProgress,
   FormControlLabel,
+  IconButton,
+  InputAdornment,
   Skeleton,
   Stack,
   Switch,
@@ -27,12 +34,21 @@ import { dataSyncApi } from "@/lib/projects/api";
 import { integrationStatus } from "./registry";
 import WebhookDeveloperGuide from "./WebhookDeveloperGuide";
 import WebhookMapping, { webhookSwitchSx } from "./WebhookMapping";
-import WebhookUpdates from "./WebhookUpdates";
 
 const CONFIG_ROLES = ["owner", "admin", "developer"];
 const errorText = (error: unknown) =>
   (error as { message?: string })?.message ??
   "Something went wrong. Please try again.";
+/**
+ * A URL next to a password field looks like a login form, so browser autofill and
+ * password-manager extensions rewrite it while React writes it back, which loops.
+ */
+const noAutofill = {
+  "data-1p-ignore": true,
+  "data-lpignore": "true",
+  "data-bwignore": true,
+  "data-form-type": "other",
+} as const;
 const mono = {
   fontFamily: "var(--pp-mono)",
   fontSize: "var(--fs-12)",
@@ -90,6 +106,7 @@ export default function WebhookIntegration() {
   const status = integrationStatus(settings);
   const [url, setUrl] = useState("");
   const [token, setToken] = useState("");
+  const [showToken, setShowToken] = useState(false);
   const [replacing, setReplacing] = useState(false);
   const [error, setError] = useState("");
 
@@ -190,7 +207,7 @@ export default function WebhookIntegration() {
                 >
                   {connected.accountLabel} ·{" "}
                   {connected.syncing && connected.syncEnabled
-                    ? "Syncing…"
+                    ? "Importing: up to 2,500 events every 2 minutes until it is up to date"
                     : connected.lastSyncedAt
                       ? `last checked ${new Date(connected.lastSyncedAt).toLocaleString()}`
                       : "waiting for the first sync"}
@@ -200,11 +217,23 @@ export default function WebhookIntegration() {
                 variant="outlined"
                 sx={{ alignSelf: "flex-start" }}
                 disabled={
-                  !canEdit || !connected.syncEnabled || syncNow.isPending
+                  !canEdit ||
+                  !connected.syncEnabled ||
+                  syncNow.isPending ||
+                  connected.syncing
                 }
                 onClick={() => run(() => syncNow.mutateAsync())}
+                startIcon={
+                  syncNow.isPending ||
+                  (connected.syncing && connected.syncEnabled) ? (
+                    <CircularProgress size={16} color="inherit" />
+                  ) : undefined
+                }
               >
-                Sync now
+                {syncNow.isPending ||
+                (connected.syncing && connected.syncEnabled)
+                  ? "Syncing…"
+                  : "Sync now"}
               </Button>
             </Stack>
             {connected.lastError && (
@@ -300,6 +329,7 @@ export default function WebhookIntegration() {
                   gap={1.5}
                   sx={{ mt: 1 }}
                   component="form"
+                  autoComplete="off"
                   onSubmit={(event) => {
                     event.preventDefault();
                     void submit();
@@ -310,20 +340,43 @@ export default function WebhookIntegration() {
                     fullWidth
                     label="Server URL"
                     placeholder="https://api.example.com/pixlpush/events"
-                    value={url}
+                    // Uncontrolled on purpose: React never writes the value back, so an
+                    // autofill extension that also writes it cannot start an update loop.
+                    defaultValue=""
                     disabled={!canEdit}
+                    autoComplete="off"
+                    inputProps={noAutofill}
                     onChange={(event) => setUrl(event.target.value)}
                   />
                   <TextField
                     size="small"
                     fullWidth
-                    type="password"
-                    autoComplete="off"
+                    type={showToken ? "text" : "password"}
+                    autoComplete="new-password"
                     label="Token"
                     helperText="Stored encrypted. It won’t be shown again."
-                    value={token}
+                    defaultValue=""
                     disabled={!canEdit}
                     onChange={(event) => setToken(event.target.value)}
+                    InputProps={{
+                      inputProps: noAutofill,
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            edge="end"
+                            size="small"
+                            aria-label={showToken ? "Hide token" : "Show token"}
+                            onClick={() => setShowToken((on) => !on)}
+                          >
+                            {showToken ? (
+                              <VisibilityOffRounded fontSize="small" />
+                            ) : (
+                              <VisibilityRounded fontSize="small" />
+                            )}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
                   />
                   <Stack direction="row" gap={1}>
                     <Button
@@ -348,7 +401,13 @@ export default function WebhookIntegration() {
                           : "Connect"}
                     </Button>
                     {replacing && (
-                      <Button onClick={() => setReplacing(false)}>
+                      <Button
+                        onClick={() => {
+                          setReplacing(false);
+                          setUrl("");
+                          setToken("");
+                        }}
+                      >
                         Cancel
                       </Button>
                     )}
@@ -370,42 +429,17 @@ export default function WebhookIntegration() {
               </Typography>
               {source && projectId ? (
                 <WebhookMapping
+                  key={`${projectId}:${source.id}`}
                   projectId={projectId}
                   sourceId={source.id}
                   canEdit={canControl}
                   journeys={
-                    <>
-                      <DataSyncMigrations
-                        projectId={projectId}
-                        accountId={account?.id}
-                        canEdit={canEdit}
-                        canControl={canControl}
-                      />
-                      <Box
-                        sx={{
-                          pt: 2,
-                          borderTop: "1px solid",
-                          borderColor: "divider",
-                        }}
-                      >
-                        <Typography fontWeight={600}>
-                          Send journey and message status to your server
-                        </Typography>
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          sx={{ mb: 1 }}
-                        >
-                          Optional. PixlPush posts signed updates to your URL so
-                          your own admin can show each user’s journey status.
-                        </Typography>
-                        <WebhookUpdates
-                          projectId={projectId}
-                          sourceId={source.id}
-                          canControl={canControl}
-                        />
-                      </Box>
-                    </>
+                    <DataSyncMigrations
+                      projectId={projectId}
+                      accountId={account?.id}
+                      canEdit={canEdit}
+                      canControl={canControl}
+                    />
                   }
                 />
               ) : (

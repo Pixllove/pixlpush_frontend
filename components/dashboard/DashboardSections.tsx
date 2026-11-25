@@ -35,7 +35,7 @@ import {
   InsightsRounded,
   KeyRounded,
   LockRounded,
-  ManageSearchRounded,
+  DonutLargeRounded,
   MoreHorizRounded,
   NotificationsActiveRounded,
   PeopleAltRounded,
@@ -1377,7 +1377,7 @@ export function UsersSection() {
           <Card className="setup-strip segment-getting-started">
             <Box className="setup-intro">
               <Box className="setup-icon">
-                <ManageSearchRounded />
+                <DonutLargeRounded />
               </Box>
               <Box>
                 <Typography fontWeight={600}>Getting started</Typography>

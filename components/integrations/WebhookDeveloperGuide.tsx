@@ -25,7 +25,7 @@ import {
 import Link from "next/link";
 import { onboardingApi } from "@/lib/projects/api";
 
-/** One source for both the on-screen guide and the copied text, so they never drift apart. */
+/** One source for the on-screen guide and the copied AI prompt, so they never drift apart. */
 const EXAMPLE = `{
   "data": [
     {
@@ -35,93 +35,118 @@ const EXAMPLE = `{
       "time": "2026-11-24T10:00:00Z",
       "product_id": "premium_monthly",
       "transaction": { "expires": "2026-12-24T10:00:00Z" },
-      "user": { "email": "ana@example.com", "name": "Ana", "language": "en", "email_consent": true }
+      "user": {
+        "email": "ana@example.com",
+        "name": "Ana",
+        "language": "en",
+        "country": "DE",
+        "region": "Berlin",
+        "timezone": "Europe/Berlin",
+        "user_type": "premium",
+        "account_status": "active",
+        "platform": "ios",
+        "email_consent": true,
+        "push_consent": true
+      }
+    },
+    {
+      "id": "msg_2001_opened",
+      "event_name": "message_opened",
+      "user_id": "12345",
+      "time": "2026-11-20T09:15:00Z",
+      "channel": "email",
+      "message_id": "msg_2001",
+      "campaign_id": "spring_sale",
+      "campaign_name": "Spring Sale"
     }
   ],
   "next": null
 }`;
 
 const FIELDS: [string, string, string][] = [
-  [
-    "id",
-    "Yes",
-    "A unique id for this event. If the same id is sent again, PixlPush ignores the repeat.",
-  ],
-  ["event_name", "Yes", "What happened. Use a name from the list below."],
+  ["id", "Yes", "A unique, stable id for this event. If the same id is sent again, PixlPush ignores the repeat."],
+  ["event_name", "Yes", "What happened. Use a name from the lists below, or your own name."],
   ["user_id", "Yes", "The user’s id in your system."],
-  [
-    "time",
-    "Yes",
-    "When it happened: ISO date, or Unix seconds or milliseconds.",
-  ],
-  [
-    "product_id",
-    "For subscription events",
-    "Which plan or product, e.g. premium_monthly.",
-  ],
-  ["transaction.expires", "No", "When access ends, for cancellations."],
-  [
-    "user",
-    "No",
-    "Profile details: email, name, language, timezone, country, email_consent, push_consent.",
-  ],
+  ["custom_user_id", "No", "Your app’s own user id, when user_id comes from a billing tool. It wins when set."],
+  ["time", "Yes", "When it really happened: ISO date, or Unix seconds or milliseconds."],
+  ["product_id", "For subscription events", "Which plan or product, e.g. premium_monthly."],
+  ["transaction.expires", "No", "When access ends, for cancellations and expiries."],
+  ["segment", "For segment events", "The segment name for segment_entered and segment_exited."],
+  ["user", "Recommended", "The user’s current profile. See Profile fields."],
+  ["properties", "No", "Extra event details as a flat object of text, numbers or true/false."],
+];
+
+const PROFILE: [string, string][] = [
+  ["email, name", "Contact details."],
+  ["language", "e.g. en, de."],
+  ["country, region", "Country and region or city."],
+  ["timezone", "An IANA name like Asia/Karachi. Invalid values are skipped; the rest of the profile still syncs."],
+  ["user_type", "e.g. free, premium, trial."],
+  ["account_status", "e.g. active, paused, blocked, deleted."],
+  ["platform", "ios, android or web. Shown until the PixlPush SDK registers the user’s device."],
+  ["email_consent, push_consent", "true or false. Leave the key out when the user was never asked; PixlPush never guesses consent."],
+  ["anything else", "Saved as a custom property you can use in segments."],
 ];
 
 const EVENTS: [string, string][] = [
   ["A free trial starts", "trial_started"],
   ["The user cancels the trial", "trial_canceled"],
-  [
-    "The trial ends, or turns into a paid subscription",
-    "trial_expired, trial_converted",
-  ],
-  [
-    "A paid subscription starts or renews",
-    "subscription_started, subscription_renewed, subscription_upgraded, subscription_product_changed",
-  ],
+  ["The trial ends, or turns into a paid subscription", "trial_expired, trial_converted"],
+  ["A paid subscription starts or renews", "subscription_started, subscription_renewed, subscription_upgraded, subscription_product_changed"],
   ["The user cancels but still has access", "subscription_canceled"],
-  [
-    "The subscription ends or is refunded",
-    "subscription_expired, subscription_refunded",
-  ],
+  ["The subscription ends or is refunded", "subscription_expired, subscription_refunded"],
   ["A payment fails", "subscription_billing_retry"],
-  [
-    "The account is paused, resumed or deleted",
-    "account_paused, account_resumed, account_deleted",
-  ],
+  ["The account is paused, resumed or deleted", "account_paused, account_resumed, account_deleted"],
+  ["The user enters or leaves one of your segments (send segment)", "segment_entered, segment_exited"],
 ];
+
+const HISTORY: [string, string][] = [
+  ["An email or push from your previous tool was sent, delivered, opened, clicked, bounced or failed", "message_sent, message_delivered, message_opened, message_clicked, message_bounced, message_failed"],
+  ["The user unsubscribed or complained (email)", "message_unsubscribed, message_complained"],
+  ["The user reached a step in a journey of your previous tool", "journey_step_entered"],
+];
+
+const HISTORY_NOTE =
+  "Optional. Message events need channel (email or push), message_id and campaign_id (campaign_name helps matching). journey_step_entered needs journey_id and step_id (journey_name and step_name help matching). This history is shown in PixlPush as imported: it is never counted as a PixlPush send and never sends anything. Push has no clicks in PixlPush, so push clicks are not stored.";
 
 const STEPS = [
   "Create a read-only endpoint in your backend, for example GET https://api.yourapp.com/pixlpush/events.",
   "Protect it with a secret token. PixlPush sends it in the header: Authorization: Bearer <token>.",
-  "Return events as JSON in stable chronological order, using the format and paging rules below.",
-  "Make it a public HTTPS URL. Localhost, private network addresses, and endpoints with invalid TLS certificates do not work.",
+  "Return events as JSON in stable time order, using the format and paging rules below. Put the user’s current profile in user on every event.",
+  "Make it a public HTTPS URL. Localhost, private network addresses and invalid TLS certificates do not work.",
   "Send the URL and the token to the person setting up PixlPush. They paste both on the Webhook page.",
 ];
 
 const PAGING =
-  "PixlPush requests up to 500 events per page with limit=500. It may include since=<ISO timestamp> to request events from a recent checkpoint; include events at the boundary so retries cannot skip them. When more results remain, return next as a non-empty opaque cursor and use that cursor to return the next page for the same query. Return next:null on the final page. Keep ordering stable across pages. Event ids must remain stable because PixlPush uses them to deduplicate overlapping reads and retries.";
+  "PixlPush reads one page of up to 2,500 events every 2 minutes (limit=2500) until it reaches your last page; never return more than limit events, and keep each page under 5 MB. To keep it fast: index the columns you order and filter by (time, id), read one page per request with a keyset query (WHERE (time, id) > cursor ORDER BY time, id LIMIT n) instead of OFFSET, and select only the columns you send. It may include since=<ISO timestamp> to restart from a checkpoint; include events at that exact time so retries cannot skip them. When more results remain, return next as a non-empty opaque cursor and return the next page for that cursor. Return next:null on the final page. Keep ordering stable across pages, and keep event ids stable because PixlPush uses them to ignore repeats.";
 
 const DEVELOPER_DOCS = "/dashboard/developer-docs/webhook";
 
 function aiPrompt() {
+  const docs = typeof window === "undefined" ? DEVELOPER_DOCS : `${window.location.origin}${DEVELOPER_DOCS}`;
   return [
-    "You are a senior backend engineer working in this repository. Implement the PixlPush server event feed in the existing application, using its actual language, framework, database, authentication, and conventions.",
+    "You are a senior backend engineer working in this repository. Implement the PixlPush server event feed in the existing application, using its actual language, framework, database, authentication and conventions.",
     "",
-    "Read the PixlPush webhook developer documentation before making changes:",
-    `${typeof window === "undefined" ? DEVELOPER_DOCS : `${window.location.origin}${DEVELOPER_DOCS}`}`,
+    "Read the PixlPush Webhook developer documentation before making changes:",
+    docs,
     "",
     "Requirements:",
-    "- Add a public HTTPS GET endpoint for the PixlPush event feed. PixlPush polls it; do not implement an outbound callback.",
-    "- Require Authorization: Bearer <token>. Compare credentials safely, keep the configured token in environment/secret storage, and never log or return it.",
-    '- Accept limit (up to 500), since (ISO timestamp), and cursor query parameters. Return JSON shaped as {"data":[...events],"next":"opaque-cursor"}; use next:null on the last page.',
-    "- Return events in stable chronological order. Implement opaque, stable cursor pagination and filter by since without skipping events at page boundaries.",
-    "- Each event must have a stable unique id, event_name, user_id, and real occurrence time. Include product_id for billing events and segment for segment_entered/segment_exited. Preserve user, properties, custom_user_id, expires_at, and transaction.expires when available.",
-    "- Use only fields and event semantics in the PixlPush documentation. Keep credentials server-side, validate inputs, and return 401/403 for invalid credentials.",
-    "- Add focused tests for auth, event serialization, since filtering, paging boundaries, stable ordering, and the final-page response. Update the project’s setup documentation with the route and secret configuration.",
-    "- First inspect the repository and report a short implementation plan. Then implement it, run relevant checks, and summarize changed files, configuration needed, and deployment steps. Do not invent database tables or claim checks passed unless you ran them.",
+    "- Add a public HTTPS GET endpoint for the PixlPush event feed. PixlPush polls it; do not build an outbound callback.",
+    "- Require Authorization: Bearer <token>. Compare it in constant time, keep the token in environment/secret storage, and never log or return it. Return 401 for a missing or wrong token.",
+    '- Accept limit (1–2500), since (ISO timestamp, inclusive) and cursor query parameters. Return {"data":[...events],"next":"opaque-cursor"}; use next:null on the last page. Return 400 for invalid parameters.',
+    "- Make each page fast: index (time, id), use a keyset query (WHERE (time, id) > cursor ORDER BY time, id LIMIT limit), never OFFSET, and select only the columns you send. A 2,500-event page should return in well under a second.",
+    "- Order events by (time, id). Make the cursor opaque and stable, and never skip or repeat events at page boundaries or at the since boundary. If the database stores times without a timezone, compare in UTC.",
+    "- Build events only from real data that already exists. Do not create new tables. Every event needs a stable unique id (derive it from the source row, e.g. purchase_<rowId>), event_name, user_id and the real time it happened.",
+    "- Map billing data to the documented lifecycle events and include product_id. Map segment changes to segment_entered/segment_exited with segment (the segment’s name). PixlPush lists these segments turned off until the customer turns them on.",
+    "- Always honour limit: never return more than limit events per page (PixlPush asks for 2500, one page every 2 minutes) and keep each page under 5 MB.",
+    "- On every event, include user with the user’s current profile from the database: email, name, language, country, region, timezone, user_type, account_status, platform, email_consent, push_consent. Leave out keys you do not have; do not send null or empty strings. Send email_consent/push_consent only when the user actually made a choice (never guess).",
+    "- Optional, only if this app has message or journey history: send message_sent/_delivered/_opened/_clicked/_bounced/_failed/_unsubscribed/_complained with channel, message_id, campaign_id, campaign_name, and journey_step_entered with journey_id, journey_name, step_id, step_name.",
+    "- Use only fields and event names from the PixlPush documentation. Do not start crons, queues or emails as part of this endpoint.",
+    "- Add focused tests for auth, serialization (including profile fields and consent rules), since filtering, page boundaries, stable ordering and the final-page response. Add the route and the token variable to the project’s setup docs.",
+    "- First inspect the repository and report a short plan: which tables become which events, and where each profile field comes from. Then implement, run the relevant checks, and summarize changed files, configuration and deployment steps. Do not claim checks passed unless you ran them.",
     "",
     "PixlPush endpoint contract:",
-    `GET https://your-domain.example${new URL("/pixlpush/events", "https://your-domain.example").pathname}?limit=500&since=<ISO timestamp>&cursor=<opaque cursor>`,
+    "GET https://your-domain.example/pixlpush/events?limit=2500&since=<ISO timestamp>&cursor=<opaque cursor>",
     "Authorization: Bearer <secret token>",
     "Accept: application/json",
     "",
@@ -369,6 +394,28 @@ export default function WebhookDeveloperGuide({
 
           <Box sx={{ overflowX: "auto" }}>
             <Typography variant="subtitle1" sx={{ mb: 1 }}>
+              Profile fields (inside user)
+            </Typography>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Key</TableCell>
+                  <TableCell>What to send</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {PROFILE.map(([key, about]) => (
+                  <TableRow key={key}>
+                    <TableCell sx={code}>{key}</TableCell>
+                    <TableCell>{about}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Box>
+
+          <Box sx={{ overflowX: "auto" }}>
+            <Typography variant="subtitle1" sx={{ mb: 1 }}>
               Event names
             </Typography>
             <Table size="small">
@@ -396,6 +443,27 @@ export default function WebhookDeveloperGuide({
                 </TableRow>
               </TableBody>
             </Table>
+          </Box>
+
+          <Box sx={{ overflowX: "auto" }}>
+            <Typography variant="subtitle1" sx={{ mb: 1 }}>
+              History from your previous tool (optional)
+            </Typography>
+            <Table size="small">
+              <TableBody>
+                {HISTORY.map(([when, names]) => (
+                  <TableRow key={when}>
+                    <TableCell>{when}</TableCell>
+                    <TableCell sx={{ ...code, overflowWrap: "anywhere" }}>
+                      {names}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              {HISTORY_NOTE}
+            </Typography>
           </Box>
 
           <Box>

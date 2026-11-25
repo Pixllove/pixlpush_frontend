@@ -29,18 +29,54 @@ import {
   type IntegrationStatus,
 } from "./registry";
 
-function IntegrationCard({
-  integration,
+/** The whole card is one link (like OneSignal or MailerLite): hover, focus and click anywhere. */
+function HubCard({
+  href,
+  name,
+  category,
+  summary,
+  logo,
   status,
 }: {
-  integration: Integration;
+  href: string;
+  name: string;
+  category: string;
+  summary: string;
+  logo: React.ReactNode;
   status: IntegrationStatus;
 }) {
-  const { name, category, summary, href, Logo } = integration;
   return (
     <Card
+      component={Link}
+      href={href}
+      aria-label={`${status ? "Manage" : "Connect"} ${name}`}
       className="integration-card"
-      sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 1.5,
+        height: "100%",
+        color: "inherit",
+        textDecoration: "none",
+        cursor: "pointer",
+        transition:
+          "border-color .15s ease, box-shadow .15s ease, transform .15s ease",
+        "&:hover": {
+          borderColor: "primary.main",
+          boxShadow: "0 6px 20px rgba(85, 23, 184, 0.10)",
+          transform: "translateY(-2px)",
+        },
+        "&:hover .hub-card-cta": { gap: 1 },
+        "&:focus-visible": {
+          outline: "2px solid",
+          outlineColor: "primary.main",
+          outlineOffset: 2,
+        },
+        "@media (prefers-reduced-motion: reduce)": {
+          transition: "none",
+          "&:hover": { transform: "none" },
+        },
+      }}
     >
       <Stack
         direction="row"
@@ -48,7 +84,7 @@ function IntegrationCard({
         justifyContent="space-between"
         gap={1}
       >
-        <Logo />
+        {logo}
         {status ? (
           <SettingsStatus tone={status.tone}>{status.label}</SettingsStatus>
         ) : (
@@ -70,16 +106,38 @@ function IntegrationCard({
           {summary}
         </Typography>
       </Box>
+      {/* Visual call to action only: the card itself is the link. */}
       <Button
-        component={Link}
-        href={href}
+        component="span"
+        tabIndex={-1}
+        className="hub-card-cta"
         variant={status ? "outlined" : "contained"}
         endIcon={<ArrowForwardRounded />}
-        sx={{ alignSelf: "flex-start" }}
+        sx={{ alignSelf: "flex-start", pointerEvents: "none" }}
       >
         {status ? "Manage" : "Connect"}
       </Button>
     </Card>
+  );
+}
+
+function IntegrationCard({
+  integration,
+  status,
+}: {
+  integration: Integration;
+  status: IntegrationStatus;
+}) {
+  const { name, category, summary, href, Logo } = integration;
+  return (
+    <HubCard
+      href={href}
+      name={name}
+      category={category}
+      summary={summary}
+      logo={<Logo />}
+      status={status}
+    />
   );
 }
 
@@ -88,50 +146,18 @@ const WEBHOOK_SUMMARY =
 
 function WebhookCard({ status }: { status: IntegrationStatus }) {
   return (
-    <Card
-      className="integration-card"
-      sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}
-    >
-      <Stack
-        direction="row"
-        alignItems="flex-start"
-        justifyContent="space-between"
-        gap={1}
-      >
+    <HubCard
+      href="/dashboard/integrations/webhook"
+      name="Webhook"
+      category="Server"
+      summary={WEBHOOK_SUMMARY}
+      logo={
         <Box className="integration-icon">
           <WebhookRounded />
         </Box>
-        {status ? (
-          <SettingsStatus tone={status.tone}>{status.label}</SettingsStatus>
-        ) : (
-          <Chip size="small" variant="outlined" label="Not connected" />
-        )}
-      </Stack>
-      <Box sx={{ flex: 1 }}>
-        <Stack direction="row" alignItems="center" gap={1}>
-          <Typography fontWeight={700} fontSize="var(--fs-14)">
-            Webhook
-          </Typography>
-          <Chip size="small" label="Server" className="neutral-chip" />
-        </Stack>
-        <Typography
-          color="text.secondary"
-          fontSize="var(--fs-12)"
-          sx={{ mt: 0.75 }}
-        >
-          {WEBHOOK_SUMMARY}
-        </Typography>
-      </Box>
-      <Button
-        component={Link}
-        href="/dashboard/integrations/webhook"
-        variant={status ? "outlined" : "contained"}
-        endIcon={<ArrowForwardRounded />}
-        sx={{ alignSelf: "flex-start" }}
-      >
-        {status ? "Manage" : "Connect"}
-      </Button>
-    </Card>
+      }
+      status={status}
+    />
   );
 }
 

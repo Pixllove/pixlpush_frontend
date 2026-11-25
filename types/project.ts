@@ -291,6 +291,8 @@ export interface UserEngagement {
 export interface UserProfile extends EndUser {
   engagement?: UserEngagement;
   emailConsent?: boolean | null;
+  /** Marketing push choice sent by the customer's server (Webhook). */
+  pushMarketingConsent?: boolean | null;
   accountStatus?: string | null;
   userType?: string | null;
   region?: string | null;

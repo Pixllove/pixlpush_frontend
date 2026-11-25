@@ -249,10 +249,7 @@ export type SyncMapping = {
   validation: { valid: boolean; errors: { code: string; path: string; message: string }[]; warnings: { code: string; path: string; message: string }[] };
   publishedAt: string | null; createdAt: string;
 };
-export type SyncExternalSegment = { id: string; sourceId: string; namespace: string; key: string; displayName: string; status: "active" | "retired"; memberCount: number };
-export type SyncWebhookEndpoint = { id: string; name: string; url: string; events: string[]; status: "active" | "paused"; createdAt: string; updatedAt: string };
-export type CreatedSyncWebhook = SyncWebhookEndpoint & { secret: string; warning: string };
-export type SyncWebhookDelivery = { id: string; status: "pending" | "processing" | "delivered" | "dead_letter"; attempts: number; responseStatus: number | null; lastError: string | null; deliveredAt: string | null; createdAt: string; topic: string; eventCreatedAt: string };
+export type SyncExternalSegment = { id: string; sourceId: string; namespace: string; key: string; displayName: string; status: "active" | "disabled" | "retired"; memberCount: number };
 export type SyncOverduePolicy = "catch_up" | "skip" | "exit";
 export type SyncSourceComparison = {
   matched: boolean; participantsMigrated: boolean; missingJourneyIds: string[];
@@ -274,12 +271,31 @@ export type MatchStatus = "matched" | "suggested" | "needs_mapping";
 /** One page of the Webhook feed with suggested matches. Suggestions only; nothing is saved. */
 export type WebhookSample = {
   sampled: number; fields: string[]; events: string[]; products: string[];
+  /** Distinct `segment` values seen in the sample. */
+  segmentNames?: string[];
   fieldMatches: { source: string; target: string | null; status: MatchStatus; reason: string; samples: string[] }[];
   eventMatches: { source: string; target: string | null; status: MatchStatus; reason: string; candidates: { name: string; score: number; reason: string }[]; sampleProperties: string[] }[];
   knownEvents: { name: string; standard: boolean; description: string | null }[];
+  campaignMatches: (TargetMatch & { channel: "email" | "push"; source: string; name: string | null; records: number; statuses: string[]; unsupported: string[] })[];
+  journeyMatches: (TargetMatch & { source: string; name: string | null; records: number; steps: (TargetMatch & { source: string; name: string | null })[] })[];
+  unknownChannel: number;
+  targets: { email: NamedItem[]; push: NamedItem[]; journeys: (NamedItem & { steps: NamedItem[] })[] };
 };
+type NamedItem = { id: string; name: string };
+type TargetMatch = { status: MatchStatus; target: string | null; reason: string; candidates: { id: string; name: string; score: number }[] };
+
+/** History from the customer's previous tool. Never counted as PixlPush sends. */
+export type ImportedMessage = {
+  id: string; channel: "email" | "push"; status: string; sourceCampaignId: string | null; campaignName: string | null; campaignId: string | null;
+  sentAt: string | null; deliveredAt: string | null; openedAt: string | null; clickedAt: string | null; bouncedAt: string | null; failedAt: string | null;
+  externalUserId: string; userId: string | null;
+};
+export type ImportedJourneyStep = { id: string; sourceJourneyId: string; journeyName: string | null; sourceStepId: string; stepName: string | null; journeyId: string | null; stepId: string | null; enteredAt: string; externalUserId?: string };
 
 export const dataSyncApi = {
+  importedForUser: (projectId: string, userId: string) => authRequest<{ messages: ImportedMessage[]; journeySteps: ImportedJourneyStep[] }>(syncAt(projectId, `/imported-history/users/${encodeURIComponent(userId)}`), undefined, BASE),
+  importedForCampaign: (projectId: string, channel: "email" | "push", campaignId: string) => authRequest<{ stats: { total: number; delivered: number; opened: number; clicked: number | null; bounced: number; failed: number }; recipients: ImportedMessage[] }>(syncAt(projectId, `/imported-history/campaigns/${channel}/${encodeURIComponent(campaignId)}`), undefined, BASE),
+  importedForJourney: (projectId: string, journeyId: string) => authRequest<{ steps: { stepId: string | null; users: number }[]; recent: ImportedJourneyStep[] }>(syncAt(projectId, `/imported-history/journeys/${encodeURIComponent(journeyId)}`), undefined, BASE),
   sources: (projectId: string) => authRequest<SyncSource[]>(syncAt(projectId, "/sources"), undefined, BASE),
   segments: (projectId: string) => authRequest<SyncExternalSegment[]>(syncAt(projectId, "/segments"), undefined, BASE),
   /** Names seen in one page of the connected Webhook feed (no values). */
@@ -287,11 +303,6 @@ export const dataSyncApi = {
   mappings: (projectId: string, sourceId: string) => authRequest<SyncMapping[]>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/mappings`), undefined, BASE),
   createMapping: (projectId: string, sourceId: string, config: unknown) => authRequest<SyncMapping>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/mappings`), { config }, BASE),
   publishMapping: (projectId: string, sourceId: string, version: number) => authRequest<SyncMapping>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/mappings/${version}/publish`), {}, BASE),
-  webhooks: (projectId: string, sourceId: string) => authRequest<SyncWebhookEndpoint[]>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/webhooks`), undefined, BASE),
-  createWebhook: (projectId: string, sourceId: string, input: { name: string; url: string; events: string[] }) => authRequest<CreatedSyncWebhook>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/webhooks`), input, BASE),
-  setWebhookStatus: (projectId: string, endpointId: string, status: SyncWebhookEndpoint["status"]) => authRequest<SyncWebhookEndpoint>(syncAt(projectId, `/webhooks/${encodeURIComponent(endpointId)}`), { status }, BASE, "PATCH"),
-  deleteWebhook: (projectId: string, endpointId: string) => authRequest<{ deleted: boolean }>(syncAt(projectId, `/webhooks/${encodeURIComponent(endpointId)}`), {}, BASE, "DELETE"),
-  webhookDeliveries: (projectId: string, endpointId: string) => authRequest<SyncWebhookDelivery[]>(syncAt(projectId, `/webhooks/${encodeURIComponent(endpointId)}/deliveries`), undefined, BASE),
   migrations: (projectId: string) => authRequest<SyncMigrationRun[]>(syncAt(projectId, "/migrations"), undefined, BASE),
   createMigration: (projectId: string, input: { name: string; sourceName?: string; journeyIds: string[] }) => authRequest<SyncMigrationRun>(syncAt(projectId, "/migrations"), input, BASE),
   validateMigration: (projectId: string, runId: string) => authRequest<unknown>(syncAt(projectId, `/migrations/${encodeURIComponent(runId)}/validate`), {}, BASE),
