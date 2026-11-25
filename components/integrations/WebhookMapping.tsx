@@ -105,7 +105,12 @@ type Config = {
     optOut?: unknown[];
   }[];
   entitlements?: {
-    products: { source: string; entitlementKey: string; tier?: string }[];
+    products: {
+      source: string;
+      entitlementKey: string;
+      tier?: string;
+      enabled?: boolean;
+    }[];
     states?: unknown[];
     events?: unknown;
   };
@@ -166,6 +171,25 @@ const LIFECYCLE_HINTS: [RegExp, string][] = [
   [/first.?(open|launch)/, "first_app_open"],
   [/new.*user|account.?created|signed.?up/, "account_created"],
 ];
+/** PixlPush plan types, like Apple and Google Play. The value is saved as the user's subscription tier (ent_subscription_tier). */
+const PLAN_TIERS = [
+  { value: "weekly", label: "Weekly" },
+  { value: "monthly", label: "Monthly" },
+  { value: "yearly", label: "Yearly" },
+  { value: "one_time", label: "One-time" },
+  { value: "trial", label: "Trial" },
+];
+/** The plan type a product id most likely is, e.g. "large_monthly" → monthly. */
+const suggestTier = (product: string) => {
+  const name = product.toLowerCase();
+  if (/trial/.test(name)) return "trial";
+  if (/week/.test(name)) return "weekly";
+  if (/year|annual|12.?month/.test(name)) return "yearly";
+  if (/one.?time|lifetime|forever|coins?|credits?|pack|consumable/.test(name))
+    return "one_time";
+  if (/month/.test(name)) return "monthly";
+  return "";
+};
 /** The built-in lifecycle segment a server segment name most likely means, if any. */
 const suggestLifecycle = (name: string) => {
   const key = LIFECYCLE_HINTS.find(([pattern]) =>
@@ -353,6 +377,7 @@ export default function WebhookMapping({
   const [fields, setFields] = useState<Record<string, string>>({});
   const [fieldEnabled, setFieldEnabled] = useState<Record<string, boolean>>({});
   const [tiers, setTiers] = useState<Record<string, string>>({});
+  const [planEnabled, setPlanEnabled] = useState<Record<string, boolean>>({});
   // `confirmed`: saved, exactly matched, or chosen by the customer. Unconfirmed suggestions are not saved.
   const [events, setEvents] = useState<
     Record<string, { target: string; enabled: boolean; confirmed: boolean }>
@@ -413,9 +438,17 @@ export default function WebhookMapping({
       nextConfirmed[rule.source] = true;
     }
     const nextTiers: Record<string, string> = {};
-    for (const product of sample.data?.products ?? []) nextTiers[product] = "";
-    for (const rule of current.entitlements?.products ?? [])
-      nextTiers[rule.source] = rule.tier ?? rule.source;
+    // New products start off and unassociated; turning one on applies the suggestion.
+    const nextPlanEnabled: Record<string, boolean> = {};
+    for (const product of sample.data?.products ?? []) {
+      nextTiers[product] = "";
+      nextPlanEnabled[product] = false;
+    }
+    for (const rule of current.entitlements?.products ?? []) {
+      nextTiers[rule.source] = rule.tier ?? "";
+      nextPlanEnabled[rule.source] = rule.enabled !== false;
+    }
+    setPlanEnabled(nextPlanEnabled);
     const nextEvents: Record<
       string,
       { target: string; enabled: boolean; confirmed: boolean }
@@ -611,6 +644,7 @@ export default function WebhookMapping({
     fields,
     fieldEnabled,
     tiers,
+    planEnabled,
     events,
     segments,
     categories,
@@ -789,12 +823,14 @@ export default function WebhookMapping({
           states: [],
           events: {},
           ...config.entitlements,
+          // Saved with their switch; products never touched stay unmapped (off).
           products: Object.entries(tiers)
-            .filter(([, tier]) => tier.trim())
+            .filter(([source, tier]) => tier.trim() || planEnabled[source])
             .map(([source, tier]) => ({
               source,
               entitlementKey: "subscription",
-              tier: tier.trim(),
+              ...(tier.trim() ? { tier: tier.trim() } : {}),
+              enabled: planEnabled[source] === true,
             })),
         },
       };
@@ -1164,6 +1200,13 @@ export default function WebhookMapping({
         <Typography variant="subtitle2" sx={{ mt: 1 }}>
           Plans
         </Typography>
+        <Typography variant="caption" color="text.secondary">
+          Every product your server sends is listed here, turned off. Associate
+          it with a PixlPush plan type (Weekly, Monthly, Yearly, One-time or
+          Trial), turn it on and publish: purchases of that product, including
+          earlier ones, set the user’s plan, which you can target in segments
+          and audiences.
+        </Typography>
         {sample.isLoading ? (
           <Skeleton height={60} />
         ) : products.length ? (
@@ -1186,10 +1229,9 @@ export default function WebhookMapping({
                 {product}
               </Typography>
               <TextField
+                select
                 size="small"
-                sx={{ minWidth: 220 }}
-                label="PixlPush tier"
-                placeholder={product}
+                label="PixlPush plan"
                 value={tiers[product] ?? ""}
                 disabled={!canEdit || busy}
                 onChange={(event) =>
@@ -1198,15 +1240,68 @@ export default function WebhookMapping({
                     [product]: event.target.value,
                   }))
                 }
-                inputProps={{
-                  maxLength: 60,
-                  "aria-label": `Plan name for ${product}`,
-                }}
-              />
+                sx={{ width: { xs: "100%", md: 300 }, flexShrink: 0 }}
+                SelectProps={{ displayEmpty: true }}
+                InputLabelProps={{ shrink: true }}
+                inputProps={{ "aria-label": `PixlPush plan for ${product}` }}
+              >
+                <MenuItem value="">
+                  <Typography component="span" color="text.secondary">
+                    Not associated
+                  </Typography>
+                </MenuItem>
+                {PLAN_TIERS.map((tier) => (
+                  <MenuItem key={tier.value} value={tier.value}>
+                    {tier.label}
+                    {tier.value === suggestTier(product) ? " (suggested)" : ""}
+                  </MenuItem>
+                ))}
+                {/* A plan saved before these types existed keeps its own name. */}
+                {tiers[product] &&
+                  !PLAN_TIERS.some((tier) => tier.value === tiers[product]) && (
+                    <MenuItem value={tiers[product]}>{tiers[product]}</MenuItem>
+                  )}
+              </TextField>
               <Chip
                 size="small"
-                label={tiers[product]?.trim() ? "Matched" : "Needs mapping"}
-                color={tiers[product]?.trim() ? "success" : "warning"}
+                label={
+                  tiers[product]
+                    ? "Associated"
+                    : suggestTier(product)
+                      ? "Suggested"
+                      : "Not associated"
+                }
+                color={
+                  tiers[product]
+                    ? "success"
+                    : suggestTier(product)
+                      ? "info"
+                      : "default"
+                }
+              />
+              <FormControlLabel
+                sx={mappingSwitchLabelSx}
+                control={
+                  <Switch
+                    size="small"
+                    sx={webhookSwitchSx}
+                    checked={planEnabled[product] === true}
+                    disabled={!canEdit || busy}
+                    onChange={(_, on) => {
+                      setPlanEnabled((current) => ({
+                        ...current,
+                        [product]: on,
+                      }));
+                      // Turning a product on applies the suggestion; it can be changed.
+                      if (on && !tiers[product] && suggestTier(product))
+                        setTiers((current) => ({
+                          ...current,
+                          [product]: suggestTier(product),
+                        }));
+                    }}
+                  />
+                }
+                label={planEnabled[product] ? "Enabled" : "Disabled"}
               />
             </Stack>
           ))
