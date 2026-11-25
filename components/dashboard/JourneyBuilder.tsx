@@ -61,6 +61,7 @@ import {
 import Link from "next/link";
 import { useActiveProject } from "@/hooks/projects/use-active-project";
 import { formatUserDateTime } from "@/lib/timezone";
+import ImportedHistory from "./ImportedHistory";
 import {
   ENTRANCE,
   EXIT,
@@ -628,6 +629,7 @@ export default function JourneyBuilder() {
           {toast}
         </Box>
       )}
+      {journeyId && <ImportedHistory kind="journey" projectId={projectId} journeyId={journeyId} />}
       <Box className="journey-builder-header">
         <Stack
           direction={{ xs: "column", md: "row" }}

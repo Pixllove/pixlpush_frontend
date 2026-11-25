@@ -36,7 +36,7 @@ import type {
   ApnsUpload,
   FirebaseSettings,
   IntegrationCredentials,
-  IntegrationProvider,
+  ConnectionProvider,
   IntegrationSettings,
   ImportMappingInput,
   ImportPreview,
@@ -119,18 +119,18 @@ export const projectApi = {
 export const integrationsApi = {
   /** Every integration with its status, in one request. */
   list: (projectId: string) => authRequest<IntegrationSettings[]>(at(projectId, "/integrations"), undefined, BASE),
-  get: (projectId: string, provider: IntegrationProvider) => authRequest<IntegrationSettings>(at(projectId, `/integrations/${provider}`), undefined, BASE),
+  get: (projectId: string, provider: ConnectionProvider) => authRequest<IntegrationSettings>(at(projectId, `/integrations/${provider}`), undefined, BASE),
   /** Checked live with the integration before anything is stored. */
-  connect: (projectId: string, provider: IntegrationProvider, credentials: IntegrationCredentials) =>
+  connect: (projectId: string, provider: ConnectionProvider, credentials: IntegrationCredentials) =>
     authRequest<IntegrationSettings>(at(projectId, `/integrations/${provider}`), credentials, BASE, "PUT"),
-  setSyncEnabled: (projectId: string, provider: IntegrationProvider, syncEnabled: boolean) =>
+  setSyncEnabled: (projectId: string, provider: ConnectionProvider, syncEnabled: boolean) =>
     authRequest<IntegrationSettings>(at(projectId, `/integrations/${provider}`), { syncEnabled }, BASE, "PATCH"),
-  syncNow: (projectId: string, provider: IntegrationProvider) => authRequest<IntegrationSettings>(at(projectId, `/integrations/${provider}/sync`), {}, BASE),
-  disconnect: (projectId: string, provider: IntegrationProvider) => authRequest<IntegrationSettings>(at(projectId, `/integrations/${provider}`), {}, BASE, "DELETE"),
+  syncNow: (projectId: string, provider: ConnectionProvider) => authRequest<IntegrationSettings>(at(projectId, `/integrations/${provider}/sync`), {}, BASE),
+  disconnect: (projectId: string, provider: ConnectionProvider) => authRequest<IntegrationSettings>(at(projectId, `/integrations/${provider}`), {}, BASE, "DELETE"),
   /** "Connect with <CRM>": the consent page to send the browser to. */
-  oauthStart: (projectId: string, provider: IntegrationProvider) => authRequest<{ url: string }>(at(projectId, `/integrations/${provider}/oauth/start`), {}, BASE),
+  oauthStart: (projectId: string, provider: ConnectionProvider) => authRequest<{ url: string }>(at(projectId, `/integrations/${provider}/oauth/start`), {}, BASE),
   /** The CRM sent the browser back with ?code (and ?state when started here). */
-  oauthCallback: (projectId: string, provider: IntegrationProvider, input: { code: string; state?: string }) =>
+  oauthCallback: (projectId: string, provider: ConnectionProvider, input: { code: string; state?: string }) =>
     authRequest<IntegrationSettings>(at(projectId, `/integrations/${provider}/oauth/callback`), input, BASE),
 };
 
@@ -179,6 +179,8 @@ export const onboardingApi = {
     authRequest<{ androidAppUrl: string | null; iosAppUrl: string | null }>(at(projectId, "/onboarding/app-links"), { websiteUrl }, BASE),
   sendSdkInstructions: (projectId: string, input: { developerEmail: string; sdk: string; prompt: string; guideUrl?: string }) =>
     authRequest<{ sent: boolean }>(at(projectId, "/onboarding/sdk-instructions"), input, BASE),
+  sendWebhookInstructions: (projectId: string, developerEmail: string) =>
+    authRequest<{ sent: boolean }>(at(projectId, "/onboarding/webhook-instructions"), { developerEmail }, BASE),
 };
 
 export type RoadmapStage = 'under_consideration' | 'future' | 'planned' | 'in_progress' | 'done' | 'unlikely_to_build';
@@ -242,39 +244,12 @@ export type SyncSource = {
   status: "active" | "paused"; activeMappingVersion?: number | null;
   records?: Record<string, number>; createdAt: string; updatedAt: string;
 };
-export type SyncCredential = {
-  id: string; name: string; keyPrefix: string; scopes: string[];
-  lastUsedAt: string | null; expiresAt: string | null; revokedAt: string | null; createdAt: string;
-};
-export type CreatedSyncCredential = SyncCredential & { key: string; warning: string };
 export type SyncMapping = {
   version: number; status: "draft" | "active" | "superseded"; config: unknown;
   validation: { valid: boolean; errors: { code: string; path: string; message: string }[]; warnings: { code: string; path: string; message: string }[] };
   publishedAt: string | null; createdAt: string;
 };
-export type SyncRecord = {
-  id: string; idempotencyKey: string; recordType: string; externalUserId: string;
-  status: "pending" | "processing" | "applied" | "ignored_stale" | "ignored_deleted" | "failed" | "dead_letter";
-  mappingVersion: number | null; attempts: number; lastError: string | null;
-  occurredAt: string; receivedAt: string; processedAt: string | null;
-};
-export type ExternalSyncSegment = {
-  id: string; namespace: string; key: string; displayName: string; status: "active" | "retired";
-  memberCount: number; source: { name: string; environment: SyncEnvironment };
-};
-export type SyncImportKind = "event_history" | "message_history";
-export type SyncImportJob = {
-  id: string; sourceId: string; kind: SyncImportKind;
-  status: "queued" | "running" | "paused" | "completed" | "failed" | "canceled";
-  partsTotal: number; partsCompleted: number; accepted: number; rejected: number;
-  partsUploaded?: number;
-  startedAt: string | null; completedAt: string | null; lastError: string | null;
-  createdAt: string; updatedAt: string;
-  parts?: { id: string; partIndex: number; idempotencyKey: string; status: string; attempts: number; lastError: string | null; processedAt: string | null }[];
-};
-export type SyncWebhookEndpoint = { id: string; name: string; url: string; events: string[]; status: "active" | "paused"; createdAt: string; updatedAt: string };
-export type CreatedSyncWebhook = SyncWebhookEndpoint & { secret: string; warning: string };
-export type SyncWebhookDelivery = { id: string; status: "pending" | "processing" | "delivered" | "dead_letter"; attempts: number; responseStatus: number | null; lastError: string | null; deliveredAt: string | null; createdAt: string; topic: string; eventCreatedAt: string };
+export type SyncExternalSegment = { id: string; sourceId: string; namespace: string; key: string; displayName: string; status: "active" | "disabled" | "retired"; memberCount: number };
 export type SyncOverduePolicy = "catch_up" | "skip" | "exit";
 export type SyncSourceComparison = {
   matched: boolean; participantsMigrated: boolean; missingJourneyIds: string[];
@@ -292,39 +267,42 @@ export type SyncMigrationRun = {
 };
 const syncAt = (projectId: string, path = "") => at(projectId, `/data-sync${path}`);
 
+export type MatchStatus = "matched" | "suggested" | "needs_mapping";
+/** One page of the Webhook feed with suggested matches. Suggestions only; nothing is saved. */
+export type WebhookSample = {
+  sampled: number; fields: string[]; events: string[]; products: string[];
+  /** Distinct `segment` values seen in the sample. */
+  segmentNames?: string[];
+  fieldMatches: { source: string; target: string | null; status: MatchStatus; reason: string; samples: string[] }[];
+  eventMatches: { source: string; target: string | null; status: MatchStatus; reason: string; candidates: { name: string; score: number; reason: string }[]; sampleProperties: string[] }[];
+  knownEvents: { name: string; standard: boolean; description: string | null }[];
+  campaignMatches: (TargetMatch & { channel: "email" | "push"; source: string; name: string | null; records: number; statuses: string[]; unsupported: string[] })[];
+  journeyMatches: (TargetMatch & { source: string; name: string | null; records: number; steps: (TargetMatch & { source: string; name: string | null })[] })[];
+  unknownChannel: number;
+  targets: { email: NamedItem[]; push: NamedItem[]; journeys: (NamedItem & { steps: NamedItem[] })[] };
+};
+type NamedItem = { id: string; name: string };
+type TargetMatch = { status: MatchStatus; target: string | null; reason: string; candidates: { id: string; name: string; score: number }[] };
+
+/** History from the customer's previous tool. Never counted as PixlPush sends. */
+export type ImportedMessage = {
+  id: string; channel: "email" | "push"; status: string; sourceCampaignId: string | null; campaignName: string | null; campaignId: string | null;
+  sentAt: string | null; deliveredAt: string | null; openedAt: string | null; clickedAt: string | null; bouncedAt: string | null; failedAt: string | null;
+  externalUserId: string; userId: string | null;
+};
+export type ImportedJourneyStep = { id: string; sourceJourneyId: string; journeyName: string | null; sourceStepId: string; stepName: string | null; journeyId: string | null; stepId: string | null; enteredAt: string; externalUserId?: string };
+
 export const dataSyncApi = {
+  importedForUser: (projectId: string, userId: string) => authRequest<{ messages: ImportedMessage[]; journeySteps: ImportedJourneyStep[] }>(syncAt(projectId, `/imported-history/users/${encodeURIComponent(userId)}`), undefined, BASE),
+  importedForCampaign: (projectId: string, channel: "email" | "push", campaignId: string) => authRequest<{ stats: { total: number; delivered: number; opened: number; clicked: number | null; bounced: number; failed: number }; recipients: ImportedMessage[] }>(syncAt(projectId, `/imported-history/campaigns/${channel}/${encodeURIComponent(campaignId)}`), undefined, BASE),
+  importedForJourney: (projectId: string, journeyId: string) => authRequest<{ steps: { stepId: string | null; users: number }[]; recent: ImportedJourneyStep[] }>(syncAt(projectId, `/imported-history/journeys/${encodeURIComponent(journeyId)}`), undefined, BASE),
   sources: (projectId: string) => authRequest<SyncSource[]>(syncAt(projectId, "/sources"), undefined, BASE),
-  createSource: (projectId: string, input: { name: string; environment: SyncEnvironment }) => authRequest<SyncSource>(syncAt(projectId, "/sources"), input, BASE),
-  setSourceStatus: (projectId: string, sourceId: string, status: SyncSource["status"]) => authRequest<SyncSource>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}`), { status }, BASE, "PATCH"),
-  credentials: (projectId: string, sourceId: string) => authRequest<SyncCredential[]>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/credentials`), undefined, BASE),
-  createCredential: (projectId: string, sourceId: string, name: string) => authRequest<CreatedSyncCredential>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/credentials`), { name }, BASE),
-  revokeCredential: (projectId: string, sourceId: string, credentialId: string) => authRequest<{ revoked: boolean }>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/credentials/${encodeURIComponent(credentialId)}/revoke`), {}, BASE),
+  segments: (projectId: string) => authRequest<SyncExternalSegment[]>(syncAt(projectId, "/segments"), undefined, BASE),
+  /** Names seen in one page of the connected Webhook feed (no values). */
+  serverSample: (projectId: string) => authRequest<WebhookSample>(syncAt(projectId, "/server-sync/sample"), undefined, BASE),
   mappings: (projectId: string, sourceId: string) => authRequest<SyncMapping[]>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/mappings`), undefined, BASE),
   createMapping: (projectId: string, sourceId: string, config: unknown) => authRequest<SyncMapping>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/mappings`), { config }, BASE),
-  updateMapping: (projectId: string, sourceId: string, version: number, config: unknown) => authRequest<SyncMapping>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/mappings/${version}`), { config }, BASE, "PUT"),
   publishMapping: (projectId: string, sourceId: string, version: number) => authRequest<SyncMapping>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/mappings/${version}/publish`), {}, BASE),
-  previewMapping: (projectId: string, sourceId: string, config: unknown, attributes: Record<string, unknown>, consent: Record<string, unknown>) => authRequest<{ validation: SyncMapping["validation"]; fields: { target: string; value: unknown }[]; consent: Record<string, boolean>; recordError: { code: string; message: string } | null }>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/mappings/preview`), { config, attributes, consent }, BASE),
-  records: (projectId: string, sourceId: string, status?: SyncRecord["status"]) => {
-    const query = new URLSearchParams({ limit: "100" }); if (status) query.set("status", status);
-    return authRequest<{ items: SyncRecord[]; nextCursor: string | null }>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/records?${query}`), undefined, BASE);
-  },
-  retryRecords: (projectId: string, sourceId: string) => authRequest<{ retried: number }>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/records/retry`), {}, BASE),
-  segments: (projectId: string) => authRequest<ExternalSyncSegment[]>(syncAt(projectId, "/segments"), undefined, BASE),
-  retireSegment: (projectId: string, segmentId: string) => authRequest<ExternalSyncSegment>(syncAt(projectId, `/segments/${encodeURIComponent(segmentId)}/retire`), {}, BASE),
-  imports: (projectId: string) => authRequest<SyncImportJob[]>(syncAt(projectId, "/imports"), undefined, BASE),
-  importJob: (projectId: string, jobId: string) => authRequest<SyncImportJob>(syncAt(projectId, `/imports/${encodeURIComponent(jobId)}`), undefined, BASE),
-  createImport: (projectId: string, sourceId: string, input: { kind: SyncImportKind; partsTotal: number }) => authRequest<SyncImportJob>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/imports`), input, BASE),
-  uploadImportPart: (projectId: string, jobId: string, input: { partIndex: number; idempotencyKey: string; records: unknown[] }) => authRequest<{ id: string; partIndex: number; idempotencyKey: string; status: string; duplicate: boolean }>(syncAt(projectId, `/imports/${encodeURIComponent(jobId)}/parts`), input, BASE),
-  startImport: (projectId: string, jobId: string) => authRequest<SyncImportJob>(syncAt(projectId, `/imports/${encodeURIComponent(jobId)}/start`), {}, BASE),
-  pauseImport: (projectId: string, jobId: string) => authRequest<{ paused: boolean }>(syncAt(projectId, `/imports/${encodeURIComponent(jobId)}/pause`), {}, BASE),
-  resumeImport: (projectId: string, jobId: string) => authRequest<{ resumed: boolean }>(syncAt(projectId, `/imports/${encodeURIComponent(jobId)}/resume`), {}, BASE),
-  cancelImport: (projectId: string, jobId: string) => authRequest<{ canceled: boolean }>(syncAt(projectId, `/imports/${encodeURIComponent(jobId)}/cancel`), {}, BASE),
-  webhooks: (projectId: string, sourceId: string) => authRequest<SyncWebhookEndpoint[]>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/webhooks`), undefined, BASE),
-  createWebhook: (projectId: string, sourceId: string, input: { name: string; url: string; events: string[] }) => authRequest<CreatedSyncWebhook>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/webhooks`), input, BASE),
-  setWebhookStatus: (projectId: string, endpointId: string, status: SyncWebhookEndpoint["status"]) => authRequest<SyncWebhookEndpoint>(syncAt(projectId, `/webhooks/${encodeURIComponent(endpointId)}`), { status }, BASE, "PATCH"),
-  deleteWebhook: (projectId: string, endpointId: string) => authRequest<{ deleted: boolean }>(syncAt(projectId, `/webhooks/${encodeURIComponent(endpointId)}`), {}, BASE, "DELETE"),
-  webhookDeliveries: (projectId: string, endpointId: string) => authRequest<SyncWebhookDelivery[]>(syncAt(projectId, `/webhooks/${encodeURIComponent(endpointId)}/deliveries`), undefined, BASE),
-  replayWebhook: (projectId: string, endpointId: string, deliveryId: string) => authRequest<{ replayed: boolean }>(syncAt(projectId, `/webhooks/${encodeURIComponent(endpointId)}/deliveries/${encodeURIComponent(deliveryId)}/replay`), {}, BASE),
   migrations: (projectId: string) => authRequest<SyncMigrationRun[]>(syncAt(projectId, "/migrations"), undefined, BASE),
   createMigration: (projectId: string, input: { name: string; sourceName?: string; journeyIds: string[] }) => authRequest<SyncMigrationRun>(syncAt(projectId, "/migrations"), input, BASE),
   validateMigration: (projectId: string, runId: string) => authRequest<unknown>(syncAt(projectId, `/migrations/${encodeURIComponent(runId)}/validate`), {}, BASE),
@@ -337,8 +315,6 @@ export const dataSyncApi = {
   requestCutover: (projectId: string, runId: string, input: { overduePolicy: SyncOverduePolicy; overdueMaxHours: number; catchUpMinutes: number }) => authRequest<SyncMigrationRun>(syncAt(projectId, `/migrations/${encodeURIComponent(runId)}/cutover/request`), input, BASE),
   cutoverMigration: (projectId: string, runId: string, confirmSelfApproval = false) => authRequest<SyncMigrationRun>(syncAt(projectId, `/migrations/${encodeURIComponent(runId)}/cutover`), { confirmSelfApproval }, BASE),
   rollbackMigration: (projectId: string, runId: string) => authRequest<SyncMigrationRun>(syncAt(projectId, `/migrations/${encodeURIComponent(runId)}/rollback`), {}, BASE),
-  serverOnlyEvents: (projectId: string) => authRequest<{ events: string[] }>(at(projectId, "/sdk-keys/server-only-events"), undefined, BASE),
-  setServerOnlyEvents: (projectId: string, events: string[]) => authRequest<{ events: string[] }>(at(projectId, "/sdk-keys/server-only-events"), { events }, BASE, "PUT"),
 };
 
 export interface EmailTemplate {
@@ -941,10 +917,18 @@ export const usersApi = {
   },
 };
 
+/** Event rules (SDK), or server rules: Webhook events add and remove users. */
+export type SegmentRulesInput =
+  | { operator?: "AND" | "OR"; conditions: Array<{ event: string }> }
+  | { source: "server"; enter: string[]; exit: string[] };
+
 export const eventsApi = {
+  /** A described custom event, so mappings and AI features know what it means. */
+  createCustom: (projectId: string, input: { name: string; description: string }) =>
+    authRequest<{ name: string; description: string }>(at(projectId, "/event-catalog"), input, BASE),
   listCatalog: (
     projectId: string,
-    platform: "web" | "mobile",
+    platform: "web" | "mobile" | "server",
     params: { search?: string; limit?: number } = {},
   ) => {
     const query = new URLSearchParams({
@@ -999,7 +983,7 @@ export const lifecycleSegmentsApi = {
     input: {
       name: string;
       description?: string;
-      rules: { operator?: "AND" | "OR"; conditions: Array<{ event: string }> };
+      rules: SegmentRulesInput;
     },
   ) =>
     authRequest<LifecycleSegment>(
@@ -1013,7 +997,7 @@ export const lifecycleSegmentsApi = {
     input: {
       name?: string;
       description?: string;
-      rules?: { operator: "AND" | "OR"; conditions: Array<{ event: string }> };
+      rules?: SegmentRulesInput;
     },
   ) =>
     authRequest<LifecycleSegment>(

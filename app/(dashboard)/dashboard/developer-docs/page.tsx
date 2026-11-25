@@ -1,4 +1,4 @@
-import { ArrowForwardRounded, CodeRounded, DataObjectRounded, EventNoteRounded, LanguageRounded, LibraryBooksRounded, PhoneAndroidRounded, WebRounded } from "@mui/icons-material";
+import { ArrowForwardRounded, CodeRounded, DataObjectRounded, EventNoteRounded, LanguageRounded, LibraryBooksRounded, PhoneAndroidRounded, WebRounded, WebhookRounded } from "@mui/icons-material";
 import { Box, Card, CardContent, Chip, Stack, Typography } from "@mui/material";
 import DashboardFrame from "@/components/dashboard/DashboardFrame";
 import { LinkButton } from "@/components/docs/links";
@@ -41,6 +41,13 @@ const steps = [
     description: "Install the Flutter package, configure identity and events, connect Firebase, and verify automatic notification-open attribution on Android and iOS.",
     href: "/dashboard/integrations/flutter/quickstart",
     icon: PhoneAndroidRounded,
+  },
+  {
+    step: "Server integration",
+    title: "Webhook event feed",
+    description: "Implement a secure, paginated HTTPS endpoint for subscription, account and custom events from your backend.",
+    href: "/dashboard/developer-docs/webhook",
+    icon: WebhookRounded,
   },
   {
     step: "Step 2 · optional",

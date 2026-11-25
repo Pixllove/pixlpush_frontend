@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apnsApi, emailApi, firebaseApi, integrationsApi, onboardingApi, projectKeys, sdkKeyApi } from '@/lib/projects/api';
-import type { IntegrationCredentials, IntegrationProvider, IntegrationSettings, ProjectPlatform } from '@/types/project';
+import type { ConnectionProvider, IntegrationCredentials, IntegrationSettings, ProjectPlatform } from '@/types/project';
 import { isPermanentAuthError } from '@/lib/auth/client';
 import type { ApiError } from '@/types/auth';
 
@@ -73,13 +73,14 @@ function useIntegrationMutation<TIn>(projectId: string | undefined, run: (id: st
 }
 
 /** One integration's status and actions; the same for HubSpot, Salesforce, Pipedrive and any later one. */
-export function useIntegration(projectId: string | undefined, provider: IntegrationProvider) {
+export function useIntegration(projectId: string | undefined, provider: ConnectionProvider) {
   return {
     query: useQuery<IntegrationSettings, ApiError>({
       queryKey: [...projectKeys.integrations(projectId ?? ''), provider],
       queryFn: () => integrationsApi.get(projectId as string, provider),
       enabled: Boolean(projectId),
-      refetchInterval: 60_000,
+      // Poll quickly while a sync runs so "Syncing…" turns into "Last checked" promptly.
+      refetchInterval: (query) => (query.state.data?.connected && query.state.data.syncing ? 5_000 : 60_000),
       retry: (count, error) => !isPermanentAuthError(error) && count < 2,
     }),
     connect: useIntegrationMutation(projectId, (id, input: IntegrationCredentials) => integrationsApi.connect(id, provider, input)),

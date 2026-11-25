@@ -263,7 +263,7 @@ const emptyAnalyticsView = (): AnalyticsView => ({
   engagement: { email: [], push: [] },
   channels: [
     { name: "Email", sent: 0, rates: [{ label: "Delivered", value: 0 }, { label: "Open rate", value: 0 }] },
-    { name: "Push", sent: 0, rates: [{ label: "Delivered", value: 0 }, { label: "Click rate", value: 0 }] },
+    { name: "Push", sent: 0, rates: [{ label: "Delivered", value: 0 }, { label: "Open rate", value: 0 }] },
   ],
   campaigns: [],
 });
@@ -325,7 +325,8 @@ function analyticsViewFromApi(overview: AnalyticsOverview | null, campaigns: Ana
         sent: numberData(overview.channelPerformance.push.sent),
         rates: [
           { label: "Delivered", value: numberData(overview.channelPerformance.push.deliveryRate) },
-          { label: "Click rate", value: numberData(overview.channelPerformance.push.clickRate) },
+          // The API calls it clickRate, but PixlPush records push opens, not link clicks.
+          { label: "Open rate", value: numberData(overview.channelPerformance.push.clickRate) },
         ],
       },
     ],

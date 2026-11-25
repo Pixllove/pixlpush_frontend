@@ -1,0 +1,176 @@
+{
+  "format": "pixlpush-agent-handoff-v1",
+  "createdAt": "2026-11-23",
+  "updatedAt": "2026-11-23",
+  "purpose": "Test the simplified PixlPush Webhook integration in Codex. This is a curated handoff, not a raw transcript, so secrets and tool output are excluded.",
+  "startHere": [
+    "Read userInstructions, currentFlow, and testPlan first.",
+    "The code is already committed and pushed on feature/data-sync-platform in both PixlPush repos. Confirm both HEADs match repositories below.",
+    "Test the flow in Chrome. Claude in Chrome was not connected to the previous session, so no signed-in browser test has been done.",
+    "Report failures with exact steps and evidence. Change code only if the user asks for fixes."
+  ],
+  "latestUserRequest": "Update conversation.json so the user can test with Codex. The preceding request was to open Chrome and stress test the Webhook flow.",
+  "userInstructions": {
+    "scope": [
+      "Make changes only in the PixlPush backend and frontend repositories.",
+      "Do not change PixlLove backend, app, admin, or cron.",
+      "Keep the solution simple. The user rejected the earlier Data Sync UI and the generated URL/token flow as over-engineered.",
+      "Do not add combined data sources for a lifecycle segment. Keep single-source-per-segment behavior.",
+      "Do not change CRM integration behavior."
+    ],
+    "git": [
+      "Stay on feature/data-sync-platform unless the user says otherwise.",
+      "Commit author is Kamran Ahsan. Never add a Claude, Codex, or Co-Authored-By trailer.",
+      "Commit or push only when the user asks.",
+      "Never commit conversation.json."
+    ],
+    "database": [
+      "Use the existing local pixlpush_dev database. Do not create a temporary database.",
+      "Tag test projects with a zz- slug, remove all test data afterward, and confirm table counts match the starting counts.",
+      "Never run truncating test suites against pixlpush_dev. The normal DB-backed test suite truncates tables.",
+      "Do not change the existing HubSpot connection or run a global integration worker pass while it is enabled, unless the user approves.",
+      "Do not print database URLs, API keys, tokens, or contents of .env files."
+    ],
+    "testing": [
+      "Test only the new Webhook changes.",
+      "Do not treat earlier unclassified failures in the full backend suite as caused by this work without a clean baseline."
+    ],
+    "engineering": [
+      "Keep customer-specific vocabulary out of PixlPush core schema.",
+      "Follow pixlpush_frontend/DESIGN.md for UI work.",
+      "When graphify-out/graph.json exists, use graphify query/path/explain for codebase questions, and run graphify update . after code changes."
+    ]
+  },
+  "repositories": {
+    "pixlpushBackend": { "path": "/Users/apple/Job/pixlpush_backend", "branch": "feature/data-sync-platform", "head": "b7cb3fc", "pushed": true, "state": "Clean" },
+    "pixlpushFrontend": { "path": "/Users/apple/Job/pixlpush_frontend", "branch": "feature/data-sync-platform", "head": "a6b1345", "pushed": true, "state": "Clean except this untracked handoff file" },
+    "pixlloveReadOnly": { "path": "/Users/apple/Job/Pixldevelop", "state": "Out of scope. The app repo has pre-existing uncommitted user changes. Do not touch." }
+  },
+  "currentFlow": {
+    "entryPoint": "Dashboard > Integrations > Server > Webhook, at /dashboard/integrations/webhook.",
+    "removedOrRedirected": [
+      "The Data Sync tab is removed from Project Settings.",
+      "/dashboard/settings/data-sync and ?setup=1 redirect to /dashboard/integrations/webhook.",
+      "Import users and lifecycle segment webhook actions link to the Webhook page."
+    ],
+    "customerSetup": [
+      "The customer enters their own backend URL and auth token. PixlPush does not generate either.",
+      "PixlPush verifies them with GET <url>?limit=1 and Authorization: Bearer <token>.",
+      "The URL must be public HTTPS on port 443. Localhost, private IPs, credentials in the URL, and redirects are rejected.",
+      "The token is stored encrypted in IntegrationConnection.accessTokenEncrypted and is never returned."
+    ],
+    "syncDirection": "Customer backend to PixlPush only. PixlPush pulls every 2 minutes through the existing integration worker and pushes nothing back.",
+    "feedContract": {
+      "request": "GET <url>?limit=500&since=<ISO date, optional>&cursor=<opaque, optional>",
+      "response": {
+        "data": [
+          {
+            "id": "evt_1001",
+            "event_name": "subscription_canceled",
+            "user_id": "your-user-id",
+            "time": "2026-11-23T12:00:00Z",
+            "product_id": "premium_monthly",
+            "expires_at": "2027-01-01T00:00:00Z",
+            "user": { "email": "user@example.com", "email_consent": true }
+          }
+        ],
+        "next": null
+      },
+      "rules": [
+        "id must be 8 to 160 characters and unique per event. Repeated ids apply once.",
+        "time is required because SyncEntityVersion orders updates by occurredAt.",
+        "Billing events require product_id. segment_entered and segment_exited require segment.",
+        "One page holds at most 500 events and 5 MB.",
+        "One invalid event rejects its whole page and shows an error on the Webhook page."
+      ]
+    },
+    "schemaUse": {
+      "IntegrationConnection": "Customer URL, encrypted token, sync on/off, cursor, last sync, and errors. Provider is webhook.",
+      "SyncSource": "One Webhook source per Project in production. Disconnect pauses it, a new connection reactivates it, and a deliberate pause stops pulling.",
+      "SyncMappingVersion": "A default autoMap mapping is created on first pull.",
+      "SyncInboxRecord": "Pulled events become durable encrypted records, deduplicated by sourceId and idempotencyKey.",
+      "SyncEntityVersion": "Prevents older updates from overwriting newer ones.",
+      "UserEntitlement and ExternalSegment": "Hold subscription states and external segment membership."
+    },
+    "keyFiles": [
+      "pixlpush_backend/src/modules/integrations/providers/webhook.ts",
+      "pixlpush_backend/src/modules/data-sync/simple-webhook.ts",
+      "pixlpush_backend/src/modules/data-sync/mapping.ts",
+      "pixlpush_backend/tests/simple-webhook.test.ts",
+      "pixlpush_frontend/components/integrations/WebhookIntegration.tsx",
+      "pixlpush_frontend/components/integrations/WebhookAdvanced.tsx",
+      "pixlpush_frontend/components/integrations/IntegrationsHub.tsx"
+    ],
+    "migrationRequired": false
+  },
+  "verification": {
+    "passed": [
+      "Backend and frontend type checks.",
+      "ESLint on the main changed frontend components.",
+      "14 scoped backend tests and 2 scoped frontend CRM plugin tests.",
+      "Database-backed check on pixlpush_dev with a stubbed customer backend: connect, bad token, private URL, profile and consent sync, lifecycle state, event, repeat pull, bad page, disconnect, reconnect, pause, and missing time.",
+      "That check's test project was deleted and table counts matched before and after."
+    ],
+    "notVerified": [
+      "Signed-in UI in a real browser.",
+      "The signed-in redirect from /dashboard/settings/data-sync?setup=1. Signed out, it stops at login.",
+      "A full scheduled worker pass for the webhook provider, because the dev database has an enabled HubSpot connection.",
+      "A real customer endpoint over a public HTTPS URL.",
+      "Load or stress behavior.",
+      "Full backend and frontend suites."
+    ]
+  },
+  "testPlan": {
+    "setup": [
+      "Frontend runs at https://localhost:3000. Confirm the local API is running without printing its environment.",
+      "Sign in through Chrome and switch to a dedicated zz- test Project. Do not connect the webhook on a real Project.",
+      "Run a small fake customer feed locally and expose only that server through a temporary HTTPS tunnel, because localhost URLs are rejected by design.",
+      "Record starting table counts for projects, project_members, end_users, events, sync_sources, sync_credentials, sync_inbox_records, integration_connections, and rate_limits."
+    ],
+    "uiFlow": [
+      "Integrations shows the Server section and Webhook card, and search finds it by webhook and server.",
+      "Project Settings has no Data Sync tab, and the old setup URL redirects while signed in.",
+      "Import users and lifecycle segment webhook actions open the Webhook page.",
+      "Connect succeeds with a valid URL and token. The token is not visible after saving or in API responses.",
+      "Sync now, Automatic sync off and on, Change URL or token, Disconnect, reconnect, and Advanced tools all work.",
+      "Viewer or member roles cannot change the connection.",
+      "Switching Projects never shows another Project's connection or records.",
+      "The page works at mobile width with no horizontal page scroll."
+    ],
+    "stress": [
+      "Double-click and rapidly repeat Connect, Sync now, toggle, and Disconnect.",
+      "Refresh and navigate away during a sync.",
+      "Try invalid, HTTP, localhost, private IP, redirecting, slow, 401, 403, 404, 429, 500, non-JSON, and over-5-MB responses.",
+      "Feed 500 events per page across multiple cursor pages, then repeat the same ids and confirm events apply once.",
+      "Send out-of-order updates for one user and confirm the newest state wins.",
+      "Confirm one invalid event stores nothing from that page and shows a clear error."
+    ],
+    "cleanup": [
+      "Disconnect the test webhook, stop the fake feed and tunnel, and delete the zz- test Project.",
+      "Remove any rate-limit rows created by the test.",
+      "Confirm table counts match the starting counts and the HubSpot connection is unchanged."
+    ]
+  },
+  "knownLimitations": [
+    "The customer must build the GET feed endpoint.",
+    "The UI for sending PixlPush updates to a customer's server was removed from the simple page. Its backend still exists.",
+    "Sources created through the old Data Sync flow appear only in Advanced tools.",
+    "pixlpush_dev has a paused Webhook source from earlier manual testing, with no active credentials. Leave it unless the user asks."
+  ],
+  "knownPixlLoveRisksNotInScope": [
+    "OTPs are returned in API responses.",
+    "PUT /user/segment/:id and POST /user/send-notifications lack authentication.",
+    "A Slack webhook URL is committed in source and must be rotated.",
+    "Remind the user if relevant, but do not edit PixlLove."
+  ],
+  "deploymentNotes": [
+    "The feature branch is pushed, but nothing has been deployed and it has not been merged to main.",
+    "This Webhook change needs no new migration. Earlier commits on the branch do include migrations, so apply them before deploying the branch."
+  ],
+  "nextSteps": [
+    "Run testPlan in Chrome on a zz- test Project.",
+    "Give the user a pass/fail report with evidence and clear anything not tested.",
+    "Fix failures only if the user asks, then rerun only the affected checks.",
+    "Commit or push only when the user asks."
+  ]
+}
