@@ -306,7 +306,14 @@ export default function TeamAccessPanel() {
               onClick={() =>
                 confirm.kind === 'remove'
                   ? act(`remove-${confirm.member.id}`, () => teamApi.removeMember(projectId, confirm.member.id), `${person(confirm.member.account)} no longer has access.`)
-                  : act(`revoke-${confirm.invitation.id}`, () => teamApi.revokeInvitation(projectId, confirm.invitation.id), 'Invitation revoked.')
+                  : act(`revoke-${confirm.invitation.id}`, async () => {
+                      const id = confirm.invitation.id;
+                      await teamApi.revokeInvitation(projectId, id);
+                      // Drop it now so the row can't flash back while the list refetches.
+                      queryClient.setQueryData<ProjectInvitation[]>(['projects', 'team', projectId, 'invitations'], (list) =>
+                        list?.map((i) => (i.id === id ? { ...i, status: 'revoked' } : i)),
+                      );
+                    }, 'Invitation revoked.')
               }
             >
               {confirm.kind === 'remove' ? 'Remove access' : 'Revoke invitation'}

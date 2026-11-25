@@ -835,7 +835,7 @@ export const teamApi = {
       BASE,
     ),
   revokeInvitation: (projectId: string, invitationId: string) =>
-    authRequest<null>(
+    authRequest<{ id: string; status: "revoked"; emailSent: boolean }>(
       at(projectId, `/invitations/${encodeURIComponent(invitationId)}`),
       {},
       BASE,

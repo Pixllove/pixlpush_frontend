@@ -108,7 +108,7 @@ describe('Team & Access', () => {
     team.updateRole.mockResolvedValue({ id: 'm-dimi@example.com', role: 'admin', updatedAt: '' });
     team.removeMember.mockResolvedValue(null);
     team.resendInvitation.mockResolvedValue({ id: 'i1', email: 'new@example.com', role: 'analyst', status: 'pending', expiresAt: '', createdAt: '', emailSent: true });
-    team.revokeInvitation.mockResolvedValue(null);
+    team.revokeInvitation.mockResolvedValue({ id: "i1", status: "revoked", emailSent: true });
     wrap(<TeamAccessPanel />);
 
     fireEvent.mouseDown(await screen.findByLabelText('Role of dimi@example.com'));
