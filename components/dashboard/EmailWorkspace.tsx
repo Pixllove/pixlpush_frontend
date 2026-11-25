@@ -596,6 +596,11 @@ export default function EmailWorkspace() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const highlightedId = searchParams.get("highlight");
+  const requestedCreate = searchParams.get("create");
+  const shouldOpenChoice =
+    requestedCreate === "template" || requestedCreate === "campaign";
+  const requestedKind: "drafts" | "templates" =
+    requestedCreate === "template" ? "templates" : "drafts";
   const requestedTab = searchParams.get("tab");
   const [items, setItems] = useState<EmailItem[]>([]);
   const [tab, setTab] = useState<TabId>(
@@ -608,8 +613,10 @@ export default function EmailWorkspace() {
   const [query, setQuery] = useState("");
   // What the server was last asked for; the list is also filtered on `query` at once from what is loaded.
   const [appliedQuery, setAppliedQuery] = useState("");
-  const [view, setView] = useState<"list" | "choice" | "editor">("list");
-  const [kind, setKind] = useState<"drafts" | "templates">("drafts");
+  const [view, setView] = useState<"list" | "choice" | "editor">(
+    shouldOpenChoice ? "choice" : "list",
+  );
+  const [kind, setKind] = useState<"drafts" | "templates">(requestedKind);
   const [editor, setEditor] = useState<Editor>("simple");
   const [creationLanguage, setCreationLanguage] = useState("en");
   const [active, setActive] = useState<EmailItem | null>(null);
@@ -623,7 +630,7 @@ export default function EmailWorkspace() {
   const restoredActive = useRef<EmailItem | null | undefined>(undefined);
   useIsomorphicLayoutEffect(() => {
     const session = readEditorSession();
-    if (session) {
+    if (session && !shouldOpenChoice) {
       editorSession.current = session;
       setKind(session.kind);
       setEditor(session.editor);
@@ -648,6 +655,12 @@ export default function EmailWorkspace() {
     }
     setRestored(true);
   }, []);
+  useEffect(() => {
+    if (!restored || !shouldOpenChoice) return;
+    setActive(null);
+    setKind(requestedKind);
+    setView("choice");
+  }, [requestedKind, restored, shouldOpenChoice]);
   useEffect(() => {
     if (!restored) return;
     if (view !== "editor") {
@@ -915,6 +928,7 @@ export default function EmailWorkspace() {
     setTab(item.kind);
     setView("list");
     setNotice(message);
+    router.replace(`/dashboard/email?tab=${item.kind}`, { scroll: false });
     queryClient.invalidateQueries({ queryKey: ["email"] });
   };
   const duplicate = async (item: EmailItem) => {
@@ -999,6 +1013,9 @@ export default function EmailWorkspace() {
     }
     setActive(null);
     setView("list");
+    if (shouldOpenChoice) {
+      router.replace("/dashboard/email", { scroll: false });
+    }
   };
   const remove = (item: EmailItem) => setDeleteTarget(item);
   const confirmRemove = async () => {
@@ -1040,7 +1057,12 @@ export default function EmailWorkspace() {
         kind={kind}
         items={items}
         projectId={activeProject?.id || ""}
-        onBack={() => setView("list")}
+        onBack={() => {
+          setView("list");
+          if (shouldOpenChoice) {
+            router.replace("/dashboard/email", { scroll: false });
+          }
+        }}
         onChoose={(next, language) => {
           setCreationLanguage(language);
           setEditor(next);
@@ -1452,6 +1474,7 @@ function ChoiceScreen({
   onTemplate: (item: EmailItem) => void;
 }) {
   const [tab, setTab] = useState(0);
+  const isReusableEmail = kind === "templates";
   const [languageOpen, setLanguageOpen] = useState(false);
   const [pendingEditor, setPendingEditor] = useState<Editor | null>(null);
   const [language, setLanguage] = useState("en");
@@ -1549,7 +1572,10 @@ function ChoiceScreen({
         </Typography>
       </Stack>
       <Card className="email-choice-intro">
-        <Chip label="New campaign setup" icon={<AutoAwesomeRounded />} />
+        <Chip
+          label={isReusableEmail ? "New reusable email" : "New campaign setup"}
+          icon={<AutoAwesomeRounded />}
+        />
         <Typography variant="h2" sx={{ mt: 1.5 }}>
           Choose your email editor
         </Typography>

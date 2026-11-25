@@ -839,6 +839,7 @@ export default function JourneyBuilder() {
           }
           onClose={() => setSelected(null)}
           onDelete={() => removeBlock(selected.id)}
+          onDesignEmail={() => router.push("/dashboard/email?create=template")}
           abTest={
             selectedTest
               ? {
@@ -1736,6 +1737,7 @@ function SettingsPanel({
   onConditionChange,
   onClose,
   onDelete,
+  onDesignEmail,
   abTest,
 }: SettingProps & {
   block: Block;
@@ -1746,6 +1748,7 @@ function SettingsPanel({
   onConditionChange: (values: string[]) => void;
   onClose: () => void;
   onDelete: () => void;
+  onDesignEmail: () => void;
   /** Set when the block is an A/B test or one of its variants: the test's results. */
   abTest?: { variants: Block[]; canApply: boolean; onApply: (variantId: string) => void };
 }) {
@@ -1786,6 +1789,7 @@ function SettingsPanel({
             values={values}
             set={set}
             templates={choices.emailTemplates}
+            onDesignEmail={onDesignEmail}
           />
         ) : block.type === "notification" || block.type === "web_notification" ? (
           <NotificationSettings
@@ -1992,14 +1996,15 @@ function EmailSettings({
   values,
   set,
   templates,
-}: SettingProps & { templates: Option[] }) {
+  onDesignEmail,
+}: SettingProps & { templates: Option[]; onDesignEmail: () => void }) {
   return (
     <Stack gap={1.4}>
       <Typography className="journey-field-label">Email content</Typography>
       <Button
         variant="contained"
         startIcon={<SettingsRounded />}
-        onClick={() => window.open("/dashboard/email", "_blank", "noopener")}
+        onClick={onDesignEmail}
       >
         Design email
       </Button>
