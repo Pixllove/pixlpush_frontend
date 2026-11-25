@@ -6903,9 +6903,14 @@ a {
   overflow: hidden;
 }
 .email-table-panel > .MuiStack-root:first-child {
-  padding: 18px 20px 8px;
+  /* The card already supplies the shared panel padding. Keep Email aligned with Push. */
+  padding: 0 0 8px;
 }
 .email-table-panel > .MuiStack-root:first-child h3 {
+  font-size: 20px;
+  letter-spacing: -0.04em;
+}
+.push-workspace .email-data-panel > .MuiStack-root:first-child h3 {
   font-size: 20px;
   letter-spacing: -0.04em;
 }
