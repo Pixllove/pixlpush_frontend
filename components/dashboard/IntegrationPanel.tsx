@@ -1,5 +1,6 @@
 'use client';
 
+import { formatUserDateTime } from '@/lib/timezone';
 import { useEffect, useRef, useState } from 'react';
 import NextLink from 'next/link';
 import { ArrowBackRounded, CallMadeRounded, CallReceivedRounded, CheckCircleRounded, LockRounded, PauseCircleRounded } from '@mui/icons-material';
@@ -26,7 +27,7 @@ function timeAgo(date: string | Date) {
   const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
   if (minutes < 60) return rtf.format(-minutes, 'minute');
   if (minutes < 24 * 60) return rtf.format(-Math.round(minutes / 60), 'hour');
-  return new Date(date).toLocaleString();
+  return formatUserDateTime(date);
 }
 
 /**
@@ -52,14 +53,6 @@ export default function IntegrationPanel({ provider }: { provider: IntegrationPr
   const [error, setError] = useState<string>();
   const canEdit = Boolean(active && CONFIG_ROLES.includes(active.role));
   const syncing = Boolean(settings?.connected && settings.syncing && settings.syncEnabled);
-
-  // The worker runs the sync; refresh while it is in progress.
-  const { refetch } = query;
-  useEffect(() => {
-    if (!syncing) return;
-    const timer = setInterval(() => void refetch(), 5000);
-    return () => clearInterval(timer);
-  }, [syncing, refetch]);
 
   const run = async (action: () => Promise<unknown>) => {
     setError(undefined);

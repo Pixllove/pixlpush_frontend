@@ -68,8 +68,27 @@ function useIntegrationMutation<TIn>(projectId: string | undefined, run: (id: st
   const queryClient = useQueryClient();
   return useMutation<IntegrationSettings, ApiError, TIn>({
     mutationFn: (input) => run(projectId as string, input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: projectKeys.integrations(projectId ?? '') }),
+    // The response is the fresh status: store it instead of re-fetching, and refresh only the hub's list.
+    onSuccess: (settings) => {
+      queryClient.setQueryData([...projectKeys.integrations(projectId ?? ''), settings.provider], settings);
+      void queryClient.invalidateQueries({ queryKey: projectKeys.integrations(projectId ?? ''), exact: true });
+    },
   });
+}
+
+/**
+ * Next status refresh, driven by what the server says is happening:
+ * a batch running → every 5s; otherwise wake just after the scheduled next sync
+ * (clamped to 15s–5min); failures back off exponentially. Hidden tabs never poll
+ * (React Query's default) and refetch on focus instead.
+ */
+export function integrationPollMs(data: IntegrationSettings | undefined, failures = 0): number | false {
+  if (failures > 0) return Math.min(5_000 * 2 ** failures, 300_000);
+  if (!data?.connected || !data.syncEnabled) return false;
+  // Running, or queued by "Sync now" and waiting for the worker to pick it up.
+  if (data.fetching || (data.syncing && !data.importing)) return 5_000;
+  const due = data.nextSyncAt ? new Date(data.nextSyncAt).getTime() - Date.now() + 3_000 : 60_000;
+  return Math.min(Math.max(due, 15_000), 300_000);
 }
 
 /** One integration's status and actions; the same for HubSpot, Salesforce, Pipedrive and any later one. */
@@ -79,8 +98,7 @@ export function useIntegration(projectId: string | undefined, provider: Connecti
       queryKey: [...projectKeys.integrations(projectId ?? ''), provider],
       queryFn: () => integrationsApi.get(projectId as string, provider),
       enabled: Boolean(projectId),
-      // Poll quickly while a sync runs so "Syncing…" turns into "Last checked" promptly.
-      refetchInterval: (query) => (query.state.data?.connected && query.state.data.syncing ? 5_000 : 60_000),
+      refetchInterval: (query) => integrationPollMs(query.state.data, query.state.fetchFailureCount),
       retry: (count, error) => !isPermanentAuthError(error) && count < 2,
     }),
     connect: useIntegrationMutation(projectId, (id, input: IntegrationCredentials) => integrationsApi.connect(id, provider, input)),

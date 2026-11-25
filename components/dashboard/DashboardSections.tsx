@@ -1035,11 +1035,11 @@ export function UsersSection() {
                 <Typography fontSize="var(--fs-12)" fontWeight={500}>
                   {row.name}
                 </Typography>
-                <Chip label={row.rules?.source === "server" ? "FROM SERVER" : "AUTO LIFECYCLE"} size="small" />
+                <Chip label={row.rules?.source === "server" ? "FROM SERVER" : row.rules?.source === "product" ? "SUBSCRIPTION RULES" : "AUTO LIFECYCLE"} size="small" />
               </Stack>
               <Typography color="text.secondary" fontSize="var(--fs-12)">
                 {row.description ||
-                  (row.rules?.source === "server" ? "Updated by events from your server." : "Automatically updated based on user activity.")}
+                  (row.rules?.source === "server" ? "Updated by events from your server." : row.rules?.source === "product" ? "Updated from your server's subscription data for the selected products." : "Automatically updated based on user activity.")}
               </Typography>
             </Box>
           </Stack>

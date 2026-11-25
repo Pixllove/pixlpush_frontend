@@ -1,5 +1,6 @@
 "use client";
 
+import { formatUserDateTime } from '@/lib/timezone';
 import { CheckCircleOutlineRounded, ErrorOutlineRounded, InfoOutlined, ReplayRounded, StopCircleOutlined, VerifiedOutlined } from "@mui/icons-material";
 import { Box, Button, Chip, Divider, Stack, Typography } from "@mui/material";
 import Image from "next/image";
@@ -131,7 +132,7 @@ export function CollaborationTimeline({ collaboration, profiles, onRetry, retryi
         </Typography>)}
         {collaboration.activeAgent || collaboration.currentAgent ? <Typography fontSize="var(--fs-12)" color="text.secondary">Active agent: {collaboration.activeAgent ?? collaboration.currentAgent}</Typography> : null}
         {collaboration.nextAgent ? <Typography fontSize="var(--fs-12)" color="text.secondary">Next agent: {collaboration.nextAgent}</Typography> : null}
-        {collaboration.events?.map((event) => <Typography key={event.id} fontSize="var(--fs-11)" color="text.secondary">{event.type}{event.actorAgent ? ` · ${event.actorAgent}` : ""} · {new Date(event.createdAt).toLocaleString()}</Typography>)}
+        {collaboration.events?.map((event) => <Typography key={event.id} fontSize="var(--fs-11)" color="text.secondary">{event.type}{event.actorAgent ? ` · ${event.actorAgent}` : ""} · {formatUserDateTime(event.createdAt)}</Typography>)}
       </Stack>
     </>}
     {visibleResults.map((result) => <CollaborationResultCard key={`${result.taskKey}-${result.agentId}`} result={result} task={taskFor(result.taskKey)} profile={profileFor(result.agentId)} onRetry={onRetry ? () => onRetry(result.taskKey) : undefined} retrying={retryingTaskKey === result.taskKey} approvalStatus={collaboration.approvalStatus} onApprove={onApprove} onReject={onReject} onViewDetails={onViewDetails} onCancel={onCancel} approvalBusy={approvalBusy} />)}

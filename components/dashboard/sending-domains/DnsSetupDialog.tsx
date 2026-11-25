@@ -1,5 +1,6 @@
 'use client';
 
+import { formatUserDateTime } from '@/lib/timezone';
 import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AccessTimeRounded, CloseRounded } from '@mui/icons-material';
@@ -245,7 +246,7 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
             )}
 
             {domain.lastCheckedAt && (
-              <Typography color="text.secondary" fontSize="var(--fs-12)">Last checked {new Date(domain.lastCheckedAt).toLocaleString()}</Typography>
+              <Typography color="text.secondary" fontSize="var(--fs-12)">Last checked {formatUserDateTime(domain.lastCheckedAt)}</Typography>
             )}
           </Stack>
         )}

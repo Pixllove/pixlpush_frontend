@@ -45,6 +45,7 @@ import {
   type MatchStatus,
   type SyncExternalSegment,
 } from "@/lib/projects/api";
+import { LifecyclePicker, MembershipEditor, membershipIssues, type Membership } from "./SegmentMembership";
 import { SEGMENT_PURPOSES } from "@/lib/lifecycle-purposes";
 import EventMappingDialog from "./EventMappingDialog";
 import {
@@ -77,6 +78,8 @@ type SegmentRule = {
   emitOnEnter?: string;
   /** The PixlPush lifecycle segment this server segment is associated with. */
   lifecycle?: string;
+  /** Set: membership follows subscription data for these products instead of segment events. */
+  membership?: Membership;
 };
 /** Only ongoing sync is switchable; imports, outbound updates and migrations are explicit actions. */
 type DataCategories = {
@@ -152,6 +155,8 @@ const sourceKey = (value: string) =>
     .replace(/^_+|_+$/g, "")
     .slice(0, 80) || "segment";
 /** PixlPush's built-in lifecycle segments a server segment can be associated with. */
+/** External segment · PixlPush segment · Membership rules · switch. */
+const segmentGrid = "minmax(140px, 0.8fr) minmax(220px, 1fr) minmax(320px, 1.8fr) 120px";
 const LIFECYCLE_TARGETS = SEGMENT_PURPOSES.filter(
   (item) => item.key !== "other",
 );
@@ -171,25 +176,6 @@ const LIFECYCLE_HINTS: [RegExp, string][] = [
   [/first.?(open|launch)/, "first_app_open"],
   [/new.*user|account.?created|signed.?up/, "account_created"],
 ];
-/** PixlPush plan types, like Apple and Google Play. The value is saved as the user's subscription tier (ent_subscription_tier). */
-const PLAN_TIERS = [
-  { value: "weekly", label: "Weekly" },
-  { value: "monthly", label: "Monthly" },
-  { value: "yearly", label: "Yearly" },
-  { value: "one_time", label: "One-time" },
-  { value: "trial", label: "Trial" },
-];
-/** The plan type a product id most likely is, e.g. "large_monthly" → monthly. */
-const suggestTier = (product: string) => {
-  const name = product.toLowerCase();
-  if (/trial/.test(name)) return "trial";
-  if (/week/.test(name)) return "weekly";
-  if (/year|annual|12.?month/.test(name)) return "yearly";
-  if (/one.?time|lifetime|forever|coins?|credits?|pack|consumable/.test(name))
-    return "one_time";
-  if (/month/.test(name)) return "monthly";
-  return "";
-};
 /** The built-in lifecycle segment a server segment name most likely means, if any. */
 const suggestLifecycle = (name: string) => {
   const key = LIFECYCLE_HINTS.find(([pattern]) =>
@@ -376,8 +362,6 @@ export default function WebhookMapping({
   const config = (active?.config ?? {}) as Config;
   const [fields, setFields] = useState<Record<string, string>>({});
   const [fieldEnabled, setFieldEnabled] = useState<Record<string, boolean>>({});
-  const [tiers, setTiers] = useState<Record<string, string>>({});
-  const [planEnabled, setPlanEnabled] = useState<Record<string, boolean>>({});
   // `confirmed`: saved, exactly matched, or chosen by the customer. Unconfirmed suggestions are not saved.
   const [events, setEvents] = useState<
     Record<string, { target: string; enabled: boolean; confirmed: boolean }>
@@ -437,18 +421,6 @@ export default function WebhookMapping({
       nextEnabled[rule.source] = rule.enabled !== false;
       nextConfirmed[rule.source] = true;
     }
-    const nextTiers: Record<string, string> = {};
-    // New products start off and unassociated; turning one on applies the suggestion.
-    const nextPlanEnabled: Record<string, boolean> = {};
-    for (const product of sample.data?.products ?? []) {
-      nextTiers[product] = "";
-      nextPlanEnabled[product] = false;
-    }
-    for (const rule of current.entitlements?.products ?? []) {
-      nextTiers[rule.source] = rule.tier ?? "";
-      nextPlanEnabled[rule.source] = rule.enabled !== false;
-    }
-    setPlanEnabled(nextPlanEnabled);
     const nextEvents: Record<
       string,
       { target: string; enabled: boolean; confirmed: boolean }
@@ -474,7 +446,6 @@ export default function WebhookMapping({
     setFields(nextFields);
     setFieldEnabled(nextEnabled);
     setFieldConfirmed(nextConfirmed);
-    setTiers(nextTiers);
     setEvents(nextEvents);
     setSegments(current.segments ?? []);
     setCategories({
@@ -643,8 +614,6 @@ export default function WebhookMapping({
   const snapshot = JSON.stringify({
     fields,
     fieldEnabled,
-    tiers,
-    planEnabled,
     events,
     segments,
     categories,
@@ -735,6 +704,52 @@ export default function WebhookMapping({
     };
   }, [dirty]);
 
+  // Suggestions from the webhook sample, used when a row has no saved rule (see MembershipEditor).
+  const suggestionFor = (name: string) =>
+    sample.data?.membershipSuggestions?.find((item) => item.segment === name) ?? null;
+  const hasRuleSuggestion = (name: string) => {
+    const suggestion = suggestionFor(name);
+    return Boolean(suggestion?.products.length && suggestion.signals.length);
+  };
+  /**
+   * The segment a row is associated with until the customer changes it: a row with prefilled
+   * rules gets its own custom segment (named like the row); otherwise the matching predefined
+   * segment ("Paywall Drop Off" → Paywall drop-off). Saved on publish for enabled rows.
+   */
+  const lifecycleOf = (segment: SegmentRule) =>
+    segment.lifecycle ??
+    (hasRuleSuggestion(segment.sourceName) ? segment.sourceName : suggestLifecycle(segment.sourceName));
+  const withSuggestion = (segment: SegmentRule): SegmentRule => {
+    const suggestion = suggestionFor(segment.sourceName);
+    if (segment.enabled === false) return segment;
+    if (!segment.lifecycle && lifecycleOf(segment)) segment = { ...segment, lifecycle: lifecycleOf(segment) };
+    if (segment.membership || !segment.lifecycle) return segment;
+    if (!suggestion?.products.length || !suggestion.signals.length) return segment;
+    // A lifecycle segment shared with another row keeps following server events.
+    if (allSegments.some((other) => other !== segment && other.enabled !== false && other.lifecycle === segment.lifecycle)) return segment;
+    return { ...segment, membership: { products: suggestion.products, signals: suggestion.signals, userTypes: suggestion.userTypes } };
+  };
+  // 3.1 membership rules: one rule set per lifecycle segment. Every product is processed automatically.
+  const segmentProblems = allSegments
+    .map(withSuggestion)
+    .filter((segment) => segment.enabled !== false && segment.membership)
+    .flatMap((segment) => {
+      const issues = membershipIssues(segment.membership!);
+      if (!segment.lifecycle) issues.unshift("Choose a PixlPush lifecycle segment.");
+      const shared = allSegments.find(
+        (other) =>
+          other !== segment &&
+          other.enabled !== false &&
+          other.lifecycle &&
+          other.lifecycle === segment.lifecycle,
+      );
+      if (shared)
+        issues.push(
+          `"${segment.lifecycle}" is also used by "${shared.sourceName}". Use one external segment per lifecycle segment with membership rules.`,
+        );
+      return issues.map((issue) => `${segment.sourceName}: ${issue}`);
+    });
+
   const save = async () => {
     setBusy(true);
     setError("");
@@ -744,6 +759,7 @@ export default function WebhookMapping({
         throw new Error(
           `Resolve duplicate PixlPush field mappings: ${[...fieldConflicts].join(", ")}.`,
         );
+      if (segmentProblems.length) throw new Error(segmentProblems[0]);
       const previous = new Map(
         (config.fields ?? []).map((rule) => [rule.source, rule]),
       );
@@ -795,7 +811,7 @@ export default function WebhookMapping({
                 }
               : {}),
           })),
-        segments,
+        segments: segments.map(withSuggestion),
         categories,
         // Only confirmed 3.3 choices are saved; unconfirmed history is still stored, just not linked.
         campaigns: Object.entries(campaignChoices)
@@ -819,20 +835,7 @@ export default function WebhookMapping({
                   }))
               : [],
           })),
-        entitlements: {
-          states: [],
-          events: {},
-          ...config.entitlements,
-          // Saved with their switch; products never touched stay unmapped (off).
-          products: Object.entries(tiers)
-            .filter(([source, tier]) => tier.trim() || planEnabled[source])
-            .map(([source, tier]) => ({
-              source,
-              entitlementKey: "subscription",
-              ...(tier.trim() ? { tier: tier.trim() } : {}),
-              enabled: planEnabled[source] === true,
-            })),
-        },
+        ...(config.entitlements ? { entitlements: config.entitlements } : {}),
       };
       const draft = await dataSyncApi.createMapping(projectId, sourceId, next);
       if (!draft.validation.valid)
@@ -860,7 +863,7 @@ export default function WebhookMapping({
 
   if (mappings.isLoading) return <Skeleton height={200} />;
   const fieldNames = shown.filter((name) => !consent.has(name)).sort();
-  const products = Object.keys(tiers).sort();
+  const products = [...(sample.data?.products ?? [])].sort();
 
   return (
     <Stack
@@ -916,66 +919,87 @@ export default function WebhookMapping({
         </Typography>
         <Typography variant="caption" color="text.secondary">
           Every segment your server sends is listed here, turned off. Turn one
-          on and associate it with a PixlPush segment, then publish: its users,
-          including past entries, join that PixlPush segment and leave it when
-          your server takes them out.
+          on, choose a predefined PixlPush lifecycle segment or create a custom
+          one, and set its membership rules: the product, the events or data,
+          and the user type that put users in and take them out. Rules are
+          prefilled from your webhook data; review them, then publish.
         </Typography>
+        {allSegments.length > 0 && (
+          <Box
+            sx={{
+              display: { xs: "none", lg: "grid" },
+              gridTemplateColumns: segmentGrid,
+              gap: 2,
+              px: 1.5,
+              py: 1,
+              mt: 1,
+              borderRadius: 1.5,
+              bgcolor: "var(--pp-primary-soft, rgba(91, 33, 182, 0.06))",
+            }}
+          >
+            {["External segment", "PixlPush lifecycle segment", "Membership rules", ""].map((label) => (
+              <Typography key={label || "switch"} variant="caption" fontWeight={600}>
+                {label}
+              </Typography>
+            ))}
+          </Box>
+        )}
         {allSegments.map((segment) => {
           const enabled = segment.enabled !== false;
           const suggested = suggestLifecycle(segment.sourceName);
-          const status = segment.lifecycle
-            ? { label: "Associated", color: "success" as const }
-            : suggested
-              ? { label: "Suggested", color: "info" as const }
-              : { label: "Not associated", color: "default" as const };
+          const predefined = LIFECYCLE_TARGETS.some((item) => item.label === lifecycleOf(segment));
+          const status = lifecycleOf(segment)
+            ? predefined
+              ? { label: "Associated", color: "success" as const }
+              : { label: "Custom", color: "secondary" as const }
+            : { label: "Not associated", color: "default" as const };
           return (
-            <Stack
+            <Box
               key={segment.sourceName}
-              direction={{ xs: "column", md: "row" }}
-              gap={1.5}
-              alignItems={{ md: "center" }}
-              sx={{ py: 1, borderTop: "1px solid", borderColor: "divider" }}
+              sx={{
+                display: "grid",
+                gridTemplateColumns: { xs: "1fr", lg: segmentGrid },
+                gap: { xs: 1.25, lg: 2 },
+                alignItems: "center",
+                px: { lg: 1.5 },
+                py: 1.5,
+                borderTop: "1px solid",
+                borderColor: "divider",
+              }}
             >
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography
-                  variant="body2"
-                  sx={{
-                    fontFamily: "var(--pp-mono)",
-                    overflowWrap: "anywhere",
-                  }}
-                >
-                  {segment.sourceName}
-                </Typography>
-              </Box>
-              <TextField
-                select
-                size="small"
-                label="PixlPush segment"
-                value={segment.lifecycle ?? ""}
-                disabled={!canEdit || busy}
-                onChange={(event) =>
-                  updateSegment(segment.sourceName, {
-                    // Associating never turns import on; only the switch does.
-                    lifecycle: event.target.value || undefined,
-                  })
-                }
-                sx={{ width: { xs: "100%", md: 300 }, flexShrink: 0 }}
-                SelectProps={{ displayEmpty: true }}
-                InputLabelProps={{ shrink: true }}
+              <Typography
+                variant="body2"
+                fontWeight={600}
+                sx={{ fontFamily: "var(--pp-mono)", overflowWrap: "anywhere" }}
               >
-                <MenuItem value="">
-                  <Typography component="span" color="text.secondary">
-                    Not associated
-                  </Typography>
-                </MenuItem>
-                {LIFECYCLE_TARGETS.map((item) => (
-                  <MenuItem key={item.key} value={item.label}>
-                    {item.label}
-                    {item.label === suggested ? " (suggested)" : ""}
-                  </MenuItem>
-                ))}
-              </TextField>
-              <Chip size="small" label={status.label} color={status.color} />
+                {segment.sourceName}
+              </Typography>
+              <Stack direction="row" gap={1} alignItems="center" sx={{ minWidth: 0 }}>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <LifecyclePicker
+                    value={lifecycleOf(segment)}
+                    predefined={LIFECYCLE_TARGETS.map((item) => item.label)}
+                    suggested={suggested}
+                    defaultCustomName={segment.sourceName}
+                    disabled={!canEdit || busy}
+                    // Associating never turns import on; only the switch does.
+                    onChange={(lifecycle) => updateSegment(segment.sourceName, { lifecycle })}
+                  />
+                </Box>
+                {status.label !== "Custom" && (
+                  <Chip size="small" label={status.label} color={status.color} />
+                )}
+              </Stack>
+              <MembershipEditor
+                segmentName={segment.sourceName}
+                membership={segment.membership}
+                products={products}
+                observedSignals={sample.data?.billingEvents ?? []}
+                userTypes={sample.data?.userTypes ?? []}
+                suggestion={suggestionFor(segment.sourceName)}
+                disabled={!canEdit || busy}
+                onChange={(membership) => updateSegment(segment.sourceName, { membership })}
+              />
               <FormControlLabel
                 sx={mappingSwitchLabelSx}
                 control={
@@ -987,9 +1011,15 @@ export default function WebhookMapping({
                     onChange={(_, on) =>
                       updateSegment(segment.sourceName, {
                         enabled: on,
-                        // Turning a segment on applies the suggestion; it can be changed.
-                        ...(on && !segment.lifecycle && suggested
-                          ? { lifecycle: suggested }
+                        // Turning a segment on: a row with prefilled membership rules gets its own
+                        // custom segment (so "VIP Cancelled" never merges into a generic one);
+                        // otherwise the matching predefined segment. Both can be changed.
+                        ...(on && !segment.lifecycle
+                          ? hasRuleSuggestion(segment.sourceName)
+                            ? { lifecycle: segment.sourceName }
+                            : suggested
+                              ? { lifecycle: suggested }
+                              : {}
                           : {}),
                       })
                     }
@@ -997,9 +1027,21 @@ export default function WebhookMapping({
                 }
                 label={enabled ? "Enabled" : "Disabled"}
               />
-            </Stack>
+            </Box>
           );
         })}
+        {allSegments.some((segment) => segment.membership) && (
+          <Alert severity="info" sx={{ mt: 1 }}>
+            Membership rules match only the selected products and user types, so
+            Premium and VIP stay separate. Products are processed automatically.
+          </Alert>
+        )}
+        {segmentProblems.length > 0 && (
+          <Alert severity="warning" sx={{ mt: 1 }}>
+            Fix before publishing: {segmentProblems[0]}
+            {segmentProblems.length > 1 ? ` (+${segmentProblems.length - 1} more)` : ""}
+          </Alert>
+        )}
         {!allSegments.length && (
           <Typography variant="body2" color="text.secondary">
             No segments found in your server data yet. They appear here, turned
@@ -1196,120 +1238,6 @@ export default function WebhookMapping({
               />
             ))}
           </Stack>
-        )}
-        <Typography variant="subtitle2" sx={{ mt: 1 }}>
-          Plans
-        </Typography>
-        <Typography variant="caption" color="text.secondary">
-          Every product your server sends is listed here, turned off. Associate
-          it with a PixlPush plan type (Weekly, Monthly, Yearly, One-time or
-          Trial), turn it on and publish: purchases of that product, including
-          earlier ones, set the user’s plan, which you can target in segments
-          and audiences.
-        </Typography>
-        {sample.isLoading ? (
-          <Skeleton height={60} />
-        ) : products.length ? (
-          products.map((product) => (
-            <Stack
-              key={product}
-              direction={{ xs: "column", sm: "row" }}
-              gap={1}
-              alignItems={{ sm: "center" }}
-              sx={{ py: 0.5, borderTop: "1px solid", borderColor: "divider" }}
-            >
-              <Typography
-                variant="body2"
-                sx={{
-                  flex: 1,
-                  fontFamily: "var(--pp-mono)",
-                  overflowWrap: "anywhere",
-                }}
-              >
-                {product}
-              </Typography>
-              <TextField
-                select
-                size="small"
-                label="PixlPush plan"
-                value={tiers[product] ?? ""}
-                disabled={!canEdit || busy}
-                onChange={(event) =>
-                  setTiers((current) => ({
-                    ...current,
-                    [product]: event.target.value,
-                  }))
-                }
-                sx={{ width: { xs: "100%", md: 300 }, flexShrink: 0 }}
-                SelectProps={{ displayEmpty: true }}
-                InputLabelProps={{ shrink: true }}
-                inputProps={{ "aria-label": `PixlPush plan for ${product}` }}
-              >
-                <MenuItem value="">
-                  <Typography component="span" color="text.secondary">
-                    Not associated
-                  </Typography>
-                </MenuItem>
-                {PLAN_TIERS.map((tier) => (
-                  <MenuItem key={tier.value} value={tier.value}>
-                    {tier.label}
-                    {tier.value === suggestTier(product) ? " (suggested)" : ""}
-                  </MenuItem>
-                ))}
-                {/* A plan saved before these types existed keeps its own name. */}
-                {tiers[product] &&
-                  !PLAN_TIERS.some((tier) => tier.value === tiers[product]) && (
-                    <MenuItem value={tiers[product]}>{tiers[product]}</MenuItem>
-                  )}
-              </TextField>
-              <Chip
-                size="small"
-                label={
-                  tiers[product]
-                    ? "Associated"
-                    : suggestTier(product)
-                      ? "Suggested"
-                      : "Not associated"
-                }
-                color={
-                  tiers[product]
-                    ? "success"
-                    : suggestTier(product)
-                      ? "info"
-                      : "default"
-                }
-              />
-              <FormControlLabel
-                sx={mappingSwitchLabelSx}
-                control={
-                  <Switch
-                    size="small"
-                    sx={webhookSwitchSx}
-                    checked={planEnabled[product] === true}
-                    disabled={!canEdit || busy}
-                    onChange={(_, on) => {
-                      setPlanEnabled((current) => ({
-                        ...current,
-                        [product]: on,
-                      }));
-                      // Turning a product on applies the suggestion; it can be changed.
-                      if (on && !tiers[product] && suggestTier(product))
-                        setTiers((current) => ({
-                          ...current,
-                          [product]: suggestTier(product),
-                        }));
-                    }}
-                  />
-                }
-                label={planEnabled[product] ? "Enabled" : "Disabled"}
-              />
-            </Stack>
-          ))
-        ) : (
-          <Typography variant="body2" color="text.secondary">
-            No products found yet. They appear when the server sends
-            subscription events with product_id.
-          </Typography>
         )}
         <Typography variant="subtitle2" sx={{ mt: 1 }}>
           Events

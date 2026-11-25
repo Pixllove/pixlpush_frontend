@@ -493,6 +493,12 @@ export type IntegrationSettings = {
       syncEnabled: boolean;
       /** A pass is queued or running. */
       syncing: boolean;
+      /** A long import is in progress, one batch per interval (Webhook). */
+      importing?: boolean;
+      /** A batch is being fetched right now. */
+      fetching?: boolean;
+      lastCheckedAt?: string | null;
+      nextSyncAt?: string;
       lastSyncedAt: string | null;
       lastError: string | null;
       counts: { created: number; updated: number; skipped: number; pushed: number };

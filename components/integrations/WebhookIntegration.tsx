@@ -1,5 +1,7 @@
 "use client";
 
+import { formatUserDateTime, formatUserTime } from "@/lib/timezone";
+
 import { useState, type ReactNode } from "react";
 import NextLink from "next/link";
 import { useQuery } from "@tanstack/react-query";
@@ -91,6 +93,15 @@ function StepItem({
   );
 }
 
+type Conn = { syncEnabled: boolean; importing?: boolean; lastCheckedAt?: string | null; lastSyncedAt: string | null; nextSyncAt?: string };
+/** One batch of up to 2,500 events every 2 minutes; nothing runs in between. */
+function syncCaption(c: Conn) {
+  const last = c.lastCheckedAt ?? c.lastSyncedAt;
+  if (!last) return "waiting for the first sync";
+  const next = c.syncEnabled && c.nextSyncAt ? ` · next sync ${formatUserTime(c.nextSyncAt)}` : "";
+  return `last synced ${formatUserDateTime(last)}${next}`;
+}
+
 export default function WebhookIntegration() {
   const { active } = useActiveProject();
   const { account } = useCurrentUser();
@@ -103,6 +114,8 @@ export default function WebhookIntegration() {
     useIntegration(projectId, "webhook");
   const settings = query.data;
   const connected = settings?.connected ? settings : undefined;
+  // Queued (waiting for the worker) or running: either way a second click would do nothing.
+  const busySync = syncNow.isPending || Boolean(connected?.fetching || (connected?.syncing && !connected.importing));
   const status = integrationStatus(settings);
   const [url, setUrl] = useState("");
   const [token, setToken] = useState("");
@@ -198,42 +211,24 @@ export default function WebhookIntegration() {
                 <Typography variant="body2" fontWeight={600}>
                   {connected.lastError
                     ? "Connected, but the last sync had a problem"
-                    : "Connected and syncing every 2 minutes"}
+                    : "Connected · syncs automatically every 2 minutes"}
                 </Typography>
                 <Typography
                   variant="caption"
                   color="text.secondary"
                   sx={{ overflowWrap: "anywhere" }}
                 >
-                  {connected.accountLabel} ·{" "}
-                  {connected.syncing && connected.syncEnabled
-                    ? "Importing: up to 2,500 events every 2 minutes until it is up to date"
-                    : connected.lastSyncedAt
-                      ? `last checked ${new Date(connected.lastSyncedAt).toLocaleString()}`
-                      : "waiting for the first sync"}
+                  {connected.accountLabel} · {syncCaption(connected)}
                 </Typography>
               </Box>
               <Button
                 variant="outlined"
                 sx={{ alignSelf: "flex-start" }}
-                disabled={
-                  !canEdit ||
-                  !connected.syncEnabled ||
-                  syncNow.isPending ||
-                  connected.syncing
-                }
+                disabled={!canEdit || !connected.syncEnabled || busySync}
                 onClick={() => run(() => syncNow.mutateAsync())}
-                startIcon={
-                  syncNow.isPending ||
-                  (connected.syncing && connected.syncEnabled) ? (
-                    <CircularProgress size={16} color="inherit" />
-                  ) : undefined
-                }
+                startIcon={busySync ? <CircularProgress size={16} color="inherit" /> : undefined}
               >
-                {syncNow.isPending ||
-                (connected.syncing && connected.syncEnabled)
-                  ? "Syncing…"
-                  : "Sync now"}
+                {busySync ? "Syncing…" : "Sync now"}
               </Button>
             </Stack>
             {connected.lastError && (

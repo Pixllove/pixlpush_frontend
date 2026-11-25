@@ -35,7 +35,7 @@ type Action = { kind: 'drain' | 'hold' | 'compare' | 'request' | 'approve' | 'ro
 export default function DataSyncMigrations({ projectId, accountId, canEdit, canControl }: { projectId: string; accountId?: string; canEdit: boolean; canControl: boolean }) {
   const client = useQueryClient();
   const queryKey = ['projects', projectId, 'data-sync', 'migrations'];
-  const runsQuery = useQuery({ queryKey, queryFn: () => dataSyncApi.migrations(projectId), refetchInterval: 15000 });
+  const runsQuery = useQuery({ queryKey, queryFn: () => dataSyncApi.migrations(projectId), refetchInterval: (query) => (query.state.data?.some((run) => run.status === 'draining') ? 15_000 : false) });
   const journeysQuery = useQuery({ queryKey: ['projects', projectId, 'migration-journeys'], queryFn: () => journeysApi.list(projectId, { limit: 100 }) });
   const journeyName = (id: string) => journeysQuery.data?.items.find((journey) => journey.id === id)?.name ?? id.slice(0, 8);
   const [name, setName] = useState('');

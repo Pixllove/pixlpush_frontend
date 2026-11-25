@@ -273,6 +273,11 @@ export type WebhookSample = {
   sampled: number; fields: string[]; events: string[]; products: string[];
   /** Distinct `segment` values seen in the sample. */
   segmentNames?: string[];
+  /** Observed user_type values and subscription events, for 3.1 membership rules. */
+  userTypes?: string[];
+  billingEvents?: string[];
+  /** Rules proposed from the sample; shown as suggestions and saved only once accepted. */
+  membershipSuggestions?: MembershipSuggestion[];
   fieldMatches: { source: string; target: string | null; status: MatchStatus; reason: string; samples: string[] }[];
   eventMatches: { source: string; target: string | null; status: MatchStatus; reason: string; candidates: { name: string; score: number; reason: string }[]; sampleProperties: string[] }[];
   knownEvents: { name: string; standard: boolean; description: string | null }[];
@@ -920,7 +925,8 @@ export const usersApi = {
 /** Event rules (SDK), or server rules: Webhook events add and remove users. */
 export type SegmentRulesInput =
   | { operator?: "AND" | "OR"; conditions: Array<{ event: string }> }
-  | { source: "server"; enter: string[]; exit: string[] };
+  | { source: "server"; enter: string[]; exit: string[] }
+  | { source: "product"; products: string[]; signals: string[]; userTypes: string[]; externalSegment?: string };
 
 export const eventsApi = {
   /** A described custom event, so mappings and AI features know what it means. */
@@ -963,6 +969,14 @@ export const eventsApi = {
 export const userStatsApi = {
   get: (projectId: string) =>
     authRequest<UserStats>(at(projectId, "/users/stats"), undefined, BASE),
+};
+
+export type MembershipSuggestion = {
+  segment: string;
+  products: string[];
+  signals: string[];
+  userTypes: string[];
+  note: string;
 };
 
 export const lifecycleSegmentsApi = {

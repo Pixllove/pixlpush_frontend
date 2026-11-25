@@ -1,5 +1,6 @@
 "use client";
 
+import { formatUserDateTime } from '@/lib/timezone';
 import { useQuery } from "@tanstack/react-query";
 import { Box, Card, Chip, Stack, Typography } from "@mui/material";
 import { dataSyncApi } from "@/lib/projects/api";
@@ -11,7 +12,7 @@ type Props = { projectId?: string } & (
 );
 
 const when = (value?: string | null) =>
-  value ? new Date(value).toLocaleString() : "—";
+  value ? formatUserDateTime(value) : "—";
 
 /** History imported from the customer's previous tool. Read-only; never counted as PixlPush sends. Renders nothing when empty. */
 export default function ImportedHistory(props: Props) {

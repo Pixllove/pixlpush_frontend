@@ -1,5 +1,6 @@
 'use client';
 
+import { formatUserDateTime } from '@/lib/timezone';
 import { useState } from 'react';
 import { WarningAmberRounded } from '@mui/icons-material';
 import { Alert, Box, Button, Card, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Typography } from '@mui/material';
@@ -52,7 +53,7 @@ export default function DangerZonePanel() {
             <Typography fontWeight={600}>{name} is deactivated</Typography>
             <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: .5 }}>
               {recoveryOpen
-                ? `It can be restored until ${new Date(project!.recoveryUntil!).toLocaleString()}. Billing is unchanged.`
+                ? `It can be restored until ${formatUserDateTime(project!.recoveryUntil!)}. Billing is unchanged.`
                 : 'The recovery window has expired. Contact PixlPush support.'}
             </Typography>
           </Box>

@@ -1,5 +1,6 @@
 "use client";
 
+import { formatUserDateTime } from '@/lib/timezone';
 import {
   ChangeEvent,
   DragEvent,
@@ -753,7 +754,7 @@ export default function UserImportDialog({
                               fields
                             </TableCell>
                             <TableCell>
-                              {new Date(record.createdAt).toLocaleString()}
+                              {formatUserDateTime(record.createdAt)}
                             </TableCell>
                             <TableCell>—</TableCell>
                             <TableCell>

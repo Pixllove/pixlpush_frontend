@@ -1,5 +1,6 @@
 'use client';
 
+import { formatUserDateTime } from '@/lib/timezone';
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
@@ -126,7 +127,7 @@ export default function FirebasePanel() {
     ['Firebase project ID', config?.firebaseProjectId ?? '—', configured],
     ['Service account', config?.clientEmail ?? '—', configured],
     ['Token sync', config?.activeTokens ? `${config.activeTokens} active app devices` : 'Waiting for the mobile SDK', Boolean(config?.activeTokens)],
-    ['Last checked', config?.validatedAt ? new Date(config.validatedAt).toLocaleString() : '—', Boolean(config?.validatedAt)],
+    ['Last checked', config?.validatedAt ? formatUserDateTime(config.validatedAt) : '—', Boolean(config?.validatedAt)],
   ];
 
   return (
@@ -227,7 +228,7 @@ export default function FirebasePanel() {
             <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: .6 }}>
               {query.isPending ? 'Loading…'
                 : config?.status === 'error' ? config.lastError
-                : configured ? `Firebase project ${config!.firebaseProjectId} · ${config!.clientEmail}${config!.validatedAt ? ` · Last checked ${new Date(config!.validatedAt).toLocaleString()}` : ''}`
+                : configured ? `Firebase project ${config!.firebaseProjectId} · ${config!.clientEmail}${config!.validatedAt ? ` · Last checked ${formatUserDateTime(config!.validatedAt)}` : ''}`
                 : 'For apps that include Firebase. Upload a service-account JSON to send push to Android and iOS.'}
             </Typography>
           </Box>
@@ -252,7 +253,7 @@ export default function FirebasePanel() {
             </Stack>
             <Typography color="text.secondary" fontSize="var(--fs-12)" sx={{ mt: .6 }}>
               {apns?.status === 'error' ? apns.lastError
-                : apnsConfigured ? `${apns!.bundleId} · Team ${apns!.teamId} · Key ${apns!.keyId} · ${apns!.activeDevices ?? 0} iOS device${apns!.activeDevices === 1 ? '' : 's'}${apns!.validatedAt ? ` · Last checked ${new Date(apns!.validatedAt).toLocaleString()}` : ''}`
+                : apnsConfigured ? `${apns!.bundleId} · Team ${apns!.teamId} · Key ${apns!.keyId} · ${apns!.activeDevices ?? 0} iOS device${apns!.activeDevices === 1 ? '' : 's'}${apns!.validatedAt ? ` · Last checked ${formatUserDateTime(apns!.validatedAt)}` : ''}`
                 : 'Only for iOS apps that do not include Firebase. Upload the APNs key (.p8) from your Apple Developer account.'}
             </Typography>
           </Box>
@@ -268,7 +269,7 @@ export default function FirebasePanel() {
           ['Bundle ID', apns?.bundleId ?? '—', Boolean(apns?.bundleId)],
           ['Team ID · Key ID', apns?.teamId && apns?.keyId ? `${apns.teamId} · ${apns.keyId}` : '—', Boolean(apns?.teamId && apns?.keyId)],
           ['Token sync', apns?.activeDevices ? `${apns.activeDevices} active iOS device${apns.activeDevices === 1 ? '' : 's'}` : 'Waiting for the iOS SDK', Boolean(apns?.activeDevices)],
-          ['Last checked', apns?.validatedAt ? new Date(apns.validatedAt).toLocaleString() : '—', Boolean(apns?.validatedAt)],
+          ['Last checked', apns?.validatedAt ? formatUserDateTime(apns.validatedAt) : '—', Boolean(apns?.validatedAt)],
         ]} />}
       </Card>
       {apnsConnected && !connected && <Alert severity="info">iOS push is ready through APNs. Android apps still need Firebase.</Alert>}

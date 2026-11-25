@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isPermanentAuthError } from '@/lib/auth/client';
 import { notificationApi } from '@/lib/notifications/api';
@@ -23,7 +23,26 @@ export const notificationKeys = {
 
 const retry = (count: number, error: ApiError) => !isPermanentAuthError(error) && count < 2;
 
+// Whether the realtime channel is up. While it is, pushes keep the counts fresh and
+// polling is off; while it is down, queries fall back to a 60s poll.
+let live = false;
+const liveListeners = new Set<() => void>();
+function setLive(next: boolean) {
+  if (live === next) return;
+  live = next;
+  liveListeners.forEach((listener) => listener());
+}
+function useRealtimeLive() {
+  return useSyncExternalStore(
+    (listener) => { liveListeners.add(listener); return () => liveListeners.delete(listener); },
+    () => live,
+    () => false,
+  );
+}
+const FALLBACK_POLL_MS = 60_000;
+
 export function useInfiniteNotifications(query: NotificationListQuery, enabled = true) {
+  const isLive = useRealtimeLive();
   return useInfiniteQuery<NotificationPage, ApiError>({
     queryKey: notificationKeys.list(query),
     queryFn: ({ pageParam }) => notificationApi.list({ ...query, cursor: pageParam as string | undefined }),
@@ -32,7 +51,7 @@ export function useInfiniteNotifications(query: NotificationListQuery, enabled =
     enabled,
     retry,
     staleTime: 20_000,
-    refetchInterval: enabled ? 60_000 : false,
+    refetchInterval: enabled && !isLive ? FALLBACK_POLL_MS : false,
   });
 }
 
@@ -64,8 +83,10 @@ export function useNotificationRealtime(enabled = true) {
       source.addEventListener('notification.updated', refresh);
       source.onopen = () => {
         attempt = 0;
+        setLive(true);
       };
       source.onerror = () => {
+        setLive(false);
         source?.close();
         if (disposed || reconnectTimer) return;
         const delay = Math.min(1_000 * 2 ** attempt, 30_000);
@@ -77,8 +98,8 @@ export function useNotificationRealtime(enabled = true) {
       };
     };
 
-    // Production: this account's private Supabase Realtime channel. The 60s
-    // refetch above keeps the bell correct while either channel is down.
+    // Production: this account's private Supabase Realtime channel. Queries
+    // poll every 60s only while neither channel is up.
     const stopLive = listenLive({
       access: async () => {
         const response = await fetch('/api/notifications/realtime', { credentials: 'same-origin', cache: 'no-store' });
@@ -87,6 +108,11 @@ export function useNotificationRealtime(enabled = true) {
       },
       events: ['notification.created', 'notification.updated'],
       onEvent: refresh,
+      onState: (up) => {
+        // Catch up on anything missed while the channel was down.
+        if (up && !live) refresh();
+        setLive(up);
+      },
       sse: () => {
         connect();
         return () => {
@@ -99,17 +125,19 @@ export function useNotificationRealtime(enabled = true) {
     return () => {
       disposed = true;
       stopLive();
+      setLive(false);
     };
   }, [enabled, queryClient]);
 }
 
 export function useNotificationUnreadCount(query: NotificationCountQuery = {}) {
+  const isLive = useRealtimeLive();
   return useQuery<{ count: number }, ApiError>({
     queryKey: notificationKeys.unreadCount(query),
     queryFn: () => notificationApi.unreadCount(query),
     retry,
     staleTime: 15_000,
-    refetchInterval: 60_000,
+    refetchInterval: isLive ? false : FALLBACK_POLL_MS,
   });
 }
 

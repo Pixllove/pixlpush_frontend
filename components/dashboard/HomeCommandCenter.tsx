@@ -1,5 +1,6 @@
 "use client";
 
+import { formatUserDateTime } from '@/lib/timezone';
 import { AddRounded, ArrowForwardRounded, ArrowUpwardRounded, AutoAwesomeRounded, AutoGraphRounded, CampaignRounded, CheckRounded, CloseRounded, ContentCopyRounded, DeleteOutlineRounded, EditOutlined, PushPinOutlined, PushPinRounded, ViewSidebarOutlined, ExpandMoreRounded, HistoryRounded, InfoOutlined, InsightsRounded, LinkRounded, PeopleAltOutlined, PhoneIphoneRounded, PsychologyRounded, ReplayRounded, RouteRounded, SearchRounded, StopRounded, TrendingDownRounded } from "@mui/icons-material";
 import { Alert, Box, Button, ButtonBase, Chip, Dialog, DialogContent, DialogTitle, IconButton, InputBase, Menu, MenuItem, Stack, TextField, Tooltip, Typography } from "@mui/material";
 import Image from "next/image";
@@ -2845,11 +2846,11 @@ export default function HomeCommandCenter() {
             return <Box key={item.id} sx={{ p: 1.5, border: "1px solid rgba(89, 57, 111, .14)", borderRadius: 2 }}>
               <Stack direction="row" justifyContent="space-between" gap={1} flexWrap="wrap">
                 <Typography fontWeight={700}>{collaboration.mode} · led by {collaboration.leadAgent}</Typography>
-                <Typography fontSize="var(--fs-11)" color="text.secondary">{new Date(item.createdAt).toLocaleString()}</Typography>
+                <Typography fontSize="var(--fs-11)" color="text.secondary">{formatUserDateTime(item.createdAt)}</Typography>
               </Stack>
                 <Typography fontSize="var(--fs-12)" color="text.secondary" sx={{ mt: .5 }}>Approval: {collaboration.approvalStatus} · Status: {collaboration.status ?? "recorded"}</Typography>
               <CollaborationTimeline collaboration={collaboration} profiles={agentProfiles} onApprove={collaboration.approvalStatus === "pending" ? () => approvalMutation.mutate({ collaborationId: collaboration.id, action: "approve" }) : undefined} onReject={collaboration.approvalStatus === "pending" ? () => approvalMutation.mutate({ collaborationId: collaboration.id, action: "reject" }) : undefined} onCancel={!['approved', 'rejected', 'cancelled', 'needs_data', 'blocked'].includes(collaboration.approvalStatus) ? () => cancelCollaborationMutation.mutate(collaboration.id) : undefined} approvalBusy={approvalMutation.isPending || cancelCollaborationMutation.isPending} />
-              {item.events.length ? <Box sx={{ mt: 1.25 }}><Typography fontSize="var(--fs-12)" fontWeight={700}>Events</Typography><Stack component="ul" sx={{ mt: .4, mb: 0, pl: 2.2 }} gap={.25}>{item.events.map((event) => <Typography component="li" fontSize="var(--fs-11)" color="text.secondary" key={event.id}>{event.type}{event.actorAgent ? ` · ${event.actorAgent}` : ""} · {new Date(event.createdAt).toLocaleString()}</Typography>)}</Stack></Box> : null}
+              {item.events.length ? <Box sx={{ mt: 1.25 }}><Typography fontSize="var(--fs-12)" fontWeight={700}>Events</Typography><Stack component="ul" sx={{ mt: .4, mb: 0, pl: 2.2 }} gap={.25}>{item.events.map((event) => <Typography component="li" fontSize="var(--fs-11)" color="text.secondary" key={event.id}>{event.type}{event.actorAgent ? ` · ${event.actorAgent}` : ""} · {formatUserDateTime(event.createdAt)}</Typography>)}</Stack></Box> : null}
             </Box>;
           })}
         </Stack>

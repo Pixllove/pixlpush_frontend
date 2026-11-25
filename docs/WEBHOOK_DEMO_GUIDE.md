@@ -95,7 +95,7 @@ Scroll to **3. Map data**.
 - **3.2 Historical user activity:**
   - Profile fields show as **Matched** automatically (email, name, language, country,
     region, user type, account status).
-  - Plans (Pixllove products) appear under *Plans*.
+  - Products are processed automatically; 3.1 membership rules pick the products per segment.
   - Events like `subscription_started` and `trial_started` are **Matched**. The pencil
     lets you remap one or create a custom event with a description.
   > "PixlPush matches the data itself. The customer only reviews it."
