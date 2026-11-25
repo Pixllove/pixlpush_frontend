@@ -119,6 +119,7 @@ describe('project-aware audience group chat flow', () => {
     expect(screen.getByRole('button', { name: 'Specific journey' })).toBeEnabled();
 
     await user.click(screen.getByRole('button', { name: 'Any journey' }));
+    await user.click(screen.getByRole('combobox', { name: 'Condition field' }));
     await user.click(screen.getByRole('option', { name: 'Journey Automation' }));
     await user.click(screen.getAllByRole('combobox')[1]);
     await user.click(screen.getByRole('option', { name: 'Has entered' }));
@@ -128,6 +129,7 @@ describe('project-aware audience group chat flow', () => {
     await user.click(screen.getByRole('button', { name: 'Back' }));
     expect(screen.getByText('Which journey scope should we use?')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Specific journey' }));
+    await user.click(screen.getByRole('combobox', { name: 'Condition field' }));
     await user.click(screen.getByRole('option', { name: 'Journey Automation' }));
     await user.click(screen.getAllByRole('combobox')[1]);
     await user.click(screen.getByRole('option', { name: 'Has entered' }));
@@ -293,6 +295,7 @@ describe('project-aware audience group chat flow', () => {
     const user = userEvent.setup();
     renderFlow();
     await user.click(await screen.findByText('Find users who took a specific event action'));
+    await user.click(screen.getByRole('combobox', { name: 'Condition field' }));
     await user.click(screen.getByRole('option', { name: 'Performed Event' }));
     await user.click(screen.getAllByRole('combobox')[1]);
     await user.click(screen.getByRole('option', { name: 'Has performed' }));
@@ -306,6 +309,7 @@ describe('project-aware audience group chat flow', () => {
     const view = renderFlow({ withoutConsent: true });
     await user.click(await screen.findByText('Find users who took a specific event action'));
     expect(screen.queryByText('Email Action')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('combobox', { name: 'Condition field' }));
     await user.click(screen.getByRole('option', { name: 'Performed Event' }));
     await user.click(screen.getAllByRole('combobox')[1]);
     await user.click(screen.getByRole('option', { name: 'Has performed' }));
@@ -500,14 +504,12 @@ describe('project-aware audience group chat flow', () => {
     api.create.mockResolvedValue({ id: 'reactivation-group', name: 'Inactive email users', description: null, rules: {}, memberCount: 3, createdAt: '', updatedAt: '' });
     renderFlow({ channels: ['email'] });
     await user.click(await screen.findByText('Reactivate users'));
-    await user.keyboard('{Escape}');
     const days = await screen.findByRole('spinbutton', { name: 'Last Email Sent days' });
     expect(days).toHaveValue(30);
     await user.clear(days);
     await user.type(days, '45');
     await user.click(screen.getByRole('button', { name: 'Back' }));
     await user.click(screen.getByText('Reactivate users'));
-    await user.keyboard('{Escape}');
     expect(await screen.findByRole('spinbutton', { name: 'Last Email Sent days' })).toHaveValue(45);
     await user.click(screen.getByRole('button', { name: 'Review rules' }));
     expect(screen.getByRole('textbox', { name: 'Group name' })).toHaveValue('Reactivation audience');
@@ -521,15 +523,15 @@ describe('project-aware audience group chat flow', () => {
     ] } })));
   });
 
-  it('opens a blank condition picker for Reactivation when channel settings are unavailable or empty', async () => {
+  it('does not auto-open the condition picker for Reactivation when channel settings are unavailable or empty', async () => {
     const user = userEvent.setup();
     renderFlow();
     await user.click(await screen.findByText('Reactivate users'));
 
     const picker = document.querySelector<HTMLButtonElement>('button[aria-label="Condition field"]');
     expect(picker).not.toBeNull();
-    expect(picker).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByRole('option', { name: 'Email' })).toBeInTheDocument();
+    expect(picker).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('option', { name: 'Email' })).not.toBeInTheDocument();
   });
 
   it('seeds only email availability and email recency when Email is the only selected channel', () => {

@@ -130,7 +130,7 @@ function audienceSuggestions(goal: Goal, blocks: Block[], schema: AudienceGroupS
   return { name, description };
 }
 
-function RuleEditor({ schema, fields, allFields, journeyScope, blocks, onChange }: { schema: AudienceGroupSchema; fields: AudienceGroupSchemaField[]; allFields: AudienceGroupSchemaField[]; journeyScope: 'any' | 'specific' | null; blocks: Block[]; onChange: (blocks: Block[]) => void }) {
+function RuleEditor({ schema, fields, allFields, journeyScope, blocks, onChange, autoOpen = false }: { schema: AudienceGroupSchema; fields: AudienceGroupSchemaField[]; allFields: AudienceGroupSchemaField[]; journeyScope: 'any' | 'specific' | null; blocks: Block[]; onChange: (blocks: Block[]) => void; autoOpen?: boolean }) {
   const maxConditions = schema.limits.maxConditions || 10;
   const conditionCount = validRuleCount(blocks, schema);
   const updateRule = (blockId: number, ruleId: number, key: keyof Rule, value: string) => onChange(blocks.map(block => block.id !== blockId ? block : {
@@ -163,7 +163,7 @@ function RuleEditor({ schema, fields, allFields, journeyScope, blocks, onChange 
     {!blocks.length && <Box sx={{ p: { xs: 1.5, sm: 2 }, border: '1px dashed', borderColor: 'divider', borderRadius: 2, textAlign: 'center' }}><Typography fontWeight={600}>No conditions selected yet</Typography><Typography color="text.secondary" fontSize="0.85rem">Add a condition to define which users belong to this group.</Typography><Button type="button" variant="outlined" startIcon={<AddRounded />} onClick={() => onChange([makeBlock(1, 1)])} sx={{ mt: 1.2 }}>Add condition</Button></Box>}
     {blocks.map((block, blockIndex) => <Box key={block.id} sx={{ p: { xs: 1.25, sm: 1.5 }, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
       <Stack gap={1.2}>
-        {block.rules.map((rule, ruleIndex) => <RuleRow key={rule.id} rule={rule} schema={schema} fields={fields} allFields={allFields} journeyScope={journeyScope} autoOpen={!rule.filter || (blockIndex === 0 && ruleIndex === 0)} onChange={(key, value) => updateRule(block.id, rule.id, key, value)} onRemove={() => remove(block.id, rule.id)} />)}
+        {block.rules.map((rule, ruleIndex) => <RuleRow key={rule.id} rule={rule} schema={schema} fields={fields} allFields={allFields} journeyScope={journeyScope} autoOpen={autoOpen && (!rule.filter || (blockIndex === 0 && ruleIndex === 0))} onChange={(key, value) => updateRule(block.id, rule.id, key, value)} onRemove={() => remove(block.id, rule.id)} />)}
         <Button type="button" size="small" startIcon={<AddRounded />} onClick={() => addAnd(block.id)} disabled={conditionCount >= maxConditions}>AND condition</Button>
       </Stack>
       {blockIndex < blocks.length - 1 && <Typography align="center" color="text.secondary" sx={{ mt: 1 }}>OR</Typography>}
@@ -365,7 +365,7 @@ export default function AudienceGroupAiFlow({ projectId, sdkIntegrated, trackedE
         {goal === 'other' && <Typography color="text.secondary" fontSize="0.85rem">These are schema-supported conditions relevant to “{otherDescription}”. Select the actual rules you want to create.</Typography>}
         {goal === 'reactivation' && fields.some(field => field.key === 'accountStatus' && optionHas(field, /deleted/i)) && <Typography color="text.secondary" fontSize="0.85rem">Deleted-account targeting is available because the backend exposed it for this project.</Typography>}
         {!fields.length ? <Alert severity="info">No matching schema-supported options are available for this goal. Choose another goal.</Alert> : <>
-          <RuleEditor schema={schema} fields={fields} allFields={allPickerFields} journeyScope={journeyScope} blocks={blocks} onChange={setBlocks} />
+          <RuleEditor schema={schema} fields={fields} allFields={allPickerFields} journeyScope={journeyScope} blocks={blocks} onChange={setBlocks} autoOpen={goal === 'profile'} />
           {incompleteRules > 0 && <Alert severity="warning">Complete or remove the incomplete condition before reviewing these rules.</Alert>}
           <Button type="button" variant="contained" endIcon={<ArrowForwardRounded />} onClick={openReview} disabled={!ruleStepReady || !hasRules || incompleteRules > 0}>Review rules</Button>
         </>}
