@@ -38,7 +38,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ComponentType, ReactNode } from 'react';
 import type { AudienceGroupSchemaField } from '@/types/project';
 import { appNotificationTokenFieldKey, audienceFieldTopic, isHiddenAudienceField } from './audienceGroupRules';
@@ -51,6 +51,7 @@ type Props = {
   ariaLabel?: string;
   compact?: boolean;
   moreFields?: AudienceGroupSchemaField[];
+  autoOpen?: boolean;
 };
 
 type PickerGroup = {
@@ -127,15 +128,21 @@ export default function AudienceConditionFieldPicker({
   ariaLabel = 'Condition field',
   compact = false,
   moreFields = [],
+  autoOpen = false,
 }: Props) {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [moreAnchorEl, setMoreAnchorEl] = useState<HTMLElement | null>(null);
   const [search, setSearch] = useState('');
   const [moreSearch, setMoreSearch] = useState('');
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
   const open = Boolean(anchorEl);
   const moreOpen = Boolean(moreAnchorEl);
   const pickerFields = useMemo(() => [...new Map([...fields, ...moreFields].map(field => [field.key, field])).values()], [fields, moreFields]);
   const selectedField = pickerFields.find(field => field.key === value || field.label === value);
+
+  useEffect(() => {
+    if (autoOpen && buttonRef.current) setAnchorEl(buttonRef.current);
+  }, [autoOpen]);
 
   const groups = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -174,6 +181,7 @@ export default function AudienceConditionFieldPicker({
   return <>
     <ButtonBase
       type="button"
+      ref={buttonRef}
       role="combobox"
       aria-label={ariaLabel}
       aria-expanded={open}

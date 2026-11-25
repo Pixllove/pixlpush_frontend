@@ -172,7 +172,7 @@ export function toJourneyInput(state: BuilderState): JourneyInput {
     const own = settings[block.id] ?? {};
     const meta = { block: block.type, title: block.title, settings: own, ...(branch ? { branchOf: branch.of, branch: branch.side } : {}) };
     if (block.type === "email" || block.type === "notification" || block.type === "web_notification") {
-      if (!own.template) throw new JourneyIncomplete(`Select a template for "${block.title}".`);
+      if (!own.template) throw new JourneyIncomplete(`Select reusable content for "${block.title}".`);
       if (block.type !== "email") {
         const channel = block.type === "web_notification" ? "web" : own.deliveryChannel === "all" ? undefined : "mobile";
         return { type: "push", key: block.id, templateId: own.template, ...(channel ? { channel } : {}), ...sendWindow(own, block.title), meta };
@@ -279,8 +279,8 @@ export function toJourneyInput(state: BuilderState): JourneyInput {
 }
 
 const TITLES: Record<JourneyStep["type"], [BlockType, string, string]> = {
-  email: ["email", "Email template", "Send a designed email to subscribers."],
-  push: ["notification", "Push notification", "Send a push notification to subscribers."],
+  email: ["email", "Email", "Send an email"],
+  push: ["notification", "Mobile Push", "Send a mobile notification"],
   delay: ["wait", "Wait", "Pause before the next step."],
   condition: ["condition", "Condition", "Split subscribers into Yes and No paths."],
   repeat: ["repeat_journey", "Repeat same journey", "Repeat this journey for a user."],
@@ -301,7 +301,23 @@ export function fromJourney(journey: Journey): BuilderState & { status: BuilderS
     const meta = (step.meta ?? {}) as { block?: BlockType; title?: string; settings?: Record<string, string>; branchOf?: string; branch?: "yes" | "no"; variantOf?: string; rules?: string[] };
     const [type, title, description] = TITLES[step.type];
     const blockType = meta.block ?? (step.type === "push" && step.channel === "web" ? "web_notification" : step.type === "delay" && (step.time || step.until) ? "specific_time" : type);
-    const block: Block = { id: step.key, type: blockType, title: meta.title ?? title, description: blockType === "event" ? "Branch subscribers based on a tracked event." : description, stats: step.stats };
+    const messageCopy = blockType === "email"
+      ? ["Email", "Send an email"]
+      : blockType === "notification"
+        ? ["Mobile Push", "Send a mobile notification"]
+        : blockType === "web_notification"
+          ? ["Web Push", "Send a web notification"]
+          : undefined;
+    const [messageTitle, messageDescription] = messageCopy ?? [];
+    const block: Block = {
+      id: step.key,
+      type: blockType,
+      title: messageTitle ?? meta.title ?? title,
+      description: blockType === "event"
+        ? "Branch subscribers based on a tracked event."
+        : messageDescription ?? description,
+      stats: step.stats,
+    };
     settings[block.id] = {
       ...(step.templateId ? { template: step.templateId } : {}),
       ...(step.type === "delay" && step.amount ? { amount: String(step.amount), unit: step.unit ?? "days" } : {}),

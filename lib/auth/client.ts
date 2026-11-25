@@ -25,6 +25,7 @@ function normalizeError(status: number, body: unknown): ApiError {
     status,
     code: error.code,
     message: error.message,
+    ...(error.details !== undefined ? { details: error.details } : {}),
     ...(fieldErrors && Object.keys(fieldErrors).length > 0 ? { fieldErrors } : {}),
   };
 }

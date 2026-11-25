@@ -426,6 +426,8 @@ export interface AudienceGroupSchemaCondition {
     freeText?: boolean;
     min?: number;
     unit?: string;
+    /** Present when a project-backed dropdown has no selectable values. */
+    emptyReason?: string;
     options?: AudienceGroupSchemaOption[];
   };
 }

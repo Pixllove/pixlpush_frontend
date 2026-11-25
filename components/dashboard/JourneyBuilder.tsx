@@ -112,20 +112,20 @@ type AddTarget =
 const blockOptions: Array<[BlockType, string, string, typeof EmailRounded]> = [
   [
     "email",
-    "Email template",
-    "Send a designed email to subscribers.",
+    "Email",
+    "Send an email",
     EmailRounded,
   ],
   [
     "notification",
-    "Push notification",
-    "Send a push notification to subscribers.",
+    "Mobile Push",
+    "Send a mobile notification",
     NotificationsActiveRounded,
   ],
   [
     "web_notification",
-    "Web push notification",
-    "Send a web push notification to subscribers.",
+    "Web Push",
+    "Send a web notification",
     NotificationsActiveRounded,
   ],
   ["wait", "Wait", "Pause before the next step.", TimerRounded],
@@ -154,9 +154,9 @@ const blockOptions: Array<[BlockType, string, string, typeof EmailRounded]> = [
 const MENU_HINTS: Record<BlockType, string> = {
   entrance: "",
   exit: "",
-  email: "Send a designed email",
-  notification: "Send a mobile push",
-  web_notification: "Send a browser push",
+  email: "Send an email",
+  notification: "Send a mobile notification",
+  web_notification: "Send a web notification",
   wait: "Pause for a set time",
   condition: "Split into Yes and No",
   event: "Branch on a tracked event",
@@ -584,7 +584,7 @@ export default function JourneyBuilder() {
       .replace(/<[^>]+>/g, "")
       .replace(/\n{3,}/g, "\n\n")
       .trim();
-  /** A message card says what will be sent: the push title/body or the complete email template. */
+  /** A message card says what will be sent: the push title/body or the complete reusable email. */
   const describe = (block: Block): Block => {
     if (block.type === "ab_test") {
       const max = abMaxVariants(settings[block.id]);
@@ -616,7 +616,7 @@ export default function JourneyBuilder() {
       description:
         block.type === "notification" || block.type === "web_notification"
           ? `Title: ${template.title ?? template.name}\nBody: ${template.body ?? ""}`
-          : `Template name: ${template.name}\nSubject: ${settings[block.id]?.subject || template.subject || template.name}\nBody:\n${readableEmailBody(template) || "No email body added yet."}`,
+          : `Reusable email: ${template.name}\nSubject: ${settings[block.id]?.subject || template.subject || template.name}\nBody:\n${readableEmailBody(template) || "No email body added yet."}`,
     };
   };
   return (
@@ -743,7 +743,7 @@ export default function JourneyBuilder() {
               <CircularProgress size={34} />
               <Typography fontWeight={600}>Loading your journey</Typography>
               <Typography color="text.secondary" fontSize="var(--fs-13)">
-                Fetching the steps and message templates…
+                Fetching the steps and reusable message content…
               </Typography>
             </Box>
           ) : (
@@ -839,6 +839,7 @@ export default function JourneyBuilder() {
           }
           onClose={() => setSelected(null)}
           onDelete={() => removeBlock(selected.id)}
+          onDesignEmail={() => router.push("/dashboard/email?create=template")}
           abTest={
             selectedTest
               ? {
@@ -1736,6 +1737,7 @@ function SettingsPanel({
   onConditionChange,
   onClose,
   onDelete,
+  onDesignEmail,
   abTest,
 }: SettingProps & {
   block: Block;
@@ -1746,6 +1748,7 @@ function SettingsPanel({
   onConditionChange: (values: string[]) => void;
   onClose: () => void;
   onDelete: () => void;
+  onDesignEmail: () => void;
   /** Set when the block is an A/B test or one of its variants: the test's results. */
   abTest?: { variants: Block[]; canApply: boolean; onApply: (variantId: string) => void };
 }) {
@@ -1786,6 +1789,7 @@ function SettingsPanel({
             values={values}
             set={set}
             templates={choices.emailTemplates}
+            onDesignEmail={onDesignEmail}
           />
         ) : block.type === "notification" || block.type === "web_notification" ? (
           <NotificationSettings
@@ -1992,19 +1996,20 @@ function EmailSettings({
   values,
   set,
   templates,
-}: SettingProps & { templates: Option[] }) {
+  onDesignEmail,
+}: SettingProps & { templates: Option[]; onDesignEmail: () => void }) {
   return (
     <Stack gap={1.4}>
       <Typography className="journey-field-label">Email content</Typography>
       <Button
         variant="contained"
         startIcon={<SettingsRounded />}
-        onClick={() => window.open("/dashboard/email", "_blank", "noopener")}
+        onClick={onDesignEmail}
       >
         Design email
       </Button>
       <PanelSelect
-        placeholder="Select any template"
+        placeholder="Select any reusable email"
         value={values.template || ""}
         onChange={pick(set, "template")}
       >
@@ -2032,8 +2037,8 @@ function NotificationSettings({
   return (
     <Stack gap={1.4}>
       <PanelSelect
-        label="Message template"
-        placeholder="Select a notification template"
+        label="Reusable notification"
+        placeholder="Select a reusable notification"
         value={values.template || ""}
         onChange={pick(set, "template")}
       >

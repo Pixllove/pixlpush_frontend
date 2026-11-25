@@ -86,6 +86,7 @@ import {
   eventsApi,
   lifecycleSegmentsApi,
   pushApi,
+  effectivePushCampaignChannels,
   userStatsApi,
   usersApi,
 } from "@/lib/projects/api";
@@ -96,6 +97,7 @@ import type {
   EmailCampaign,
   EmailTemplate,
   PushCampaign,
+  PushDeliveryChannel,
   PushTemplate,
 } from "@/lib/projects/api";
 import { useActiveProject } from "@/hooks/projects/use-active-project";
@@ -1748,8 +1750,8 @@ function EmailDataSection() {
       id: item.id,
       name: item.name,
       detail: item.subject || "No subject",
-      meta: `${item.category === "template" ? "Reusable template" : (item.category ?? "Email template")} · Updated ${date(item.updatedAt)}`,
-      status: "Reusable template",
+      meta: `${item.category === "template" ? "Reusable email" : (item.category ?? "Reusable email")} · Updated ${date(item.updatedAt)}`,
+      status: "Reusable email",
     }),
   );
   const campaignRows: EmailRow[] = (
@@ -1789,7 +1791,7 @@ function EmailDataSection() {
     },
     {
       id: "templates" as const,
-      label: "My Templates",
+      label: "Reusable Emails",
       count: templatesQuery.data?.total ?? 0,
       icon: GridViewRounded,
     },
@@ -1883,7 +1885,7 @@ function EmailDataSection() {
             Create email campaign
           </Button>
           <Button variant="outlined" startIcon={<GridViewRounded />}>
-            Create email template
+            Create reusable email
           </Button>
         </Stack>
       </Stack>
@@ -1913,7 +1915,7 @@ function EmailDataSection() {
           <Box>
             <Typography variant="h3">
               {tab === "templates"
-                ? "My Templates"
+                ? "Reusable Emails"
                 : tab === "drafts"
                   ? "Draft emails"
                   : "Sent campaigns"}
@@ -1934,7 +1936,7 @@ function EmailDataSection() {
                 setAppliedSearch(value);
                 setPage(1);
               }}
-              placeholder={`Search ${tab === "templates" ? "templates" : tab === "drafts" ? "drafts" : "campaigns"}`}
+              placeholder={`Search ${tab === "templates" ? "reusable emails" : tab === "drafts" ? "drafts" : "campaigns"}`}
             />
             <Select
               size="small"
@@ -1952,7 +1954,7 @@ function EmailDataSection() {
           totalCount={String(activeQuery.data?.total ?? 0)}
           noun={
             tab === "templates"
-              ? "templates"
+              ? "reusable emails"
               : tab === "drafts"
                 ? "drafts"
                 : "campaigns"
@@ -1961,13 +1963,13 @@ function EmailDataSection() {
             icon: <MailOutlineRounded />,
             noun:
               tab === "templates"
-                ? "templates"
+                ? "reusable emails"
                 : tab === "drafts"
                   ? "drafts"
                   : "sent campaigns",
             description:
               tab === "templates"
-                ? "Templates you save are kept here to reuse in campaigns and journeys."
+                ? "Reusable emails you save are kept here to reuse in campaigns and journeys."
                 : tab === "drafts"
                   ? "Emails you start and save appear here until they are sent."
                   : "Campaigns appear here once they have been sent.",
@@ -2012,7 +2014,7 @@ function EmailSection() {
             detail:
               "Introduce PixlLove, highlight profile setup, and invite users to start matching.",
             meta: "Onboarding · Updated today",
-            status: "Reusable template",
+            status: "Reusable email",
           },
           {
             id: "premium",
@@ -2020,7 +2022,7 @@ function EmailSection() {
             detail:
               "A clean offer layout with benefits, pricing nudge, and a strong upgrade action.",
             meta: "Promotion · Updated yesterday",
-            status: "Reusable template",
+            status: "Reusable email",
           },
           {
             id: "reengagement",
@@ -2028,7 +2030,7 @@ function EmailSection() {
             detail:
               "Bring inactive subscribers back with warm copy and personalized reminders.",
             meta: "Winback · Updated 2 days ago",
-            status: "Reusable template",
+            status: "Reusable email",
           },
           {
             id: "product-update",
@@ -2036,7 +2038,7 @@ function EmailSection() {
             detail:
               "Share new features, product improvements, and important announcements.",
             meta: "Product · Updated 4 days ago",
-            status: "Reusable template",
+            status: "Reusable email",
           },
         ]
       : tab === "drafts"
@@ -2144,7 +2146,7 @@ function EmailSection() {
     { id: "drafts" as const, label: "Drafts", count: "2", icon: EditRounded },
     {
       id: "templates" as const,
-      label: "My Templates",
+      label: "Reusable Emails",
       count: "4",
       icon: GridViewRounded,
     },
@@ -2169,7 +2171,7 @@ function EmailSection() {
             Create email campaign
           </Button>
           <Button variant="outlined" startIcon={<GridViewRounded />}>
-            Create email template
+            Create reusable email
           </Button>
         </Stack>
       </Stack>
@@ -2192,7 +2194,7 @@ function EmailSection() {
           <Box>
             <Typography variant="h3">
               {tab === "templates"
-                ? "My Templates"
+                ? "Reusable Emails"
                 : tab === "drafts"
                   ? "Draft emails"
                   : "Sent campaigns"}
@@ -2207,7 +2209,7 @@ function EmailSection() {
           </Box>
           <Stack direction="row" gap={1} className="data-toolbar email-toolbar">
             <SearchField
-              placeholder={`Search ${tab === "templates" ? "templates" : tab === "drafts" ? "drafts" : "campaigns"}`}
+              placeholder={`Search ${tab === "templates" ? "reusable emails" : tab === "drafts" ? "drafts" : "campaigns"}`}
             />
             <Select
               size="small"
@@ -2225,7 +2227,7 @@ function EmailSection() {
           totalCount={String(emailRows.length)}
           noun={
             tab === "templates"
-              ? "templates"
+              ? "reusable emails"
               : tab === "drafts"
                 ? "drafts"
                 : "campaigns"
@@ -2256,6 +2258,10 @@ function PushSection() {
   const [composer, setComposer] = useState<"campaign" | "template" | null>(
     null,
   );
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(
+    null,
+  );
+  const [editingDraftId, setEditingDraftId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{
     id: string;
     name: string;
@@ -2343,13 +2349,35 @@ function PushSection() {
         severity: "error",
       }),
   });
+  const openNewComposer = (next: "campaign" | "template") => {
+    setEditingTemplateId(null);
+    setEditingDraftId(null);
+    setComposer(next);
+  };
+  const openTemplate = (templateId: string) => {
+    setEditingTemplateId(templateId);
+    setEditingDraftId(null);
+    setComposer("template");
+  };
+  const openDraft = (draftId: string) => {
+    setEditingTemplateId(null);
+    setEditingDraftId(draftId);
+    setComposer("campaign");
+  };
+  const closeComposer = () => {
+    setEditingTemplateId(null);
+    setEditingDraftId(null);
+    setComposer(null);
+  };
   if (composer)
     return (
       <PushComposer
         mode={composer}
-        onBack={() => setComposer(null)}
+        templateId={editingTemplateId}
+        draftId={editingDraftId}
+        onBack={closeComposer}
         onSaved={(target) => {
-          setComposer(null);
+          closeComposer();
           setTab(target === "send" ? "send" : target);
           setPage(1);
         }}
@@ -2377,38 +2405,45 @@ function PushSection() {
       category:
         item.category === "push_notification"
           ? "Push notification"
-          : "Template",
+          : "Reusable notification",
       created: formatDate(item.updatedAt),
       status: item.status === "active" ? "Active" : (item.status ?? "Active"),
-      target: "Reusable content",
+      target: "Reusable notification",
       sends: item.sends === undefined ? "—" : item.sends.toLocaleString(),
       clicks: item.opens === undefined ? "—" : item.opens.toLocaleString(),
     }),
   );
   const campaignRows: PushRow[] = (
     (tab === "drafts" ? draftsQuery.data?.items : sentQuery.data?.items) ?? []
-  ).map((item: PushCampaign) => ({
-    id: item.id,
-    name: item.name,
-    title: item.template?.title ?? "—",
-    message: item.template?.body ?? "—",
-    category: item.category === "template" ? "Template" : "Push notification",
-    created: formatDate(item.updatedAt),
-    status: item.status.charAt(0).toUpperCase() + item.status.slice(1),
-    target: item.audience?.allUsers
+  ).map((item: PushCampaign) => {
+    const audienceLabel = item.audience?.allUsers
       ? "All eligible users"
       : item.audience?.audienceGroupIds?.length
         ? "Audience group"
         : item.audience?.lifecycleSegmentIds?.length
           ? "Lifecycle segment"
-          : "Selected users",
-    sends:
-      item.stats?.sent === undefined ? "—" : item.stats.sent.toLocaleString(),
-    clicks:
-      item.stats?.opened === undefined
-        ? "—"
-        : `${item.stats.opened.toLocaleString()} · ${item.stats.openRate.toFixed(1)}%`,
-  }));
+          : "Selected users";
+    const channels = effectivePushCampaignChannels(item);
+    const deliveryLabel = channels === null
+      ? "All push channels"
+      : channels.map((channel: PushDeliveryChannel) => channel === "web" ? "Web Notification" : "Mobile Push").join(" + ");
+    return {
+      id: item.id,
+      name: item.name,
+      title: item.template?.title ?? "—",
+      message: item.template?.body ?? "—",
+      category: item.category === "template" ? "Reusable notification" : "Push notification",
+      created: formatDate(item.updatedAt),
+      status: item.status.charAt(0).toUpperCase() + item.status.slice(1),
+      target: `${audienceLabel} · ${deliveryLabel}`,
+      sends:
+        item.stats?.sent === undefined ? "—" : item.stats.sent.toLocaleString(),
+      clicks:
+        item.stats?.opened === undefined
+          ? "—"
+          : `${item.stats.opened.toLocaleString()} · ${item.stats.openRate.toFixed(1)}%`,
+    };
+  });
   const activeQuery =
     tab === "templates"
       ? templatesQuery
@@ -2427,8 +2462,14 @@ function PushSection() {
             type="button"
             fontSize="var(--fs-12)"
             fontWeight={500}
-            onClick={() =>
-              router.push(`/dashboard/push?tab=${tab}&highlight=${row.id}`)
+            onClick={(event) => {
+              event.stopPropagation();
+              if (tab === "templates") openTemplate(row.id);
+              else if (tab === "drafts") openDraft(row.id);
+              else router.push(`/dashboard/push?tab=${tab}&highlight=${row.id}`);
+            }}
+            aria-label={
+              tab === "templates" ? `Edit ${row.name}` : `Open ${row.name}`
             }
             sx={{
               display: "block",
@@ -2535,7 +2576,19 @@ function PushSection() {
           direction="row"
           justifyContent="flex-end"
           className="table-row-actions"
+          onClick={(event) => event.stopPropagation()}
         >
+          {(tab === "templates" || tab === "drafts") && (
+            <IconButton
+              size="small"
+              className="edit-action"
+              aria-label={`Edit ${row.name}`}
+              onClick={() => tab === "templates" ? openTemplate(row.id) : openDraft(row.id)}
+              disabled={actionMutation.isPending}
+            >
+              <EditRounded fontSize="small" />
+            </IconButton>
+          )}
           {tab === "templates" && (
             <IconButton
               size="small"
@@ -2583,7 +2636,7 @@ function PushSection() {
     },
     {
       id: "templates" as const,
-      label: "My Templates",
+      label: "Reusable Notifications",
       count: String(
         templatesQuery.data?.tabCounts?.templates ??
           templatesQuery.data?.total ??
@@ -2604,16 +2657,16 @@ function PushSection() {
           <Button
             variant="contained"
             startIcon={<SendRounded />}
-            onClick={() => setComposer("campaign")}
+            onClick={() => openNewComposer("campaign")}
           >
             Create push campaign
           </Button>
           <Button
             variant="outlined"
             startIcon={<GridViewRounded />}
-            onClick={() => setComposer("template")}
+            onClick={() => openNewComposer("template")}
           >
-            Create push template
+            Create reusable notification
           </Button>
         </Stack>
       </Stack>
@@ -2644,7 +2697,7 @@ function PushSection() {
           <Box>
             <Typography variant="h3">
               {tab === "templates"
-                ? "My Templates"
+                ? "Reusable Notifications"
                 : tab === "drafts"
                   ? "Draft notifications"
                   : "Sent notifications"}
@@ -2691,7 +2744,7 @@ function PushSection() {
           }
           noun={
             tab === "templates"
-              ? "templates"
+          ? "reusable notifications"
               : tab === "drafts"
                 ? "drafts"
                 : "campaigns"
@@ -2700,13 +2753,13 @@ function PushSection() {
             icon: <NotificationsNoneRounded />,
             noun:
               tab === "templates"
-                ? "templates"
+              ? "reusable notifications"
                 : tab === "drafts"
                   ? "drafts"
                   : "sent notifications",
             description:
               tab === "templates"
-                ? "Templates you save are kept here to reuse in campaigns and journeys."
+                ? "Reusable notifications you save are kept here to reuse in campaigns and journeys."
                 : tab === "drafts"
                   ? "Notifications you start and save appear here until they are sent."
                   : "Notifications appear here once they have been sent.",
@@ -2735,6 +2788,13 @@ function PushSection() {
           onNextPage={() => setPage((current) => current + 1)}
           page={page}
           serverPageSize={25}
+          onRowClick={
+            tab === "templates"
+              ? (row) => openTemplate(row.id)
+              : tab === "drafts"
+                ? (row) => openDraft(row.id)
+                : undefined
+          }
         />
       </Card>
       <DeleteConfirmDialog
@@ -2747,7 +2807,7 @@ function PushSection() {
         }}
         title={`Delete "${deleteTarget?.name ?? "item"}"?`}
         description={tab === "templates"
-          ? "This template will be hidden from your workspace. Existing journeys and sends keep their content, and platform admins retain its details."
+          ? "This reusable notification will be hidden from your workspace. Existing journeys and sends keep their content, and platform admins retain its details."
           : "This item will be deleted from your workspace."}
       />
       <Toast

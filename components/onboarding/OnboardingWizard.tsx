@@ -587,6 +587,9 @@ export default function OnboardingWizard() {
                 {isSdkStep && <OnboardingStepExperience
                   kind={activeStep.kind as 'app-sdk' | 'web-sdk'}
                   projectName={state.projectName}
+                  projectId={projectId}
+                  projectSlug={selectedProject?.slug}
+                  canCreateSdkKey={Boolean(selectedProject && ['owner', 'admin', 'developer'].includes(selectedProject.role))}
                   onRequestSdk={() => setSdkRequestOpen(true)}
                   onSendDeveloperInstructions={async (input) => {
                     if (!projectId) throw new Error('Select a project before sending developer instructions.');

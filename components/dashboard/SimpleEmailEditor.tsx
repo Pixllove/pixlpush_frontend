@@ -5,6 +5,7 @@ import CloseEmailEditor from "./CloseEmailEditor";
 import EmailPreviewDialog from "./EmailPreviewDialog";
 import EmailTranslationPanel from "./EmailTranslationPanel";
 import EmailLanguageSettings from "./EmailLanguageSettings";
+import TemplateSaveDialog from "./TemplateSaveDialog";
 import { languageName } from "./EmailLanguageSettings";
 import { emailApi } from "@/lib/projects/api";
 
@@ -232,7 +233,7 @@ export default function SimpleEmailEditor({
 }: Props) {
   const [name, setName] = useState(
     item?.name ||
-      (kind === "templates" ? "New email template" : "New email campaign"),
+      (kind === "templates" ? "New reusable email" : "New email campaign"),
   );
   const [activeLanguage, setActiveLanguage] = useState(language);
   const [subject, setSubject] = useState(item?.subject || "");
@@ -244,6 +245,7 @@ export default function SimpleEmailEditor({
   const [reviewOpen, setReviewOpen] = useState(false);
   const [previewAnchor, setPreviewAnchor] = useState<null | HTMLElement>(null);
   const [saveAnchor, setSaveAnchor] = useState<null | HTMLElement>(null);
+  const [templateSaveOpen, setTemplateSaveOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiResult, setAiResult] = useState<{
@@ -293,7 +295,7 @@ export default function SimpleEmailEditor({
   }, [name, subject, content, translations]);
 
   useEffect(() => {
-    setName(item?.name || (kind === "templates" ? "New email template" : "New email campaign"));
+    setName(item?.name || (kind === "templates" ? "New reusable email" : "New email campaign"));
     setSubject(item?.subject || "");
     setContent(item?.content || "");
     setTranslations(item?.translations || {});
@@ -465,8 +467,11 @@ export default function SimpleEmailEditor({
     editor.focus();
     updateContent(editor.innerHTML);
   };
-  const saveAs = async (destination: EmailKind) => {
-    if (saving) return;
+  const saveAs = async (
+    destination: EmailKind,
+    templateMode: "update" | "new" = "update",
+  ): Promise<boolean> => {
+    if (saving) return false;
     // Let the selected save endpoint validate the payload so its response is
     // shown to the user and the request is visible in the network panel.
     setSaving(true);
@@ -474,7 +479,7 @@ export default function SimpleEmailEditor({
       const isExisting = Boolean(item?.id && !item.id.startsWith("email-"));
       let savedId = id;
       if (destination === "templates") {
-        const saved = isExisting && item?.kind === "templates"
+        const saved = templateMode === "update" && isExisting && item?.kind === "templates"
           ? await emailApi.templates.update(projectId, item.id, { name, subject, html: content, editor: "simple", translations, fallbackLanguage })
           : await emailApi.templates.create(projectId, { name, subject, html: content, editor: "simple", translations, fallbackLanguage });
         savedId = saved.id;
@@ -497,17 +502,30 @@ export default function SimpleEmailEditor({
           translations,
           fallbackLanguage,
         },
-        destination === "templates" ? "Template saved" : "Draft saved",
+        destination === "templates"
+          ? templateMode === "update" && isExisting && item?.kind === "templates"
+            ? "Reusable email updated"
+            : "Reusable email saved"
+          : "Draft saved",
       );
+      return true;
     } catch (error) {
       onNotice(error && typeof error === "object" && "message" in error
         ? String((error as { message?: unknown }).message)
         : "Could not save this email.");
+      return false;
     } finally {
       setSaving(false);
     }
   };
   const save = () => saveAs(kind);
+  const isExistingTemplate = Boolean(
+    item?.id && !item.id.startsWith("email-") && item.kind === "templates",
+  );
+  const saveTemplate = () => {
+    if (isExistingTemplate) setTemplateSaveOpen(true);
+    else void saveAs("templates", "new");
+  };
   if (reviewOpen)
     return (
       <SimpleCampaignReview
@@ -799,9 +817,17 @@ export default function SimpleEmailEditor({
           </Button>
           <Menu anchorEl={saveAnchor} open={Boolean(saveAnchor)} onClose={() => setSaveAnchor(null)}>
             <MenuItem onClick={() => { saveAs("drafts"); setSaveAnchor(null); }}>Save as draft</MenuItem>
-            <MenuItem onClick={() => { void saveAs("templates"); setSaveAnchor(null); }}>Save as template</MenuItem>
+            <MenuItem onClick={() => { saveTemplate(); setSaveAnchor(null); }}>
+              {isExistingTemplate ? "Update reusable email" : "Save reusable email"}
+            </MenuItem>
             <MenuItem onClick={() => { setReviewOpen(true); setSaveAnchor(null); }}>Prepare to send campaign</MenuItem>
           </Menu>
+      <TemplateSaveDialog
+        open={templateSaveOpen}
+        onClose={() => setTemplateSaveOpen(false)}
+        onUpdate={() => saveAs("templates", "update")}
+        onSaveAsNew={() => saveAs("templates", "new")}
+      />
           <CloseEmailEditor onDiscard={onClose} onSaveDraft={() => { void saveAs("drafts"); }} snapshot={JSON.stringify([name, subject, content, translations])} />
         </Stack>
       </Box>

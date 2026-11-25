@@ -1203,6 +1203,25 @@ export interface PushTranslation {
   body: string;
 }
 
+export type PushDeliveryChannel = "mobile" | "web";
+
+export interface PushChannelDeliveryResult {
+  delivered: number;
+  failed: number;
+  deliveredProviders?: string[];
+  attemptedProviders?: string[];
+  retryable?: boolean;
+  lastError?: string | null;
+}
+
+export interface PushTemplateTestResult {
+  delivered: number;
+  failed: number;
+  error?: string | null;
+  channels?: PushDeliveryChannel[] | null;
+  channelResults?: Partial<Record<PushDeliveryChannel, PushChannelDeliveryResult>>;
+}
+
 export interface PushDeepLink {
   id: string;
   projectId: string;
@@ -1261,6 +1280,10 @@ export interface PushCampaign {
   category?: "template" | "push_notification";
   templateId: string;
   template?: PushTemplate;
+  /** New campaigns may target one or both delivery channels. */
+  channels?: PushDeliveryChannel[];
+  /** Legacy single-channel value retained for older campaigns. */
+  channel?: PushDeliveryChannel | null;
   audience: PushAudience;
   status:
     | "draft"
@@ -1274,6 +1297,14 @@ export interface PushCampaign {
   createdAt: string;
   updatedAt: string;
   stats?: PushCampaignStats;
+}
+
+/** Normalizes current and legacy campaign responses for UI consumers. */
+export function effectivePushCampaignChannels(
+  campaign: Pick<PushCampaign, "channels" | "channel">,
+): PushDeliveryChannel[] | null {
+  if (campaign.channels?.length) return campaign.channels;
+  return campaign.channel ? [campaign.channel] : null;
 }
 
 export interface PushPaginated<T> {
@@ -1391,10 +1422,10 @@ export const pushApi = {
         BASE,
         "DELETE",
       ),
-    test: (projectId: string, templateId: string, userId: string) =>
-      authRequest<{ delivered: boolean; failed: boolean; error?: string }>(
+    test: (projectId: string, templateId: string, userId: string, channels?: PushDeliveryChannel[]) =>
+      authRequest<PushTemplateTestResult>(
         at(projectId, `/push-templates/${encodeURIComponent(templateId)}/test`),
-        { userId },
+        { userId, ...(channels?.length ? { channels } : {}) },
         BASE,
       ),
   },
@@ -1427,10 +1458,10 @@ export const pushApi = {
         undefined,
         BASE,
       ),
-    audiencePreview: (projectId: string, audience: PushAudience) =>
+    audiencePreview: (projectId: string, audience: PushAudience, channels?: PushDeliveryChannel[]) =>
       authRequest<{ matching: number; reachable: number }>(
         at(projectId, "/push-campaigns/audience-preview"),
-        { audience },
+        { audience, ...(channels?.length ? { channels } : {}) },
         BASE,
       ),
     create: (
@@ -1448,6 +1479,8 @@ export const pushApi = {
           fallbackLanguage?: string | null;
         };
         category?: "template" | "push_notification";
+        channel?: PushDeliveryChannel;
+        channels?: PushDeliveryChannel[];
         audience?: PushAudience;
         sendNow?: boolean;
         scheduledAt?: string;
@@ -1457,7 +1490,22 @@ export const pushApi = {
     update: (
       projectId: string,
       campaignId: string,
-      input: { name?: string; templateId?: string; audience?: PushAudience },
+      input: {
+        name?: string;
+        templateId?: string;
+        content?: {
+          title: string;
+          body: string;
+          imageUrl?: string | null;
+          deepLink?: string | null;
+          data?: Record<string, string>;
+          translations?: Record<string, PushTranslation> | null;
+          fallbackLanguage?: string | null;
+        };
+        channel?: PushDeliveryChannel;
+        channels?: PushDeliveryChannel[];
+        audience?: PushAudience;
+      },
     ) =>
       authRequest<PushCampaign>(
         at(projectId, `/push-campaigns/${encodeURIComponent(campaignId)}`),

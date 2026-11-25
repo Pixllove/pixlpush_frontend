@@ -24,7 +24,7 @@ export const hiddenAudienceFieldKeys = new Set([
 ]);
 
 export const appNotificationTokenFieldKey = 'appNotificationToken';
-export const appNotificationTokenFieldLabel = 'Mobile push';
+export const appNotificationTokenFieldLabel = 'App Notification';
 
 export type NotificationRecencyChannel = 'email' | 'mobile-push' | 'web-push';
 
@@ -74,7 +74,20 @@ export function isHiddenAudienceField(field: AudienceGroupSchemaField) {
  * so existing saved rules can still be read and edited as legacy conditions.
  */
 export function withAppNotificationTokenField(schema: AudienceGroupSchema): AudienceGroupSchema {
-  if (schema.fields.some(field => field.key === appNotificationTokenFieldKey)) return schema;
+  const existing = schema.fields.find(field => field.key === appNotificationTokenFieldKey);
+  if (existing) {
+    // Older backend schemas expose the same combined predicate with the
+    // implementation-oriented label "App Notification Token (FCM & APNs)".
+    // Keep the key and operators unchanged, but use the product-facing label
+    // in both audience-group surfaces.
+    if (existing.label === appNotificationTokenFieldLabel && existing.topic === 'reachability') return schema;
+    return {
+      ...schema,
+      fields: schema.fields.map(field => field.key === appNotificationTokenFieldKey
+        ? { ...field, label: appNotificationTokenFieldLabel, topic: 'reachability' }
+        : field),
+    };
+  }
   const fcm = schema.fields.find(field => field.key === 'fcmToken');
   const apns = schema.fields.find(field => field.key === 'apnsToken');
   if (!fcm || !apns) return schema;
@@ -102,7 +115,18 @@ export type ReactivationChannel = 'email' | 'mobile-push' | 'web-push';
 export type ReactivationSeed = { blocks: Block[]; unavailable: string[] };
 
 export function reactivationChannelsForProject(platforms: ProjectPlatform[], channels: string[]): ReactivationChannel[] {
-  const selected = new Set(channels);
+  // Onboarding currently stores `mobile-push` and `web-push`, but older
+  // progress rows and a few integrations used `mobile`, `web`, or snake-case
+  // variants. Normalize them here so reactivation never loses a selected
+  // channel and falls back to the wrong defaults.
+  const selected = new Set<string>();
+  for (const channel of channels) {
+    const normalized = channel.trim().toLowerCase().replace(/_/g, '-');
+    if (normalized === 'email') selected.add('email');
+    else if (normalized === 'mobile' || normalized === 'mobile-push' || normalized === 'mobilepush') selected.add('mobile-push');
+    else if (normalized === 'web' || normalized === 'web-push' || normalized === 'webpush') selected.add('web-push');
+    else if (normalized === 'push') selected.add('push');
+  }
   if (selected.has('push')) {
     if (platforms.includes('mobile')) selected.add('mobile-push');
     if (platforms.includes('web')) selected.add('web-push');
@@ -129,7 +153,11 @@ function channelFields(schema: AudienceGroupSchema, channel: ReactivationChannel
   if (channel === 'web-push') {
     return schema.fields.filter(field => !field.deprecated && !isNotificationRecencyField(field) && (field.key === 'webPush' || /(?:web|browser).*(?:push|notification)|(?:push|notification).*(?:web|browser)/i.test(`${field.key} ${field.label}`)));
   }
-  const combined = schema.fields.find(field => field.key === appNotificationTokenFieldKey && field.synthetic);
+  // Prefer the backend's canonical combined field when it is available. The
+  // synthetic fallback below is only for older schemas that expose FCM/APNs
+  // separately; filtering for `synthetic` here caused the real field to be
+  // skipped and left the App Notification condition out of reactivation.
+  const combined = schema.fields.find(field => field.key === appNotificationTokenFieldKey);
   if (combined) return [combined];
   const explicit = schema.fields.filter(field => !field.deprecated
     && !isNotificationRecencyField(field)
@@ -156,17 +184,25 @@ function notificationRecencyCondition(schema: AudienceGroupSchema, channel: Noti
 /** Build one editable AND group of schema-backed default reactivation rules. */
 export function seedReactivationRules(schema: AudienceGroupSchema, selectedChannels: ReactivationChannel[]): ReactivationSeed {
   const uniqueChannels = [...new Set(selectedChannels)];
-  const emailFallback = uniqueChannels.includes('email') && (uniqueChannels.includes('mobile-push') || uniqueChannels.includes('web-push'));
-  const channelsToSeed = emailFallback && !uniqueChannels.includes('mobile-push')
-    ? [...uniqueChannels, 'mobile-push' as const]
-    : uniqueChannels;
+  const emailOnlySelected = uniqueChannels.length === 1 && uniqueChannels[0] === 'email';
+  const mobileOnlySelected = uniqueChannels.length === 1 && uniqueChannels[0] === 'mobile-push';
+  const webOnlySelected = uniqueChannels.length === 1 && uniqueChannels[0] === 'web-push';
+  const emailAndMobileSelected = uniqueChannels.includes('email') && uniqueChannels.includes('mobile-push');
+  const allDeliveryChannelsSelected = (['email', 'mobile-push', 'web-push'] as const).every(channel => uniqueChannels.includes(channel));
+  // Keep the generated rows in the same order as the reactivation design:
+  // Email, Web Push, then App Notification/Mobile Push.
+  const channelOrder: ReactivationChannel[] = ['email', 'web-push', 'mobile-push'];
+  const orderedChannels = channelOrder.filter(channel => uniqueChannels.includes(channel));
+  // Only selected channels may seed conditions. In particular, Email + Web
+  // Push must not silently add App Notification or mobile recency rows.
+  const channelsToSeed = orderedChannels;
   const unavailable: string[] = [];
   const base: Rule[] = [];
   for (const channel of channelsToSeed) {
     const label = channel === 'email' ? 'Email' : channel === 'mobile-push' ? 'Mobile push' : 'Web push';
     const candidates = channelFields(schema, channel);
     const supported = candidates.flatMap(field => {
-      const condition = conditionForAvailability(field, channel !== 'mobile-push' || !emailFallback);
+      const condition = conditionForAvailability(field, true);
       return condition ? [{ field, condition }] : [];
     });
     if (!supported.length || (channel === 'mobile-push' && (candidates.length !== 1 || supported.length !== 1))) {
@@ -191,10 +227,34 @@ export function seedReactivationRules(schema: AudienceGroupSchema, selectedChann
     } else {
       unavailable.push(notificationRecencyLabel(channel));
     }
+
   }
   if (!uniqueChannels.length) unavailable.unshift('No delivery channels are selected');
 
-  const blocks = base.length ? [{ id: 1, rules: base.map((rule, index) => ({ ...rule, id: index + 1 })) }] : [];
+  const blocks: Block[] = base.length
+    ? [{ id: 1, rules: base.map((rule, index) => ({ ...rule, id: index + 1 })) }]
+    : [];
+
+  // For Email + Mobile Push, including the all-channel case, add the
+  // re-entry branch from the correct reactivation design:
+  // Email available AND App Notification not available.
+  if (emailAndMobileSelected || allDeliveryChannelsSelected) {
+    const emailField = channelFields(schema, 'email')[0];
+    const emailAvailable = emailField ? conditionForAvailability(emailField, true) : undefined;
+    const mobileField = channelFields(schema, 'mobile-push')[0];
+    const mobileUnavailable = mobileField ? conditionForAvailability(mobileField, false) : undefined;
+    if (emailField && emailAvailable && mobileField && mobileUnavailable) {
+      blocks.push({
+        id: 2,
+        rules: [
+          { id: 1, filter: emailField.key, operator: emailAvailable.key, value: '' },
+          { id: 2, filter: mobileField.key, operator: mobileUnavailable.key, value: '' },
+        ],
+      });
+    } else {
+      unavailable.push('Mobile push unavailable condition');
+    }
+  }
   return { blocks, unavailable };
 }
 
@@ -221,6 +281,53 @@ export function audienceFieldTopic(field: AudienceGroupSchemaField) {
   if (field.category === 'lifecycle' || field.category === 'group') return 'Groups & Segments';
   if (field.category === 'journey') return 'Automation & Campaigns';
   return 'Account Details';
+}
+
+const languageDisplayNames = new Intl.DisplayNames(['en'], { type: 'language', fallback: 'code' });
+
+/** Display language values by name while preserving their backend key/code. */
+export function audienceOptionLabel(field: AudienceGroupSchemaField | undefined, option: { key: string; label: string }) {
+  if (!field || !['language', 'preferredLanguage'].includes(field.key)) return option.label;
+  const code = option.key.trim().replace(/_/g, '-').toLowerCase();
+  const display = languageDisplayNames.of(code);
+  return display && display.toLowerCase() !== code ? display : option.label;
+}
+
+/** Fallback copy for older backends that do not yet return emptyReason. */
+export function audienceEmptyOptionReason(field: AudienceGroupSchemaField | undefined) {
+  switch (field?.key) {
+    case 'country':
+    case 'region':
+    case 'language':
+    case 'preferredLanguage':
+    case 'accountStatus':
+    case 'userType':
+      return 'No active users have a value for this field yet.';
+    case 'platform':
+      return 'No active installations with platform information are available yet.';
+    case 'currentLifecycleSegment':
+    case 'historicalLifecycleSegment':
+      return 'No lifecycle segments have been created in this project yet.';
+    case 'journeyAutomation':
+    case 'historicalJourneyAutomation':
+      return 'No active journey automations are available in this project yet.';
+    case 'emailCampaign':
+      return 'No email campaigns are available in this project yet.';
+    case 'mobilePushCampaign':
+      return 'No mobile push campaigns are available in this project yet.';
+    case 'webPushCampaign':
+      return 'No web push campaigns are available in this project yet.';
+    case 'mobileAppUserEvents':
+      return 'No tracked iOS or Android events are available in this project yet.';
+    case 'webUserEvents':
+      return 'No tracked web events are available in this project yet.';
+    case 'performedEvent':
+      return 'No tracked product events are available in this project yet.';
+    case 'audienceGroup':
+      return 'No audience groups are available in this project yet.';
+    default:
+      return 'No project values are available yet.';
+  }
 }
 
 function isNotificationRecencyRule(field: AudienceGroupSchemaField | undefined, rule?: Rule) {
@@ -296,7 +403,9 @@ function valueIsValid(rule: Rule, condition: NonNullable<ReturnType<typeof schem
   if (condition.value.type === 'none' || condition.value.required === false) return true;
   const values = rule.value.split(',').map(item => item.trim()).filter(Boolean);
   if (!values.length) return false;
-  if (condition.value.options?.length) return values.every(value => condition.value.options?.some(option => option.key === value));
+  if (condition.value.options && !condition.value.freeText) {
+    return condition.value.options.length > 0 && values.every(value => condition.value.options?.some(option => option.key === value));
+  }
   if (condition.value.type === 'integer') {
     return values.every(value => {
       if (!/^[+-]?\d+$/.test(value)) return false;

@@ -35,6 +35,18 @@ const schema: AudienceGroupSchema = {
       { key: 'has_performed', label: 'Has performed', value: { type: 'text', options: [{ key: 'checkout_started', label: 'Checkout started' }] } },
       { key: 'performed_in_last_30', label: 'Performed in the last 30 days', value: { type: 'text', options: [{ key: 'checkout_started', label: 'Checkout started' }] } },
     ] },
+    { key: 'mobileAppUserEvents', label: 'Mobile App User Events', category: 'event', topic: 'engagement', operators: ['is', 'is_not', 'is_any_of', 'is_none_of'], conditions: [
+      { key: 'is', label: 'Is', value: { type: 'text', options: [{ key: 'app_opened', label: 'App opened' }] } },
+      { key: 'is_not', label: 'Is not', value: { type: 'text', options: [{ key: 'app_opened', label: 'App opened' }] } },
+      { key: 'is_any_of', label: 'Is any of', value: { type: 'text', multiple: true, options: [{ key: 'app_opened', label: 'App opened' }, { key: 'purchase', label: 'Purchase' }] } },
+      { key: 'is_none_of', label: 'Is none of', value: { type: 'text', multiple: true, options: [{ key: 'app_opened', label: 'App opened' }, { key: 'purchase', label: 'Purchase' }] } },
+    ] },
+    { key: 'webUserEvents', label: 'Web User Events', category: 'event', topic: 'engagement', operators: ['is', 'is_not', 'is_any_of', 'is_none_of'], conditions: [
+      { key: 'is', label: 'Is', value: { type: 'text', options: [{ key: 'page_viewed', label: 'Page viewed' }] } },
+      { key: 'is_not', label: 'Is not', value: { type: 'text', options: [{ key: 'page_viewed', label: 'Page viewed' }] } },
+      { key: 'is_any_of', label: 'Is any of', value: { type: 'text', multiple: true, options: [{ key: 'page_viewed', label: 'Page viewed' }, { key: 'checkout_started', label: 'Checkout started' }] } },
+      { key: 'is_none_of', label: 'Is none of', value: { type: 'text', multiple: true, options: [{ key: 'page_viewed', label: 'Page viewed' }, { key: 'checkout_started', label: 'Checkout started' }] } },
+    ] },
     { key: 'emailAction', label: 'Email Action', category: 'email', operators: ['opened'], conditions: [{ key: 'opened', label: 'Opened', value: { type: 'text', options: [{ key: 'campaign_a', label: 'Campaign A' }] } }] },
     { key: 'fcmToken', label: 'FCM Token', category: 'push', operators: ['available', 'not_available'], conditions: [{ key: 'available', label: 'Is available', value: { type: 'none' } }, { key: 'not_available', label: 'Is not available', value: { type: 'none' } }] },
     { key: 'apnsToken', label: 'APNs Token (iOS without Firebase)', category: 'push', operators: ['available', 'not_available'], conditions: [{ key: 'available', label: 'Is available', value: { type: 'none' } }, { key: 'not_available', label: 'Is not available', value: { type: 'none' } }] },
@@ -42,10 +54,11 @@ const schema: AudienceGroupSchema = {
     { key: 'lastMobilePushNotification', label: 'Last Mobile Push Sent', category: 'push', operators: ['exclude_in_last_days'], conditions: [{ key: 'exclude_in_last_days', label: 'Exclude users sent a mobile push in the last X days', value: { type: 'integer', required: true, min: 1, unit: 'days' } }] },
     { key: 'lastWebPushNotification', label: 'Last Web Push Sent', category: 'push', operators: ['exclude_in_last_days'], conditions: [{ key: 'exclude_in_last_days', label: 'Exclude users sent a web push in the last X days', value: { type: 'integer', required: true, min: 1, unit: 'days' } }] },
     { key: 'country', label: 'Country', category: 'location', operators: ['equals'], conditions: [{ key: 'equals', label: 'Is', value: { type: 'text', options: [{ key: 'pk', label: 'Pakistan' }] } }] },
+    { key: 'region', label: 'Region', category: 'location', topic: 'account_details', operators: ['is'], conditions: [{ key: 'is', label: 'Is', value: { type: 'enum', required: true, options: [] } }] },
     { key: 'customProperty', label: 'Custom property', category: 'custom', operators: ['equals'], property: { required: true, options: [{ key: 'plan', label: 'Plan' }] }, conditions: [{ key: 'equals', label: 'Is', value: { type: 'text', options: [{ key: 'pro', label: 'Pro' }] } }] },
     { key: 'optIn', label: 'Email opt-in', category: 'consent', operators: ['is'], conditions: [{ key: 'is', label: 'Is', value: { type: 'text', options: [{ key: 'true', label: 'Yes' }] } }] },
   ],
-  fieldKeys: ['email', 'performedEvent', 'emailAction', 'country', 'customProperty', 'optIn'],
+  fieldKeys: ['email', 'performedEvent', 'mobileAppUserEvents', 'webUserEvents', 'emailAction', 'country', 'customProperty', 'optIn'],
   logicalOperators: ['AND', 'OR'],
   limits: { maxConditions: 10, maxDepth: 2 },
 };
@@ -67,7 +80,7 @@ function renderFlow(overrides: { sdkIntegrated?: boolean; trackedEvents?: string
   if (overrides.emptyProjectData) {
     responseSchema = {
       ...responseSchema,
-      fields: responseSchema.fields.map(field => ['performedEvent', 'emailAction', 'country', 'customProperty'].includes(field.key)
+      fields: responseSchema.fields.map(field => ['performedEvent', 'mobileAppUserEvents', 'webUserEvents', 'emailAction', 'country', 'customProperty'].includes(field.key)
         ? { ...field, property: field.property ? { ...field.property, options: [] } : field.property, conditions: field.conditions.map(condition => ({ ...condition, value: { ...condition.value, options: [] } })) }
         : field),
     };
@@ -106,8 +119,7 @@ describe('project-aware audience group chat flow', () => {
     expect(screen.getByRole('button', { name: 'Specific journey' })).toBeEnabled();
 
     await user.click(screen.getByRole('button', { name: 'Any journey' }));
-    await user.click(screen.getByRole('button', { name: 'Add condition' }));
-    await user.click(screen.getAllByRole('combobox')[0]);
+    await user.click(screen.getByRole('combobox', { name: 'Condition field' }));
     await user.click(screen.getByRole('option', { name: 'Journey Automation' }));
     await user.click(screen.getAllByRole('combobox')[1]);
     await user.click(screen.getByRole('option', { name: 'Has entered' }));
@@ -117,8 +129,7 @@ describe('project-aware audience group chat flow', () => {
     await user.click(screen.getByRole('button', { name: 'Back' }));
     expect(screen.getByText('Which journey scope should we use?')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Specific journey' }));
-    await user.click(screen.getByRole('button', { name: 'Add condition' }));
-    await user.click(screen.getAllByRole('combobox')[0]);
+    await user.click(screen.getByRole('combobox', { name: 'Condition field' }));
     await user.click(screen.getByRole('option', { name: 'Journey Automation' }));
     await user.click(screen.getAllByRole('combobox')[1]);
     await user.click(screen.getByRole('option', { name: 'Has entered' }));
@@ -138,6 +149,20 @@ describe('project-aware audience group chat flow', () => {
     expect(screen.queryByText('Lifecycle segment status')).not.toBeInTheDocument();
   });
 
+  it('shows mobile and web user events under Engagement with channel event operators', async () => {
+    const user = userEvent.setup();
+    renderFlow();
+    await user.click(await screen.findByText('Group users by profile details'));
+    await user.click(screen.getByRole('button', { name: /Engagement/ }));
+    await user.click(screen.getByRole('option', { name: 'Mobile App User Events' }));
+    await user.click(screen.getAllByRole('combobox')[1]);
+    expect(screen.getByRole('option', { name: 'Is any of' })).toBeInTheDocument();
+    await user.click(screen.getByRole('option', { name: 'Is any of' }));
+    await user.click(screen.getAllByRole('combobox')[2]);
+    expect(screen.getByRole('option', { name: 'Purchase' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'App opened' })).toBeInTheDocument();
+  });
+
   it('asks for the Something else description before showing relevant rules and preserves it on Back', async () => {
     const user = userEvent.setup();
     renderFlow();
@@ -149,6 +174,7 @@ describe('project-aware audience group chat flow', () => {
     await user.click(screen.getByRole('button', { name: 'Find supported conditions' }));
     expect(screen.getByText('Conditions for Something else')).toBeInTheDocument();
     expect(screen.getByText(/started checkout but did not finish/)).toBeInTheDocument();
+    await user.keyboard('{Escape}');
     await user.click(screen.getByRole('button', { name: 'Back' }));
     expect(screen.getByDisplayValue('Users who started checkout but did not finish')).toBeInTheDocument();
   });
@@ -173,15 +199,14 @@ describe('project-aware audience group chat flow', () => {
     await user.click(screen.getByRole('button', { name: /Reachability/ }));
     expect(screen.getByText('Conditions for Reachability')).toBeInTheDocument();
     expect(screen.getByText('Selected goal: Group users by profile details')).toBeInTheDocument();
-    expect(screen.getByText('No conditions selected yet')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Add condition' }));
-    await user.click(screen.getAllByRole('combobox')[0]);
     await user.click(screen.getByRole('option', { name: 'Email' }));
     await user.click(screen.getAllByRole('combobox')[1]);
     await user.click(screen.getByRole('option', { name: 'Is available' }));
+    await user.keyboard('{Escape}');
     expect(screen.getByRole('button', { name: 'Review rules' })).toBeEnabled();
     expect(screen.getAllByRole('combobox')[0]).toHaveAttribute('aria-label', 'Condition field');
     await user.click(screen.getByRole('button', { name: 'AND condition' }));
+    await user.keyboard('{Escape}');
     expect(screen.getByText('Choose a field, or remove this incomplete condition.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Review rules' })).toBeDisabled();
     await user.click(screen.getAllByRole('button', { name: 'Remove condition' })[1]);
@@ -198,11 +223,10 @@ describe('project-aware audience group chat flow', () => {
     renderFlow();
     await user.click(await screen.findByText('Group users by profile details'));
     await user.click(screen.getByRole('button', { name: /Engagement/ }));
-    await user.click(screen.getByRole('button', { name: 'Add condition' }));
-    await user.click(screen.getAllByRole('combobox')[0]);
     expect(screen.getByRole('button', { name: 'More options' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'More options' }));
     expect(screen.getByPlaceholderText('Search all properties...')).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Region' })).toBeInTheDocument();
     await user.click(screen.getByRole('option', { name: 'Email' }));
     expect(screen.getByRole('combobox', { name: 'Condition field' })).toHaveTextContent('Email');
     expect(screen.getByRole('combobox', { name: 'Condition operator' })).toBeInTheDocument();
@@ -213,8 +237,6 @@ describe('project-aware audience group chat flow', () => {
     renderFlow();
     await user.click(await screen.findByText('Group users by profile details'));
     await user.click(screen.getByRole('button', { name: /Reachability/ }));
-    await user.click(screen.getByRole('button', { name: 'Add condition' }));
-    await user.click(screen.getAllByRole('combobox')[0]);
     await user.click(screen.getByRole('option', { name: 'Last Email Sent' }));
 
     expect(screen.getByText('Exclude users sent an email in the last')).toBeInTheDocument();
@@ -238,9 +260,7 @@ describe('project-aware audience group chat flow', () => {
     await user.click(await screen.findByText('Group users by profile details'));
     expect(screen.queryByRole('button', { name: /Custom properties/ })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /Reachability/ }));
-    await user.click(screen.getByRole('button', { name: 'Add condition' }));
-    await user.click(screen.getAllByRole('combobox')[0]);
-    expect(screen.getByRole('option', { name: 'Mobile push' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'App Notification' })).toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'FCM Token' })).not.toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'APNs Token (iOS without Firebase)' })).not.toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'Last Emailed' })).not.toBeInTheDocument();
@@ -249,7 +269,7 @@ describe('project-aware audience group chat flow', () => {
     expect(screen.getByRole('option', { name: 'Last Web Push Sent' })).toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'Last Notified' })).not.toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'Custom property' })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('option', { name: 'Mobile push' }));
+    await user.click(screen.getByRole('option', { name: 'App Notification' }));
     await user.click(screen.getAllByRole('combobox')[1]);
     await user.click(screen.getByRole('option', { name: 'Is available' }));
     api.create.mockResolvedValue({ id: 'mobile-group', name: 'Mobile users', description: null, rules: {}, memberCount: 1, createdAt: '', updatedAt: '' });
@@ -275,8 +295,7 @@ describe('project-aware audience group chat flow', () => {
     const user = userEvent.setup();
     renderFlow();
     await user.click(await screen.findByText('Find users who took a specific event action'));
-    await user.click(screen.getByRole('button', { name: 'Add condition' }));
-    await user.click(screen.getAllByRole('combobox')[0]);
+    await user.click(screen.getByRole('combobox', { name: 'Condition field' }));
     await user.click(screen.getByRole('option', { name: 'Performed Event' }));
     await user.click(screen.getAllByRole('combobox')[1]);
     await user.click(screen.getByRole('option', { name: 'Has performed' }));
@@ -290,15 +309,14 @@ describe('project-aware audience group chat flow', () => {
     const view = renderFlow({ withoutConsent: true });
     await user.click(await screen.findByText('Find users who took a specific event action'));
     expect(screen.queryByText('Email Action')).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Add condition' }));
-    const selects = screen.getAllByRole('combobox');
-    await user.click(selects[0]);
+    await user.click(screen.getByRole('combobox', { name: 'Condition field' }));
     await user.click(screen.getByRole('option', { name: 'Performed Event' }));
     await user.click(screen.getAllByRole('combobox')[1]);
     await user.click(screen.getByRole('option', { name: 'Has performed' }));
     await user.click(screen.getAllByRole('combobox')[2]);
     await user.click(screen.getByRole('option', { name: 'Checkout started' }));
     await user.click(screen.getByRole('button', { name: 'AND condition' }));
+    await user.keyboard('{Escape}');
     expect(screen.getAllByRole('combobox').length).toBeGreaterThan(3);
     await user.click(screen.getAllByRole('button', { name: 'Remove condition' })[1]);
     await user.click(screen.getByRole('button', { name: 'Review rules' }));
@@ -320,15 +338,12 @@ describe('project-aware audience group chat flow', () => {
     renderFlow();
     await user.click(await screen.findByText('Group users by profile details'));
     await user.click(screen.getByRole('button', { name: /Account Details/ }));
-    await user.click(screen.getByRole('button', { name: 'Add condition' }));
-    await user.click(screen.getAllByRole('combobox')[0]);
     await user.click(screen.getByRole('option', { name: 'Country' }));
     await user.click(screen.getAllByRole('combobox')[1]);
     await user.click(screen.getByRole('option', { name: 'Is' }));
     await user.click(screen.getAllByRole('combobox')[2]);
     await user.click(screen.getByRole('option', { name: 'Pakistan' }));
     await user.click(screen.getByRole('button', { name: 'OR group' }));
-    await user.click(screen.getAllByRole('combobox')[3]);
     await user.click(screen.getByRole('option', { name: 'Country' }));
     await user.click(screen.getAllByRole('combobox')[4]);
     await user.click(screen.getByRole('option', { name: 'Is' }));
@@ -371,24 +386,22 @@ describe('project-aware audience group chat flow', () => {
     { label: 'email and mobile push', channels: ['email', 'mobile-push'], expected: [{ operator: 'AND', conditions: [
       { field: 'email', operator: 'available' },
       { field: 'lastEmailNotification', operator: 'exclude_in_last_days', value: '30' },
-      { operator: 'AND', conditions: [{ field: 'fcmToken', operator: 'not_available' }, { field: 'apnsToken', operator: 'not_available' }] },
+      { operator: 'OR', conditions: [{ field: 'fcmToken', operator: 'available' }, { field: 'apnsToken', operator: 'available' }] },
       { field: 'lastMobilePushNotification', operator: 'exclude_in_last_days', value: '30' },
     ] }] },
     { label: 'email, mobile push, and web push', channels: ['email', 'mobile-push', 'web-push'], expected: [{ operator: 'AND', conditions: [
       { field: 'email', operator: 'available' },
       { field: 'lastEmailNotification', operator: 'exclude_in_last_days', value: '30' },
-      { operator: 'AND', conditions: [{ field: 'fcmToken', operator: 'not_available' }, { field: 'apnsToken', operator: 'not_available' }] },
-      { field: 'lastMobilePushNotification', operator: 'exclude_in_last_days', value: '30' },
       { field: 'webPush', operator: 'available' },
       { field: 'lastWebPushNotification', operator: 'exclude_in_last_days', value: '30' },
+      { operator: 'OR', conditions: [{ field: 'fcmToken', operator: 'available' }, { field: 'apnsToken', operator: 'available' }] },
+      { field: 'lastMobilePushNotification', operator: 'exclude_in_last_days', value: '30' },
     ] }] },
     { label: 'email and web push', channels: ['email', 'web-push'], expected: [{ operator: 'AND', conditions: [
       { field: 'email', operator: 'available' },
       { field: 'lastEmailNotification', operator: 'exclude_in_last_days', value: '30' },
       { field: 'webPush', operator: 'available' },
       { field: 'lastWebPushNotification', operator: 'exclude_in_last_days', value: '30' },
-      { operator: 'AND', conditions: [{ field: 'fcmToken', operator: 'not_available' }, { field: 'apnsToken', operator: 'not_available' }] },
-      { field: 'lastMobilePushNotification', operator: 'exclude_in_last_days', value: '30' },
     ] }] },
     { label: 'mobile push only', channels: ['mobile-push'], expected: [{ operator: 'AND', conditions: [
       { operator: 'OR', conditions: [{ field: 'fcmToken', operator: 'available' }, { field: 'apnsToken', operator: 'available' }] },
@@ -397,16 +410,57 @@ describe('project-aware audience group chat flow', () => {
     { label: 'web push only', channels: ['web-push'], expected: [{ operator: 'AND', conditions: [{ field: 'webPush', operator: 'available' }, { field: 'lastWebPushNotification', operator: 'exclude_in_last_days', value: '30' }] }] },
   ])('seeds schema-backed reactivation rules for $label', ({ channels, expected }) => {
     const combinedSchema = withAppNotificationTokenField(schema);
-    const result = seedReactivationRules(combinedSchema as never, channels as never);
+    const result = seedReactivationRules(combinedSchema, channels as never);
     expect(result.unavailable).toEqual([]);
-    expect(toBackendRules(result.blocks, combinedSchema as never)).toEqual(expected.length === 1 ? expected[0] : { operator: 'OR', conditions: expected });
+    const backendRules = toBackendRules(result.blocks, combinedSchema);
+    if (channels.includes('email') && channels.includes('mobile-push')) {
+      expect(result.blocks).toHaveLength(2);
+      expect(backendRules).toMatchObject({
+        operator: 'OR',
+        conditions: [
+          expected[0],
+          {
+            operator: 'AND',
+            conditions: [
+              { field: 'email', operator: 'available' },
+              { operator: 'AND', conditions: [{ field: 'fcmToken', operator: 'not_available' }, { field: 'apnsToken', operator: 'not_available' }] },
+            ],
+          },
+        ],
+      });
+    } else {
+      expect(backendRules).toEqual(expected.length === 1 ? expected[0] : { operator: 'OR', conditions: expected });
+    }
   });
 
-  it('uses one combined mobile-push rule and never seeds Firebase/APNs alternatives or blank rows', () => {
-    const result = seedReactivationRules(withAppNotificationTokenField(schema), ['email', 'mobile-push']);
-    expect(result.blocks).toHaveLength(1);
+  it('adds the Email plus App Notification unavailable OR branch for all delivery channels', () => {
+    const combinedSchema = withAppNotificationTokenField(schema);
+    const result = seedReactivationRules(combinedSchema, ['email', 'mobile-push', 'web-push']);
+
+    expect(result.unavailable).toEqual([]);
+    expect(result.blocks).toHaveLength(2);
+    expect(toBackendRules(result.blocks, combinedSchema)).toMatchObject({
+      operator: 'OR',
+      conditions: [
+        expect.objectContaining({ operator: 'AND' }),
+        {
+          operator: 'AND',
+          conditions: [
+            { field: 'email', operator: 'available' },
+            { operator: 'AND', conditions: [{ field: 'fcmToken', operator: 'not_available' }, { field: 'apnsToken', operator: 'not_available' }] },
+          ],
+        },
+      ],
+    });
+  });
+
+  it('uses one combined mobile-push rule and selects availability without blank rows', () => {
+    const combinedSchema = withAppNotificationTokenField(schema);
+    const result = seedReactivationRules(combinedSchema, ['email', 'mobile-push']);
+    expect(result.blocks).toHaveLength(2);
     expect(result.blocks[0].rules.every(rule => rule.filter && rule.operator)).toBe(true);
     expect(result.blocks[0].rules.map(rule => rule.filter)).toEqual(['email', 'lastEmailNotification', 'appNotificationToken', 'lastMobilePushNotification']);
+    expect(result.blocks[1].rules.map(rule => rule.filter)).toEqual(['email', 'appNotificationToken']);
   });
 
   it('does not seed separate provider token fields when a combined mobile-push rule is unavailable', () => {
@@ -419,7 +473,7 @@ describe('project-aware audience group chat flow', () => {
   it('reports missing channel schema support without adding invalid conditions', () => {
     const withoutPush = { ...schema, fields: schema.fields.filter(field => !['fcmToken', 'apnsToken', 'webPush'].includes(field.key)) };
     const result = seedReactivationRules(withoutPush as never, ['email', 'mobile-push', 'web-push']);
-    expect(result.unavailable).toEqual(['Mobile push', 'Web push']);
+    expect(result.unavailable).toEqual(['Web push', 'Mobile push', 'Mobile push unavailable condition']);
     expect(toBackendRules(result.blocks, withoutPush as never)).toEqual({ operator: 'AND', conditions: [
       { field: 'email', operator: 'available' },
       { field: 'lastEmailNotification', operator: 'exclude_in_last_days', value: '30' },
@@ -428,8 +482,59 @@ describe('project-aware audience group chat flow', () => {
 
   it('uses saved product types to expand legacy push and ignores channels for unselected products', () => {
     expect(reactivationChannelsForProject(['mobile', 'web'], ['email', 'push'])).toEqual(['email', 'mobile-push', 'web-push']);
+    expect(reactivationChannelsForProject(['mobile', 'web'], ['email', 'mobile', 'web'])).toEqual(['email', 'mobile-push', 'web-push']);
+    expect(reactivationChannelsForProject(['mobile', 'web'], ['email', 'mobile_push', 'web_push'])).toEqual(['email', 'mobile-push', 'web-push']);
     expect(reactivationChannelsForProject(['mobile'], ['web-push'])).toEqual([]);
     expect(reactivationChannelsForProject(['web'], ['push'])).toEqual(['web-push']);
+  });
+
+  it('uses the canonical appNotificationToken field from the backend schema', () => {
+    const actualBackendShape = {
+      ...schema,
+      fields: [
+        ...schema.fields.filter(field => !['fcmToken', 'apnsToken'].includes(field.key)),
+        { key: 'appNotificationToken', label: 'App Notification Token (FCM & APNs)', category: 'push', topic: 'reachability', operators: ['available', 'not_available'], conditions: [
+          { key: 'available', label: 'Is available', value: { type: 'none' as const } },
+          { key: 'not_available', label: 'Is not available', value: { type: 'none' as const } },
+        ] },
+      ],
+    };
+
+    const selectedChannels = reactivationChannelsForProject(['mobile', 'web'], ['email', 'mobile', 'web']);
+    const normalizedSchema = withAppNotificationTokenField(actualBackendShape as never);
+    const result = seedReactivationRules(normalizedSchema, selectedChannels);
+
+    expect(result.unavailable).toEqual([]);
+    expect(result.blocks).toHaveLength(2);
+    expect(result.blocks[0]?.rules.map(rule => rule.filter)).toEqual([
+      'email',
+      'lastEmailNotification',
+      'webPush',
+      'lastWebPushNotification',
+      'appNotificationToken',
+      'lastMobilePushNotification',
+    ]);
+    expect(result.blocks[1]?.rules).toEqual([
+      { id: 1, filter: 'email', operator: 'available', value: '' },
+      { id: 2, filter: 'appNotificationToken', operator: 'not_available', value: '' },
+    ]);
+    expect(toBackendRules(result.blocks, normalizedSchema)).toEqual({
+      operator: 'OR',
+      conditions: [
+        { operator: 'AND', conditions: [
+          { field: 'email', operator: 'available' },
+          { field: 'lastEmailNotification', operator: 'exclude_in_last_days', value: '30' },
+          { field: 'webPush', operator: 'available' },
+          { field: 'lastWebPushNotification', operator: 'exclude_in_last_days', value: '30' },
+          { field: 'appNotificationToken', operator: 'available' },
+          { field: 'lastMobilePushNotification', operator: 'exclude_in_last_days', value: '30' },
+        ] },
+        { operator: 'AND', conditions: [
+          { field: 'email', operator: 'available' },
+          { field: 'appNotificationToken', operator: 'not_available' },
+        ] },
+      ],
+    });
   });
 
   it('preserves edited reactivation defaults after Back and re-entry, and saves the reviewed rules', async () => {
@@ -456,17 +561,74 @@ describe('project-aware audience group chat flow', () => {
     ] } })));
   });
 
-  it('shows Mobile push unavailable when Email and Mobile push are both selected', async () => {
+  it('does not auto-open the condition picker for Reactivation when channel settings are unavailable or empty', async () => {
+    const user = userEvent.setup();
+    renderFlow();
+    await user.click(await screen.findByText('Reactivate users'));
+
+    const picker = document.querySelector<HTMLButtonElement>('button[aria-label="Condition field"]');
+    expect(picker).not.toBeNull();
+    expect(picker).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('option', { name: 'Email' })).not.toBeInTheDocument();
+  });
+
+  it('seeds only email availability and email recency when Email is the only selected channel', () => {
+    const emailCampaign = {
+      key: 'emailCampaign', label: 'Email Campaign', category: 'email', topic: 'automation_campaigns', operators: ['never_belonged_to_campaign'],
+      conditions: [{ key: 'never_belonged_to_campaign', label: 'Never Belonged to Campaign', value: { type: 'reference' as const, options: [{ key: 'campaign-1', label: 'Welcome email' }] } }],
+    };
+    const emailOnlySchema = { ...schema, fields: [...schema.fields, emailCampaign] };
+    const result = seedReactivationRules(emailOnlySchema, ['email']);
+
+    expect(result.unavailable).toEqual([]);
+    expect(result.blocks).toHaveLength(1);
+    expect(toBackendRules(result.blocks, emailOnlySchema)).toEqual({ operator: 'AND', conditions: [
+      { field: 'email', operator: 'available' },
+      { field: 'lastEmailNotification', operator: 'exclude_in_last_days', value: '30' },
+    ] });
+    expect(result.blocks.flatMap(block => block.rules).some(rule => rule.filter === 'emailCampaign')).toBe(false);
+    expect(result.blocks.flatMap(block => block.rules).some(rule => rule.filter === 'appNotificationToken' || rule.filter === 'webPush')).toBe(false);
+  });
+
+  it('seeds only mobile push availability and mobile push recency when Mobile push is the only selected channel', () => {
+    const result = seedReactivationRules(withAppNotificationTokenField(schema), ['mobile-push']);
+
+    expect(result.unavailable).toEqual([]);
+    expect(result.blocks).toHaveLength(1);
+    expect(toBackendRules(result.blocks, withAppNotificationTokenField(schema))).toEqual({ operator: 'AND', conditions: [
+      { operator: 'OR', conditions: [
+        { field: 'fcmToken', operator: 'available' },
+        { field: 'apnsToken', operator: 'available' },
+      ] },
+      { field: 'lastMobilePushNotification', operator: 'exclude_in_last_days', value: '30' },
+    ] });
+    expect(result.blocks.flatMap(block => block.rules).some(rule => ['email', 'lastEmailNotification', 'webPush', 'emailCampaign'].includes(rule.filter))).toBe(false);
+  });
+
+  it('seeds only web push availability and web push recency when Web push is the only selected channel', () => {
+    const result = seedReactivationRules(withAppNotificationTokenField(schema), ['web-push']);
+
+    expect(result.unavailable).toEqual([]);
+    expect(result.blocks).toHaveLength(1);
+    expect(toBackendRules(result.blocks, withAppNotificationTokenField(schema))).toEqual({ operator: 'AND', conditions: [
+      { field: 'webPush', operator: 'available' },
+      { field: 'lastWebPushNotification', operator: 'exclude_in_last_days', value: '30' },
+    ] });
+    expect(result.blocks.flatMap(block => block.rules).some(rule => ['email', 'lastEmailNotification', 'appNotificationToken', 'lastMobilePushNotification', 'emailCampaign'].includes(rule.filter))).toBe(false);
+  });
+
+  it('shows Mobile push available when Email and Mobile push are both selected', async () => {
     const user = userEvent.setup();
     renderFlow({ channels: ['email', 'mobile-push'] });
     await user.click(await screen.findByText('Reactivate users'));
+    await user.keyboard('{Escape}');
 
-    expect(screen.getAllByRole('combobox', { name: 'Condition field' })).toHaveLength(4);
-    expect(screen.getByText('Mobile push')).toBeInTheDocument();
-    expect(screen.getByText('Is not available')).toBeInTheDocument();
+    expect(screen.getAllByRole('combobox', { name: 'Condition field' })).toHaveLength(6);
+    expect(screen.getAllByText('App Notification')).toHaveLength(2);
+    expect(screen.getAllByText('Is available')).toHaveLength(3);
   });
 
-  it('uses the schema’s combined Mobile push field and selects its unavailable operator for email fallback', () => {
+  it('uses the schema’s combined Mobile push field and selects both availability operators', () => {
     const mobilePush = {
       key: 'mobilePush', label: 'Mobile push', category: 'push', operators: ['available', 'not_available'],
       conditions: [
@@ -474,16 +636,23 @@ describe('project-aware audience group chat flow', () => {
         { key: 'not_available', label: 'Is not available', value: { type: 'none' as const } },
       ],
     };
-    const combinedSchema = { ...schema, fields: [...schema.fields.filter(field => !['fcmToken', 'apnsToken'].includes(field.key)), mobilePush] };
+    const combinedSchema = { ...schema, fields: [...schema.fields.filter(field => !['fcmToken', 'apnsToken'].includes(field.key)), mobilePush, {
+      key: 'emailCampaign', label: 'Email Campaign', category: 'email', topic: 'automation_campaigns', operators: ['never_belonged_to_campaign'],
+      conditions: [{ key: 'never_belonged_to_campaign', label: 'Never Belonged to Campaign', value: { type: 'reference' as const, required: true, options: [{ key: 'campaign-1', label: 'Welcome email' }] } }],
+    }] };
     const result = seedReactivationRules(combinedSchema, ['email', 'mobile-push']);
 
     expect(result.unavailable).toEqual([]);
-    expect(result.blocks).toHaveLength(1);
+    expect(result.blocks).toHaveLength(2);
     expect(result.blocks[0].rules.map(rule => [rule.filter, rule.operator])).toEqual([
       ['email', 'available'],
       ['lastEmailNotification', 'exclude_in_last_days'],
-      ['mobilePush', 'not_available'],
+      ['mobilePush', 'available'],
       ['lastMobilePushNotification', 'exclude_in_last_days'],
+    ]);
+    expect(result.blocks[1].rules.map(rule => [rule.filter, rule.operator])).toEqual([
+      ['email', 'available'],
+      ['mobilePush', 'not_available'],
     ]);
   });
 });

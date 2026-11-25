@@ -75,6 +75,8 @@ export interface ApiError {
   status: number;
   code: string;
   message: string;
+  /** Optional structured backend details, such as missing push channels. */
+  details?: unknown;
   /** Field-level messages keyed by form field, from a 422 VALIDATION_ERROR. */
   fieldErrors?: Record<string, string>;
 }
