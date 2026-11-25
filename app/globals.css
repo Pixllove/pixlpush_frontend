@@ -5101,7 +5101,9 @@ a {
   vertical-align: middle;
 }
 .journey-guide-step {
-  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
   min-height: 164px;
   padding: 12px;
   border: 1px solid #ebe8f2;
@@ -5129,11 +5131,26 @@ a {
   background: #eef0ff;
 }
 .journey-guide-arrow {
-  position: absolute;
-  bottom: 10px;
-  left: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  margin-top: auto;
+  padding: 0;
+  border: 1px solid #e3e8f3;
+  border-radius: 50%;
+  background: #f7f9fd;
   color: #8190aa;
-  font-size: 16px;
+}
+.journey-guide-arrow svg {
+  font-size: 18px;
+}
+.journey-guide-step:hover .journey-guide-arrow {
+  border-color: #cfd8ee;
+  background: #eef2ff;
+  color: #5268e8;
 }
 .journey-guide-connector {
   display: none;

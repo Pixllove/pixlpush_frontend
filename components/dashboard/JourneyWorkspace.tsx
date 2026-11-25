@@ -445,11 +445,14 @@ export default function JourneyWorkspace() {
                   color="text.secondary"
                   fontSize="var(--fs-12)"
                   lineHeight={1.45}
+                  className="journey-guide-description"
                   sx={{ mt: 0.6 }}
                 >
                   {description}
                 </Typography>
-                <ArrowForwardRounded className="journey-guide-arrow" />
+                <Box className="journey-guide-arrow" aria-hidden="true">
+                  <ArrowForwardRounded />
+                </Box>
               </Box>
               {index < guide.length - 1 && (
                 <Box className="journey-guide-connector" />
