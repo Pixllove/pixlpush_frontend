@@ -1791,7 +1791,7 @@ function EmailDataSection() {
     },
     {
       id: "templates" as const,
-      label: "My Reusable Emails",
+      label: "Reusable Emails",
       count: templatesQuery.data?.total ?? 0,
       icon: GridViewRounded,
     },
@@ -1915,7 +1915,7 @@ function EmailDataSection() {
           <Box>
             <Typography variant="h3">
               {tab === "templates"
-                ? "My Reusable Emails"
+                ? "Reusable Emails"
                 : tab === "drafts"
                   ? "Draft emails"
                   : "Sent campaigns"}
@@ -2146,7 +2146,7 @@ function EmailSection() {
     { id: "drafts" as const, label: "Drafts", count: "2", icon: EditRounded },
     {
       id: "templates" as const,
-      label: "My Reusable Emails",
+      label: "Reusable Emails",
       count: "4",
       icon: GridViewRounded,
     },
@@ -2194,7 +2194,7 @@ function EmailSection() {
           <Box>
             <Typography variant="h3">
               {tab === "templates"
-                ? "My Reusable Emails"
+                ? "Reusable Emails"
                 : tab === "drafts"
                   ? "Draft emails"
                   : "Sent campaigns"}
@@ -2636,7 +2636,7 @@ function PushSection() {
     },
     {
       id: "templates" as const,
-      label: "My Reusable Notifications",
+      label: "Reusable Notifications",
       count: String(
         templatesQuery.data?.tabCounts?.templates ??
           templatesQuery.data?.total ??
@@ -2697,7 +2697,7 @@ function PushSection() {
           <Box>
             <Typography variant="h3">
               {tab === "templates"
-                ? "My Reusable Notifications"
+                ? "Reusable Notifications"
                 : tab === "drafts"
                   ? "Draft notifications"
                   : "Sent notifications"}

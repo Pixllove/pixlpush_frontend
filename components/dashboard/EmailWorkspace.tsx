@@ -1162,7 +1162,7 @@ export default function EmailWorkspace() {
           },
           {
             value: "templates",
-            label: "My Reusable Emails",
+            label: "Reusable Emails",
             icon: GridViewRounded,
             count: templatesQuery.data?.total ?? 0,
           },
@@ -1178,7 +1178,7 @@ export default function EmailWorkspace() {
           <Box>
             <Typography variant="h3">
               {tab === "templates"
-                ? "My Reusable Emails"
+                ? "Reusable Emails"
                 : tab === "drafts"
                   ? "Draft emails"
                   : "Sent campaigns"}
