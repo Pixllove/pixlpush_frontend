@@ -2,7 +2,7 @@
 
 import { formatUserDateTime, formatUserTime } from "@/lib/timezone";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import NextLink from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -21,6 +21,7 @@ import {
   FormControlLabel,
   IconButton,
   InputAdornment,
+  InputBase,
   Skeleton,
   Stack,
   Switch,
@@ -50,6 +51,15 @@ const noAutofill = {
   "data-lpignore": "true",
   "data-bwignore": true,
   "data-form-type": "other",
+} as const;
+const bareInputSx = {
+  mt: 0.5,
+  px: 1.5,
+  py: 0.5,
+  border: "1px solid",
+  borderColor: "divider",
+  borderRadius: 1.5,
+  "&.Mui-focused": { borderColor: "primary.main" },
 } as const;
 const mono = {
   fontFamily: "var(--pp-mono)",
@@ -115,7 +125,17 @@ export default function WebhookIntegration() {
   const settings = query.data;
   const connected = settings?.connected ? settings : undefined;
   // Queued (waiting for the worker) or running: either way a second click would do nothing.
-  const busySync = syncNow.isPending || Boolean(connected?.fetching || (connected?.syncing && !connected.importing));
+  // A ticking clock, so the page notices when the next automatic sync is due.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  // An automatic sync is due: show it as running until the server reports the new sync time.
+  // Capped at 2 minutes overdue, so a stopped worker never leaves the spinner on forever.
+  const overdueMs = connected?.syncEnabled && connected.nextSyncAt ? now - new Date(connected.nextSyncAt).getTime() : -1;
+  const due = overdueMs >= 0 && overdueMs < 120_000;
+  const busySync = syncNow.isPending || due || Boolean(connected?.fetching || (connected?.syncing && !connected.importing));
   const status = integrationStatus(settings);
   const [url, setUrl] = useState("");
   const [token, setToken] = useState("");
@@ -330,38 +350,57 @@ export default function WebhookIntegration() {
                     void submit();
                   }}
                 >
-                  <TextField
-                    size="small"
-                    fullWidth
-                    label="Server URL"
-                    placeholder="https://api.example.com/pixlpush/events"
-                    // Uncontrolled on purpose: React never writes the value back, so an
-                    // autofill extension that also writes it cannot start an update loop.
-                    defaultValue=""
-                    disabled={!canEdit}
-                    autoComplete="off"
-                    inputProps={noAutofill}
-                    onChange={(event) => setUrl(event.target.value)}
-                  />
-                  <TextField
-                    size="small"
-                    fullWidth
-                    type={showToken ? "text" : "password"}
-                    autoComplete="new-password"
-                    label="Token"
-                    helperText="Stored encrypted. It won’t be shown again."
-                    defaultValue=""
-                    disabled={!canEdit}
-                    onChange={(event) => setToken(event.target.value)}
-                    InputProps={{
-                      inputProps: noAutofill,
-                      endAdornment: (
+                  {/*
+                    Bare inputs on purpose: TextField's FormControl tracks "filled" state, and
+                    autofill/password-manager extensions rewriting these fields made it loop
+                    ("Maximum update depth exceeded"). InputBase outside a FormControl has no
+                    such state. Uncontrolled too: React never writes the value back.
+                  */}
+                  <Box component="label" sx={{ display: "block" }}>
+                    <Typography variant="caption" color="text.secondary">
+                      Server URL
+                    </Typography>
+                    <InputBase
+                      fullWidth
+                      placeholder="https://api.example.com/pixlpush/events"
+                      defaultValue=""
+                      disabled={!canEdit}
+                      autoComplete="off"
+                      inputProps={{ ...noAutofill, "aria-label": "Server URL", spellCheck: false }}
+                      onChange={(event) => setUrl(event.target.value)}
+                      sx={bareInputSx}
+                    />
+                  </Box>
+                  <Box component="label" sx={{ display: "block" }}>
+                    <Typography variant="caption" color="text.secondary">
+                      Token
+                    </Typography>
+                    <InputBase
+                      fullWidth
+                      // Masked text, not type="password": a URL plus a password field looks like
+                      // a login form to password managers.
+                      type="text"
+                      defaultValue=""
+                      disabled={!canEdit}
+                      autoComplete="off"
+                      inputProps={{
+                        ...noAutofill,
+                        "aria-label": "Token",
+                        spellCheck: false,
+                        style: showToken ? undefined : ({ WebkitTextSecurity: "disc" } as React.CSSProperties),
+                      }}
+                      onChange={(event) => setToken(event.target.value)}
+                      sx={bareInputSx}
+                      endAdornment={
                         <InputAdornment position="end">
                           <IconButton
                             edge="end"
                             size="small"
                             aria-label={showToken ? "Hide token" : "Show token"}
-                            onClick={() => setShowToken((on) => !on)}
+                            onClick={(event) => {
+                              event.preventDefault();
+                              setShowToken((on) => !on);
+                            }}
                           >
                             {showToken ? (
                               <VisibilityOffRounded fontSize="small" />
@@ -370,9 +409,12 @@ export default function WebhookIntegration() {
                             )}
                           </IconButton>
                         </InputAdornment>
-                      ),
-                    }}
-                  />
+                      }
+                    />
+                    <Typography variant="caption" color="text.secondary">
+                      Stored encrypted. It won’t be shown again.
+                    </Typography>
+                  </Box>
                   <Stack direction="row" gap={1}>
                     <Button
                       type="submit"

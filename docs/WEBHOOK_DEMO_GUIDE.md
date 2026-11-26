@@ -90,8 +90,12 @@ Open **Integrations → Webhook**. Point at the header: *Not connected*.
 
 ### Step 3: Map data (2 minutes)
 Scroll to **3. Map data**.
-- **3.1 Segments:** Pixllove's segments (e.g. *Premium Uncanceled*, *Expired Subscribers*)
-  appear as **Seen in your data** chips. Click one to map it.
+- **3.1 Segments:** three columns per segment: your segment, the PixlPush lifecycle segment, and
+  membership rules.
+  - Built-in matches are filled in (e.g. *Paywall Drop Off* → Paywall drop-off). Subscription
+    segments get their own custom segment, renamed with the pencil.
+  - Membership rules (Product, Event / data, User type) are prefilled from Pixllove's own data.
+  > "Premium and VIP never mix: each rule only looks at its own products."
 - **3.2 Historical user activity:**
   - Profile fields show as **Matched** automatically (email, name, language, country,
     region, user type, account status).

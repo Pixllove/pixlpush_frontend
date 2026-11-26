@@ -87,8 +87,11 @@ export function integrationPollMs(data: IntegrationSettings | undefined, failure
   if (!data?.connected || !data.syncEnabled) return false;
   // Running, or queued by "Sync now" and waiting for the worker to pick it up.
   if (data.fetching || (data.syncing && !data.importing)) return 5_000;
-  const due = data.nextSyncAt ? new Date(data.nextSyncAt).getTime() - Date.now() + 3_000 : 60_000;
-  return Math.min(Math.max(due, 15_000), 300_000);
+  if (!data.nextSyncAt) return 60_000;
+  const untilDue = new Date(data.nextSyncAt).getTime() - Date.now();
+  // Due or overdue: the worker is about to sync or is syncing, so check often until it reports back.
+  if (untilDue <= 0) return untilDue > -120_000 ? 3_000 : 15_000;
+  return Math.min(untilDue + 1_000, 300_000);
 }
 
 /** One integration's status and actions; the same for HubSpot, Salesforce, Pipedrive and any later one. */

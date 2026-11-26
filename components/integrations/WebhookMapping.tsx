@@ -717,16 +717,19 @@ export default function WebhookMapping({
    * segment ("Paywall Drop Off" → Paywall drop-off). Saved on publish for enabled rows.
    */
   const lifecycleOf = (segment: SegmentRule) =>
-    segment.lifecycle ??
-    (hasRuleSuggestion(segment.sourceName) ? segment.sourceName : suggestLifecycle(segment.sourceName));
+    segment.lifecycle !== undefined
+      ? segment.lifecycle || undefined // "": the customer cleared it, so no automatic choice
+      : hasRuleSuggestion(segment.sourceName)
+        ? segment.sourceName
+        : suggestLifecycle(segment.sourceName);
   const withSuggestion = (segment: SegmentRule): SegmentRule => {
     const suggestion = suggestionFor(segment.sourceName);
+    segment = { ...segment, lifecycle: lifecycleOf(segment) };
     if (segment.enabled === false) return segment;
-    if (!segment.lifecycle && lifecycleOf(segment)) segment = { ...segment, lifecycle: lifecycleOf(segment) };
     if (segment.membership || !segment.lifecycle) return segment;
     if (!suggestion?.products.length || !suggestion.signals.length) return segment;
     // A lifecycle segment shared with another row keeps following server events.
-    if (allSegments.some((other) => other !== segment && other.enabled !== false && other.lifecycle === segment.lifecycle)) return segment;
+    if (allSegments.some((other) => other.sourceName !== segment.sourceName && other.enabled !== false && lifecycleOf(other) === segment.lifecycle)) return segment;
     return { ...segment, membership: { products: suggestion.products, signals: suggestion.signals, userTypes: suggestion.userTypes } };
   };
   // 3.1 membership rules: one rule set per lifecycle segment. Every product is processed automatically.
@@ -738,10 +741,9 @@ export default function WebhookMapping({
       if (!segment.lifecycle) issues.unshift("Choose a PixlPush lifecycle segment.");
       const shared = allSegments.find(
         (other) =>
-          other !== segment &&
+          other.sourceName !== segment.sourceName &&
           other.enabled !== false &&
-          other.lifecycle &&
-          other.lifecycle === segment.lifecycle,
+          lifecycleOf(other) === segment.lifecycle,
       );
       if (shared)
         issues.push(
@@ -983,7 +985,7 @@ export default function WebhookMapping({
                     defaultCustomName={segment.sourceName}
                     disabled={!canEdit || busy}
                     // Associating never turns import on; only the switch does.
-                    onChange={(lifecycle) => updateSegment(segment.sourceName, { lifecycle })}
+                    onChange={(lifecycle) => updateSegment(segment.sourceName, { lifecycle: lifecycle ?? "" })}
                   />
                 </Box>
                 {status.label !== "Custom" && (
@@ -995,6 +997,7 @@ export default function WebhookMapping({
                 membership={segment.membership}
                 products={products}
                 observedSignals={sample.data?.billingEvents ?? []}
+                productPeriods={sample.data?.productPeriods ?? {}}
                 userTypes={sample.data?.userTypes ?? []}
                 suggestion={suggestionFor(segment.sourceName)}
                 disabled={!canEdit || busy}

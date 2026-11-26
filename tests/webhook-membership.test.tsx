@@ -102,4 +102,11 @@ describe('webhook membership rules', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Rename VIP Cancelled Monthly' }));
     expect(screen.getByRole('textbox', { name: 'Custom lifecycle segment' })).toHaveValue('VIP Cancelled Monthly');
   });
+
+  it('labels products as subscriptions or one-time payments in the picker', async () => {
+    render(<MembershipEditor segmentName="Coins" membership={undefined} products={['small_one_time', 'vip_weekly']} productPeriods={{ small_one_time: 'one_time', vip_weekly: 'weekly' }} onChange={() => {}} />);
+    await userEvent.type(screen.getByRole('combobox', { name: 'Product' }), '_');
+    expect(screen.getByRole('option', { name: /small_one_time\s*One-time payment/ })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /vip_weekly\s*Weekly subscription/ })).toBeInTheDocument();
+  });
 });

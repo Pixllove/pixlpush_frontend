@@ -15,6 +15,7 @@ const responseExample = `{
       "user_id": "12345",
       "time": "2026-11-24T10:00:00Z",
       "product_id": "premium_monthly",
+      "billing_period": "monthly",
       "transaction": { "expires": "2026-12-24T10:00:00Z" },
       "user": {
         "email": "ana@example.com",
@@ -90,6 +91,7 @@ const fields = [
   [<code key="properties">properties</code>, "Optional", "Flat event properties with string, number, boolean, or null values."],
   [<code key="product_id">product_id</code>, "Conditional", "Required for subscription and trial lifecycle events."],
   [<code key="expires_at">expires_at</code>, "Optional", "Entitlement access end time. transaction.expires is also accepted."],
+  [<code key="billing_period">billing_period</code>, "Optional", "weekly, monthly, quarterly, yearly or one_time. Tells PixlPush whether the product is a subscription or a one-time payment. Detected from product_id or the paid length when left out."],
   [<code key="segment">segment</code>, "Conditional", "Required for segment_entered and segment_exited."],
   [<code key="channel">channel</code>, "Conditional", "email or push. Required for message_* history events."],
   [<code key="message_id">message_id</code>, "Conditional", "Your id for one delivered message. Required for message_* history events."],
@@ -111,6 +113,7 @@ const profileFields = [
 
 const lifecycleEvents = [
   ["Trial", "trial_started, trial_canceled, trial_cancelled, trial_converted, trial_expired, trial_billing_retry, trial_billing_retry_entered"],
+  ["One-time payment", "purchase, one_time_purchase (coin packs, credits, lifetime unlocks; send product_id)"],
   ["Subscription", "subscription_started, subscription_renewed, subscription_upgraded, subscription_downgraded, subscription_product_changed"],
   ["Cancellation and access", "subscription_canceled, subscription_cancelled, subscription_renew_restored, will_renew, subscription_expired, subscription_refunded, in_app_refunded, subscription_revoked"],
   ["Billing retry", "subscription_billing_retry, subscription_billing_retry_entered"],
@@ -173,8 +176,9 @@ export default function WebhookDeveloperDocsPage() {
       <Section id="events" title="Lifecycle event names">
         <DataTable headers={["Category", "Accepted event names"]} rows={lifecycleEvents} code={false} minWidth={760} />
         <Body><p>Every <code>product_id</code> is processed automatically: PixlPush keeps each user&apos;s current subscription state per product, with no setup. In 3.1 Segments, membership rules pick the exact products, events or data, and user types that put users in a lifecycle segment and take them out, so Premium and VIP never mix.</p></Body>
-        <Body><p>Segments from <code>segment_entered</code> and <code>segment_exited</code> start <b>turned off</b>. They are listed under Integrations → Webhook → 3.1, where each one can be associated with a PixlPush segment such as “Uncancelled active subscription” or “Expired subscription”. PixlPush suggests one from the name. Turn it on and publish: users your server puts in that segment, including earlier entries, join the PixlPush segment and leave it when your server sends <code>segment_exited</code>. Several of your segments can point to the same PixlPush segment.</p></Body>
-        <Body><p>Subscription and trial events update the user’s subscription entitlement and are also recorded as events. They require <code>product_id</code>. Cancellation schedules access to end; send <code>subscription_expired</code> when access actually ends. <code>account_deleted</code> removes the user. <code>segment_entered</code> and <code>segment_exited</code> require a <code>segment</code> name.</p></Body>
+        <Body><p>Segments your server sends (<code>segment_entered</code> / <code>segment_exited</code>) are listed under Integrations → Webhook → 3.1, <b>turned off</b>, with three columns: your segment, the PixlPush lifecycle segment, and its membership rules. For the PixlPush lifecycle segment, pick a predefined one (for example “Expired subscription” or “Paywall drop-off”) or create a custom one, such as “VIP Cancelled”, and rename it with the pencil.</p></Body>
+        <Body><p><b>Membership rules</b> decide who is in the segment from your subscription data: <b>Product</b> (exact <code>product_id</code>s), <b>Event / data</b> (for example <code>subscription_canceled</code> and <code>billing_retry</code>) and <b>User type</b> (<code>user.user_type</code>, or Any). PixlPush prefills them from the events your server actually sent; review them, turn the row on and publish. A user enters and stays while one of those products is in a matching state and the user type matches, and leaves as soon as that product&apos;s state changes or the user type no longer matches. Other products never change the segment, so Premium and VIP stay separate. A row without rules follows your <code>segment_entered</code> and <code>segment_exited</code> events instead.</p></Body>
+        <Body><p>Subscription and trial events update the user’s subscription entitlement and are also recorded as events. They require <code>product_id</code>. PixlPush keeps a separate current state for each product, and an older event never replaces newer state. Cancellation, billing retry and grace period keep access until <code>expires_at</code>; when that time passes PixlPush marks the subscription expired on its own, never earlier. Send <code>subscription_expired</code> when access ends early or when there is no end date. <code>account_deleted</code> removes the user. <code>segment_entered</code> and <code>segment_exited</code> require a <code>segment</code> name.</p></Body>
         <Body><p>Custom event names are also accepted and stored as events. Include the same event id and event data if you retry a read or replay an event.</p></Body>
       </Section>
 

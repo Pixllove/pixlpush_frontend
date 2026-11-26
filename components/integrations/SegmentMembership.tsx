@@ -32,6 +32,8 @@ export const MEMBERSHIP_SIGNALS: {
   state: string;
   kind: "event" | "state";
 }[] = [
+  { value: "purchase", state: "active", kind: "event" },
+  { value: "one_time_purchase", state: "active", kind: "event" },
   { value: "subscription_started", state: "active", kind: "event" },
   { value: "subscription_renewed", state: "active", kind: "event" },
   { value: "trial_converted", state: "active", kind: "event" },
@@ -70,6 +72,14 @@ export const MEMBERSHIP_SIGNALS: {
   { value: "revoked", state: "revoked", kind: "state" },
 ];
 const SIGNAL = new Map(MEMBERSHIP_SIGNALS.map((item) => [item.value, item]));
+
+const PERIOD_LABEL: Record<string, string> = {
+  weekly: "Weekly subscription",
+  monthly: "Monthly subscription",
+  quarterly: "Quarterly subscription",
+  yearly: "Yearly subscription",
+  one_time: "One-time payment",
+};
 
 const STATE_LABEL: Record<string, string> = {
   active: "active",
@@ -118,8 +128,11 @@ function ChipField({
   freeSolo,
   disabled,
   placeholder,
+  describe,
   onChange,
 }: {
+  /** Optional hint after an option, e.g. "Monthly" or "One-time". */
+  describe?: (option: string) => string | null | undefined;
   label: string;
   value: string[];
   options: string[];
@@ -166,6 +179,16 @@ function ChipField({
             ...new Set(next.map((item) => item.trim()).filter(Boolean)),
           ])
         }
+        renderOption={(props, option) => {
+          const { key, ...rest } = props as typeof props & { key: string };
+          const hint = describe?.(option);
+          return (
+            <li key={key} {...rest}>
+              {option}
+              {hint ? <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>{hint}</Typography> : null}
+            </li>
+          );
+        }}
         renderTags={(items, getTagProps) =>
           items.map((item, index) => {
             const { key, ...props } = getTagProps({ index });
@@ -203,6 +226,7 @@ export function MembershipEditor({
   membership,
   products,
   observedSignals = [],
+  productPeriods = {},
   userTypes = [],
   suggestion,
   disabled,
@@ -212,6 +236,8 @@ export function MembershipEditor({
   membership: Membership | undefined;
   /** Product ids seen in the webhook sample. */
   products: string[];
+  /** Each product's billing period, sent by the server or detected (weekly … yearly, one_time). */
+  productPeriods?: Record<string, string | null>;
   /** Subscription events seen in the sample; listed first. */
   observedSignals?: string[];
   /** user_type values seen in the sample. */
@@ -274,6 +300,7 @@ export function MembershipEditor({
         placeholder={
           products.length ? "Choose a product id" : "e.g. premium_monthly"
         }
+        describe={(product) => PERIOD_LABEL[productPeriods[product] ?? ""] ?? null}
         onChange={(next) => update({ ...rule, products: next })}
       />
       <ChipField

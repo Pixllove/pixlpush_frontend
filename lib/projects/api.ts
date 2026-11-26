@@ -276,6 +276,8 @@ export type WebhookSample = {
   /** Observed user_type values and subscription events, for 3.1 membership rules. */
   userTypes?: string[];
   billingEvents?: string[];
+  /** Each product's billing period: weekly, monthly, quarterly, yearly or one_time (null when unknown). */
+  productPeriods?: Record<string, string | null>;
   /** Rules proposed from the sample; shown as suggestions and saved only once accepted. */
   membershipSuggestions?: MembershipSuggestion[];
   fieldMatches: { source: string; target: string | null; status: MatchStatus; reason: string; samples: string[] }[];
