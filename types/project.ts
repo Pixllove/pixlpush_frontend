@@ -499,6 +499,8 @@ export type IntegrationSettings = {
       fetching?: boolean;
       lastCheckedAt?: string | null;
       nextSyncAt?: string;
+      /** Webhook only: where the customer's server pushes live events. */
+      pushUrl?: string;
       lastSyncedAt: string | null;
       lastError: string | null;
       counts: { created: number; updated: number; skipped: number; pushed: number };

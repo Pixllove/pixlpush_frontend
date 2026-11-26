@@ -299,11 +299,19 @@ export type ImportedMessage = {
 };
 export type ImportedJourneyStep = { id: string; sourceJourneyId: string; journeyName: string | null; sourceStepId: string; stepName: string | null; journeyId: string | null; stepId: string | null; enteredAt: string; externalUserId?: string };
 
+export type SyncKey = { id: string; name: string; keyPrefix: string; scopes: string[]; lastUsedAt: string | null; expiresAt: string | null; revokedAt: string | null; createdAt: string; revealable?: boolean };
+
 export const dataSyncApi = {
   importedForUser: (projectId: string, userId: string) => authRequest<{ messages: ImportedMessage[]; journeySteps: ImportedJourneyStep[] }>(syncAt(projectId, `/imported-history/users/${encodeURIComponent(userId)}`), undefined, BASE),
   importedForCampaign: (projectId: string, channel: "email" | "push", campaignId: string) => authRequest<{ stats: { total: number; delivered: number; opened: number; clicked: number | null; bounced: number; failed: number }; recipients: ImportedMessage[] }>(syncAt(projectId, `/imported-history/campaigns/${channel}/${encodeURIComponent(campaignId)}`), undefined, BASE),
   importedForJourney: (projectId: string, journeyId: string) => authRequest<{ steps: { stepId: string | null; users: number }[]; recent: ImportedJourneyStep[] }>(syncAt(projectId, `/imported-history/journeys/${encodeURIComponent(journeyId)}`), undefined, BASE),
   sources: (projectId: string) => authRequest<SyncSource[]>(syncAt(projectId, "/sources"), undefined, BASE),
+  /** Server keys of one source. */
+  keys: (projectId: string, sourceId: string) => authRequest<SyncKey[]>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/credentials`), undefined, BASE),
+  createKey: (projectId: string, sourceId: string, name: string) => authRequest<SyncKey & { key: string }>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/credentials`), { name, scopes: ["records:write"] }, BASE),
+  revealKey: (projectId: string, sourceId: string, keyId: string) => authRequest<{ id: string; name: string; key: string }>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/credentials/${encodeURIComponent(keyId)}/reveal`), {}, BASE),
+  revokeKey: (projectId: string, sourceId: string, keyId: string) => authRequest<{ revoked: boolean }>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/credentials/${encodeURIComponent(keyId)}/revoke`), {}, BASE),
+  deleteKey: (projectId: string, sourceId: string, keyId: string) => authRequest<void>(syncAt(projectId, `/sources/${encodeURIComponent(sourceId)}/credentials/${encodeURIComponent(keyId)}`), {}, BASE, "DELETE"),
   segments: (projectId: string) => authRequest<SyncExternalSegment[]>(syncAt(projectId, "/segments"), undefined, BASE),
   /** Names seen in one page of the connected Webhook feed (no values). */
   serverSample: (projectId: string) => authRequest<WebhookSample>(syncAt(projectId, "/server-sync/sample"), undefined, BASE),

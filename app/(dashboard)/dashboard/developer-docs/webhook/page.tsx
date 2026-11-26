@@ -182,6 +182,25 @@ export default function WebhookDeveloperDocsPage() {
         <Body><p>Custom event names are also accepted and stored as events. Include the same event id and event data if you retry a read or replay an event.</p></Body>
       </Section>
 
+      <Section id="push" title="Real-time push (optional)">
+        <Body><p>The feed above is pulled every 2 minutes. For live events, especially purchases, your server can also <b>push</b> each event to PixlPush the moment it happens. Users, plans, segments and journeys update within seconds. Keep the feed: PixlPush still pulls it for history and to catch anything a push missed.</p></Body>
+        <DataTable headers={["Item", "Value"]} rows={[
+          ["URL", "The push URL shown on Integrations → Webhook (POST)."],
+          ["Authentication", "Authorization: Bearer <push key>. Create a named key on the Webhook page, then reveal or copy it from the active key list. Reveals are audited. Revoke keys that are no longer needed."],
+          ["Body", "One event in the feed format, or {\"data\": [...]} with up to 500 events. Same fields as the feed, including purchase, subscription_*, billing_period and user."],
+          ["Duplicates", "Use the same event id as in your feed. PixlPush applies an event once, whether it arrives by push, pull or both, so retrying is always safe."],
+        ]} code={false} minWidth={640} />
+        <CodeBlock language="HTTP" code={'POST /server/v1/webhook/events HTTP/1.1\nHost: <PixlPush API host from the Webhook page>\nAuthorization: Bearer pp_srv_live_...\nContent-Type: application/json\n\n{"id":"pur_123","event_name":"purchase","user_id":"42","time":"2026-11-26T10:00:00Z","product_id":"coins_500","billing_period":"one_time","user":{"email":"ana@example.com"}}'} />
+        <DataTable headers={["Response", "Meaning"]} rows={[
+          ["202", "Stored and applied. data.accepted / duplicates / rejected, plus one result per event."],
+          ["400", "Every event in the request is invalid; each result names the field to fix. Do not retry unchanged."],
+          ["401", "Missing, wrong or revoked push key."],
+          ["403", "A key from another source, or the request came from a browser. Push keys are for servers only."],
+          ["409", "The Webhook connection is paused or not set up."],
+          ["429 / 5xx", "Retry later with the same event ids."],
+        ]} code={false} minWidth={640} />
+      </Section>
+
       <Section id="history" title="Campaign and journey history (optional)">
         <Body><p>If you are moving from another messaging tool, you can include its history in the same feed. Message events (<code>message_sent</code>, <code>message_delivered</code>, <code>message_opened</code>, <code>message_clicked</code>, <code>message_bounced</code>, <code>message_failed</code>, <code>message_unsubscribed</code>, <code>message_complained</code>) need <code>channel</code>, <code>message_id</code> and <code>campaign_id</code>. <code>journey_step_entered</code> needs <code>journey_id</code> and <code>step_id</code>.</p></Body>
         <Body><p>On the Webhook page, step 3.3 maps your campaigns to PixlPush email and push campaigns, and your journeys and steps to PixlPush journeys. The history then appears on user profiles, campaign reports and journey pages, marked as imported.</p></Body>

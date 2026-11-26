@@ -29,6 +29,7 @@ import {
   Typography,
 } from "@mui/material";
 import DataSyncMigrations from "@/components/dashboard/DataSyncMigrations";
+import WebhookPush from "./WebhookPush";
 import SettingsStatus from "@/components/dashboard/SettingsStatus";
 import { useCurrentUser } from "@/hooks/auth/use-current-user";
 import { useActiveProject } from "@/hooks/projects/use-active-project";
@@ -452,6 +453,12 @@ export default function WebhookIntegration() {
                 </Stack>
               )}
             </StepItem>
+
+            {connected?.pushUrl && source && projectId && (
+              <Box sx={{ pl: { sm: 5 }, pt: 1, borderTop: "1px dashed", borderColor: "divider" }}>
+                <WebhookPush projectId={projectId} sourceId={source.id} pushUrl={connected.pushUrl} canEdit={canControl} />
+              </Box>
+            )}
 
             <StepItem n={3} title="Map data">
               <Typography
