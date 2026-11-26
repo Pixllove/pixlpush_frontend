@@ -473,7 +473,7 @@ export type IntegrationProvider = 'hubspot' | 'salesforce' | 'pipedrive';
 /** Every connection the integrations API serves; the customer's backend has its own page. */
 export type ConnectionProvider = IntegrationProvider | 'webhook';
 
-/** GET /projects/:id/integrations/:provider. Credentials are never returned. */
+/** GET /projects/:id/integrations/:provider. Secrets are returned only by explicit, authorized reveal actions. */
 export type IntegrationSettings = {
   provider: ConnectionProvider;
   name: string;
@@ -501,6 +501,8 @@ export type IntegrationSettings = {
       nextSyncAt?: string;
       /** Webhook only: where the customer's server pushes live events. */
       pushUrl?: string;
+      /** Webhook only: the configured purchase history endpoint. */
+      serverUrl?: string;
       lastSyncedAt: string | null;
       lastError: string | null;
       counts: { created: number; updated: number; skipped: number; pushed: number };

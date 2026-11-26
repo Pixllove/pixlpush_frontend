@@ -120,6 +120,8 @@ export const integrationsApi = {
   /** Every integration with its status, in one request. */
   list: (projectId: string) => authRequest<IntegrationSettings[]>(at(projectId, "/integrations"), undefined, BASE),
   get: (projectId: string, provider: ConnectionProvider) => authRequest<IntegrationSettings>(at(projectId, `/integrations/${provider}`), undefined, BASE),
+  revealWebhookToken: (projectId: string) =>
+    authRequest<{ token: string }>(at(projectId, "/integrations/webhook/reveal"), {}, BASE),
   /** Checked live with the integration before anything is stored. */
   connect: (projectId: string, provider: ConnectionProvider, credentials: IntegrationCredentials) =>
     authRequest<IntegrationSettings>(at(projectId, `/integrations/${provider}`), credentials, BASE, "PUT"),

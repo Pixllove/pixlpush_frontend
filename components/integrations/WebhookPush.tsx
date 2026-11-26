@@ -268,21 +268,8 @@ export default function WebhookPush({ projectId, sourceId, pushUrl, canEdit }: {
     if (await run(() => dataSyncApi.deleteKey(projectId, sourceId, target.id))) setDeleteTarget(null);
   };
 
-  const example = `curl -X POST ${pushUrl} \\
-  -H "Authorization: Bearer <push key>" \\
-  -H "Content-Type: application/json" \\
-  -d '{"id":"pur_123","event_name":"purchase","user_id":"42","time":"${new Date().toISOString().slice(0, 19)}Z","product_id":"coins_500","billing_period":"one_time"}'`;
-
   return (
     <Stack gap={1.5}>
-      <Box>
-        <Typography variant="body2" fontWeight={600}>Real-time events (optional)</Typography>
-        <Typography variant="caption" color="text.secondary" component="p">
-          Your server can also send each event to PixlPush the moment it happens, so purchases and subscription
-          changes reach users and journeys in seconds. The 2-minute pull keeps running for history and catches
-          anything that was missed. An event that arrives both ways is applied once.
-        </Typography>
-      </Box>
       <Stack gap={0.5}>
         <Typography variant="caption" color="text.secondary">Push URL (POST)</Typography>
         <CopyField label="Push URL" value={pushUrl} onFeedback={handleCopyFeedback} />
@@ -375,14 +362,6 @@ export default function WebhookPush({ projectId, sourceId, pushUrl, canEdit }: {
             </AccordionDetails>
           </Accordion>
         )}
-      </Stack>
-
-      <Stack gap={0.5}>
-        <Typography variant="caption" color="text.secondary">Example: one purchase, sent as it happens. Use the same event id as in your feed.</Typography>
-        <Stack direction="row" alignItems="flex-start" gap={1} sx={{ p: 1.5, borderRadius: 1.5, bgcolor: "action.hover", minWidth: 0 }}>
-          <Box component="pre" sx={{ ...mono, m: 0, flex: 1, minWidth: 0, overflowX: "auto", whiteSpace: "pre" }}>{example}</Box>
-          <CopyButton label="Example snippet" value={example} onFeedback={handleCopyFeedback} />
-        </Stack>
       </Stack>
 
       <Snackbar open={Boolean(copyToast)} autoHideDuration={2200} onClose={() => setCopyToast("")} anchorOrigin={{ vertical: "bottom", horizontal: "center" }}>

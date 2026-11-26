@@ -6,7 +6,13 @@ import { useEffect, useState, type ReactNode } from "react";
 import NextLink from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import {
+  ArrowForwardRounded,
   ArrowBackRounded,
+  BoltRounded,
+  InfoOutlined,
+  LayersRounded,
+  StorefrontRounded,
+  SyncRounded,
   VisibilityOffRounded,
   VisibilityRounded,
   WebhookRounded,
@@ -34,7 +40,7 @@ import SettingsStatus from "@/components/dashboard/SettingsStatus";
 import { useCurrentUser } from "@/hooks/auth/use-current-user";
 import { useActiveProject } from "@/hooks/projects/use-active-project";
 import { useIntegration } from "@/hooks/projects/use-project-settings";
-import { dataSyncApi } from "@/lib/projects/api";
+import { dataSyncApi, integrationsApi } from "@/lib/projects/api";
 import { integrationStatus } from "./registry";
 import WebhookDeveloperGuide from "./WebhookDeveloperGuide";
 import WebhookMapping, { webhookSwitchSx } from "./WebhookMapping";
@@ -65,6 +71,31 @@ const bareInputSx = {
 const mono = {
   fontFamily: "var(--pp-mono)",
   fontSize: "var(--fs-12)",
+} as const;
+const purchaseMethodCardSx = {
+  p: { xs: 1.5, sm: 2 },
+  borderColor: "divider",
+  bgcolor: "#f8f5ff",
+  borderRadius: 2,
+} as const;
+const purchaseTimingBadgeSx = {
+  bgcolor: "#ece3fb",
+  color: "primary.main",
+  border: "1px solid rgba(91, 33, 182, 0.2)",
+  fontWeight: 600,
+} as const;
+const purchaseFlowSourceChipSx = {
+  bgcolor: "#ece3fb",
+  color: "#4c1d95",
+  border: "1px solid rgba(91, 33, 182, 0.22)",
+  fontWeight: 600,
+  "& .MuiChip-icon": { color: "#5b21b6" },
+} as const;
+const purchaseFlowTargetChipSx = {
+  bgcolor: "#5b21b6",
+  color: "#ffffff",
+  fontWeight: 600,
+  "& .MuiChip-icon": { color: "#ffffff" },
 } as const;
 
 function StepItem({
@@ -104,15 +135,6 @@ function StepItem({
   );
 }
 
-type Conn = { syncEnabled: boolean; importing?: boolean; lastCheckedAt?: string | null; lastSyncedAt: string | null; nextSyncAt?: string };
-/** One batch of up to 2,500 events every 2 minutes; nothing runs in between. */
-function syncCaption(c: Conn) {
-  const last = c.lastCheckedAt ?? c.lastSyncedAt;
-  if (!last) return "waiting for the first sync";
-  const next = c.syncEnabled && c.nextSyncAt ? ` · next sync ${formatUserTime(c.nextSyncAt)}` : "";
-  return `last synced ${formatUserDateTime(last)}${next}`;
-}
-
 export default function WebhookIntegration() {
   const { active } = useActiveProject();
   const { account } = useCurrentUser();
@@ -125,6 +147,8 @@ export default function WebhookIntegration() {
     useIntegration(projectId, "webhook");
   const settings = query.data;
   const connected = settings?.connected ? settings : undefined;
+  const lastSyncAt = connected?.lastCheckedAt ?? connected?.lastSyncedAt;
+  const nextSyncAt = connected?.syncEnabled ? connected.nextSyncAt : undefined;
   // Queued (waiting for the worker) or running: either way a second click would do nothing.
   // A ticking clock, so the page notices when the next automatic sync is due.
   const [now, setNow] = useState(() => Date.now());
@@ -141,8 +165,15 @@ export default function WebhookIntegration() {
   const [url, setUrl] = useState("");
   const [token, setToken] = useState("");
   const [showToken, setShowToken] = useState(false);
-  const [replacing, setReplacing] = useState(false);
+  const [savedToken, setSavedToken] = useState("");
+  const [showSavedToken, setShowSavedToken] = useState(false);
+  const [revealingSavedToken, setRevealingSavedToken] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    setSavedToken("");
+    setShowSavedToken(false);
+  }, [projectId, connected?.connectedAt]);
 
   // Created by the first sync after connecting; the extras need it.
   const sources = useQuery({
@@ -169,8 +200,27 @@ export default function WebhookIntegration() {
       await connect.mutateAsync({ url: url.trim(), token: token.trim() });
       setUrl("");
       setToken("");
-      setReplacing(false);
+      setShowToken(false);
     });
+
+  const revealSavedToken = async () => {
+    if (savedToken) {
+      setShowSavedToken((visible) => !visible);
+      return;
+    }
+    if (!projectId) return;
+    setError("");
+    setRevealingSavedToken(true);
+    try {
+      const result = await integrationsApi.revealWebhookToken(projectId);
+      setSavedToken(result.token);
+      setShowSavedToken(true);
+    } catch (cause) {
+      setError(errorText(cause));
+    } finally {
+      setRevealingSavedToken(false);
+    }
+  };
 
   return (
     <Stack gap={2.5}>
@@ -220,83 +270,6 @@ export default function WebhookIntegration() {
         </Stack>
       </Card>
 
-      {connected && (
-        <Card className="saas-card">
-          <Stack gap={2}>
-            <Stack
-              direction={{ xs: "column", sm: "row" }}
-              gap={1}
-              justifyContent="space-between"
-            >
-              <Box sx={{ minWidth: 0 }}>
-                <Typography variant="body2" fontWeight={600}>
-                  {connected.lastError
-                    ? "Connected, but the last sync had a problem"
-                    : "Connected · syncs automatically every 2 minutes"}
-                </Typography>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{ overflowWrap: "anywhere" }}
-                >
-                  {connected.accountLabel} · {syncCaption(connected)}
-                </Typography>
-              </Box>
-              <Button
-                variant="outlined"
-                sx={{ alignSelf: "flex-start" }}
-                disabled={!canEdit || !connected.syncEnabled || busySync}
-                onClick={() => run(() => syncNow.mutateAsync())}
-                startIcon={busySync ? <CircularProgress size={16} color="inherit" /> : undefined}
-              >
-                {busySync ? "Syncing…" : "Sync now"}
-              </Button>
-            </Stack>
-            {connected.lastError && (
-              <Alert severity="warning">{connected.lastError}</Alert>
-            )}
-            <Stack
-              direction={{ xs: "column", sm: "row" }}
-              gap={1}
-              justifyContent="space-between"
-              alignItems={{ sm: "center" }}
-            >
-              <FormControlLabel
-                sx={{ ml: 0, gap: 1 }}
-                label="Automatic sync"
-                control={
-                  <Switch
-                    size="small"
-                    sx={webhookSwitchSx}
-                    checked={connected.syncEnabled}
-                    disabled={!canEdit || setSyncEnabled.isPending}
-                    onChange={(_, on) =>
-                      run(() => setSyncEnabled.mutateAsync(on))
-                    }
-                  />
-                }
-              />
-              <Stack direction="row" gap={1} flexWrap="wrap">
-                {/* One click: disconnecting only pauses the sync; synced data stays and you can reconnect. */}
-                <Button
-                  color="error"
-                  variant="text"
-                  disabled={!canEdit || disconnect.isPending}
-                  onClick={() => run(() => disconnect.mutateAsync())}
-                  startIcon={
-                    disconnect.isPending ? (
-                      <CircularProgress size={16} color="inherit" />
-                    ) : undefined
-                  }
-                >
-                  {disconnect.isPending ? "Disconnecting…" : "Disconnect"}
-                </Button>
-              </Stack>
-            </Stack>
-          </Stack>
-        </Card>
-      )}
-
       {query.isLoading && <Skeleton height={120} />}
 
       {settings && (
@@ -312,153 +285,314 @@ export default function WebhookIntegration() {
               <WebhookDeveloperGuide projectId={projectId} />
             </StepItem>
 
-            <StepItem n={2} title="Paste the URL and token">
-              {connected && !replacing ? (
-                <Stack
-                  direction={{ xs: "column", sm: "row" }}
-                  gap={1}
-                  alignItems={{ sm: "center" }}
-                  sx={{ mt: 1 }}
-                >
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      flex: 1,
-                      minWidth: 0,
-                      overflowWrap: "anywhere",
-                    }}
-                  >
-                    Connected to <b>{connected.accountLabel}</b>. The token is
-                    stored encrypted.
-                  </Typography>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    disabled={!canEdit}
-                    onClick={() => setReplacing(true)}
-                  >
-                    Change URL or token
-                  </Button>
-                </Stack>
-              ) : (
-                <Stack
-                  gap={1.5}
-                  sx={{ mt: 1 }}
-                  component="form"
-                  autoComplete="off"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    void submit();
-                  }}
-                >
-                  {/*
-                    Bare inputs on purpose: TextField's FormControl tracks "filled" state, and
-                    autofill/password-manager extensions rewriting these fields made it loop
-                    ("Maximum update depth exceeded"). InputBase outside a FormControl has no
-                    such state. Uncontrolled too: React never writes the value back.
-                  */}
-                  <Box component="label" sx={{ display: "block" }}>
-                    <Typography variant="caption" color="text.secondary">
-                      Server URL
-                    </Typography>
-                    <InputBase
-                      fullWidth
-                      placeholder="https://api.example.com/pixlpush/events"
-                      defaultValue=""
-                      disabled={!canEdit}
-                      autoComplete="off"
-                      inputProps={{ ...noAutofill, "aria-label": "Server URL", spellCheck: false }}
-                      onChange={(event) => setUrl(event.target.value)}
-                      sx={bareInputSx}
-                    />
-                  </Box>
-                  <Box component="label" sx={{ display: "block" }}>
-                    <Typography variant="caption" color="text.secondary">
-                      Token
-                    </Typography>
-                    <InputBase
-                      fullWidth
-                      // Masked text, not type="password": a URL plus a password field looks like
-                      // a login form to password managers.
-                      type="text"
-                      defaultValue=""
-                      disabled={!canEdit}
-                      autoComplete="off"
-                      inputProps={{
-                        ...noAutofill,
-                        "aria-label": "Token",
-                        spellCheck: false,
-                        style: showToken ? undefined : ({ WebkitTextSecurity: "disc" } as React.CSSProperties),
-                      }}
-                      onChange={(event) => setToken(event.target.value)}
-                      sx={bareInputSx}
-                      endAdornment={
-                        <InputAdornment position="end">
-                          <IconButton
-                            edge="end"
-                            size="small"
-                            aria-label={showToken ? "Hide token" : "Show token"}
-                            onClick={(event) => {
-                              event.preventDefault();
-                              setShowToken((on) => !on);
+            <StepItem n={2} title="Connect purchase events">
+              <Typography variant="caption" color="text.secondary">
+                Choose one method or use both. Historical sync imports past purchases and keeps new data up to date; real-time events arrive instantly.
+              </Typography>
+              <Stack gap={1.5} sx={{ mt: 1.5 }}>
+                <Card variant="outlined" sx={purchaseMethodCardSx}>
+                  <Stack gap={1.5}>
+                    <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" gap={1}>
+                      <Stack direction="row" gap={1.25} alignItems="center">
+                        <Box sx={{ width: 40, height: 40, borderRadius: 1.5, display: "grid", placeItems: "center", bgcolor: "#ece3fb", color: "primary.main" }}>
+                          <SyncRounded />
+                        </Box>
+                        <Box>
+                          <Stack direction="row" gap={1} alignItems="center" flexWrap="wrap">
+                            <Typography variant="body2" fontWeight={600}>Historical &amp; ongoing sync</Typography>
+                            <Chip size="small" label="Every 2 minutes" sx={purchaseTimingBadgeSx} />
+                          </Stack>
+                          <Typography variant="caption" color="text.secondary">Import past purchases and keep new data up to date.</Typography>
+                        </Box>
+                      </Stack>
+                      <Stack direction="row" alignItems="center" gap={0.75} sx={{ pl: { xs: 6.25, sm: 0 } }}>
+                        <Chip size="small" icon={<SyncRounded />} label="History" sx={purchaseFlowSourceChipSx} />
+                        <ArrowForwardRounded fontSize="small" color="action" />
+                        <Chip size="small" icon={<LayersRounded />} label="PixlPush" sx={purchaseFlowTargetChipSx} />
+                      </Stack>
+                    </Stack>
+                    {connected ? (
+                      <Stack gap={1.5} sx={{ mt: 1 }}>
+                        <Box component="label" sx={{ display: "block" }}>
+                          <Typography variant="caption" color="text.secondary">
+                            Server URL
+                          </Typography>
+                          <InputBase
+                            fullWidth
+                            value={connected.serverUrl ?? `https://${connected.accountLabel}`}
+                            inputProps={{
+                              ...noAutofill,
+                              "aria-label": "Server URL",
+                              readOnly: true,
+                              spellCheck: false,
                             }}
-                          >
-                            {showToken ? (
-                              <VisibilityOffRounded fontSize="small" />
-                            ) : (
-                              <VisibilityRounded fontSize="small" />
-                            )}
-                          </IconButton>
-                        </InputAdornment>
-                      }
-                    />
-                    <Typography variant="caption" color="text.secondary">
-                      Stored encrypted. It won’t be shown again.
-                    </Typography>
-                  </Box>
-                  <Stack direction="row" gap={1}>
-                    <Button
-                      type="submit"
-                      variant="contained"
-                      disabled={
-                        !canEdit ||
-                        connect.isPending ||
-                        !url.trim() ||
-                        token.trim().length < 8
-                      }
-                      startIcon={
-                        connect.isPending ? (
-                          <CircularProgress size={16} color="inherit" />
-                        ) : undefined
-                      }
-                    >
-                      {connect.isPending
-                        ? "Connecting…"
-                        : connected
-                          ? "Save"
-                          : "Connect"}
-                    </Button>
-                    {replacing && (
-                      <Button
-                        onClick={() => {
-                          setReplacing(false);
-                          setUrl("");
-                          setToken("");
+                            sx={bareInputSx}
+                          />
+                        </Box>
+                        <Box component="label" sx={{ display: "block" }}>
+                          <Typography variant="caption" color="text.secondary">
+                            Token
+                          </Typography>
+                          <InputBase
+                            fullWidth
+                            type="text"
+                            value={showSavedToken ? savedToken : "•".repeat(32)}
+                            inputProps={{
+                              ...noAutofill,
+                              "aria-label": "Webhook token",
+                              readOnly: true,
+                              spellCheck: false,
+                            }}
+                            sx={bareInputSx}
+                            endAdornment={
+                              <InputAdornment position="end">
+                                <IconButton
+                                  edge="end"
+                                  size="small"
+                                  disabled={!canEdit || revealingSavedToken}
+                                  aria-label={showSavedToken ? "Hide webhook token" : "Reveal webhook token"}
+                                  onClick={() => void revealSavedToken()}
+                                >
+                                  {revealingSavedToken ? (
+                                    <CircularProgress size={16} />
+                                  ) : showSavedToken ? (
+                                    <VisibilityOffRounded fontSize="small" />
+                                  ) : (
+                                    <VisibilityRounded fontSize="small" />
+                                  )}
+                                </IconButton>
+                              </InputAdornment>
+                            }
+                          />
+                          <Typography variant="caption" color="text.secondary">
+                            Stored encrypted. Use the eye to reveal the token.
+                          </Typography>
+                        </Box>
+                      </Stack>
+                    ) : (
+                      <Stack
+                        gap={1.5}
+                        sx={{ mt: 1 }}
+                        component="form"
+                        autoComplete="off"
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          void submit();
                         }}
                       >
-                        Cancel
-                      </Button>
+                        {/*
+                          Bare inputs on purpose: TextField's FormControl tracks "filled" state, and
+                          autofill/password-manager extensions rewriting these fields made it loop
+                          ("Maximum update depth exceeded"). InputBase outside a FormControl has no
+                          such state. Uncontrolled too: React never writes the value back.
+                        */}
+                        <Box component="label" sx={{ display: "block" }}>
+                          <Typography variant="caption" color="text.secondary">
+                            Server URL
+                          </Typography>
+                          <InputBase
+                            fullWidth
+                            placeholder="https://api.example.com/pixlpush/events"
+                            defaultValue=""
+                            disabled={!canEdit}
+                            autoComplete="off"
+                            inputProps={{ ...noAutofill, "aria-label": "Server URL", spellCheck: false }}
+                            onChange={(event) => setUrl(event.target.value)}
+                            sx={bareInputSx}
+                          />
+                        </Box>
+                        <Box component="label" sx={{ display: "block" }}>
+                          <Typography variant="caption" color="text.secondary">
+                            Token
+                          </Typography>
+                          <InputBase
+                            fullWidth
+                            // Masked text, not type="password": a URL plus a password field looks like
+                            // a login form to password managers.
+                            type="text"
+                            defaultValue=""
+                            disabled={!canEdit}
+                            autoComplete="off"
+                            inputProps={{
+                              ...noAutofill,
+                              "aria-label": "Token",
+                              spellCheck: false,
+                              style: showToken ? undefined : ({ WebkitTextSecurity: "disc" } as React.CSSProperties),
+                            }}
+                            onChange={(event) => setToken(event.target.value)}
+                            sx={bareInputSx}
+                            endAdornment={
+                              <InputAdornment position="end">
+                                <IconButton
+                                  edge="end"
+                                  size="small"
+                                  aria-label={showToken ? "Hide token" : "Show token"}
+                                  onClick={(event) => {
+                                    event.preventDefault();
+                                    setShowToken((on) => !on);
+                                  }}
+                                >
+                                  {showToken ? (
+                                    <VisibilityOffRounded fontSize="small" />
+                                  ) : (
+                                    <VisibilityRounded fontSize="small" />
+                                  )}
+                                </IconButton>
+                              </InputAdornment>
+                            }
+                          />
+                          <Typography variant="caption" color="text.secondary">
+                            Stored encrypted after connecting.
+                          </Typography>
+                        </Box>
+                        <Stack direction="row" gap={1}>
+                          <Button
+                            type="submit"
+                            variant="contained"
+                            disabled={
+                              !canEdit ||
+                              connect.isPending ||
+                              !url.trim() ||
+                              token.trim().length < 8
+                            }
+                            startIcon={
+                              connect.isPending ? (
+                                <CircularProgress size={16} color="inherit" />
+                              ) : undefined
+                            }
+                          >
+                            {connect.isPending ? "Connecting…" : "Connect"}
+                          </Button>
+                        </Stack>
+                      </Stack>
+                    )}
+                    <Stack direction="row" gap={1} alignItems="flex-start" sx={{ pt: 1.5, borderTop: "1px solid", borderColor: "divider" }}>
+                      <InfoOutlined fontSize="small" color="primary" />
+                      <Typography variant="caption" color="text.secondary">
+                        Historical import starts after connecting. Automatic sync repeats every 2 minutes while enabled.
+                      </Typography>
+                    </Stack>
+                    {connected && (
+                      <Box sx={{ p: 1.5, bgcolor: "#ece3fb", border: "1px solid rgba(91, 33, 182, 0.12)", borderRadius: 1.5 }}>
+                        <Stack
+                          direction={{ xs: "column", xl: "row" }}
+                          gap={1.5}
+                          justifyContent="space-between"
+                          alignItems={{ xl: "center" }}
+                        >
+                          <Stack direction="row" gap={1} alignItems="center" sx={{ minWidth: 0, flex: 1 }}>
+                            <Stack
+                              direction={{ xs: "column", sm: "row" }}
+                              gap={{ xs: 0.25, sm: 1.5 }}
+                              flexWrap="wrap"
+                              sx={{ minWidth: 0 }}
+                            >
+                              <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: { sm: "nowrap" } }}>
+                                Last synced: {lastSyncAt
+                                  ? formatUserDateTime(lastSyncAt)
+                                  : "Waiting for first sync"}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: { sm: "nowrap" } }}>
+                                Next sync: {nextSyncAt
+                                  ? formatUserTime(nextSyncAt)
+                                  : "Paused"}
+                              </Typography>
+                            </Stack>
+                          </Stack>
+                          <Stack
+                            direction={{ xs: "column", sm: "row" }}
+                            gap={1.5}
+                            alignItems={{ sm: "center" }}
+                            sx={{ flexShrink: 0 }}
+                          >
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              disabled={!canEdit || !connected.syncEnabled || busySync}
+                              onClick={() => run(() => syncNow.mutateAsync())}
+                              startIcon={busySync ? <CircularProgress size={16} color="inherit" /> : undefined}
+                              sx={{ minWidth: 104, minHeight: 36, whiteSpace: "nowrap" }}
+                            >
+                              {busySync ? "Syncing…" : "Sync now"}
+                            </Button>
+                            <FormControlLabel
+                              sx={{
+                                ml: 0,
+                                mr: 0,
+                                gap: 1,
+                                whiteSpace: "nowrap",
+                                "& .MuiFormControlLabel-label": { lineHeight: 1.2 },
+                              }}
+                              label="Automatic sync"
+                              control={
+                                <Switch
+                                  size="small"
+                                  sx={webhookSwitchSx}
+                                  checked={connected.syncEnabled}
+                                  disabled={!canEdit || setSyncEnabled.isPending}
+                                  onChange={(_, on) => run(() => setSyncEnabled.mutateAsync(on))}
+                                />
+                              }
+                            />
+                            <Button
+                              size="small"
+                              color="error"
+                              disabled={!canEdit || disconnect.isPending}
+                              onClick={() => run(() => disconnect.mutateAsync())}
+                              sx={{ minHeight: 36, whiteSpace: "nowrap" }}
+                            >
+                              {disconnect.isPending ? "Disconnecting…" : "Disconnect"}
+                            </Button>
+                          </Stack>
+                        </Stack>
+                        {connected.lastError && (
+                          <Alert severity="warning" sx={{ mt: 1 }}>
+                            {connected.lastError}
+                          </Alert>
+                        )}
+                      </Box>
                     )}
                   </Stack>
-                </Stack>
-              )}
-            </StepItem>
+                </Card>
 
-            {connected?.pushUrl && source && projectId && (
-              <Box sx={{ pl: { sm: 5 }, pt: 1, borderTop: "1px dashed", borderColor: "divider" }}>
-                <WebhookPush projectId={projectId} sourceId={source.id} pushUrl={connected.pushUrl} canEdit={canControl} />
-              </Box>
-            )}
+                <Card variant="outlined" sx={purchaseMethodCardSx}>
+                  <Stack gap={1.5}>
+                    <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" gap={1}>
+                      <Stack direction="row" gap={1.25} alignItems="center">
+                        <Box sx={{ width: 40, height: 40, borderRadius: 1.5, display: "grid", placeItems: "center", bgcolor: "#ece3fb", color: "primary.main" }}>
+                          <BoltRounded />
+                        </Box>
+                        <Box>
+                          <Stack direction="row" gap={1} alignItems="center" flexWrap="wrap">
+                            <Typography variant="body2" fontWeight={600}>Real-time webhook</Typography>
+                            <Chip size="small" label="Instant" sx={purchaseTimingBadgeSx} />
+                          </Stack>
+                          <Typography variant="caption" color="text.secondary">Send each purchase as it happens.</Typography>
+                        </Box>
+                      </Stack>
+                      <Stack direction="row" alignItems="center" gap={0.75} sx={{ pl: { xs: 6.25, sm: 0 } }}>
+                        <Chip size="small" icon={<StorefrontRounded />} label="Your server" sx={purchaseFlowSourceChipSx} />
+                        <ArrowForwardRounded fontSize="small" color="action" />
+                        <Chip size="small" icon={<LayersRounded />} label="PixlPush" sx={purchaseFlowTargetChipSx} />
+                      </Stack>
+                    </Stack>
+                    {connected?.pushUrl && source && projectId ? (
+                      <WebhookPush projectId={projectId} sourceId={source.id} pushUrl={connected.pushUrl} canEdit={canControl} />
+                    ) : connected && sources.isLoading ? (
+                      <Alert severity="info">Loading your real-time webhook settings…</Alert>
+                    ) : connected ? (
+                      <Alert severity="info">Your webhook URL and push keys will be available after the first history sync.</Alert>
+                    ) : (
+                      <Alert severity="info" icon={<InfoOutlined />}>
+                        Connect your purchase history feed below to set up the webhook URL and manage push keys.
+                      </Alert>
+                    )}
+                  </Stack>
+                </Card>
+
+
+              </Stack>
+            </StepItem>
 
             <StepItem n={3} title="Map data">
               <Typography
