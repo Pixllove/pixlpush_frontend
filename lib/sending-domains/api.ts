@@ -3,6 +3,8 @@ import type {
   CreateSendingDomainInput,
   DnsRecordsResponse,
   DomainAnalysis,
+  MtaDnsCheckResponse,
+  MtaDnsRecordsResponse,
   SendingDomain,
 } from '@/types/sending-domain';
 
@@ -57,6 +59,19 @@ export const refreshSesRecords = (projectId: string, domainId: string) =>
 
 export const getDnsRecords = (projectId: string, domainId: string) =>
   authRequest<DnsRecordsResponse>(one(projectId, domainId, '/dns-records'), undefined, BASE);
+
+/** Read and stage the MTA setup independently of the currently selected provider. */
+export const getMtaDnsRecords = (projectId: string, domainId: string) =>
+  authRequest<MtaDnsRecordsResponse>(one(projectId, domainId, '/mta/dns-records'), undefined, BASE);
+
+export const provisionMtaDnsRecords = (projectId: string, domainId: string) =>
+  authRequest<MtaDnsRecordsResponse>(one(projectId, domainId, '/mta/provision'), {}, BASE);
+
+export const checkMtaDns = (projectId: string, domainId: string) =>
+  authRequest<MtaDnsCheckResponse>(one(projectId, domainId, '/mta/check-dns'), {}, BASE);
+
+export const updateDeliveryProvider = (projectId: string, domainId: string, deliveryProvider: 'ses' | 'mta') =>
+  authRequest<SendingDomain>(one(projectId, domainId, '/delivery-provider'), { deliveryProvider }, BASE, 'PATCH');
 
 export const checkDns = (projectId: string, domainId: string) =>
   authRequest<SendingDomain>(one(projectId, domainId, '/check-dns'), {}, BASE);

@@ -20,6 +20,11 @@ vi.mock('@/lib/sending-domains/api', () => ({
   verifySendingDomain: vi.fn(),
   updateSendingDomain: vi.fn(),
   activateSendingDomain: vi.fn(),
+  getMtaDnsRecords: vi.fn(),
+  provisionMtaDnsRecords: vi.fn(),
+  checkMtaDns: vi.fn(),
+  updateDeliveryProvider: vi.fn(),
+  refreshSesRecords: vi.fn(),
 }));
 
 /** The domain the Project currently sends from, as Email sending reports it. */
@@ -54,6 +59,7 @@ const domain = (over: Partial<SendingDomain> = {}): SendingDomain => ({
   senderEmail: 'sender@example.com',
   senderName: null,
   replyTo: null,
+  deliveryProvider: 'ses' as const,
   provider: null,
   providerName: null,
   connectionMethod: 'manual',
@@ -142,6 +148,34 @@ describe('Sending domains list', () => {
     m.listSendingDomains.mockResolvedValue([]);
     renderPanel();
     expect(await screen.findByText('No sending domains yet')).toBeInTheDocument();
+  });
+
+  it('stages and verifies MTA DNS before offering the per-domain provider switch', async () => {
+    const dkim = record({ id: 'mta_dkim', type: 'TXT', name: 'pp-test._domainkey', value: 'v=DKIM1; k=rsa; p=public-key-value', purpose: 'DKIM', verified: false });
+    const spf = record({ id: 'mta_spf', type: 'TXT', name: '@', value: 'v=spf1 include:amazonses.com ip4:203.0.113.10 ~all', purpose: 'SPF', verified: false });
+    const verifiedRecords = [{ ...dkim, verified: true, status: 'verified' as const }, { ...spf, verified: true, status: 'verified' as const }];
+    m.listSendingDomains.mockResolvedValue([withRecords({ status: 'verified' })]);
+    m.getSendingDomain.mockResolvedValue(withRecords({ status: 'verified', deliveryProvider: 'ses' }));
+    m.getMtaDnsRecords.mockResolvedValueOnce({ domain: 'example.com', records: [] })
+      .mockResolvedValueOnce({ domain: 'example.com', records: [dkim, spf] })
+      .mockResolvedValue({ domain: 'example.com', records: verifiedRecords });
+    m.provisionMtaDnsRecords.mockResolvedValue({ domain: 'example.com', records: [dkim, spf] });
+    m.checkMtaDns.mockResolvedValue({ domain: 'example.com', checkedAt: new Date().toISOString(), ready: true, records: verifiedRecords });
+    m.updateDeliveryProvider.mockResolvedValue(withRecords({ status: 'verified', deliveryProvider: 'mta' }));
+    renderPanel();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'View MTA DNS records' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(/current provider stays selected/i)).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Prepare MTA DNS records' }));
+    await waitFor(() => expect(m.provisionMtaDnsRecords).toHaveBeenCalledWith('p1', 'd1'));
+    expect(await within(dialog).findByText('v=DKIM1; k=rsa; p=public-key-value')).toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: 'Use MTA for this domain' })).not.toBeInTheDocument();
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Check MTA DNS status' }));
+    expect(m.checkMtaDns).toHaveBeenCalledWith('p1', 'd1');
+    await userEvent.click(await within(dialog).findByRole('button', { name: 'Use MTA for this domain' }));
+    expect(m.updateDeliveryProvider).toHaveBeenCalledWith('p1', 'd1', 'mta');
   });
 
   it('shows friendly API and authorization errors, with retry', async () => {

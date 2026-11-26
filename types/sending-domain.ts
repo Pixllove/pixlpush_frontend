@@ -35,6 +35,7 @@ export interface SendingDomain {
   replyTo: string | null;
   /** DKIM selector of the customer's email provider; only set when the key is not under a common one. */
   dkimSelector?: string | null;
+  deliveryProvider?: 'ses' | 'mta';
   provider: string | null;
   providerName: string | null;
   /** Link to the DNS settings at the domain's DNS host, when known. */
@@ -70,4 +71,14 @@ export interface DnsRecordsResponse {
   domain: string;
   lastCheckedAt: string | null;
   records: DnsRecord[];
+}
+
+export interface MtaDnsRecordsResponse {
+  domain: string;
+  records: DnsRecord[];
+}
+
+export interface MtaDnsCheckResponse extends MtaDnsRecordsResponse {
+  checkedAt: string;
+  ready: boolean;
 }

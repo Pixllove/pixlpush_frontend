@@ -18,9 +18,11 @@ import {
   StepLabel,
   Stepper,
   TextField,
+  Tabs,
+  Tab,
   Typography,
 } from '@mui/material';
-import { checkDns, getSendingDomain, refreshSesRecords, updateSendingDomain } from '@/lib/sending-domains/api';
+import { checkDns, checkMtaDns, getMtaDnsRecords, getSendingDomain, provisionMtaDnsRecords, refreshSesRecords, updateDeliveryProvider, updateSendingDomain } from '@/lib/sending-domains/api';
 import { domainErrorMessage, isConnectionCode, messageForCode } from '@/lib/sending-domains/errors';
 import type { SendingDomain } from '@/types/sending-domain';
 import DnsRecordCard from './DnsRecordCard';
@@ -45,10 +47,12 @@ interface Props {
   onClose: () => void;
   onChanged: () => void;
   onRetryAutomatic?: (domain: SendingDomain) => void;
+  initialTab?: 'provider' | 'mta';
+  canManage?: boolean;
 }
 
 /** Guided manual setup: records come from the backend, checks reload from it. */
-export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged, onRetryAutomatic }: Props) {
+export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged, onRetryAutomatic, initialTab = 'provider', canManage = true }: Props) {
   const query = useQuery({
     queryKey: ['projects', 'sending-domains', projectId, domainId],
     queryFn: () => getSendingDomain(projectId, domainId),
@@ -56,6 +60,14 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
   const [checking, setChecking] = useState(false);
   const [checkError, setCheckError] = useState<string | null>(null);
   const [selector, setSelector] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'provider' | 'mta'>(initialTab);
+  const [mtaBusy, setMtaBusy] = useState(false);
+  const [mtaError, setMtaError] = useState<string | null>(null);
+  const mtaQuery = useQuery({
+    queryKey: ['projects', 'sending-domains', projectId, domainId, 'mta-dns'],
+    queryFn: () => getMtaDnsRecords(projectId, domainId),
+    enabled: activeTab === 'mta',
+  });
 
   const domain = query.data;
   const records = domain?.dnsRecords ?? [];
@@ -129,11 +141,55 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
   const selectorValue = selector ?? domain?.dkimSelector ?? '';
   const selectorValid = /^[a-z0-9-]{0,63}$/i.test(selectorValue.trim());
   const statusMessage = domain && domain.status !== 'verified' ? messageForCode(domain.lastError) : null;
+  const mtaRecords = mtaQuery.data?.records ?? [];
+  const mtaReady = mtaRecords.some((record) => record.id === 'mta_spf')
+    && mtaRecords.some((record) => record.id === 'mta_dkim')
+    && mtaRecords.filter((record) => record.required).every((record) => record.verified);
+
+  const prepareMta = async () => {
+    setMtaBusy(true);
+    setMtaError(null);
+    try {
+      await provisionMtaDnsRecords(projectId, domainId);
+      await mtaQuery.refetch();
+    } catch (error) {
+      setMtaError(domainErrorMessage(error));
+    } finally {
+      setMtaBusy(false);
+    }
+  };
+
+  const checkMta = async () => {
+    setMtaBusy(true);
+    setMtaError(null);
+    try {
+      await checkMtaDns(projectId, domainId);
+      await mtaQuery.refetch();
+    } catch (error) {
+      setMtaError(domainErrorMessage(error));
+    } finally {
+      setMtaBusy(false);
+    }
+  };
+
+  const selectMta = async () => {
+    setMtaBusy(true);
+    setMtaError(null);
+    try {
+      await updateDeliveryProvider(projectId, domainId, 'mta');
+      await query.refetch();
+      onChanged();
+    } catch (error) {
+      setMtaError(domainErrorMessage(error));
+    } finally {
+      setMtaBusy(false);
+    }
+  };
 
   return (
     <Dialog
       open
-      onClose={checking ? undefined : onClose}
+      onClose={checking || mtaBusy ? undefined : onClose}
       fullWidth
       maxWidth="md"
       scroll="paper"
@@ -145,11 +201,20 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
             <span>DNS records for {domain?.domain ?? '…'}</span>
             {domain && <DomainStatusBadge status={domain.status} lastError={domain.lastError} />}
           </Stack>
-          <IconButton aria-label="Close" onClick={onClose} disabled={checking} size="small">
+          <IconButton aria-label="Close" onClick={onClose} disabled={checking || mtaBusy} size="small">
             <CloseRounded />
           </IconButton>
         </Stack>
       </DialogTitle>
+      <Tabs
+        value={activeTab}
+        onChange={(_, value: 'provider' | 'mta') => setActiveTab(value)}
+        aria-label="DNS setup provider"
+        sx={{ px: 3, borderBottom: '1px solid', borderColor: 'divider' }}
+      >
+        <Tab value="provider" label="View DNS records" />
+        <Tab value="mta" label="View MTA DNS records" />
+      </Tabs>
       <DialogContent sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
         {query.isPending && (
           <Stack alignItems="center" justifyContent="center" sx={{ minHeight: 240 }} role="status"><CircularProgress size={28} /></Stack>
@@ -160,7 +225,7 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
             <Button variant="outlined" onClick={() => query.refetch()} sx={{ alignSelf: 'flex-start' }}>Retry</Button>
           </Stack>
         )}
-        {domain && (
+        {domain && activeTab === 'provider' && (
           <Stack gap={2.5}>
             <Stepper alternativeLabel activeStep={domain.status === 'verified' ? STEPS.length : domain.lastCheckedAt ? 4 : 1}>
               {STEPS.map((label) => <Step key={label}><StepLabel>{label}</StepLabel></Step>)}
@@ -250,19 +315,52 @@ export default function DnsSetupDialog({ projectId, domainId, onClose, onChanged
             )}
           </Stack>
         )}
+        {activeTab === 'mta' && (
+          <Stack gap={2.5}>
+            <Alert severity="info">
+              Set up PixlPush MTA separately from your current email provider. Your current provider stays selected until you verify these records and choose MTA for this domain.
+            </Alert>
+            {mtaError && <Alert severity="error">{mtaError}</Alert>}
+            {mtaQuery.isError && <Alert severity="error">{domainErrorMessage(mtaQuery.error)}</Alert>}
+            {mtaQuery.isPending && <Stack alignItems="center" sx={{ py: 3 }} role="status"><CircularProgress size={24} /></Stack>}
+            {mtaRecords.length === 0 && !mtaQuery.isPending && (
+              <Stack gap={1.5}>
+                <Typography color="text.secondary">PixlPush will create a DKIM key on the MTA and show the public DNS records here. The private key stays on the MTA.</Typography>
+                {canManage && <Button variant="contained" onClick={prepareMta} disabled={mtaBusy}>{mtaBusy ? 'Preparing records…' : 'Prepare MTA DNS records'}</Button>}
+              </Stack>
+            )}
+            {mtaRecords.length > 0 && (
+              <>
+                <Stack gap={0.5}>
+                  <Typography fontWeight={600}>Add these records to your DNS provider</Typography>
+                  <Typography color="text.secondary" fontSize="var(--fs-13)">The SPF value keeps existing mechanisms and adds the MTA address. Keep one SPF record on the domain.</Typography>
+                </Stack>
+                <Stack gap={1.5}>{mtaRecords.map((record) => <DnsRecordCard key={record.id} record={record} />)}</Stack>
+                {mtaReady
+                  ? <Alert severity="success">MTA DNS is verified. You can now select PixlPush MTA for this domain.</Alert>
+                  : <Alert severity="info">After publishing the records, check DNS status. PixlPush will keep using {domain?.deliveryProvider === 'mta' ? 'MTA' : 'your current provider'} until MTA DNS is verified and selected.</Alert>}
+                <Stack direction={{ xs: 'column', sm: 'row' }} gap={1}>
+                  {canManage && <Button variant="outlined" onClick={checkMta} disabled={mtaBusy}>{mtaBusy ? 'Checking…' : 'Check MTA DNS status'}</Button>}
+                  {canManage && mtaReady && domain?.deliveryProvider !== 'mta' && <Button variant="contained" onClick={selectMta} disabled={mtaBusy}>Use MTA for this domain</Button>}
+                  {domain?.deliveryProvider === 'mta' && <Alert severity="success" sx={{ flex: 1 }}>PixlPush MTA is selected for this domain.</Alert>}
+                </Stack>
+              </>
+            )}
+          </Stack>
+        )}
       </DialogContent>
       <DialogActions sx={{ position: 'sticky', bottom: 0, zIndex: 1, bgcolor: 'background.paper', borderTop: '1px solid', borderColor: 'divider' }}>
-        {automaticProvider && domain?.status !== 'verified' && (
+        {activeTab === 'provider' && automaticProvider && domain?.status !== 'verified' && (
           <Button onClick={() => onRetryAutomatic?.({ ...domain!, provider: automaticProvider! })} disabled={checking}>
             Try automatic connection
           </Button>
         )}
-        {domain && displayRecords.length > 0 && (
+        {activeTab === 'provider' && domain && displayRecords.length > 0 && (
           <Button variant="outlined" onClick={runCheck} disabled={checking}>
             {checking ? 'Checking DNS…' : 'Check status'}
           </Button>
         )}
-        <Button variant="contained" onClick={onClose} disabled={checking}>Done</Button>
+        <Button variant="contained" onClick={onClose} disabled={checking || mtaBusy}>Done</Button>
       </DialogActions>
     </Dialog>
   );
