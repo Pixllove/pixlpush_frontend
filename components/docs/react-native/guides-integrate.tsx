@@ -177,16 +177,13 @@ export function Push({ base }: GuideProps) {
     </Section>
     <Section id="states" title="Foreground, background, cold start">
       <DataTable code={false} headers={["App state", "Receipt", "Tap"]} rows={[
-        ["Foreground", "Not shown by FCM. The SDK re-posts it through expo-notifications or an injected CLI notificationModule.", "Automatic when the notification module preserves data.pp_job_id."],
+        ["Foreground", "PixlPush handles the Firebase message once. It displays one local notification when expo-notifications or an injected CLI notificationModule is available; otherwise use the received listener for in-app UI.", "Automatic when the notification module preserves data.pp_job_id."],
         ["Background", "Shown by the OS.", "Automatic: recorded and notification_opened emitted."],
         ["Quit (cold start)", "Shown by the OS.", "Automatic during configure() — which is why listeners must exist first."],
       ]} />
-      <Body>FCM doesn’t display a notification while your app is open. Pick one:</Body>
-      <CodeTabs label="Foreground handling" options={{
-        "Re-post with expo-notifications (recommended)": { code: code.foregroundRepost, language: "TypeScript", filename: "src/notifications/foreground.ts" },
-        "Your own in-app banner": { code: code.foreground, language: "TypeScript", filename: "src/notifications/foreground.ts" },
-      }} />
-      <Callout tone="warning" title="Keep data: message.data when re-posting">The tap is attributed from <code>pp_job_id</code> inside <code>data</code>. Drop it and the open isn’t counted.</Callout>
+      <Body>PixlPush registers its own Firebase foreground listener. With <code>expo-notifications</code>, it displays one local notification automatically. A React Native CLI app can provide a <code>NotificationModule</code> to let the SDK display one; without a local notification renderer, use the received listener for an in-app banner.</Body>
+      <CodeBlock code={code.foreground} filename="src/notifications/foreground.ts" />
+      <Callout tone="warning" title="Do not add a second foreground handler">Do not register another Firebase <code>onMessage</code> listener, call <code>handleNotification()</code> yourself for those messages, or schedule another local notification. The SDK already handles receipt and Expo display; duplicating this path can show duplicate notifications and emit the received event twice.</Callout>
       <Body><code>getInitialNotification()</code> on the SDK only returns a payload you stored with <code>setInitialNotification()</code>; it does not ask Firebase. You don’t need it with React Native Firebase.</Body>
     </Section>
     <Section id="actions" title="Actions and deep links">

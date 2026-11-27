@@ -69,6 +69,12 @@ ${stack.ref.methods.map((line) => `- ${line}`).join("\n")}
 ${stack.ref.options.length ? `Options: ${stack.ref.options.join(", ")}` : ""}
 </api_reference>
 
+<duplicate_safety>
+- Read the SDK behavior and project code before wiring events, lifecycle tracking, push receipt, notification display or notification opens. The SDK may already own these paths.
+- Keep one SDK initialization and one handler for each SDK-managed callback. Do not manually recreate or forward behavior the SDK handles automatically, because that can duplicate events or notifications.
+- Preserve the SDK's required attribution fields when adapting a notification library.
+</duplicate_safety>
+
 <source_of_truth>
 - Full documentation: ${docs} (this prompt: ${DOCS_ORIGIN}/ai-prompts/${platformId}.md).
 - If the installed package's README, CHANGELOG or type definitions differ from this prompt (a newer release), follow the installed package and say so under Open questions.

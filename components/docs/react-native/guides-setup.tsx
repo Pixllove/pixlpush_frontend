@@ -42,7 +42,7 @@ export function Overview({ base }: GuideProps) {
         ["Flushes every 15 s, on foreground and on background; retries with backoff", "Call identify() after login and reset() on logout"],
         ["Records app_opened and app_backgrounded", "Track the product events that matter"],
         ["With React Native Firebase: sends the FCM token, refreshes, and records taps (background and cold start)", "Ask for notification permission from your UI, then call syncPushToken()"],
-        ["De-duplicates a tap seen by two listeners", "Handle foreground messages and deep links"],
+        ["Handles Firebase foreground receipt once; displays one local notification when a notification module is available", "Use addNotificationReceivedListener for an in-app banner and handle deep links in the opened listener"],
       ]} />
     </Section>
     <Section id="app-paths" title="Expo, Expo Go, or bare">
@@ -152,7 +152,7 @@ export function Installation({ base }: GuideProps) {
       <Body>Only needed for push. The SDK detects them at runtime; an app without them still builds.</Body>
       <CodeTabs label="Package manager" group="package-manager" options={pushInstallCommands} />
       <Callout tone="warning" title="React Native Firebase v22+ (modular API)">The SDK calls the modular functions <code>getMessaging</code>, <code>getToken</code> and <code>onTokenRefresh</code>. Older namespaced-only versions are ignored: no token is sent.</Callout>
-      <Body><code>expo-notifications</code> is optional. When installed, the SDK also records taps it reports. See <A href={rn(base, "push", "expo-notifications")}>Using expo-notifications</A>.</Body>
+      <Body><code>expo-notifications</code> is optional. When installed, the SDK detects it, displays one local notification for foreground FCM messages, and records taps it reports. Do not add a second <code>onMessage</code> listener or schedule another notification. See <A href={rn(base, "push", "expo-notifications")}>Using expo-notifications</A>.</Body>
     </Section>
     <Section id="environment" title="Environment variables">
       <CodeTabs label="App type" group="app-type" options={{ Expo: { code: code.envExpo, language: "Environment", filename: ".env" }, "Bare React Native": { code: code.envBare, language: "TypeScript", filename: "src/config/pixlpush.ts" } }} />

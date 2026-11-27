@@ -16,7 +16,7 @@ export const installCommands = {
 };
 
 export const pushInstallCommands = {
-  Expo: "npx expo install @react-native-firebase/app @react-native-firebase/messaging expo-build-properties",
+  Expo: "npx expo install @react-native-firebase/app @react-native-firebase/messaging expo-notifications expo-build-properties",
   npm: "npm install @react-native-firebase/app @react-native-firebase/messaging",
   yarn: "yarn add @react-native-firebase/app @react-native-firebase/messaging",
   pnpm: "pnpm add @react-native-firebase/app @react-native-firebase/messaging",
@@ -182,32 +182,14 @@ export async function enableNotifications() {
   return status === AuthorizationStatus.AUTHORIZED || status === AuthorizationStatus.PROVISIONAL;
 }`,
 
-  foregroundRepost: `// FCM doesn't show a notification while the app is open. Re-post it with
-// expo-notifications so the user sees it and a tap is attributed automatically.
-import { getMessaging, onMessage } from "@react-native-firebase/messaging";
-import * as Notifications from "expo-notifications";
+  foreground: `// PixlPush already listens for foreground FCM messages and calls
+// handleNotification() internally. Do not add another onMessage listener.
 import PixlPush from "@pixlpush/react-native";
 
-onMessage(getMessaging(), async (message) => {
-  PixlPush.handleNotification(message); // emits notification_received
-  await Notifications.scheduleNotificationAsync({
-    content: {
-      title: message.notification?.title,
-      body: message.notification?.body,
-      data: message.data, // keep this: it carries pp_job_id for open attribution
-    },
-    trigger: null,
-  });
-});`,
-
-  foreground: `// FCM does not show or report foreground messages to PixlPush by itself.
-import { getMessaging, onMessage } from "@react-native-firebase/messaging";
-import PixlPush from "@pixlpush/react-native";
-
-const unsubscribe = onMessage(getMessaging(), (message) => {
-  PixlPush.handleNotification(message); // emits notification_received
-});
-
+// Expo: when expo-notifications is installed, PixlPush automatically displays
+// one local notification. For a CLI app, pass a NotificationModule to configure()
+// if you want the SDK to display a local notification.
+// Without a local notification renderer, show your own in-app UI instead.
 PixlPush.addNotificationReceivedListener((notification) => {
   showInAppBanner(notification.title, notification.body);
 });`,
@@ -564,7 +546,7 @@ Listeners → in a file imported before startPixlPush() runs:
 ${fence("ts", code.listeners)}
 Permission → call from a button or onboarding step, never automatically at launch:
 ${fence("ts", code.permission)}
-Foreground messages:
+Foreground handling: PixlPush already owns the Firebase onMessage listener. With expo-notifications installed it displays one local notification automatically. For React Native CLI, provide a NotificationModule only if you want SDK-managed local display; otherwise subscribe to the received event for an in-app banner. Never add a second onMessage handler, call handleNotification() yourself for Firebase messages, or schedule a second local notification.
 ${fence("ts", code.foreground)}
 Never send an Expo push token (ExponentPushToken[…]) to PixlPush; autoPush sends the native FCM token.
 
