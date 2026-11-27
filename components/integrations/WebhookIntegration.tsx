@@ -19,6 +19,7 @@ import {
 } from "@mui/icons-material";
 import {
   Alert,
+  AlertTitle,
   Box,
   Button,
   Card,
@@ -194,7 +195,8 @@ export default function WebhookIntegration() {
       setPlanToastOpen(true);
     }
   }, [planLimited, planToastAt]);
-  const busySync = syncNow.isPending || Boolean(connected?.fetching) || applying > 0 || Boolean(connected?.importing && connected.syncEnabled) || (overdueMs >= 0 && overdueMs < 90_000);
+  const limitReached = Boolean(connected?.limitReached);
+  const busySync = !limitReached && (syncNow.isPending || Boolean(connected?.fetching) || applying > 0 || Boolean(connected?.importing && connected.syncEnabled) || (overdueMs >= 0 && overdueMs < 90_000));
   const status = integrationStatus(settings);
   const [url, setUrl] = useState("");
   const [token, setToken] = useState("");
@@ -301,8 +303,8 @@ export default function WebhookIntegration() {
           }
           sx={{ width: "100%", alignItems: "center" }}
         >
-          Plan limit reached: {planLimited.toLocaleString()} new users from your server were not added. Existing
-          users keep syncing. Upgrade to add more.
+          <AlertTitle sx={{ mb: 0.25 }}>Plan limit reached</AlertTitle>
+          Sync is paused because your plan&apos;s user limit is full. Upgrade to resume syncing.
         </Alert>
       </Snackbar>
       {error && (
@@ -546,6 +548,23 @@ export default function WebhookIntegration() {
                         Historical import starts after connecting. Automatic sync repeats every 2 minutes while enabled.
                       </Typography>
                     </Stack>
+                    {connected && limitReached && (
+                      <Alert
+                        severity="warning"
+                        variant="outlined"
+                        action={
+                          <Button component={NextLink} href="/dashboard/billing" variant="contained" color="warning" size="small" sx={{ whiteSpace: "nowrap" }}>
+                            Upgrade plan
+                          </Button>
+                        }
+                        sx={{ alignItems: "center", borderRadius: 1.5 }}
+                      >
+                        <AlertTitle sx={{ mb: 0.25 }}>Sync paused: plan limit reached</AlertTitle>
+                        Your plan&apos;s user limit is full
+                        {planLimited > 0 ? `, so ${planLimited.toLocaleString()} new users from your server were not added` : ""}.
+                        Upgrade to resume syncing. It picks up automatically where it left off.
+                      </Alert>
+                    )}
                     {connected && (
                       <Box sx={{ p: 1.5, bgcolor: "#ece3fb", border: "1px solid rgba(91, 33, 182, 0.12)", borderRadius: 1.5 }}>
                         <Stack
@@ -567,7 +586,9 @@ export default function WebhookIntegration() {
                                   : "Waiting for first sync"}
                               </Typography>
                               <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: { sm: "nowrap" } }}>
-                                {connected.importing && connected.syncEnabled
+                                {limitReached
+                                  ? "Next sync: paused until you upgrade"
+                                  : connected.importing && connected.syncEnabled
                                   ? "Next sync: runs continuously until your history is imported, then every 2 minutes"
                                   : `Next sync: ${nextSyncAt ? formatUserTime(nextSyncAt) : "Paused"}`}
                               </Typography>
@@ -583,11 +604,13 @@ export default function WebhookIntegration() {
                               size="small"
                               variant="outlined"
                               disabled={!canEdit || !connected.syncEnabled || busySync}
-                              onClick={() => run(() => syncNow.mutateAsync())}
+                              onClick={() => (limitReached ? setPlanToastOpen(true) : run(() => syncNow.mutateAsync()))}
                               startIcon={busySync ? <CircularProgress size={16} color="inherit" /> : undefined}
                               sx={{ minWidth: 104, minHeight: 36, whiteSpace: "nowrap" }}
                             >
-                              {connected.importing && connected.syncEnabled
+                              {limitReached
+                                ? "Sync now"
+                                : connected.importing && connected.syncEnabled
                                 ? applying > 0 ? `Importing · ${applying.toLocaleString()} to apply` : "Importing…"
                                 : applying > 0 ? `Applying ${applying.toLocaleString()}…` : busySync ? "Syncing…" : "Sync now"}
                             </Button>

@@ -501,6 +501,8 @@ export type IntegrationSettings = {
       applying?: number;
       /** Webhook: records rejected because the plan's reachable-user limit is full. */
       planLimited?: number;
+      /** Plan's reachable-user limit is full: the webhook sync is stopped. */
+      limitReached?: boolean;
       lastCheckedAt?: string | null;
       nextSyncAt?: string;
       /** Webhook only: where the customer's server pushes live events. */
