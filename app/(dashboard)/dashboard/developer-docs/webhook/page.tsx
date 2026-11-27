@@ -140,14 +140,29 @@ export default function WebhookDeveloperDocsPage() {
           <li><strong>Add the route.</strong> Create a public <code>GET /pixlpush/events</code> route next to your existing routes, following their structure.</li>
           <li><strong>Check the token.</strong> Read <code>Authorization: Bearer &lt;token&gt;</code>, compare it in constant time, and return <code>401</code> with a JSON error when it is missing or wrong.</li>
           <li><strong>Read the parameters.</strong> <code>limit</code> is the page size PixlPush asks for: pass it straight to your database <code>LIMIT</code>, with no cap or check of your own. <code>since</code> is an optional ISO timestamp; <code>cursor</code> is the opaque value you returned as <code>next</code>. Return <code>400</code> with a clear JSON message for invalid values.</li>
-          <li><strong>Map your rows to events.</strong> Each source row becomes one event with a stable <code>id</code> (e.g. <code>purchase_123</code>), an <code>event_name</code> from the event list below, <code>user_id</code>, and the real <code>time</code> it happened. Subscription events need <code>product_id</code>, <code>billing_period</code> and <code>expires_at</code> when known.</li>
+          <li><strong>Map your rows to events.</strong> Each source row becomes one event with a stable <code>id</code> of at least 8 characters (e.g. <code>purchase_123</code>), an <code>event_name</code> from the event list below, <code>user_id</code>, and the real <code>time</code> it happened. Subscription events need <code>product_id</code>, <code>billing_period</code> and <code>expires_at</code> when known.</li>
           <li><strong>Write the query.</strong> Filter <code>time &gt;= since</code>, continue after the cursor with <code>WHERE (time, id) &gt; (:time, :id)</code>, <code>ORDER BY time, id</code>, and fetch <code>limit + 1</code> rows to know if there is a next page. Index <code>(time, id)</code> and never use <code>OFFSET</code>. If you combine tables with <code>UNION</code>, give every part the same column names.</li>
           <li><strong>Add the user profile.</strong> Load the profiles for the whole page in one query and put them in <code>user</code> on each event: email, name, language, country, timezone, consent and so on. Leave out keys you do not have.</li>
           <li><strong>Return the page.</strong> Send <code>{'{"data": [...], "next": "cursor"}'}</code>, with <code>next: null</code> on the last page. Encode the last event&apos;s time and id as the cursor, for example base64 JSON.</li>
           <li><strong>Return clear errors.</strong> Every error is JSON like <code>{'{"error": {"code": "INVALID_CURSOR", "message": "cursor is not valid"}}'}</code>. PixlPush shows this message exactly as sent, so never include stack traces, SQL or tokens.</li>
           <li><strong>Test it.</strong> Call it with <code>curl -H &quot;Authorization: Bearer $TOKEN&quot; &quot;https://api.example.com/pixlpush/events?limit=1&quot;</code>, then with a wrong token, a <code>since</code> value, and the returned cursor. Check there are no gaps or duplicates between pages.</li>
           <li><strong>Deploy and connect.</strong> Deploy it on public HTTPS, open Integrations → Webhook, paste the URL and token, and click Connect. If it fails, open Technical details to see your endpoint&apos;s exact response.</li>
+                  <li><strong>After connecting.</strong> PixlPush imports your history on its own and keeps it up to date. Turn on what to sync under Map data (3.1–3.3) on the Webhook page.</li>
         </Box>
+      </Section>
+
+      <Section id="sync-flow" title="How the sync works">
+        <Box component="ol" sx={{ pl: 2.5, m: 0, color: "text.secondary", "& li": { mb: 1 } }}>
+          <li><strong>Import.</strong> PixlPush calls your endpoint with <code>limit={FEED_FETCH_SIZE}</code>, one request at a time, following <code>next</code>, and stores each page. It stays up to {FEED_PAGE} events ahead of what it has applied.</li>
+          <li><strong>Apply.</strong> In parallel, stored events become users, subscriptions, segment changes and events. A record that hits a short conflict is retried after 15 seconds.</li>
+          <li><strong>Keep up to date.</strong> When your endpoint returns <code>next: null</code>, the import is done; PixlPush then checks for new events every 2 minutes (from <code>since</code>). <em>Sync now</em> on the Webhook page runs that check immediately.</li>
+          <li><strong>Plan limit.</strong> New reachable users beyond your plan are not added (the Webhook page shows a notice with an upgrade link); users already in PixlPush keep syncing.</li>
+        </Box>
+        <DataTable headers={["Webhook page shows", "Meaning"]} rows={[
+          ["Syncing…", "A request to your endpoint is running, or a sync is due and about to start."],
+          ["Applying N…", "N fetched records are being applied."],
+          ["Sync now · Next sync: time", "Up to date; the next check runs at that time, or now if you click Sync now."],
+        ]} />
       </Section>
 
       <Section id="endpoint" title="Endpoint and authentication">

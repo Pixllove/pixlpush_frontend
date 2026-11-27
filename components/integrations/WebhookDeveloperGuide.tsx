@@ -114,12 +114,20 @@ const HISTORY_NOTE =
   "Optional. Message events need channel (email or push), message_id and campaign_id (campaign_name helps matching). journey_step_entered needs journey_id and step_id (journey_name and step_name help matching). This history is shown in PixlPush as imported: it is never counted as a PixlPush send and never sends anything. Push has no clicks in PixlPush, so push clicks are not stored.";
 
 const STEPS = [
-  "Create a read-only endpoint in your backend, for example GET https://api.yourapp.com/pixlpush/events.",
-  "Protect it with a secret token. PixlPush sends it in the header: Authorization: Bearer <token>.",
-  "Return events as JSON in stable time order, using the format and paging rules below. Put the user’s current profile in user on every event.",
-  "Make it a public HTTPS URL. Localhost, private network addresses and invalid TLS certificates do not work.",
-  "Send the URL and the token to the person setting up PixlPush. They paste both on the Webhook page.",
-  "Optional real time: your backend can POST each canonical business event to the Push URL shown on Integrations → Webhook. Create a separate Push key there with records:write; keep both the key and POST request on your server.",
+  "Look at your backend first: note its framework, router, database and ORM, and open the real schema. Write down the exact table and column names for users, purchases/subscriptions and billing history.",
+  "Generate a token (for example: openssl rand -hex 32) and store it as a server secret such as PIXLPUSH_FEED_TOKEN. Never commit it or put it in app code.",
+  "Add a public GET route, for example https://api.yourapp.com/pixlpush/events, next to your existing routes and following their structure.",
+  "Check Authorization: Bearer <token> in constant time. Return 401 with a JSON error when it is missing or wrong.",
+  "Read the query: limit is the page size PixlPush asks for, so use it as-is in your database LIMIT; since is an optional ISO timestamp (inclusive); cursor is the opaque value you returned as next.",
+  "Turn each source row into one event: a stable unique id of at least 8 characters (e.g. purchase_<rowId>), an event_name from the list below, user_id and the real time it happened. Subscription events also need product_id, billing_period and expires_at when known.",
+  "Query with a keyset cursor: WHERE time >= since AND (time, id) > (cursor time, cursor id) ORDER BY time, id LIMIT limit + 1. Index (time, id), never use OFFSET, and give every UNION part the same column names.",
+  "Load the users' current profiles for the whole page in one query and put them in user on every event (email, name, language, country, timezone, consent…). Leave out keys you do not have.",
+  "Return {\"data\": [...events], \"next\": \"cursor\"}: next is the last event's time and id encoded (for example base64 JSON), or null on the last page.",
+  "Return every error as JSON: {\"error\": {\"code\": \"...\", \"message\": \"...\"}}. PixlPush shows the message exactly as sent, so never include stack traces, SQL or tokens.",
+  "Test it: curl with limit=1, then with a wrong token, with since, and with the returned cursor. Check that pages have no gaps or duplicates and that ids never change.",
+  "Deploy on public HTTPS (no localhost, private IPs, redirects or invalid certificates) and send the URL and token to the PixlPush project owner. They paste both on Integrations → Webhook and click Connect; if it fails, Technical details shows your endpoint's exact response.",
+  "After connecting, PixlPush imports your history automatically: 1,000 events per request, one request at a time, applied in parallel. Once caught up it checks every 2 minutes. Then turn on what to sync in Map data (3.1–3.3).",
+  "Optional real time: also POST each event to the Push URL shown on Integrations → Webhook with a Push key (records:write) from that page, from your server only.",
 ];
 
 const PAGING =
@@ -150,7 +158,7 @@ function aiPrompt() {
     "- If you merge several tables with UNION / UNION ALL, give every branch identical column aliases (AS id, AS event_name, AS time, ...), not just the first one. Inside each branch, ORDER BY the real source columns (e.g. ORDER BY p.\"expirationDate\", id_expr) or wrap the union in an outer SELECT and order there; never ORDER BY an alias a branch does not define, or Postgres fails with: column \"time\" does not exist. Test the query once with since, once with a cursor, and once with limit=1 before shipping.",
     "- Return every error as JSON with a precise, human-readable reason: {\"error\":{\"code\":\"INVALID_CURSOR\",\"message\":\"cursor is not valid\"}}. Use 400 for bad parameters (name the parameter and the value rule), 401 for a missing or wrong token, and 500 only for real server failures (message like \"database query failed\", never stack traces, SQL, tokens or user data). PixlPush shows this message to the developer exactly as sent.",
     "- Order events by (time, id). Make the cursor opaque and stable, and never skip or repeat events at page boundaries or at the since boundary. If the database stores times without a timezone, compare in UTC.",
-    "- Build events only from real data that already exists. Do not create new tables. Every event needs a stable unique id (derive it from the source row, e.g. purchase_<rowId>), event_name, user_id and the real time it happened.",
+    "- Build events only from real data that already exists. Do not create new tables. Every event needs a stable unique id of at least 8 characters (derive it from the source row, e.g. purchase_<rowId>), event_name, user_id and the real time it happened.",
     "- Map billing data to the documented lifecycle events, one event per change, with the exact product_id (e.g. premium_monthly, vip_monthly), billing_period (weekly, monthly, quarterly, yearly, or one_time for one-time payments such as coin packs) and expires_at when access has an end date: start, renewal, one-time purchase (purchase), cancellation (subscription_canceled), payment failure (subscription_billing_retry), restore (subscription_restored, or purchase_restored for one-time purchases), expiry (subscription_expired / trial_expired) and refund (subscription_refunded). Use these exact event names; any other name shows as \"needs mapping\" in PixlPush until someone maps it by hand. PixlPush keeps a separate state per product and uses these for segment membership rules, so send cancellations and renewals, not only purchases. Map segment changes to segment_entered/segment_exited with segment (the segment’s name).",
     `- Always honour limit: never return more than limit events per page (PixlPush asks for ${FEED_FETCH_SIZE} per request, up to ${FEED_PAGE} per 2-minute cycle) and keep each page under ${FEED_MAX_MB} MB.`,
     "- On every event, include user with the user’s current profile from the database: email, name, language, country, region, timezone, user_type, account_status, platform, email_consent, push_consent. Leave out keys you do not have; do not send null or empty strings. Send email_consent/push_consent only when the user actually made a choice (never guess).",
@@ -359,7 +367,7 @@ export default function WebhookDeveloperGuide({
         >
           <Box>
             <Typography variant="subtitle1" sx={{ mb: 1 }}>
-              What to build
+              Step-by-step setup (without the AI prompt)
             </Typography>
             <Box component="ol" sx={{ m: 0, pl: 2.5, "& li": { mb: 0.75 } }}>
               {STEPS.map((step) => (
