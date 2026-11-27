@@ -8,10 +8,8 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ArrowForwardRounded,
   ArrowBackRounded,
-  BoltRounded,
   InfoOutlined,
   LayersRounded,
-  StorefrontRounded,
   SyncRounded,
   VisibilityOffRounded,
   VisibilityRounded,
@@ -35,7 +33,6 @@ import {
   Typography,
 } from "@mui/material";
 import DataSyncMigrations from "@/components/dashboard/DataSyncMigrations";
-import WebhookPush from "./WebhookPush";
 import SettingsStatus from "@/components/dashboard/SettingsStatus";
 import { useCurrentUser } from "@/hooks/auth/use-current-user";
 import { useActiveProject } from "@/hooks/projects/use-active-project";
@@ -72,26 +69,26 @@ const mono = {
   fontFamily: "var(--pp-mono)",
   fontSize: "var(--fs-12)",
 } as const;
-const purchaseMethodCardSx = {
+const historySyncCardSx = {
   p: { xs: 1.5, sm: 2 },
   borderColor: "divider",
   bgcolor: "#f8f5ff",
   borderRadius: 2,
 } as const;
-const purchaseTimingBadgeSx = {
+const historySyncTimingBadgeSx = {
   bgcolor: "#ece3fb",
   color: "primary.main",
   border: "1px solid rgba(91, 33, 182, 0.2)",
   fontWeight: 600,
 } as const;
-const purchaseFlowSourceChipSx = {
+const historySyncSourceChipSx = {
   bgcolor: "#ece3fb",
   color: "#4c1d95",
   border: "1px solid rgba(91, 33, 182, 0.22)",
   fontWeight: 600,
   "& .MuiChip-icon": { color: "#5b21b6" },
 } as const;
-const purchaseFlowTargetChipSx = {
+const historySyncTargetChipSx = {
   bgcolor: "#5b21b6",
   color: "#ffffff",
   fontWeight: 600,
@@ -285,12 +282,12 @@ export default function WebhookIntegration() {
               <WebhookDeveloperGuide projectId={projectId} />
             </StepItem>
 
-            <StepItem n={2} title="Connect purchase events">
+            <StepItem n={2} title="Connect history sync">
               <Typography variant="caption" color="text.secondary">
-                Choose one method or use both. Historical sync imports past purchases and keeps new data up to date; real-time events arrive instantly.
+                Historical sync imports past events and keeps new data up to date.
               </Typography>
               <Stack gap={1.5} sx={{ mt: 1.5 }}>
-                <Card variant="outlined" sx={purchaseMethodCardSx}>
+                  <Card variant="outlined" sx={historySyncCardSx}>
                   <Stack gap={1.5}>
                     <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" gap={1}>
                       <Stack direction="row" gap={1.25} alignItems="center">
@@ -300,15 +297,15 @@ export default function WebhookIntegration() {
                         <Box>
                           <Stack direction="row" gap={1} alignItems="center" flexWrap="wrap">
                             <Typography variant="body2" fontWeight={600}>Historical &amp; ongoing sync</Typography>
-                            <Chip size="small" label="Every 2 minutes" sx={purchaseTimingBadgeSx} />
+                            <Chip size="small" label="Every 2 minutes" sx={historySyncTimingBadgeSx} />
                           </Stack>
-                          <Typography variant="caption" color="text.secondary">Import past purchases and keep new data up to date.</Typography>
+                          <Typography variant="caption" color="text.secondary">Import past events and keep new data up to date.</Typography>
                         </Box>
                       </Stack>
                       <Stack direction="row" alignItems="center" gap={0.75} sx={{ pl: { xs: 6.25, sm: 0 } }}>
-                        <Chip size="small" icon={<SyncRounded />} label="History" sx={purchaseFlowSourceChipSx} />
+                        <Chip size="small" icon={<SyncRounded />} label="History" sx={historySyncSourceChipSx} />
                         <ArrowForwardRounded fontSize="small" color="action" />
-                        <Chip size="small" icon={<LayersRounded />} label="PixlPush" sx={purchaseFlowTargetChipSx} />
+                        <Chip size="small" icon={<LayersRounded />} label="PixlPush" sx={historySyncTargetChipSx} />
                       </Stack>
                     </Stack>
                     {connected ? (
@@ -554,42 +551,6 @@ export default function WebhookIntegration() {
                     )}
                   </Stack>
                 </Card>
-
-                <Card variant="outlined" sx={purchaseMethodCardSx}>
-                  <Stack gap={1.5}>
-                    <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" gap={1}>
-                      <Stack direction="row" gap={1.25} alignItems="center">
-                        <Box sx={{ width: 40, height: 40, borderRadius: 1.5, display: "grid", placeItems: "center", bgcolor: "#ece3fb", color: "primary.main" }}>
-                          <BoltRounded />
-                        </Box>
-                        <Box>
-                          <Stack direction="row" gap={1} alignItems="center" flexWrap="wrap">
-                            <Typography variant="body2" fontWeight={600}>Real-time webhook</Typography>
-                            <Chip size="small" label="Instant" sx={purchaseTimingBadgeSx} />
-                          </Stack>
-                          <Typography variant="caption" color="text.secondary">Send each purchase as it happens.</Typography>
-                        </Box>
-                      </Stack>
-                      <Stack direction="row" alignItems="center" gap={0.75} sx={{ pl: { xs: 6.25, sm: 0 } }}>
-                        <Chip size="small" icon={<StorefrontRounded />} label="Your server" sx={purchaseFlowSourceChipSx} />
-                        <ArrowForwardRounded fontSize="small" color="action" />
-                        <Chip size="small" icon={<LayersRounded />} label="PixlPush" sx={purchaseFlowTargetChipSx} />
-                      </Stack>
-                    </Stack>
-                    {connected?.pushUrl && source && projectId ? (
-                      <WebhookPush projectId={projectId} sourceId={source.id} pushUrl={connected.pushUrl} canEdit={canControl} />
-                    ) : connected && sources.isLoading ? (
-                      <Alert severity="info">Loading your real-time webhook settings…</Alert>
-                    ) : connected ? (
-                      <Alert severity="info">Your webhook URL and push keys will be available after the first history sync.</Alert>
-                    ) : (
-                      <Alert severity="info" icon={<InfoOutlined />}>
-                        Connect your purchase history feed below to set up the webhook URL and manage push keys.
-                      </Alert>
-                    )}
-                  </Stack>
-                </Card>
-
 
               </Stack>
             </StepItem>
