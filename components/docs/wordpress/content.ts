@@ -101,7 +101,7 @@ When you are done, the PixlPush plugin is installed and active, a "Turn on notif
 ${automaticEvents.map(([name, where, what]) => `  - ${name} (${where}): ${what}`).join("\n")}
 - With "Track account and order events" enabled, the plugin also syncs profile changes and account deletions. It handles login/logout through the browser identity sync; do not add your own login/logout events or duplicate signup and purchase tracking.
 - WooCommerce purchase tracking skips guest orders and deduplicates the paid/completed callbacks with one stored eventId per order.
-- `page_viewed`, `page_left`, `signed_up`, and `purchase_completed` are already handled by the plugin when their settings/integrations apply. Only add distinct business events that the plugin does not already send.
+- \`page_viewed\`, \`page_left\`, \`signed_up\`, and \`purchase_completed\` are already handled by the plugin when their settings/integrations apply. Only add distinct business events that the plugin does not already send.
 - Settings live in Settings → PixlPush (wp-admin). They are entered by a person, not by code.
 - Server helpers: pixlpush_client() returns the configured PHP client (null when not configured); pixlpush_user_id($wpUserId) returns that user's PixlPush id.
 </plugin_facts>
