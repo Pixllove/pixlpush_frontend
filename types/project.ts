@@ -499,6 +499,8 @@ export type IntegrationSettings = {
       fetching?: boolean;
       /** Webhook: fetched events still being applied; the next fetch waits until this is 0. */
       applying?: number;
+      /** Webhook: records rejected because the plan's reachable-user limit is full. */
+      planLimited?: number;
       lastCheckedAt?: string | null;
       nextSyncAt?: string;
       /** Webhook only: where the customer's server pushes live events. */

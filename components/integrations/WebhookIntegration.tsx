@@ -29,6 +29,7 @@ import {
   InputAdornment,
   InputBase,
   Skeleton,
+  Snackbar,
   Stack,
   Switch,
   TextField,
@@ -183,6 +184,16 @@ export default function WebhookIntegration() {
   }, []);
   const overdueMs = connected?.syncEnabled && connected.nextSyncAt ? now - new Date(connected.nextSyncAt).getTime() : -1;
   const applying = connected?.applying ?? 0;
+  // Plan limit: toast when rejections first appear and whenever the number grows (not on every poll).
+  const planLimited = connected?.planLimited ?? 0;
+  const [planToastAt, setPlanToastAt] = useState(0);
+  const [planToastOpen, setPlanToastOpen] = useState(false);
+  useEffect(() => {
+    if (planLimited > planToastAt) {
+      setPlanToastAt(planLimited);
+      setPlanToastOpen(true);
+    }
+  }, [planLimited, planToastAt]);
   const busySync = syncNow.isPending || Boolean(connected?.fetching) || applying > 0 || (overdueMs >= 0 && overdueMs < 90_000);
   const status = integrationStatus(settings);
   const [url, setUrl] = useState("");
@@ -273,6 +284,27 @@ export default function WebhookIntegration() {
       {query.isError && (
         <Alert severity="error">{errorText(query.error)}</Alert>
       )}
+      <Snackbar
+        open={planToastOpen}
+        autoHideDuration={10_000}
+        onClose={(_, reason) => reason !== "clickaway" && setPlanToastOpen(false)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          severity="warning"
+          variant="filled"
+          onClose={() => setPlanToastOpen(false)}
+          action={
+            <Button component={NextLink} href="/dashboard/billing" color="inherit" size="small">
+              Upgrade plan
+            </Button>
+          }
+          sx={{ width: "100%", alignItems: "center" }}
+        >
+          Plan limit reached: {planLimited.toLocaleString()} new users from your server were not added. Existing
+          users keep syncing. Upgrade to add more.
+        </Alert>
+      </Snackbar>
       {error && (
         <Alert severity="error" onClose={() => { setError(""); setErrorDetails(null); }}>
           {error}
