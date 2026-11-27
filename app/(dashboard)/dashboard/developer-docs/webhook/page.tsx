@@ -1,4 +1,4 @@
-import { FEED_MAX_MB, FEED_MILLION_MINUTES, FEED_PAGE, FEED_PAGE_SIZE, FEED_TIMEOUT_SECONDS } from "@/lib/webhook-feed";
+import { FEED_FETCH, FEED_FETCH_SIZE, FEED_MAX_MB, FEED_MILLION_MINUTES, FEED_PAGE, FEED_TIMEOUT_SECONDS } from "@/lib/webhook-feed";
 import { ArrowBackRounded } from "@mui/icons-material";
 import { Box, Button, Card, CardContent, Stack, Typography } from "@mui/material";
 import DashboardFrame from "@/components/dashboard/DashboardFrame";
@@ -152,14 +152,14 @@ export default function WebhookDeveloperDocsPage() {
 
       <Section id="endpoint" title="Endpoint and authentication">
         <Body><p>Implement a read-only <code>GET</code> route such as <code>https://api.example.com/pixlpush/events</code>. It must be reachable over public HTTPS. Localhost, private network addresses, redirects, and invalid TLS certificates are rejected.</p></Body>
-        <CodeBlock language="HTTP" code={`GET /pixlpush/events?limit=${FEED_PAGE_SIZE}&since=2026-11-24T10%3A00%3A00.000Z&cursor=eyJ... HTTP/1.1\nHost: api.example.com\nAuthorization: Bearer <your-token>\nAccept: application/json`} />
+        <CodeBlock language="HTTP" code={`GET /pixlpush/events?limit=${FEED_FETCH_SIZE}&since=2026-11-24T10%3A00%3A00.000Z&cursor=eyJ... HTTP/1.1\nHost: api.example.com\nAuthorization: Bearer <your-token>\nAccept: application/json`} />
         <Callout tone="warning" title="Keep the feed token private">Generate a unique high-entropy token, store it in your server’s secret manager or environment, and compare it as a bearer credential. Do not put it in browser or mobile code, source control, or application logs. Rotate it by reconnecting with the replacement token.</Callout>
         <Body><p>Return <code>401</code> or <code>403</code> for invalid credentials. Return a successful JSON response only after the page has been read from your data store. The request has a {FEED_TIMEOUT_SECONDS} second timeout, and each response is limited to {FEED_MAX_MB} MB.</p></Body>
       </Section>
 
       <Section id="pagination" title="Request parameters and pagination">
         <DataTable headers={["Parameter", "Meaning"]} rows={[
-          [<code key="limit">limit</code>, `Events per page. PixlPush asks for ${FEED_PAGE_SIZE} and reads one page every 2 minutes until it reaches your last page. Never return more than limit events, and keep each page under ${FEED_MAX_MB} MB. Use limit as-is in your database LIMIT; do not cap or hardcode a page size.`],
+          [<code key="limit">limit</code>, `Events per request. PixlPush asks for ${FEED_FETCH_SIZE} at a time and follows next, reading up to ${FEED_PAGE} events per 2-minute cycle until it reaches your last page. Never return more than limit events, and keep each page under ${FEED_MAX_MB} MB. Use limit as-is in your database LIMIT; do not cap or hardcode a page size.`],
           [<code key="since">since</code>, "ISO timestamp checkpoint. Filter inclusively so events at the boundary are not lost."],
           [<code key="cursor">cursor</code>, "Opaque cursor returned in next. Use it to continue the same query on the next page."],
         ]} />
@@ -168,7 +168,7 @@ export default function WebhookDeveloperDocsPage() {
       </Section>
 
       <Section id="performance" title="Make the feed fast">
-        <Body><p>PixlPush waits up to {FEED_TIMEOUT_SECONDS} seconds for each page. Keep each {FEED_PAGE}-event page well within that:</p></Body>
+        <Body><p>PixlPush waits up to {FEED_TIMEOUT_SECONDS} seconds for each page. Aim for about a second per {FEED_FETCH}-event request:</p></Body>
         <Box component="ul" sx={{ pl: 2.5, m: 0, color: "text.secondary", "& li": { mb: 1 } }}>
           <li>Index the columns you order and filter by, for example <code>(occurred_at, id)</code>.</li>
           <li>Use a keyset cursor: <code>WHERE (occurred_at, id) &gt; (:time, :id) ORDER BY occurred_at, id LIMIT :limit</code>. Never use <code>OFFSET</code>; it gets slower on every page.</li>
@@ -258,7 +258,7 @@ export default function WebhookDeveloperDocsPage() {
           <li>Replay the same page and confirm every event keeps the same id and occurrence time.</li>
           <li>Open Integrations → Webhook in PixlPush, paste the public URL and token, and connect. The connection check requests one event before it is saved.</li>
         </Box>
-        <Callout tone="success" title="After connecting">PixlPush reads one page of up to {FEED_PAGE} events every 2 minutes, so a first import of 1,000,000 events takes about {FEED_MILLION_MINUTES} minutes; after that each run picks up only new events. The status shows “Importing” until it is up to date. Check profile fields and plans under Map data, and turn on the segments you want.</Callout>
+        <Callout tone="success" title="After connecting">Every 2 minutes PixlPush reads up to {FEED_PAGE} events ({FEED_FETCH} per request) and applies them before the next cycle, so a first import of 1,000,000 events takes at least {FEED_MILLION_MINUTES} minutes; after that each run picks up only new events. The status shows “Importing” until it is up to date. Check profile fields and plans under Map data, and turn on the segments you want.</Callout>
       </Section>
     </Stack>
   </DashboardFrame>;

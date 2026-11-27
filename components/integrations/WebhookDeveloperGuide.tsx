@@ -24,7 +24,7 @@ import {
 } from "@mui/material";
 import Link from "next/link";
 import { onboardingApi } from "@/lib/projects/api";
-import { FEED_MAX_MB, FEED_PAGE, FEED_PAGE_SIZE, FEED_TIMEOUT_SECONDS } from "@/lib/webhook-feed";
+import { FEED_FETCH, FEED_FETCH_SIZE, FEED_MAX_MB, FEED_PAGE, FEED_TIMEOUT_SECONDS } from "@/lib/webhook-feed";
 
 /** One source for the on-screen guide and the copied AI prompt, so they never drift apart. */
 const EXAMPLE = `{
@@ -123,7 +123,7 @@ const STEPS = [
 ];
 
 const PAGING =
-  `PixlPush reads one page of up to ${FEED_PAGE} events every 2 minutes (limit=${FEED_PAGE_SIZE}) until it reaches your last page; never return more than limit events, and keep each page under ${FEED_MAX_MB} MB. To keep it fast: index the columns you order and filter by (time, id), read one page per request with a keyset query (WHERE (time, id) > cursor ORDER BY time, id LIMIT n) instead of OFFSET, and select only the columns you send. It may include since=<ISO timestamp> to restart from a checkpoint; include events at that exact time so retries cannot skip them. When more results remain, return next as a non-empty opaque cursor and return the next page for that cursor. Return next:null on the final page. Keep ordering stable across pages, and keep event ids stable because PixlPush uses them to ignore repeats.`;
+  `Every 2 minutes PixlPush reads up to ${FEED_PAGE} events, ${FEED_FETCH} per request (limit=${FEED_FETCH_SIZE}), following next, and applies them before the next cycle; never return more than limit events, and keep each page under ${FEED_MAX_MB} MB. To keep it fast: index the columns you order and filter by (time, id), read one page per request with a keyset query (WHERE (time, id) > cursor ORDER BY time, id LIMIT n) instead of OFFSET, and select only the columns you send. It may include since=<ISO timestamp> to restart from a checkpoint; include events at that exact time so retries cannot skip them. When more results remain, return next as a non-empty opaque cursor and return the next page for that cursor. Return next:null on the final page. Keep ordering stable across pages, and keep event ids stable because PixlPush uses them to ignore repeats.`;
 
 const DEVELOPER_DOCS = "/dashboard/developer-docs/webhook";
 
@@ -146,13 +146,13 @@ function aiPrompt() {
     "- Require Authorization: Bearer <token>. Compare it in constant time, keep the token in environment/secret storage, and never log or return it. Return 401 for a missing or wrong token.",
     `- Accept limit, since (ISO timestamp, inclusive) and cursor query parameters. Return {"data":[...events],"next":"opaque-cursor"}; use next:null on the last page. Return 400 for invalid parameters.`,
     "- Use the limit query parameter PixlPush sends directly as your database LIMIT; do not hardcode, cap or validate a page size. PixlPush decides how many events it asks for.",
-    `- Make each page fast: index (time, id), use a keyset query (WHERE (time, id) > cursor ORDER BY time, id LIMIT limit), never OFFSET, and select only the columns you send. A ${FEED_PAGE}-event page must return well within ${FEED_TIMEOUT_SECONDS} seconds.`,
+    `- Make each page fast: index (time, id), use a keyset query (WHERE (time, id) > cursor ORDER BY time, id LIMIT limit), never OFFSET, and select only the columns you send. A ${FEED_FETCH}-event request should return in about a second, and must finish within ${FEED_TIMEOUT_SECONDS} seconds.`,
     "- If you merge several tables with UNION / UNION ALL, give every branch identical column aliases (AS id, AS event_name, AS time, ...), not just the first one. Inside each branch, ORDER BY the real source columns (e.g. ORDER BY p.\"expirationDate\", id_expr) or wrap the union in an outer SELECT and order there; never ORDER BY an alias a branch does not define, or Postgres fails with: column \"time\" does not exist. Test the query once with since, once with a cursor, and once with limit=1 before shipping.",
     "- Return every error as JSON with a precise, human-readable reason: {\"error\":{\"code\":\"INVALID_CURSOR\",\"message\":\"cursor is not valid\"}}. Use 400 for bad parameters (name the parameter and the value rule), 401 for a missing or wrong token, and 500 only for real server failures (message like \"database query failed\", never stack traces, SQL, tokens or user data). PixlPush shows this message to the developer exactly as sent.",
     "- Order events by (time, id). Make the cursor opaque and stable, and never skip or repeat events at page boundaries or at the since boundary. If the database stores times without a timezone, compare in UTC.",
     "- Build events only from real data that already exists. Do not create new tables. Every event needs a stable unique id (derive it from the source row, e.g. purchase_<rowId>), event_name, user_id and the real time it happened.",
     "- Map billing data to the documented lifecycle events, one event per change, with the exact product_id (e.g. premium_monthly, vip_monthly), billing_period (weekly, monthly, quarterly, yearly, or one_time for one-time payments such as coin packs) and expires_at when access has an end date: start, renewal, one-time purchase (purchase), cancellation (subscription_canceled), payment failure (subscription_billing_retry), restore (subscription_restored, or purchase_restored for one-time purchases), expiry (subscription_expired / trial_expired) and refund (subscription_refunded). Use these exact event names; any other name shows as \"needs mapping\" in PixlPush until someone maps it by hand. PixlPush keeps a separate state per product and uses these for segment membership rules, so send cancellations and renewals, not only purchases. Map segment changes to segment_entered/segment_exited with segment (the segment’s name).",
-    `- Always honour limit: never return more than limit events per page (PixlPush asks for ${FEED_PAGE_SIZE}, one page every 2 minutes) and keep each page under ${FEED_MAX_MB} MB.`,
+    `- Always honour limit: never return more than limit events per page (PixlPush asks for ${FEED_FETCH_SIZE} per request, up to ${FEED_PAGE} per 2-minute cycle) and keep each page under ${FEED_MAX_MB} MB.`,
     "- On every event, include user with the user’s current profile from the database: email, name, language, country, region, timezone, user_type, account_status, platform, email_consent, push_consent. Leave out keys you do not have; do not send null or empty strings. Send email_consent/push_consent only when the user actually made a choice (never guess).",
     "- Optional real-time delivery: keep the GET feed as the source for history and recovery, and also POST each live business event to the exact Push URL displayed in Integrations → Webhook. Use POST <push URL> with Content-Type: application/json and Authorization: Bearer <push key>. Create a separate Push key on that Webhook page; it is scoped to records:write and must stay in server-side secret storage. Never put it in a browser, mobile app, logs, or source control. The feed token and Push key are different credentials for different directions.",
     "- Send one event object or {\"data\":[...]} with 1–500 events per request (2 MB request limit). Use the same complete event payload and stable id in the push request and GET feed. PixlPush deduplicates by event id across push, pull, and retries. Do not generate a new id per delivery attempt, alter an event under an existing id, or emit the same business action from multiple hooks/SDKs; this can create duplicate activity and downstream journey/notification effects. Choose one canonical event producer and use a durable outbox with a unique event id if this app already has one.",
@@ -163,7 +163,7 @@ function aiPrompt() {
     "- After implementing, run the relevant checks and summarize changed files, configuration and deployment steps. Do not claim checks passed unless you ran them.",
     "",
     "PixlPush endpoint contract:",
-    `GET https://your-domain.example/pixlpush/events?limit=${FEED_PAGE_SIZE}&since=<ISO timestamp>&cursor=<opaque cursor>`,
+    `GET https://your-domain.example/pixlpush/events?limit=${FEED_FETCH_SIZE}&since=<ISO timestamp>&cursor=<opaque cursor>`,
     "Authorization: Bearer <secret token>",
     "Accept: application/json",
     "POST <exact Push URL copied from Integrations → Webhook>",

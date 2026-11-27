@@ -497,6 +497,8 @@ export type IntegrationSettings = {
       importing?: boolean;
       /** A batch is being fetched right now. */
       fetching?: boolean;
+      /** Webhook: fetched events still being applied; the next fetch waits until this is 0. */
+      applying?: number;
       lastCheckedAt?: string | null;
       nextSyncAt?: string;
       /** Webhook only: where the customer's server pushes live events. */

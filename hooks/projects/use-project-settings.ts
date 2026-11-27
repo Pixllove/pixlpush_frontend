@@ -86,7 +86,7 @@ export function integrationPollMs(data: IntegrationSettings | undefined, failure
   if (failures > 0) return Math.min(5_000 * 2 ** failures, 300_000);
   if (!data?.connected || !data.syncEnabled) return false;
   // Running, or queued by "Sync now" and waiting for the worker to pick it up.
-  if (data.fetching || (data.syncing && !data.importing)) return 5_000;
+  if (data.fetching || data.applying || (data.syncing && !data.importing)) return 5_000;
   if (!data.nextSyncAt) return 60_000;
   const untilDue = new Date(data.nextSyncAt).getTime() - Date.now();
   // Due or overdue: the worker is about to sync or is syncing, so check often until it reports back.

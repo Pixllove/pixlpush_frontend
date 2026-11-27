@@ -184,7 +184,8 @@ export default function WebhookIntegration() {
     return () => window.clearInterval(timer);
   }, []);
   const overdueMs = connected?.syncEnabled && connected.nextSyncAt ? now - new Date(connected.nextSyncAt).getTime() : -1;
-  const busySync = syncNow.isPending || Boolean(connected?.fetching) || (overdueMs >= 0 && overdueMs < 90_000);
+  const applying = connected?.applying ?? 0;
+  const busySync = syncNow.isPending || Boolean(connected?.fetching) || applying > 0 || (overdueMs >= 0 && overdueMs < 90_000);
   const status = integrationStatus(settings);
   const [url, setUrl] = useState("");
   const [token, setToken] = useState("");
@@ -536,9 +537,11 @@ export default function WebhookIntegration() {
                                   : "Waiting for first sync"}
                               </Typography>
                               <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: { sm: "nowrap" } }}>
-                                Next sync: {nextSyncAt
-                                  ? formatUserTime(nextSyncAt)
-                                  : "Paused"}
+                                Next sync: {applying > 0
+                                  ? "after this batch is applied"
+                                  : nextSyncAt
+                                    ? formatUserTime(nextSyncAt)
+                                    : "Paused"}
                               </Typography>
                             </Stack>
                           </Stack>
@@ -556,7 +559,7 @@ export default function WebhookIntegration() {
                               startIcon={busySync ? <CircularProgress size={16} color="inherit" /> : undefined}
                               sx={{ minWidth: 104, minHeight: 36, whiteSpace: "nowrap" }}
                             >
-                              {busySync ? "Syncing…" : "Sync now"}
+                              {applying > 0 ? `Applying ${applying.toLocaleString()}…` : busySync ? "Syncing…" : "Sync now"}
                             </Button>
                             <FormControlLabel
                               sx={{
