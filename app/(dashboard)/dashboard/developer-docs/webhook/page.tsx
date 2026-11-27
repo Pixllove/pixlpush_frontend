@@ -1,4 +1,4 @@
-import { FEED_FETCH, FEED_FETCH_SIZE, FEED_MAX_MB, FEED_MILLION_MINUTES, FEED_PAGE, FEED_TIMEOUT_SECONDS } from "@/lib/webhook-feed";
+import { FEED_FETCH, FEED_FETCH_SIZE, FEED_MAX_MB, FEED_PAGE, FEED_TIMEOUT_SECONDS } from "@/lib/webhook-feed";
 import { ArrowBackRounded } from "@mui/icons-material";
 import { Box, Button, Card, CardContent, Stack, Typography } from "@mui/material";
 import DashboardFrame from "@/components/dashboard/DashboardFrame";
@@ -258,7 +258,7 @@ export default function WebhookDeveloperDocsPage() {
           <li>Replay the same page and confirm every event keeps the same id and occurrence time.</li>
           <li>Open Integrations → Webhook in PixlPush, paste the public URL and token, and connect. The connection check requests one event before it is saved.</li>
         </Box>
-        <Callout tone="success" title="After connecting">Every 2 minutes PixlPush reads up to {FEED_PAGE} events ({FEED_FETCH} per request) and applies them before the next cycle, so a first import of 1,000,000 events takes at least {FEED_MILLION_MINUTES} minutes; after that each run picks up only new events. The status shows “Importing” until it is up to date. Check profile fields and plans under Map data, and turn on the segments you want.</Callout>
+        <Callout tone="success" title="After connecting">While importing, PixlPush reads your feed continuously ({FEED_FETCH} events per request, one at a time) up to {FEED_PAGE} events ahead of what it has applied, and applies them in parallel; once caught up it checks every 2 minutes. Import time depends mostly on applying, about 1 to 3 minutes per {FEED_PAGE} events; after that each run picks up only new events. The status shows “Importing” until it is up to date. Check profile fields and plans under Map data, and turn on the segments you want.</Callout>
       </Section>
     </Stack>
   </DashboardFrame>;
