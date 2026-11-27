@@ -49,6 +49,28 @@ const CONFIG_ROLES = ["owner", "admin", "developer"];
 const errorText = (error: unknown) =>
   (error as { message?: string })?.message ??
   "Something went wrong. Please try again.";
+/** Exact error from the customer's backend, like a developer console would show it. */
+function TechnicalDetails({ error }: { error: unknown }) {
+  const { code, details } = (error ?? {}) as { code?: string; details?: Record<string, unknown> };
+  if (!details || typeof details !== "object" || !("upstreamError" in details || "upstreamStatus" in details)) return null;
+  const rows: [string, unknown][] = [
+    ["Error code", code],
+    ["Request", details.request],
+    ["Response status", details.upstreamStatus ? `${details.upstreamStatus} ${details.upstreamStatusText ?? ""}`.trim() : null],
+    ["Response error", details.upstreamError],
+  ];
+  const text = rows.filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`).join("\n");
+  return (
+    <Box component="details" sx={{ mt: 1 }}>
+      <Box component="summary" sx={{ cursor: "pointer", fontWeight: 600 }}>Technical details</Box>
+      <Box component="pre" sx={{ mt: 1, p: 1.5, borderRadius: 1, bgcolor: "action.hover", fontSize: 12, whiteSpace: "pre-wrap", wordBreak: "break-all", fontFamily: "monospace" }}>
+        {text}
+      </Box>
+      <Button size="small" onClick={() => navigator.clipboard?.writeText(text)}>Copy</Button>
+    </Box>
+  );
+}
+
 /**
  * A URL next to a password field looks like a login form, so browser autofill and
  * password-manager extensions rewrite it while React writes it back, which loops.
@@ -169,6 +191,7 @@ export default function WebhookIntegration() {
   const [showSavedToken, setShowSavedToken] = useState(false);
   const [revealingSavedToken, setRevealingSavedToken] = useState(false);
   const [error, setError] = useState("");
+  const [errorDetails, setErrorDetails] = useState<unknown>(null);
 
   useEffect(() => {
     setSavedToken("");
@@ -193,6 +216,7 @@ export default function WebhookIntegration() {
       await action();
     } catch (cause) {
       setError(errorText(cause));
+      setErrorDetails(cause);
     }
   };
   const submit = () =>
@@ -236,8 +260,9 @@ export default function WebhookIntegration() {
         <Alert severity="error">{errorText(query.error)}</Alert>
       )}
       {error && (
-        <Alert severity="error" onClose={() => setError("")}>
+        <Alert severity="error" onClose={() => { setError(""); setErrorDetails(null); }}>
           {error}
+          <TechnicalDetails error={errorDetails} />
         </Alert>
       )}
       {!canEdit && active && (
