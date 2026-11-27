@@ -1,3 +1,4 @@
+import { FEED_MAX_MB, FEED_MILLION_MINUTES, FEED_PAGE, FEED_PAGE_SIZE, FEED_TIMEOUT_SECONDS } from "@/lib/webhook-feed";
 import { ArrowBackRounded } from "@mui/icons-material";
 import { Box, Button, Card, CardContent, Stack, Typography } from "@mui/material";
 import DashboardFrame from "@/components/dashboard/DashboardFrame";
@@ -61,14 +62,11 @@ function validBearer(header: string | undefined) {
 app.get("/pixlpush/events", async (req, res, next) => {
   try {
     if (!validBearer(req.header("authorization"))) {
-      return res.status(401).json({ error: "Unauthorized" });
+      return res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Missing or wrong bearer token" } });
     }
 
-    const requestedLimit = Number(req.query.limit ?? 2500);
-    if (!Number.isInteger(requestedLimit) || requestedLimit < 1 || requestedLimit > 2500) {
-      return res.status(400).json({ error: "limit must be an integer from 1 to 2500" });
-    }
-    const limit = requestedLimit;
+    // PixlPush decides the page size: use it as your database LIMIT, no cap.
+    const limit = Number(req.query.limit);
     const since = typeof req.query.since === "string" ? req.query.since : undefined;
     const cursor = typeof req.query.cursor === "string" ? req.query.cursor : undefined;
 
@@ -130,20 +128,38 @@ export default function WebhookDeveloperDocsPage() {
         <Typography color="text.secondary" sx={{ mt: 1, maxWidth: 760 }}>The Webhook integration is a server-to-server pull feed. PixlPush makes authenticated GET requests to an endpoint in your application and imports the returned user, subscription, and event data.</Typography>
         <Stack direction="row" gap={1} flexWrap="wrap" sx={{ mt: 2 }}>
           <LinkButton href="/dashboard/integrations/webhook" variant="contained">Open Webhook setup</LinkButton>
+          <Button href="#manual-setup" variant="outlined">Step-by-step setup</Button>
           <Button href="#endpoint" variant="outlined">Read endpoint contract</Button>
         </Stack>
       </CardContent></Card>
 
+      <Section id="manual-setup" title="Set up step by step (without the AI prompt)">
+        <Box component="ol" sx={{ pl: 2.5, m: 0, color: "text.secondary", "& li": { mb: 1.5 } }}>
+          <li><strong>Look at your backend.</strong> Note your framework, router, database and ORM, and open your real schema. Find the tables for users, purchases or subscriptions, and billing history, and write down their exact column names.</li>
+          <li><strong>Generate a token.</strong> Run <code>openssl rand -hex 32</code> and store the result as a server secret, for example <code>PIXLPUSH_FEED_TOKEN</code>. Never commit it or put it in app code.</li>
+          <li><strong>Add the route.</strong> Create a public <code>GET /pixlpush/events</code> route next to your existing routes, following their structure.</li>
+          <li><strong>Check the token.</strong> Read <code>Authorization: Bearer &lt;token&gt;</code>, compare it in constant time, and return <code>401</code> with a JSON error when it is missing or wrong.</li>
+          <li><strong>Read the parameters.</strong> <code>limit</code> is the page size PixlPush asks for: pass it straight to your database <code>LIMIT</code>, with no cap or check of your own. <code>since</code> is an optional ISO timestamp; <code>cursor</code> is the opaque value you returned as <code>next</code>. Return <code>400</code> with a clear JSON message for invalid values.</li>
+          <li><strong>Map your rows to events.</strong> Each source row becomes one event with a stable <code>id</code> (e.g. <code>purchase_123</code>), an <code>event_name</code> from the event list below, <code>user_id</code>, and the real <code>time</code> it happened. Subscription events need <code>product_id</code>, <code>billing_period</code> and <code>expires_at</code> when known.</li>
+          <li><strong>Write the query.</strong> Filter <code>time &gt;= since</code>, continue after the cursor with <code>WHERE (time, id) &gt; (:time, :id)</code>, <code>ORDER BY time, id</code>, and fetch <code>limit + 1</code> rows to know if there is a next page. Index <code>(time, id)</code> and never use <code>OFFSET</code>. If you combine tables with <code>UNION</code>, give every part the same column names.</li>
+          <li><strong>Add the user profile.</strong> Load the profiles for the whole page in one query and put them in <code>user</code> on each event: email, name, language, country, timezone, consent and so on. Leave out keys you do not have.</li>
+          <li><strong>Return the page.</strong> Send <code>{'{"data": [...], "next": "cursor"}'}</code>, with <code>next: null</code> on the last page. Encode the last event&apos;s time and id as the cursor, for example base64 JSON.</li>
+          <li><strong>Return clear errors.</strong> Every error is JSON like <code>{'{"error": {"code": "INVALID_CURSOR", "message": "cursor is not valid"}}'}</code>. PixlPush shows this message exactly as sent, so never include stack traces, SQL or tokens.</li>
+          <li><strong>Test it.</strong> Call it with <code>curl -H &quot;Authorization: Bearer $TOKEN&quot; &quot;https://api.example.com/pixlpush/events?limit=1&quot;</code>, then with a wrong token, a <code>since</code> value, and the returned cursor. Check there are no gaps or duplicates between pages.</li>
+          <li><strong>Deploy and connect.</strong> Deploy it on public HTTPS, open Integrations → Webhook, paste the URL and token, and click Connect. If it fails, open Technical details to see your endpoint&apos;s exact response.</li>
+        </Box>
+      </Section>
+
       <Section id="endpoint" title="Endpoint and authentication">
         <Body><p>Implement a read-only <code>GET</code> route such as <code>https://api.example.com/pixlpush/events</code>. It must be reachable over public HTTPS. Localhost, private network addresses, redirects, and invalid TLS certificates are rejected.</p></Body>
-        <CodeBlock language="HTTP" code={'GET /pixlpush/events?limit=2500&since=2026-11-24T10%3A00%3A00.000Z&cursor=eyJ... HTTP/1.1\nHost: api.example.com\nAuthorization: Bearer <your-token>\nAccept: application/json'} />
+        <CodeBlock language="HTTP" code={`GET /pixlpush/events?limit=${FEED_PAGE_SIZE}&since=2026-11-24T10%3A00%3A00.000Z&cursor=eyJ... HTTP/1.1\nHost: api.example.com\nAuthorization: Bearer <your-token>\nAccept: application/json`} />
         <Callout tone="warning" title="Keep the feed token private">Generate a unique high-entropy token, store it in your server’s secret manager or environment, and compare it as a bearer credential. Do not put it in browser or mobile code, source control, or application logs. Rotate it by reconnecting with the replacement token.</Callout>
-        <Body><p>Return <code>401</code> or <code>403</code> for invalid credentials. Return a successful JSON response only after the page has been read from your data store. The request has a 15 second timeout, and each response is limited to 5 MB.</p></Body>
+        <Body><p>Return <code>401</code> or <code>403</code> for invalid credentials. Return a successful JSON response only after the page has been read from your data store. The request has a {FEED_TIMEOUT_SECONDS} second timeout, and each response is limited to {FEED_MAX_MB} MB.</p></Body>
       </Section>
 
       <Section id="pagination" title="Request parameters and pagination">
         <DataTable headers={["Parameter", "Meaning"]} rows={[
-          [<code key="limit">limit</code>, "Events per page. PixlPush asks for 2500 and reads one page every 2 minutes until it reaches your last page. Never return more than limit events, and keep each page under 5 MB."],
+          [<code key="limit">limit</code>, `Events per page. PixlPush asks for ${FEED_PAGE_SIZE} and reads one page every 2 minutes until it reaches your last page. Never return more than limit events, and keep each page under ${FEED_MAX_MB} MB. Use limit as-is in your database LIMIT; do not cap or hardcode a page size.`],
           [<code key="since">since</code>, "ISO timestamp checkpoint. Filter inclusively so events at the boundary are not lost."],
           [<code key="cursor">cursor</code>, "Opaque cursor returned in next. Use it to continue the same query on the next page."],
         ]} />
@@ -152,7 +168,7 @@ export default function WebhookDeveloperDocsPage() {
       </Section>
 
       <Section id="performance" title="Make the feed fast">
-        <Body><p>PixlPush waits up to 15 seconds for each page. Aim for well under a second per 2,500-event page:</p></Body>
+        <Body><p>PixlPush waits up to {FEED_TIMEOUT_SECONDS} seconds for each page. Keep each {FEED_PAGE}-event page well within that:</p></Body>
         <Box component="ul" sx={{ pl: 2.5, m: 0, color: "text.secondary", "& li": { mb: 1 } }}>
           <li>Index the columns you order and filter by, for example <code>(occurred_at, id)</code>.</li>
           <li>Use a keyset cursor: <code>WHERE (occurred_at, id) &gt; (:time, :id) ORDER BY occurred_at, id LIMIT :limit</code>. Never use <code>OFFSET</code>; it gets slower on every page.</li>
@@ -242,7 +258,7 @@ export default function WebhookDeveloperDocsPage() {
           <li>Replay the same page and confirm every event keeps the same id and occurrence time.</li>
           <li>Open Integrations → Webhook in PixlPush, paste the public URL and token, and connect. The connection check requests one event before it is saved.</li>
         </Box>
-        <Callout tone="success" title="After connecting">PixlPush reads one page of up to 2,500 events every 2 minutes, so a first import of 100,000 events takes about 80 minutes; after that each run picks up only new events. The status shows “Importing” until it is up to date. Check profile fields and plans under Map data, and turn on the segments you want.</Callout>
+        <Callout tone="success" title="After connecting">PixlPush reads one page of up to {FEED_PAGE} events every 2 minutes, so a first import of 1,000,000 events takes about {FEED_MILLION_MINUTES} minutes; after that each run picks up only new events. The status shows “Importing” until it is up to date. Check profile fields and plans under Map data, and turn on the segments you want.</Callout>
       </Section>
     </Stack>
   </DashboardFrame>;

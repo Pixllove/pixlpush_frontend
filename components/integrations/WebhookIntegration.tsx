@@ -563,7 +563,20 @@ export default function WebhookIntegration() {
                               size="small"
                               color="error"
                               disabled={!canEdit || disconnect.isPending}
-                              onClick={() => run(() => disconnect.mutateAsync())}
+                              onClick={() =>
+                                run(async () => {
+                                  // Keep URL and token in the form so reconnecting is one click.
+                                  const keepUrl = connected.serverUrl ?? `https://${connected.accountLabel}`;
+                                  const keepToken =
+                                    savedToken ||
+                                    (projectId
+                                      ? await integrationsApi.revealWebhookToken(projectId).then((r) => r.token).catch(() => "")
+                                      : "");
+                                  await disconnect.mutateAsync();
+                                  setUrl(keepUrl);
+                                  setToken(keepToken);
+                                })
+                              }
                               sx={{ minHeight: 36, whiteSpace: "nowrap" }}
                             >
                               {disconnect.isPending ? "Disconnecting…" : "Disconnect"}

@@ -1,0 +1,14 @@
+/**
+ * Webhook feed page settings shown in the docs, the AI prompt and the setup guide.
+ * Change them here and every page follows. Keep equal to FEED_PAGE_SIZE / FEED_MAX_MB /
+ * FEED_TIMEOUT_MS in the backend (src/modules/integrations/providers/webhook.ts).
+ * Production: 2500 / 5 / 15. TESTING now: 50000 / 60 / 60.
+ */
+export const FEED_PAGE_SIZE = 50000;
+export const FEED_MAX_MB = 60;
+export const FEED_TIMEOUT_SECONDS = 60;
+
+/** "50,000" — for prose. FEED_PAGE_SIZE is the raw value for URLs and code. */
+export const FEED_PAGE = FEED_PAGE_SIZE.toLocaleString("en-US");
+/** First import of 1,000,000 events, one page every 2 minutes. */
+export const FEED_MILLION_MINUTES = Math.ceil(1_000_000 / FEED_PAGE_SIZE) * 2;
