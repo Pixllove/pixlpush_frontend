@@ -194,7 +194,7 @@ export default function WebhookIntegration() {
       setPlanToastOpen(true);
     }
   }, [planLimited, planToastAt]);
-  const busySync = syncNow.isPending || Boolean(connected?.fetching) || applying > 0 || (overdueMs >= 0 && overdueMs < 90_000);
+  const busySync = syncNow.isPending || Boolean(connected?.fetching) || applying > 0 || Boolean(connected?.importing && connected.syncEnabled) || (overdueMs >= 0 && overdueMs < 90_000);
   const status = integrationStatus(settings);
   const [url, setUrl] = useState("");
   const [token, setToken] = useState("");
@@ -567,11 +567,9 @@ export default function WebhookIntegration() {
                                   : "Waiting for first sync"}
                               </Typography>
                               <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: { sm: "nowrap" } }}>
-                                Next sync: {applying > 0
-                                  ? "after this batch is applied"
-                                  : nextSyncAt
-                                    ? formatUserTime(nextSyncAt)
-                                    : "Paused"}
+                                {connected.importing && connected.syncEnabled
+                                  ? "Next sync: runs continuously until your history is imported, then every 2 minutes"
+                                  : `Next sync: ${nextSyncAt ? formatUserTime(nextSyncAt) : "Paused"}`}
                               </Typography>
                             </Stack>
                           </Stack>
@@ -589,7 +587,9 @@ export default function WebhookIntegration() {
                               startIcon={busySync ? <CircularProgress size={16} color="inherit" /> : undefined}
                               sx={{ minWidth: 104, minHeight: 36, whiteSpace: "nowrap" }}
                             >
-                              {applying > 0 ? `Applying ${applying.toLocaleString()}…` : busySync ? "Syncing…" : "Sync now"}
+                              {connected.importing && connected.syncEnabled
+                                ? applying > 0 ? `Importing · ${applying.toLocaleString()} to apply` : "Importing…"
+                                : applying > 0 ? `Applying ${applying.toLocaleString()}…` : busySync ? "Syncing…" : "Sync now"}
                             </Button>
                             <FormControlLabel
                               sx={{
