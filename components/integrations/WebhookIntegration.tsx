@@ -45,7 +45,6 @@ import { integrationStatus } from "./registry";
 import WebhookDeveloperGuide from "./WebhookDeveloperGuide";
 import WebhookMapping, { webhookSwitchSx } from "./WebhookMapping";
 
-const CONFIG_ROLES = ["owner", "admin", "developer"];
 const errorText = (error: unknown) =>
   (error as { message?: string })?.message ??
   "Something went wrong. Please try again.";
@@ -161,10 +160,9 @@ export default function WebhookIntegration() {
   const { active } = useActiveProject();
   const { account } = useCurrentUser();
   const projectId = active?.id;
-  const canEdit = Boolean(active && CONFIG_ROLES.includes(active.role));
-  const canControl = Boolean(
-    active && ["owner", "admin"].includes(active.role),
-  );
+  // TEMPORARY: every project member can use the webhook (matches the backend for now).
+  const canEdit = Boolean(active);
+  const canControl = Boolean(active);
   const { query, connect, setSyncEnabled, syncNow, disconnect } =
     useIntegration(projectId, "webhook");
   const settings = query.data;
