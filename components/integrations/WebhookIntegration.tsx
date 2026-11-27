@@ -175,14 +175,34 @@ export default function WebhookIntegration() {
   const tokenKept = Boolean(kept?.tokenSaved);
   const lastSyncAt = connected?.lastCheckedAt ?? connected?.lastSyncedAt;
   const nextSyncAt = connected?.syncEnabled ? connected.nextSyncAt : undefined;
-  // Spinner only while a run really holds the lock (the server reports it), never just because a
-  // sync is due or an import is unfinished: a crashed run then shows its error instead of spinning.
-  const busySync = syncNow.isPending || Boolean(connected?.fetching);
+  // Cron-like: "Syncing…" while the worker runs (server-reported lock), or for up to 90 s after a
+  // sync is due (the worker cron picks it up within a minute). Otherwise "Sync now" + next time.
+  // "Sync now" just makes it due now, so it follows exactly the same path.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const overdueMs = connected?.syncEnabled && connected.nextSyncAt ? now - new Date(connected.nextSyncAt).getTime() : -1;
+  const busySync = syncNow.isPending || Boolean(connected?.fetching) || (overdueMs >= 0 && overdueMs < 90_000);
   const status = integrationStatus(settings);
   const [url, setUrl] = useState("");
   const [token, setToken] = useState("");
   const [showToken, setShowToken] = useState(false);
   const [savedToken, setSavedToken] = useState("");
+  // Disconnected but kept: load the saved token into the field, masked until the eye is clicked.
+  const [keptToken, setKeptToken] = useState("");
+  useEffect(() => {
+    if (!tokenKept || !projectId || !canEdit) return;
+    let live = true;
+    integrationsApi
+      .revealWebhookToken(projectId)
+      .then((result) => live && (setKeptToken(result.token), setToken(result.token)))
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [tokenKept, projectId, canEdit]);
   const [showSavedToken, setShowSavedToken] = useState(false);
   const [revealingSavedToken, setRevealingSavedToken] = useState(false);
   const [error, setError] = useState("");
@@ -431,7 +451,8 @@ export default function WebhookIntegration() {
                             // Masked text, not type="password": a URL plus a password field looks like
                             // a login form to password managers.
                             type="text"
-                            defaultValue=""
+                            key={keptToken}
+                            defaultValue={keptToken}
                             placeholder={tokenKept ? "Saved token is kept — leave empty to reuse it" : undefined}
                             disabled={!canEdit}
                             autoComplete="off"

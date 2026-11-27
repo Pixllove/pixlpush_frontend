@@ -111,8 +111,8 @@ const profileFields = [
 
 const lifecycleEvents = [
   ["Trial", "trial_started, trial_canceled, trial_cancelled, trial_converted, trial_expired, trial_billing_retry, trial_billing_retry_entered"],
-  ["One-time payment", "purchase, one_time_purchase (coin packs, credits, lifetime unlocks; send product_id)"],
-  ["Subscription", "subscription_started, subscription_renewed, subscription_upgraded, subscription_downgraded, subscription_product_changed"],
+  ["One-time payment", "purchase, one_time_purchase, purchase_restored (coin packs, credits, lifetime unlocks; send product_id)"],
+  ["Subscription", "subscription_started, subscription_renewed, subscription_restored, subscription_upgraded, subscription_downgraded, subscription_product_changed"],
   ["Cancellation and access", "subscription_canceled, subscription_cancelled, subscription_renew_restored, will_renew, subscription_expired, subscription_refunded, in_app_refunded, subscription_revoked"],
   ["Billing retry", "subscription_billing_retry, subscription_billing_retry_entered"],
   ["Account and segments", "account_paused, account_resumed, account_deleted, segment_entered, segment_exited"],
