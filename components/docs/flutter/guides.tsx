@@ -303,7 +303,7 @@ export function Push({ base }: FlutterGuideProps) {
       <Body>Initialize once after <code>Firebase.initializeApp()</code>. The adapter registers Firebase listeners, local notification callbacks, token refresh and the terminated-app launch response.</Body>
     </Section>
     <Section id="permission" title="Permission and token sync">
-      <CodeTabs label="Permission timing" group="flutter-permission" options={{ "Request during startup": { code: code.push, language: "Dart" }, "Request from your UI": { code: code.permission, language: "Dart" } }} />
+      <CodeTabs label="Permission timing" group="flutter-permission" options={{ "Initialize without prompting": { code: code.push, language: "Dart" }, "Request from your UI": { code: code.permission, language: "Dart" } }} />
       <Body>Use <code>requestPermission: false</code> when your onboarding or settings screen owns the prompt. Call <code>requestPermission()</code> there; the adapter updates permission and token state.</Body>
     </Section>
     <Section id="permission-changes" title="Permission changes in Settings">

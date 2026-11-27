@@ -118,6 +118,7 @@ const STEPS = [
   "Return events as JSON in stable time order, using the format and paging rules below. Put the user’s current profile in user on every event.",
   "Make it a public HTTPS URL. Localhost, private network addresses and invalid TLS certificates do not work.",
   "Send the URL and the token to the person setting up PixlPush. They paste both on the Webhook page.",
+  "Optional real time: your backend can POST each canonical business event to the Push URL shown on Integrations → Webhook. Create a separate Push key there with records:write; keep both the key and POST request on your server.",
 ];
 
 const PAGING =
@@ -143,9 +144,11 @@ function aiPrompt() {
     "- Map billing data to the documented lifecycle events, one event per change, with the exact product_id (e.g. premium_monthly, vip_monthly), billing_period (weekly, monthly, quarterly, yearly, or one_time for one-time payments such as coin packs) and expires_at when access has an end date: start, renewal, one-time purchase (purchase), cancellation (subscription_canceled), payment failure (subscription_billing_retry), restore, expiry and refund. PixlPush keeps a separate state per product and uses these for segment membership rules, so send cancellations and renewals, not only purchases. Map segment changes to segment_entered/segment_exited with segment (the segment’s name).",
     "- Always honour limit: never return more than limit events per page (PixlPush asks for 2500, one page every 2 minutes) and keep each page under 5 MB.",
     "- On every event, include user with the user’s current profile from the database: email, name, language, country, region, timezone, user_type, account_status, platform, email_consent, push_consent. Leave out keys you do not have; do not send null or empty strings. Send email_consent/push_consent only when the user actually made a choice (never guess).",
-    "- Optional, for real time: when a purchase or subscription change happens, also POST that same event (same id) to the PixlPush push URL with Authorization: Bearer <push key>. Find the URL on the Webhook page; reveal or copy an active key there. Body: one event, or {\"data\":[...]} up to 500. Retry on network errors, 429 or 5xx; PixlPush applies each event id once. Keep the feed for history.",
+    "- Optional real-time delivery: keep the GET feed as the source for history and recovery, and also POST each live business event to the exact Push URL displayed in Integrations → Webhook. Use POST <push URL> with Content-Type: application/json and Authorization: Bearer <push key>. Create a separate Push key on that Webhook page; it is scoped to records:write and must stay in server-side secret storage. Never put it in a browser, mobile app, logs, or source control. The feed token and Push key are different credentials for different directions.",
+    "- Send one event object or {\"data\":[...]} with 1–500 events per request (2 MB request limit). Use the same complete event payload and stable id in the push request and GET feed. PixlPush deduplicates by event id across push, pull, and retries. Do not generate a new id per delivery attempt, alter an event under an existing id, or emit the same business action from multiple hooks/SDKs; this can create duplicate activity and downstream journey/notification effects. Choose one canonical event producer and use a durable outbox with a unique event id if this app already has one.",
+    "- A 202 response means the valid events were stored and applied immediately; read data.accepted, data.duplicates, data.rejected, and per-event results. A mixed batch can return 202 with rejected events, so inspect those results. Do not resend a successful or duplicate event. Fix invalid payloads before retrying a 400. Retry network failures, 429, and 5xx with capped exponential backoff and jitter, always reusing the exact same ids and payloads; split requests that exceed 2 MB, without changing event ids. Handle 401/403/409 as credential or connection configuration errors, not transient retries. The endpoint rejects browser-origin requests, so call it only from your server. Never send a second notification or track the same business event again in a client SDK just because it was pushed to PixlPush.",
     "- Optional, only if this app has message or journey history: send message_sent/_delivered/_opened/_clicked/_bounced/_failed/_unsubscribed/_complained with channel, message_id, campaign_id, campaign_name, and journey_step_entered with journey_id, journey_name, step_id, step_name.",
-    "- Use only fields and event names from the PixlPush documentation. Do not start crons, queues or emails as part of this endpoint.",
+    "- Use only fields and event names from the PixlPush documentation. Do not add a second poller for real-time delivery, trigger notifications from the event-forwarding handler, or create duplicate event producers. Reuse the application's existing durable outbox/queue when available; otherwise add only the smallest server-side retry mechanism that follows the idempotency rules above. Never hold the customer's main request open while calling PixlPush.",
     "- Add focused tests for auth, serialization (including profile fields and consent rules), since filtering, page boundaries, stable ordering and the final-page response. Add the route and the token variable to the project’s setup docs.",
     "- First inspect the repository and report a short plan: which tables become which events, and where each profile field comes from. Then implement, run the relevant checks, and summarize changed files, configuration and deployment steps. Do not claim checks passed unless you ran them.",
     "",
@@ -153,6 +156,10 @@ function aiPrompt() {
     "GET https://your-domain.example/pixlpush/events?limit=2500&since=<ISO timestamp>&cursor=<opaque cursor>",
     "Authorization: Bearer <secret token>",
     "Accept: application/json",
+    "POST <exact Push URL copied from Integrations → Webhook>",
+    "Authorization: Bearer <server-only Push key for the Webhook source, records:write>",
+    "Content-Type: application/json",
+    "Body: one event object or {\"data\":[...]} (1–500 events; max request size 2 MB)",
     "",
     "Example response:",
     EXAMPLE,

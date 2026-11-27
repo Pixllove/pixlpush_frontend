@@ -38,8 +38,6 @@ Future<void> initializePixlPush() async {
   );
 
   await Firebase.initializeApp();
-  final push = PixlPushFirebaseMessaging(client);
-  await push.initialize(requestPermission: true);
 }`,
 
   main: `Future<void> main() async {
@@ -109,7 +107,7 @@ debugPrint('remaining: \${result.remaining}');`,
 );`,
 
   push: `final push = PixlPushFirebaseMessaging(PixlPush.instance);
-await push.initialize(requestPermission: true);`,
+await push.initialize(requestPermission: false); // reads permission; never prompts`,
 
   listeners: `final removeReceived = PixlPush.instance.addNotificationReceivedListener(
   (notification) => debugPrint('Received: \${notification.title}'),
@@ -128,20 +126,18 @@ final removeOpened = PixlPush.instance.addNotificationOpenedListener(
 removeReceived();
 removeOpened();`,
 
-  permission: `final push = PixlPushFirebaseMessaging(PixlPush.instance);
-await push.initialize(requestPermission: false);
-
-// Call later from your onboarding/settings UI.
+  permission: `// Use the same adapter instance initialized once in your push service.
+// Call this from a user action, such as an onboarding or settings button.
 await push.requestPermission();`,
 
   localDevelopment: `flutter run \\
   --dart-define=PIXLPUSH_SDK_KEY=YOUR_DEVELOPMENT_SDK_KEY \\
   --dart-define=PIXLPUSH_PROJECT_ID=YOUR_PROJECT_ID`,
 
-  foreground: `// Do not add a second onMessage listener that schedules another
-// local notification. The PixlPush Firebase adapter owns this path.
-final push = PixlPushFirebaseMessaging(PixlPush.instance);
-await push.initialize(requestPermission: true);`,
+  foreground: `// PixlPushFirebaseMessaging already listens for Firebase foreground
+// messages and displays one local notification. Do not register another
+// onMessage listener or schedule a second local notification.
+// Use addNotificationReceivedListener only for app-specific in-app UI.`,
 
   deepLink: `PixlPush.instance.addNotificationOpenedListener((notification) {
   final deepLink = notification.deepLink;
@@ -225,6 +221,13 @@ When you are done, the app configures PixlPush once at startup, identifies users
 7. Uncertainty: if the project conflicts with these steps (no clear auth flow, flavors, an existing FCM handler), stop and ask one concise question instead of guessing.
 </rules>
 
+<automatic_behavior_safety>
+- The core SDK records app_opened and app_backgrounded when lifecycle tracking is enabled. Do not track those events yourself.
+- Initialize one PixlPushFirebaseMessaging adapter. It owns Firebase foreground receipt, local notification display, token refresh, permission sync and notification-open attribution.
+- Do not add a parallel Firebase onMessage listener, schedule a second local notification, or call a separate click-tracking endpoint. Subscribe to addNotificationReceivedListener only for app-specific UI, and route from the opened listener.
+- Configure the adapter with requestPermission: false during startup. Request permission later from the app's existing user-initiated flow.
+</automatic_behavior_safety>
+
 <workflow>
 Step 0 — Inspect, then plan. Before editing, report in a short list:
 - Flutter and Dart versions, platforms built (android, ios, web)
@@ -254,7 +257,8 @@ ${fence("dart", code.track)}
 If a consent prompt exists, forward its answers:
 ${fence("dart", code.consent)}
 
-Step 6 — Push. The Firebase adapter owns notification display, token sync and taps:
+Step 6 — Push. Initialize the Firebase adapter once with requestPermission: false. It owns notification display, token sync and taps. Keep its instance in your app's push service; call requestPermission() later only from a user action:
+${fence("dart", code.push)}
 ${fence("dart", code.permission)}
 ${fence("dart", code.foreground)}
 Listeners and deep links (route with the app's own router):

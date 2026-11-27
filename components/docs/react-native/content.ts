@@ -290,6 +290,18 @@ plugins {
   },
 };`,
 
+  expoNotificationHandler: `import * as Notifications from "expo-notifications";
+
+// Merge into the app's existing handler if it already has one; register one handler.
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});`,
+
   expoBuild: `# Regenerate native projects after changing plugins or Firebase files
 npx expo prebuild --clean
 
@@ -532,6 +544,8 @@ React Native Firebase must be v22+ (modular API).
 Expo → merge into app.config.*, then rebuild (Expo Go cannot receive push):
 ${fence("js", code.expoConfig)}
 ${fence("sh", code.expoBuild)}
+Expo foreground presentation: if the app does not already configure an Expo notification handler, add this once. Merge it into an existing handler instead of registering another:
+${fence("ts", code.expoNotificationHandler)}
 
 Bare Android → android/build.gradle and android/app/build.gradle:
 ${fence("gradle", code.androidRootGradle + "\n\n" + code.androidAppGradle)}

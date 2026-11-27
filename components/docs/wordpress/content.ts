@@ -24,9 +24,10 @@ export const code = {
 
   jsTrack: `<script>
   // window.PixlPush is the PixlPush web SDK, loaded on every page.
-  document.querySelector('#signup-form')?.addEventListener('submit', () => {
+  // Call this from the form's existing success handler, not its raw submit event.
+  function onNewsletterSubmissionSucceeded() {
     PixlPush.track('newsletter_form_submitted', { form: 'footer' });
-  });
+  }
 </script>`,
 
   phpTrack: `// functions.php or your own plugin
@@ -98,6 +99,9 @@ When you are done, the PixlPush plugin is installed and active, a "Turn on notif
 - The plugin loads the PixlPush web SDK on every page, serves the service worker at /?pixlpush_sw=1, identifies logged-in users and logs them out of PixlPush on logout.
 - It already tracks these events; never add them yourself:
 ${automaticEvents.map(([name, where, what]) => `  - ${name} (${where}): ${what}`).join("\n")}
+- With "Track account and order events" enabled, the plugin also syncs profile changes and account deletions. It handles login/logout through the browser identity sync; do not add your own login/logout events or duplicate signup and purchase tracking.
+- WooCommerce purchase tracking skips guest orders and deduplicates the paid/completed callbacks with one stored eventId per order.
+- `page_viewed`, `page_left`, `signed_up`, and `purchase_completed` are already handled by the plugin when their settings/integrations apply. Only add distinct business events that the plugin does not already send.
 - Settings live in Settings → PixlPush (wp-admin). They are entered by a person, not by code.
 - Server helpers: pixlpush_client() returns the configured PHP client (null when not configured); pixlpush_user_id($wpUserId) returns that user's PixlPush id.
 </plugin_facts>
@@ -106,7 +110,7 @@ ${automaticEvents.map(([name, where, what]) => `  - ${name} (${where}): ${what}`
 1. Use ONLY the plugin, shortcode, helpers and methods in this prompt and its api_reference. Do not invent hooks or options.
 2. Put custom code in the child theme's functions.php or a small site plugin (mu-plugin), never in the PixlPush plugin or a parent theme.
 3. Always guard server calls: if ($pixlpush = pixlpush_client()) { … } so the site works while PixlPush is not configured.
-4. Privacy: never send passwords, tokens, payment details or other sensitive values as properties.
+4. Privacy: never send passwords, tokens, payment details or other sensitive values as properties. Track custom form events only after the existing code confirms success, and only once per completed action.
 5. Scope: do not change unrelated templates, plugins or caching rules beyond the service-worker exclusion below.
 6. Uncertainty: if something conflicts with these steps (multisite, headless WordPress, a page builder without shortcodes), stop and ask one concise question instead of guessing.
 </rules>

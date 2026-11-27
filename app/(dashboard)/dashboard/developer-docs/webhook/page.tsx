@@ -183,22 +183,26 @@ export default function WebhookDeveloperDocsPage() {
       </Section>
 
       <Section id="push" title="Real-time push (optional)">
-        <Body><p>The feed above is pulled every 2 minutes. For live events, especially purchases, your server can also <b>push</b> each event to PixlPush the moment it happens. Users, plans, segments and journeys update within seconds. Keep the feed: PixlPush still pulls it for history and to catch anything a push missed.</p></Body>
+        <Body><p>The feed above is pulled every 2 minutes. For live events, especially purchases, your server can also <b>push</b> each event to PixlPush the moment it happens. Accepted events are stored and applied immediately; users, plans, segments and journeys can update within seconds. Keep the feed for history and recovery if a push fails.</p></Body>
         <DataTable headers={["Item", "Value"]} rows={[
           ["URL", "The push URL shown on Integrations → Webhook (POST)."],
-          ["Authentication", "Authorization: Bearer <push key>. Create a named key on the Webhook page, then reveal or copy it from the active key list. Reveals are audited. Revoke keys that are no longer needed."],
-          ["Body", "One event in the feed format, or {\"data\": [...]} with up to 500 events. Same fields as the feed, including purchase, subscription_*, billing_period and user."],
-          ["Duplicates", "Use the same event id as in your feed. PixlPush applies an event once, whether it arrives by push, pull or both, so retrying is always safe."],
+          ["Authentication", "Authorization: Bearer <push key>. Create a named key on the Webhook page; it is scoped to records:write. Reveal or copy it from the active key list (reveals are audited), then store it in server-side secret storage. It is separate from the token PixlPush uses to read your feed. Never put it in a browser or mobile app. Revoke keys that are no longer needed."],
+          ["Body and limits", "One event in the feed format, or {\"data\": [...]} with 1–500 events. Maximum request size is 2 MB; rate limit is 1,000 requests per minute per key. The endpoint rejects browser-origin requests."],
+          ["Duplicates", "Use the same stable event id and payload in your feed and push. PixlPush deduplicates by event id across push, pull and retries. Do not make a new id per attempt, change the event under an existing id, or send the same business action from multiple hooks/SDKs."],
+          ["Delivery", "A 202 response means valid events were stored and applied immediately. Inspect accepted, duplicates, rejected and each result; a mixed batch can return 202 with some rejected events."],
         ]} code={false} minWidth={640} />
         <CodeBlock language="HTTP" code={'POST /server/v1/webhook/events HTTP/1.1\nHost: <PixlPush API host from the Webhook page>\nAuthorization: Bearer pp_srv_live_...\nContent-Type: application/json\n\n{"id":"pur_123","event_name":"purchase","user_id":"42","time":"2026-11-26T10:00:00Z","product_id":"coins_500","billing_period":"one_time","user":{"email":"ana@example.com"}}'} />
         <DataTable headers={["Response", "Meaning"]} rows={[
-          ["202", "Stored and applied. data.accepted / duplicates / rejected, plus one result per event."],
-          ["400", "Every event in the request is invalid; each result names the field to fix. Do not retry unchanged."],
+          ["202", "Valid events were stored and applied. The response includes accepted / duplicates / rejected counts and one result per event. Do not retry accepted or duplicate events."],
+          ["400", "Every event in the request is invalid; each result names the field to fix. Correct the payload before retrying."],
           ["401", "Missing, wrong or revoked push key."],
           ["403", "A key from another source, or the request came from a browser. Push keys are for servers only."],
-          ["409", "The Webhook connection is paused or not set up."],
-          ["429 / 5xx", "Retry later with the same event ids."],
+          ["409", "The Webhook connection is paused or has no active mapping; resume/connect it in PixlPush."],
+          ["422", "The batch is empty or has more than 500 events."],
+          ["413", "The request body exceeds 2 MB; split it into smaller batches without changing event ids."],
+          ["429 / 5xx / network failure", "Retry with capped backoff and the exact same event ids and payloads. Do not retry 401/403/409 until the configuration is fixed."],
         ]} code={false} minWidth={640} />
+        <Callout tone="warning" title="Forward events; do not create another send">Use one canonical server-side producer for each business action. Push and pull can carry the same event safely when its id and payload stay identical. Do not also emit the same action from another hook or SDK, and do not send a customer notification from the forwarding handler. A PixlPush event can affect configured journeys; duplicate event ids are ignored to prevent duplicate downstream processing.</Callout>
       </Section>
 
       <Section id="history" title="Campaign and journey history (optional)">

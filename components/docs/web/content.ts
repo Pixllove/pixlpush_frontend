@@ -275,24 +275,25 @@ export function usePushPermission() {
 
   inAppToast: `import { useEffect } from "react";
 import { usePixlPush } from "${PACKAGE}/react";
-import { toast } from "sonner"; // or your toast library
 
-/** Shows notifications that arrive while the site is open, and counts clicks on them. */
-export function PixlPushToasts() {
+/** Connects PixlPush to an existing inbox; do not show a second toast for a push. */
+export function PixlPushInboxSync() {
   const pixlpush = usePixlPush();
   const router = useRouter();
 
   useEffect(() => {
     const offReceived = pixlpush.onNotificationReceived((n) => {
-      toast(n.title, {
-        description: n.body,
-        action: { label: "Open", onClick: () => pixlpush.openNotification(n) },
-      });
+      // Update your existing inbox silently. The service worker already shows
+      // the browser notification, including while this site is open.
+      notificationInbox.add(n);
     });
-    // Fires for system clicks and openNotification(): route inside the app.
+    // System clicks and inbox clicks reported through openNotification() arrive here.
     const offOpened = pixlpush.onNotificationOpened((n) => router.push(n.deepLink ?? "/"));
     return () => { offReceived(); offOpened(); };
   }, [pixlpush, router]);
+
+  // In an existing inbox row's click handler, call:
+  // void pixlpush.openNotification(n);
 
   return null;
 }`,
@@ -412,7 +413,7 @@ const list = (commands: Record<string, string>) => Object.entries(commands).map(
 export const aiPrompt = `You are a senior full-stack engineer. Integrate the PixlPush web SDK (${PACKAGE} ${SDK_VERSION}) into this repository: user identity, product analytics, and browser push notifications (Web Push, no Firebase). Work like a careful reviewer is watching: small, focused changes that match the existing code.
 
 <goal>
-When you are done, the site initializes PixlPush once on the client, identifies users on sign-in and resets on sign-out, tracks its core product events, offers a "Turn on notifications" button, counts clicks on in-app notifications, serves the PixlPush service worker, and passes the verification step below.
+When you are done, the site initializes PixlPush once on the client, identifies users on sign-in and resets on sign-out, tracks its core product events, offers a "Turn on notifications" button, serves the PixlPush service worker, and preserves click attribution for the browser notification or an existing app inbox.
 </goal>
 
 <sdk_facts>
@@ -420,6 +421,7 @@ When you are done, the site initializes PixlPush once on the client, identifies 
 - It never throws and never rejects; on the server (SSR) every call is a no-op. Failures go to PixlPush.onError.
 - The only required option is sdkKey (a public pp_sk_… key; safe in browser code). The SDK always sends to the PixlPush API: there is NO apiBaseUrl/url option.
 - page_viewed (every navigation) and page_left (with duration_ms, the visible time on the page) are tracked automatically. Do not track them yourself, and do not track logged_in / logged_out: identify() and reset() already show as "Logged in" / "Logged out" on the user's profile.
+- The service worker displays each PixlPush system notification and also emits notification_received to an open tab. Do not create a toast for that same receipt; it would show a second notification. Use the received listener only to update an existing inbox quietly. Call openNotification(n) once when that inbox item is clicked.
 - Every id the SDK makes is a cuid. externalUserId is the app's own stable user id (never an email).
 - Push needs a service worker file served from the site root at /pixlpush-sw.js. The SDK registers it under its own scope (/pixlpush/), so an existing service worker (PWA, caching) is untouched.
 </sdk_facts>
@@ -495,7 +497,7 @@ Step 7 — Push permission UI: a hook plus a button placed where opting in makes
 ${fence("ts", code.permissionHook)}
 ${fence("tsx", code.permissionButton)}
 
-Step 8 — In-app notifications (only if the site has a toast/notification system; otherwise skip and say so). Show notifications that arrive while the site is open and route on open. openNotification(n) on click is required, or the click is not counted:
+Step 8 — Existing in-app inbox (only if the site already has one; otherwise skip and say so). Update it quietly when a notification arrives; the service worker already displays the browser notification. When a user clicks an inbox item, call openNotification(n) once so its click is attributed:
 ${fence("tsx", code.inAppToast)}
 
 Step 9 — CSP (only if one exists): allow the PixlPush API host in connect-src and 'self' in worker-src:

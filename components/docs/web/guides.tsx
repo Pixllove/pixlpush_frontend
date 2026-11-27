@@ -370,13 +370,13 @@ export function Recipes({ base }: WebGuideProps) {
       <CodeBlock code={code.permissionButton} filename="src/components/NotificationsButton.tsx" />
       <Body>Show it where turning notifications on makes sense (after a purchase, on an order page, in settings) rather than on first load: browsers block sites that prompt too early.</Body>
     </Section>
-    <Section id="in-app" title="In-app notifications">
-      <Body>When a notification arrives while the site is open, show it in your UI and count clicks on it:</Body>
-      <CodeBlock code={code.inAppToast} filename="src/components/PixlPushToasts.tsx" />
-      <Callout tone="warning" title="Call openNotification on click">It records the open for the campaign or journey. Without it, clicks on your toast are not counted.</Callout>
+    <Section id="in-app" title="Connect an existing inbox">
+      <Body>The service worker displays the browser notification and sends the received event to an open tab. If the site already has an inbox, update it quietly from that event; do not show another toast for the same notification.</Body>
+      <CodeBlock code={code.inAppToast} filename="src/components/PixlPushInboxSync.tsx" />
+      <Callout tone="warning" title="Attribute existing inbox clicks">Call <code>openNotification(n)</code> once when a user opens an inbox item. It records the campaign or journey open and closes the matching system notification.</Callout>
     </Section>
     <Section id="checklist" title="Wiring checklist">
-      <Checklist items={["Provider (or init) once at the app root.", "PixlPushAuthSync (or the Vue watch) next to it.", "A typed track helper for your product events.", "A notifications button in a sensible place.", "PixlPushToasts if you show notifications in-app.", <>Then <A href={web(base, "production")}>Verify &amp; ship</A>.</>]} />
+      <Checklist items={["Provider (or init) once at the app root.", "PixlPushAuthSync (or the Vue watch) next to it.", "A typed track helper for your product events.", "A notifications button in a sensible place.", "PixlPushInboxSync only if the site already has an inbox.", <>Then <A href={web(base, "production")}>Verify &amp; ship</A>.</>]} />
     </Section>
   </>;
 }

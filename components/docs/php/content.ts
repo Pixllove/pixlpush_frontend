@@ -254,11 +254,13 @@ $hash = $pixlpush->userHash($user->pixlpush_id);`,
     var signedIn = PixlPush.getStatus().externalUserId;
 <?php if ($user): ?>
     // Once per login ("Logged in" on the profile); repeat identifies change nothing.
-    if (signedIn !== <?= json_encode($user->pixlpush_id) ?>) PixlPush.identify(<?= json_encode([
-      'externalUserId' => $user->pixlpush_id,
-      'email' => $user->email,
-      'userHash' => $pixlpush->userHash($user->pixlpush_id),
-    ]) ?>);
+    if (signedIn !== <?= json_encode($user->pixlpush_id) ?>) {
+      var identity = <?= json_encode(['externalUserId' => $user->pixlpush_id, 'email' => $user->email]) ?>;
+      <?php if (!empty(getenv('PIXLPUSH_IDENTITY_SECRET'))): ?>
+      identity.userHash = <?= json_encode($pixlpush->userHash($user->pixlpush_id)) ?>;
+      <?php endif; ?>
+      PixlPush.identify(identity);
+    }
 <?php else: ?>
     if (signedIn) PixlPush.reset(); // logged out since the last page: "Logged out"
 <?php endif; ?>
@@ -374,6 +376,13 @@ When you are done, the app creates one PixlPush client, gives every user a stabl
 7. Uncertainty: if something conflicts with these steps (several apps, unusual auth, long-running runtime), stop and ask one concise question instead of guessing.
 </rules>
 
+<runtime_and_duplicate_safety>
+- The PHP client queues in memory and auto-flushes at process shutdown by default. Laravel's package integration instead flushes after the response, command and each queue job; do not add a second shutdown or termination hook for it.
+- For non-Laravel long-running workers, flush once at the end of each request or job. Do not flush after every individual track() call.
+- Give each business action one stable eventId when retries or webhooks can repeat it. Reuse that ID only for retries of the same action; never track the same completed signup or purchase both in PHP and in another integration.
+- Browser page views and push belong to the Web SDK. Do not track page_viewed/page_left from PHP or invent logged_in/logged_out conversion events; identify/reset update identity state. Keep browser identity sync to one identify/reset per signed-in state.
+</runtime_and_duplicate_safety>
+
 <workflow>
 Step 0 — Inspect, then plan. Before editing, report in a short list:
 - PHP version, framework and version, runtime (php-fpm, Octane, RoadRunner, Swoole, queue workers)
@@ -405,6 +414,7 @@ ${fence("php", code.deleteUser)}
 Step 5 — Events: track the app's core actions (snake_case names, non-sensitive properties) where they complete. Prefer signed_up, checkout_started, purchase_completed, subscription_started and trial_started when the action exists.
 ${fence("php", code.track)}
 Webhooks may arrive twice: pass a stored eventId.
+Use this idempotent form instead of adding a second track() call for the same business action:
 ${fence("php", code.idempotent)}
 CLI scripts, queues and long-running workers: flush when a unit of work ends.
 ${fence("php", code.flush)}
