@@ -482,7 +482,7 @@ export type IntegrationSettings = {
   /** Something to do in the CRM before signing in (Salesforce: install the PixlPush package). */
   oauthSetupUrl?: string | null;
 } & (
-  | { connected: false }
+  | { connected: false; /** Webhook kept after Disconnect. */ serverUrl?: string; tokenSaved?: boolean }
   | {
       connected: true;
       /** oauth = signed in; token = pasted API token or Service Key; client_credentials = the customer's own app. */

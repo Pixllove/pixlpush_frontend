@@ -169,20 +169,15 @@ export default function WebhookIntegration() {
     useIntegration(projectId, "webhook");
   const settings = query.data;
   const connected = settings?.connected ? settings : undefined;
+  // After Disconnect the server keeps the URL and encrypted token, so reconnecting is one click.
+  const kept = settings && !settings.connected ? settings : undefined;
+  const savedUrl = kept?.serverUrl ?? "";
+  const tokenKept = Boolean(kept?.tokenSaved);
   const lastSyncAt = connected?.lastCheckedAt ?? connected?.lastSyncedAt;
   const nextSyncAt = connected?.syncEnabled ? connected.nextSyncAt : undefined;
-  // Queued (waiting for the worker) or running: either way a second click would do nothing.
-  // A ticking clock, so the page notices when the next automatic sync is due.
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 1_000);
-    return () => window.clearInterval(timer);
-  }, []);
-  // An automatic sync is due: show it as running until the server reports the new sync time.
-  // Capped at 2 minutes overdue, so a stopped worker never leaves the spinner on forever.
-  const overdueMs = connected?.syncEnabled && connected.nextSyncAt ? now - new Date(connected.nextSyncAt).getTime() : -1;
-  const due = overdueMs >= 0 && overdueMs < 120_000;
-  const busySync = syncNow.isPending || due || Boolean(connected?.fetching || (connected?.syncing && !connected.importing));
+  // Spinner only while a run really holds the lock (the server reports it), never just because a
+  // sync is due or an import is unfinished: a crashed run then shows its error instead of spinning.
+  const busySync = syncNow.isPending || Boolean(connected?.fetching);
   const status = integrationStatus(settings);
   const [url, setUrl] = useState("");
   const [token, setToken] = useState("");
@@ -221,7 +216,7 @@ export default function WebhookIntegration() {
   };
   const submit = () =>
     run(async () => {
-      await connect.mutateAsync({ url: url.trim(), token: token.trim() });
+      await connect.mutateAsync({ url: url.trim() || savedUrl, token: token.trim() });
       setUrl("");
       setToken("");
       setShowToken(false);
@@ -418,7 +413,8 @@ export default function WebhookIntegration() {
                           <InputBase
                             fullWidth
                             placeholder="https://api.example.com/pixlpush/events"
-                            defaultValue=""
+                            key={savedUrl}
+                            defaultValue={savedUrl}
                             disabled={!canEdit}
                             autoComplete="off"
                             inputProps={{ ...noAutofill, "aria-label": "Server URL", spellCheck: false }}
@@ -436,6 +432,7 @@ export default function WebhookIntegration() {
                             // a login form to password managers.
                             type="text"
                             defaultValue=""
+                            placeholder={tokenKept ? "Saved token is kept — leave empty to reuse it" : undefined}
                             disabled={!canEdit}
                             autoComplete="off"
                             inputProps={{
@@ -477,8 +474,8 @@ export default function WebhookIntegration() {
                             disabled={
                               !canEdit ||
                               connect.isPending ||
-                              !url.trim() ||
-                              token.trim().length < 8
+                              !(url.trim() || savedUrl) ||
+                              (token.trim().length < 8 && !(tokenKept && !token.trim()))
                             }
                             startIcon={
                               connect.isPending ? (
@@ -513,7 +510,7 @@ export default function WebhookIntegration() {
                               sx={{ minWidth: 0 }}
                             >
                               <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: { sm: "nowrap" } }}>
-                                Last synced: {lastSyncAt
+                                {connected.importing ? "Importing · last batch" : "Last synced"}: {lastSyncAt
                                   ? formatUserDateTime(lastSyncAt)
                                   : "Waiting for first sync"}
                               </Typography>
@@ -563,20 +560,7 @@ export default function WebhookIntegration() {
                               size="small"
                               color="error"
                               disabled={!canEdit || disconnect.isPending}
-                              onClick={() =>
-                                run(async () => {
-                                  // Keep URL and token in the form so reconnecting is one click.
-                                  const keepUrl = connected.serverUrl ?? `https://${connected.accountLabel}`;
-                                  const keepToken =
-                                    savedToken ||
-                                    (projectId
-                                      ? await integrationsApi.revealWebhookToken(projectId).then((r) => r.token).catch(() => "")
-                                      : "");
-                                  await disconnect.mutateAsync();
-                                  setUrl(keepUrl);
-                                  setToken(keepToken);
-                                })
-                              }
+                              onClick={() => run(() => disconnect.mutateAsync())}
                               sx={{ minHeight: 36, whiteSpace: "nowrap" }}
                             >
                               {disconnect.isPending ? "Disconnecting…" : "Disconnect"}
